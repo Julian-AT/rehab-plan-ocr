@@ -4,11 +4,15 @@
 
 # Termine 0.3.0: Agenda, Widgets und Erinnerungen
 
-Die normale Oberfläche verwendet die Referenz `image.png`: helle Flächen,
+Die damalige Oberfläche verwendete die Referenz `image.png`: helle Flächen,
 24-Punkt-Karten, große Uhrzeiten und eine schwarze schwebende Navigation. Die
 Systemdarstellung, Terminprüfung, Originalfotos, Feldbestätigungen, gespeicherten
 Korrekturen und Kalenderbestätigungen bleiben verfügbar. Die Entwickleransicht
 ist über Einstellungen erreichbar.
+
+Die alte Bildreferenz ist inzwischen aus dem Hauptverzeichnis entfernt; ihre
+Git-Revision, Prüfsumme und erhaltene lokale Kopie stehen im
+[Umzugsnachweis](../../development/private-storage.md#retired-root-level-workspace-remnants--2026-09-26).
 
 ## Daten und Zuständigkeit
 

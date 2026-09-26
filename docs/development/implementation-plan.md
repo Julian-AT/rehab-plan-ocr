@@ -109,6 +109,16 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Remaining workspace-root cleanup — 2026-09-26
+
+Consumer inventory identifies only historical documentation for the root-level
+travel-app design reference. Its Git blob and local copy are verified before
+retirement. Fifty-five obsolete workspace/cache/reference files move intact into
+ignored local storage; empty former directories disappear with them. Canonical
+training/data paths, all selected visual references and the three required legacy
+compatibility links remain intact. The [relocation record](private-storage.md)
+also retains the separate generated-intermediate cleanup identities.
+
 ### Explicit portable CI scope — 2026-09-26
 
 Manual dispatch keeps full verification as its default and adds an explicit
