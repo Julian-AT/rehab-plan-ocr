@@ -32,11 +32,23 @@ Die gesonderten Modellkonvertierungs-Pins, insbesondere Victoria, bleiben unver�
 ```sh
 make bootstrap
 make doctor
+make restore
+make convert
 make lint
 make test
 make build
 make test-ios
 ```
+
+`make restore` lädt gesperrte Abhängigkeiten und Quelldateien. `make convert`
+erstellt daraus lokale Artefakte für den Simulator; mit `TARGET=all` werden auch
+Gerätebibliotheken vorbereitet. Normale Builds prüfen vorhandene Modellgewichte,
+Wörterbücher, Laufzeitbibliotheken und Build-Identitäten, ohne Downloads oder
+Konvertierungen zu starten. Fehlende oder veränderte Artefakte brechen den Build
+mit einem Hinweis auf den nötigen Einrichtungsschritt ab.
+
+`make help` zeigt die Einstiegspunkte. Einzelne Prüfungen sind beispielsweise
+`make test-agenda-cache`, `make test-voice-rules` und `make test-tools`.
 
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus

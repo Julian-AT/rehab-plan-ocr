@@ -60,5 +60,14 @@ with zipfile.ZipFile(io.BytesIO(data)) as archive:
             check=True,
         )
         universal.unlink()
+        installed = output / "libonnxruntime.a"
+        expected = lock["libraries"][target]
+        if (
+            installed.stat().st_size != expected["bytes"]
+            or hashlib.sha256(installed.read_bytes()).hexdigest() != expected["sha256"]
+        ):
+            raise SystemExit(
+                f"Extracted runtime differs from the committed architecture pin: {target}"
+            )
         print(f"Installed static ORT {lock['version']} for {target}: {len(binary)} bytes")
     (root / "LICENSE").write_bytes(archive.read("LICENSE"))

@@ -140,7 +140,9 @@ def doctor(portable=False):
             raise RuntimeError("swift-format hat eine ungeprüfte Version.")
         version = run("xcodebuild", "-version", capture=True)
         if not any(f"Build version {build}" in version for build in VERSIONS["xcode-builds"]):
-            raise RuntimeError("Xcode-Build stimmt nicht mit config/toolchains/versions.json überein.")
+            raise RuntimeError(
+                "Xcode-Build stimmt nicht mit config/toolchains/versions.json überein."
+            )
         print(version)
     print("Werkzeugversionen geprüft.")
 
@@ -193,8 +195,7 @@ def tests(portable):
     doctor(portable)
     space(1)
     run("cargo", "test", "--locked", "--workspace")
-    for test in sorted([*(ROOT / "tooling").rglob("test-*.py"), *(ROOT / "ml").rglob("test-*.py")]):
-        run("uv", "run", "--locked", "python", test)
+    tool_tests()
     run("cargo", "build", "--locked", "-p", "reha-cli", "--bin", "reha")
     run(
         "uv",
@@ -224,11 +225,26 @@ def tests(portable):
             run("sh", f"tooling/checks/test-{probe}.sh")
 
 
+def tool_tests():
+    for test in sorted([*(ROOT / "tooling").rglob("test-*.py"), *(ROOT / "ml").rglob("test-*.py")]):
+        run("uv", "run", "--locked", "python", test)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "action",
-        choices=["bootstrap", "doctor", "format", "lint", "test", "test-ios", "build", "space"],
+        choices=[
+            "bootstrap",
+            "doctor",
+            "format",
+            "lint",
+            "test",
+            "test-tools",
+            "test-ios",
+            "build",
+            "space",
+        ],
     )
     parser.add_argument("value", nargs="?")
     parser.add_argument("--portable", action="store_true")
@@ -243,6 +259,8 @@ def main():
         style(args.action == "format", args.portable)
     elif args.action == "test":
         tests(args.portable)
+    elif args.action == "test-tools":
+        tool_tests()
     elif args.action == "test-ios":
         doctor()
         space(4)

@@ -2,5 +2,15 @@
   "version": "1.22.0",
   "url": "https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.22.0.zip",
   "sha256": "90d9de5a139087a6b05a18125d01d01d198820e1731e6f0f11b38749b2ab181f",
-  "bytes": 47124222
+  "bytes": 47124222,
+  "libraries": {
+    "aarch64-apple-ios": {
+      "bytes": 36907264,
+      "sha256": "948587c1719c0b98dd98582ff333c1e47c49d45e1bd0243a9cd86f2d4a98e65a"
+    },
+    "aarch64-apple-ios-sim": {
+      "bytes": 36786904,
+      "sha256": "8ff1e1d256490c5e83ee58af618adca80471775af4baf14ff0c114e86f894117"
+    }
+  }
 }

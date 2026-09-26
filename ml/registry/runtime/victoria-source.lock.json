@@ -1,0 +1,17 @@
+{
+  "revision": "ce81e200ff9203e1a3b042cd678c48e3ffb85cef",
+  "files": {
+    "model.pth": {
+      "url": "https://huggingface.co/kikiri-tts/kikiri-german-victoria/resolve/ce81e200ff9203e1a3b042cd678c48e3ffb85cef/kikiri_german_victoria_ep10.pth",
+      "sha256": "128d1c4a4184a459f23cb307a6cbbb8e9c076c2526f86e18594c1b320a81e00c"
+    },
+    "victoria.pt": {
+      "url": "https://huggingface.co/kikiri-tts/kikiri-german-victoria/resolve/ce81e200ff9203e1a3b042cd678c48e3ffb85cef/voices/victoria.pt",
+      "sha256": "18dbcf0afa7b737e450e6ba769ee898a5aae1d90218265ff4c95422f4693da50"
+    },
+    "config.json": {
+      "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/config.json",
+      "sha256": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f"
+    }
+  }
+}

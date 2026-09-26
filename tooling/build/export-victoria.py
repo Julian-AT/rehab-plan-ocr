@@ -4,13 +4,12 @@
 # ///
 """Convert pinned Victoria weights locally; no model code or pickle code is loaded.
 
-Run with uv run --locked tooling/build/export-victoria.py. fetch-speech-model.py calls this only
-when the checked ONNX model is missing. All products remain under models/private.
+Run through make convert after make restore. This step never downloads model
+assets. All products remain under models/private.
 """
 
 import hashlib
 import json
-import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -23,46 +22,13 @@ from kokoro.model import KModelForONNX
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "models/private/kikiri-victoria-source"
 TARGET = ROOT / "models/private/kokoro-german"
-REVISION = "ce81e200ff9203e1a3b042cd678c48e3ffb85cef"
-ASSETS = {
-    "model.pth": (
-        f"kikiri-tts/kikiri-german-victoria/resolve/{REVISION}/kikiri_german_victoria_ep10.pth",
-        "128d1c4a4184a459f23cb307a6cbbb8e9c076c2526f86e18594c1b320a81e00c",
-    ),
-    "victoria.pt": (
-        f"kikiri-tts/kikiri-german-victoria/resolve/{REVISION}/voices/victoria.pt",
-        "18dbcf0afa7b737e450e6ba769ee898a5aae1d90218265ff4c95422f4693da50",
-    ),
-    "config.json": (
-        "hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/config.json",
-        "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
-    ),
-}
-SOURCE.mkdir(parents=True, exist_ok=True)
+source_manifest = json.loads((ROOT / "ml/registry/runtime/victoria-source.lock.json").read_text())
+REVISION = source_manifest["revision"]
+for name, entry in source_manifest["files"].items():
+    path = SOURCE / name
+    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
+        raise RuntimeError(f"Missing pinned speech source {name}; run make restore.")
 TARGET.mkdir(parents=True, exist_ok=True)
-for name, (remote, digest) in ASSETS.items():
-    destination = SOURCE / name
-    if not destination.exists() or hashlib.sha256(destination.read_bytes()).hexdigest() != digest:
-        temporary = destination.with_suffix(".download")
-        subprocess.run(
-            [
-                "curl",
-                "--fail",
-                "--location",
-                "--silent",
-                "--show-error",
-                "--retry",
-                "3",
-                "--max-time",
-                "600",
-                "https://huggingface.co/" + remote,
-                "-o",
-                str(temporary),
-            ],
-            check=True,
-        )
-        assert hashlib.sha256(temporary.read_bytes()).hexdigest() == digest, name
-        temporary.replace(destination)
 
 config = json.loads((SOURCE / "config.json").read_text())
 assert config["vocab"] == json.loads((ROOT / "ml/registry/runtime/kokoro-vocab.json").read_text())

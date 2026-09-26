@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Bundle pinned German Victoria weights, voice and local pronunciation data."""
+"""Restore pinned speech sources separately from explicit offline conversion."""
 
+import argparse
 import hashlib
 import json
 import shutil
@@ -9,31 +10,26 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-manifest = json.loads((ROOT / "ml/registry/runtime/kokoro.lock.json").read_text())
-target = ROOT / "models/private" / manifest["bundle_directory"]
-target.mkdir(parents=True, exist_ok=True)
-entries = {entry["path"]: entry for entry in manifest["files"]}
 
 
-def valid(path, name):
+def digest(path):
+    with path.open("rb") as file:
+        return hashlib.file_digest(file, "sha256").hexdigest()
+
+
+def valid(path, entry):
     return (
-        path.exists()
-        and path.stat().st_size == entries[name]["bytes"]
-        and hashlib.sha256(path.read_bytes()).hexdigest() == entries[name]["sha256"]
+        path.is_file()
+        and digest(path) == entry["sha256"]
+        and ("bytes" not in entry or path.stat().st_size == entry["bytes"])
     )
 
 
-if not valid(target / "model.onnx", "model.onnx") or not valid(target / "voice.f32", "voice.f32"):
-    subprocess.run(
-        ["uv", "run", "--locked", str(ROOT / "tooling/build/export-victoria.py")], check=True
-    )
-for name, entry in entries.items():
-    if "remote" not in entry and "remote_url" not in entry:
-        continue
-    destination = target / name
-    if valid(destination, name):
-        continue
-    temporary = destination.with_suffix(destination.suffix + ".download")
+def restore(path, entry):
+    if valid(path, entry):
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".download")
     subprocess.run(
         [
             "curl",
@@ -45,40 +41,77 @@ for name, entry in entries.items():
             "3",
             "--retry-all-errors",
             "--max-time",
-            "300",
-            entry.get("remote_url")
-            or f"https://huggingface.co/{manifest['model']}/resolve/{manifest['revision']}/{entry['remote']}",
+            "600",
+            entry["url"],
             "--output",
             str(temporary),
         ],
         check=True,
     )
-    if not valid(temporary, name):
-        raise RuntimeError(f"Checksum mismatch: {name}")
-    temporary.replace(destination)
-# The model's tokenizer must match the renderer's phoneme-to-token mapping.
-expected_vocab = json.loads((ROOT / "ml/registry/runtime/kokoro-vocab.json").read_text())
-model_vocab = json.loads((target / "config.json").read_text())["vocab"]
-assert model_vocab == expected_vocab
-raw = (target / "voice.f32").read_bytes()
-assert len(raw) == 510 * 256 * 4, "Unexpected Victoria voice shape"
-assert all(abs(v[0]) < float("inf") for v in struct.iter_unpack("<f", raw)), "Invalid voice values"
-for source, name in [
-    ("ml/registry/runtime/kokoro-vocab.json", "vocab.json"),
-    ("docs/third-party/licenses/kokoro-apache-2.0.txt", "LICENSE"),
-    ("docs/third-party/licenses/kokoro-source.txt", "NOTICE"),
-]:
-    shutil.copyfile(ROOT / source, target / name)
-data = ROOT / "models/private/espeak/host/espeak-ng-data"
-if not (data / "de_dict").exists():
-    subprocess.run(["python3", str(ROOT / "tooling/build/build-phonemizer.py"), "host"], check=True)
-for name in entries:
-    if name.startswith("espeak-ng-data/"):
-        destination = target / name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(data / name.removeprefix("espeak-ng-data/"), destination)
-for name in entries:
-    if not valid(target / name, name):
-        raise RuntimeError(f"Bundled speech asset checksum mismatch: {name}")
-shutil.copyfile(ROOT / "ml/registry/runtime/kokoro.lock.json", target / "manifest.json")
-print(f"Verified {len(entries)} bundled Kokoro/Victoria speech and pronunciation assets (24 kHz)")
+    if not valid(temporary, entry):
+        raise RuntimeError(f"Speech source checksum mismatch: {path.name}")
+    temporary.replace(path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("mode", choices=["restore", "convert"], default="restore", nargs="?")
+    args = parser.parse_args()
+    registry = ROOT / "ml/registry/runtime"
+    manifest = json.loads((registry / "kokoro.lock.json").read_text())
+    target = ROOT / "models/private" / manifest["bundle_directory"]
+    entries = {entry["path"]: entry for entry in manifest["files"]}
+    if args.mode == "restore":
+        sources = json.loads((registry / "victoria-source.lock.json").read_text())
+        for name, entry in sources["files"].items():
+            restore(ROOT / "models/private/kikiri-victoria-source" / name, entry)
+        for name, entry in entries.items():
+            if "remote" not in entry and "remote_url" not in entry:
+                continue
+            url = (
+                entry.get("remote_url")
+                or f"https://huggingface.co/{manifest['model']}/resolve/{manifest['revision']}/{entry['remote']}"
+            )
+            restore(target / name, entry | {"url": url})
+        print("Verified speech sources and metadata; conversion remains explicit.")
+        return
+
+    for name, entry in entries.items():
+        if ("remote" in entry or "remote_url" in entry) and not valid(target / name, entry):
+            raise RuntimeError(f"Missing speech metadata {name}; run make restore.")
+    if not all(valid(target / name, entries[name]) for name in ["model.onnx", "voice.f32"]):
+        subprocess.run(
+            ["uv", "run", "--offline", "--locked", str(ROOT / "tooling/build/export-victoria.py")],
+            check=True,
+        )
+    expected_vocab = json.loads((registry / "kokoro-vocab.json").read_text())
+    if json.loads((target / "config.json").read_text())["vocab"] != expected_vocab:
+        raise RuntimeError("Speech vocabulary differs from the deployment dictionary")
+    raw = (target / "voice.f32").read_bytes()
+    if len(raw) != 510 * 256 * 4 or not all(
+        abs(value[0]) < float("inf") for value in struct.iter_unpack("<f", raw)
+    ):
+        raise RuntimeError("Invalid Victoria voice shape or values")
+    for source, name in [
+        ("ml/registry/runtime/kokoro-vocab.json", "vocab.json"),
+        ("docs/third-party/licenses/kokoro-apache-2.0.txt", "LICENSE"),
+        ("docs/third-party/licenses/kokoro-source.txt", "NOTICE"),
+    ]:
+        shutil.copyfile(ROOT / source, target / name)
+    data = ROOT / "models/private/espeak/host/espeak-ng-data"
+    if not (data / "de_dict").is_file():
+        raise RuntimeError("Phonemizer data missing; run make convert.")
+    for name in entries:
+        if name.startswith("espeak-ng-data/"):
+            destination = target / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(data / name.removeprefix("espeak-ng-data/"), destination)
+    for name, entry in entries.items():
+        if not valid(target / name, entry):
+            raise RuntimeError(f"Bundled speech asset checksum mismatch: {name}")
+    shutil.copyfile(registry / "kokoro.lock.json", target / "manifest.json")
+    print(f"Verified {len(entries)} bundled speech assets (24 kHz); no network used.")
+
+
+if __name__ == "__main__":
+    main()

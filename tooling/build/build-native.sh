@@ -23,16 +23,20 @@ bindings() {
 framework() {
   python3 tooling/dev/quality.py space 2
   bindings
-  uv run tooling/build/fetch-models.py --tier small
-  uv run tooling/build/fetch-ios-runtime.py
-  python3 tooling/build/build-phonemizer.py
-  python3 tooling/build/fetch-speech-model.py
   mkdir -p apps/ios/build/ffi/device apps/ios/build/ffi/simulator
   case "$mode" in
     simulator | test) variants=simulator ;;
     device) variants=device ;;
     *) variants='device simulator' ;;
   esac
+  for variant in $variants; do
+    python3 tooling/build/verify-native-assets.py "$variant"
+    case "$variant" in
+      device) triple=aarch64-apple-ios ;;
+      simulator) triple=aarch64-apple-ios-sim ;;
+    esac
+    python3 tooling/build/build-phonemizer.py --verify "$triple"
+  done
   for variant in $variants; do
     case "$variant" in
       device) triple=aarch64-apple-ios ;;
