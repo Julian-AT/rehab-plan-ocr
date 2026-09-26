@@ -31,10 +31,28 @@ older differently configured runtime controls and the MLX baseline.
 
 The four unsafe candidate proposals all select a specific event for an ambiguous
 deletion request. No calendar operation was executed. Passing export parity does
-not resolve those errors or establish a safe model. Current Swift-router replay,
-actual native app conversations, physical resource measurements and independent
-human-reviewed examples remain separate checks. Public provider selection is
+not resolve those errors or establish a safe model. Actual native app
+conversations, physical resource measurements and independent human-reviewed
+examples remain separate checks. Public provider selection is
 unchanged and `qualified` / `promoted` remain false.
+
+The subsequent actual Swift host-router replay, before the explicit rename rule,
+scores 24/40 exact for the untuned native control, 33/40 for the previous corrected
+native candidate and **36/40 for the new candidate**. Each variant uses the same
+24 complete rule responses and admits 16 recorded provider responses; none yields
+an unsafe proposal after the router in this corpus. The new candidate fixes three
+minimal-create cases without new wrong or unsafe post-router results relative to
+the previous trained candidate. Its four remaining errors are clarification in
+place of an explicitly requested rename following “Nicht löschen”.
+
+The replay uses the current strict app grader and checks all original response,
+prompt, model and source identities. Its 112 source inputs remained unchanged;
+four deliberately corrupted grading inputs were rejected. It performs no fresh
+inference, audio, calendar operation or complete voice workflow. The underlying
+four unsafe missing-target answers remain visible in the raw comparison and are
+new relative to the untuned control. All results remain one known development
+group. The immutable private evidence is
+`.local/runs/assistant-v2-router-replay-20260926-s21-001`.
 
 Private evidence:
 

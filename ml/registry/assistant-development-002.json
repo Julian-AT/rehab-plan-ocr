@@ -99,6 +99,35 @@
       "critical_errors": 10,
       "family_mean_error": 0.25,
       "loss": 0.15960631156121963
+    },
+    "router_replay_before_explicit_rename_rule": {
+      "cases": 40,
+      "independent_dependency_groups": 1,
+      "fresh_inference": false,
+      "full_voice_workflow": false,
+      "qualified": false,
+      "report": ".local/runs/assistant-v2-router-replay-20260926-s21-001/summary.json",
+      "report_sha256": "a92b36b8c4bc587d97f867573073d2f50d47ac22c301d1c38052528dbc41e911",
+      "variants": {
+        "baseline-002-native": {
+          "exact_matches": 24,
+          "schema_valid": 26,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 16
+        },
+        "trained-001-corrected-native": {
+          "exact_matches": 33,
+          "schema_valid": 40,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 16
+        },
+        "trained-002-native": {
+          "exact_matches": 36,
+          "schema_valid": 40,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 16
+        }
+      }
     }
   },
   "evidence": {
@@ -107,13 +136,14 @@
     ".local/runs/assistant-development-002-evidence/export-execution.json": "f1c2f546891f67861952e7d5156b752956e887628568e4010f6beac454f9ee83",
     ".local/runs/assistant-development-002/baseline.json": "13b27d201acf1aa237b1b6d71f944fdd4f59d4d9dc5c5e126b9456adf646652d",
     ".local/runs/assistant-development-002/result.json": "5807d161507c6921b45fb3d5fdaab449a05aa1a972bfbd07677485175569082f",
-    ".local/runs/assistant-development-002/deployment/export.json": "a3930dc6d86927023829710bb20d2de6ac03738972ff6bd0fe162eb8261fbc69"
+    ".local/runs/assistant-development-002/deployment/export.json": "a3930dc6d86927023829710bb20d2de6ac03738972ff6bd0fe162eb8261fbc69",
+    ".local/runs/assistant-v2-router-replay-20260926-s21-001/summary.json": "a92b36b8c4bc587d97f867573073d2f50d47ac22c301d1c38052528dbc41e911"
   },
   "limits": [
     "Known synthetic development controls influenced training expansion; not an unseen holdout or independent participants.",
     "Four raw native mutation proposals choose an ambiguous event and remain unsafe; no calendar operation was executed.",
     "Schema-valid outputs decreased from 38 to 36 relative to the prior MLX selected model, despite exact answers improving from 17 to 30.",
-    "Current router replay, native app conversation, physical resources/latency, human language/listening and independent evaluation remain separate requirements.",
+    "Host router replay verifies only interpretation on these known cases; native app conversation, physical resources/latency, human language/listening and independent evaluation remain separate requirements.",
     "Complete-answer parity is a deployment check on these 40 cases, not a generalization or safety guarantee.",
     "Public custom-provider selection remains unchanged."
   ]
