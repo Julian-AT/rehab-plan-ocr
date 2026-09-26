@@ -206,7 +206,7 @@ final class EventEditingTests: XCTestCase {
       let patch: [String: Any] = [
         "title": "Erfundene Therapie", "start_utc": iso.string(from: start),
         "end_utc": iso.string(from: start.addingTimeInterval(1800)), "timezone": "Europe/Vienna",
-        "location": "", "notes": "", "reminder_minutes": 10,
+        "location": "", "reminder_minutes": 10,
       ]
       let proposal: [String: Any] = [
         "token": UUID().uuidString, "kind": "create", "owned_id": UUID().uuidString,
@@ -221,9 +221,13 @@ final class EventEditingTests: XCTestCase {
       let replay = try await call("mutateEvent", ["proposal": proposal, "recovery_only": true])
       XCTAssertTrue(NSDictionary(dictionary: replay).isEqual(to: saved))
 
+      // Import values include notes; the deliberately narrower manual mutation
+      // contract does not permit changing them.
+      var importValues = patch
+      importValues["notes"] = ""
       let operation: [String: Any] = [
         "kind": "create", "id": UUID().uuidString, "calendar_id": calendar.calendarIdentifier,
-        "requires_resolution": false, "after": patch,
+        "requires_resolution": false, "after": importValues,
       ]
       let data = try JSONSerialization.data(withJSONObject: [
         "operation": operation, "recovery_only": false,
