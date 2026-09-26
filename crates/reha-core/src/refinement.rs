@@ -6,6 +6,85 @@ use std::collections::HashSet;
 
 pub type Reading = RefinementReading;
 
+/// A field crop can contain a clipped fragment of its neighboring column.
+/// Keep that evidence for review, but never join it into an asserted field value.
+fn contained_field_text(
+    observations: &[Observation],
+    regions: &[Region],
+    width: u32,
+    height: u32,
+) -> Option<String> {
+    if observations.is_empty() {
+        return None;
+    }
+    for observation in observations {
+        if observation.region_ids.is_empty() {
+            return None;
+        }
+        for id in &observation.region_ids {
+            let region = regions.iter().find(|r| &r.id == id)?;
+            if region.polygon.len() < 4
+                || region.polygon.iter().any(|p| {
+                    !p.x.is_finite()
+                        || !p.y.is_finite()
+                        || p.x <= 1.0
+                        || p.x >= f64::from(width) - 1.0
+                        || p.y < 0.0
+                        || p.y > f64::from(height)
+                })
+            {
+                return None;
+            }
+        }
+    }
+    let text = observations
+        .iter()
+        .map(|o| o.text.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
+    (!text.trim().is_empty()).then_some(text)
+}
+
+#[cfg(test)]
+mod field_crop_tests {
+    use super::*;
+
+    #[test]
+    fn clipped_neighbor_or_missing_geometry_never_becomes_a_field_value() {
+        let observation = Observation {
+            id: "read".into(),
+            text: "B 12".into(),
+            region_ids: vec!["box".into()],
+            engine: "synthetic".into(),
+            score: Some(1.0),
+            alternatives: vec![],
+        };
+        let mut region = Region {
+            id: "box".into(),
+            polygon: geometry::rect(8.0, 4.0, 30.0, 12.0),
+            frame: "crop".into(),
+            kind: "text".into(),
+            parent: None,
+            children: vec![],
+        };
+        assert_eq!(
+            contained_field_text(&[observation.clone()], &[region.clone()], 100, 30).as_deref(),
+            Some("B 12")
+        );
+        for polygon in [
+            geometry::rect(0.0, 4.0, 30.0, 12.0),
+            geometry::rect(80.0, 4.0, 20.0, 12.0),
+            vec![],
+        ] {
+            region.polygon = polygon;
+            assert!(
+                contained_field_text(&[observation.clone()], &[region.clone()], 100, 30).is_none()
+            );
+        }
+        assert!(contained_field_text(&[observation], &[], 100, 30).is_none());
+    }
+}
+
 /// Refresh the version-5/6 column checks from retained OCR when row identities
 /// stay unambiguous. Structural changes still require a full explicit reprocess.
 pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
@@ -361,6 +440,12 @@ where
                     if !complete {
                         attempt.status = "partial".into();
                     }
+                    let field_text = field.as_ref().and_then(|_| {
+                        contained_field_text(&observations, &regions, crop.width(), crop.height())
+                    });
+                    if field.is_some() && !observations.is_empty() && field_text.is_none() {
+                        attempt.detail = "Text am Spaltenrand oder ohne vollständige Geometrie: keine Feldübernahme.".into();
+                    }
                     for region in &mut regions {
                         region.id = format!("{id}-{}", region.id);
                         region.parent = None;
@@ -376,16 +461,14 @@ where
                     }
                     attempt.observation_ids = observations.iter().map(|o| o.id.clone()).collect();
                     if complete && field.is_some() {
-                        let text = observations
-                            .iter()
-                            .map(|o| o.text.as_str())
-                            .collect::<Vec<_>>()
-                            .join(" ");
+                        let text = field_text.as_deref().unwrap_or_default();
                         let value = if field.as_deref() == Some("date") {
-                            crate::parser::heading_date(&observations, &regions)
+                            field_text
+                                .as_ref()
+                                .and_then(|_| crate::parser::heading_date(&observations, &regions))
                                 .map(serde_json::Value::String)
                         } else if matches!(field.as_deref(), Some("start" | "end")) {
-                            crate::parser::clock_value(&text).map(serde_json::Value::String)
+                            crate::parser::clock_value(text).map(serde_json::Value::String)
                         } else {
                             (!text.trim().is_empty()).then_some(serde_json::json!(text))
                         };
