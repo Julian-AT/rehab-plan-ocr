@@ -64,10 +64,11 @@ pub async fn dispatch(
                 "import" => {
                     serde_json::to_value(store.batch(id).map_err(failure)?).map_err(failure)
                 }
-                "event" => Ok(store
-                    .event_mutation(id)
-                    .map_err(failure)?
-                    .unwrap_or(Value::Null)),
+                "event" => {
+                    drop(store);
+                    serde_json::to_value(super::calendar_administration::event_detail(state, id)?)
+                        .map_err(failure)
+                }
                 "capture" => Ok(json!({"document_id":id})),
                 "recognition" => {
                     let result: (String, String, Option<String>) = store
@@ -108,39 +109,13 @@ pub async fn dispatch(
             super::calendar_repair::run(platform, state, command, args).await
         }
         "calendarStatus" => {
-            let mut status = native(&platform, "calendarStatus", json!({})).await?;
-            let store = state.store.lock().map_err(failure)?;
-            let prefs: Value = store
-                .setting("preferences")
-                .map_err(failure)?
-                .and_then(|s| serde_json::from_str(&s).ok())
-                .unwrap_or(json!({}));
-            status["calendar_id"] = prefs["calendar_id"].clone();
-            status["display_calendar_ids"] = prefs["display_calendar_ids"].clone();
-            status["pending_imports"] = json!(store.pending().map_err(failure)?.len());
-            let pending: u32 = store
-                .connection
-                .query_row(
-                    "SELECT count(*) FROM event_mutations WHERE status IN ('pending','uncertain')",
-                    [],
-                    |r| r.get(0),
-                )
-                .map_err(failure)?;
-            status["pending_events"] = json!(pending);
-            status["pending_bookkeeping"] =
-                json!(crate::store::bookkeeping::pending_count(&store).map_err(failure)?);
-            Ok(status)
+            serde_json::to_value(super::calendar_administration::status(platform, state).await?)
+                .map_err(failure)
         }
-        "reconcileCalendarBookkeeping" => {
-            let _guard = state.calendar_lock.lock().await;
-            let store = state.store.lock().map_err(failure)?;
-            crate::store::bookkeeping::recover(&store).map_err(|_| {
-                super::ServiceError::Storage(crate::store::bookkeeping::WARNING.into())
-            })?;
-            Ok(
-                json!({"pending_bookkeeping":crate::store::bookkeeping::pending_count(&store).map_err(failure)?}),
-            )
-        }
+        "reconcileCalendarBookkeeping" => serde_json::to_value(
+            super::calendar_administration::reconcile_bookkeeping(state).await?,
+        )
+        .map_err(failure),
         "refreshAgenda" => {
             let _guard = state.calendar_lock.lock().await;
             super::agenda::sync(&platform, state).await
@@ -183,9 +158,7 @@ pub async fn dispatch(
             .await?,
         )
         .map_err(failure),
-        "eventHistory" => Ok(
-            json!({"history":state.store.lock().map_err(failure)?.event_history().map_err(failure)?}),
-        ),
+        "eventHistory" => Ok(json!({"history":super::calendar_administration::history(state)?})),
         "registerEventSession" => {
             let session = super::calendar_mutations::register(state)?;
             Ok(json!({"session":session}))
@@ -195,56 +168,25 @@ pub async fn dispatch(
             super::calendar_mutations::invalidate(state, session)?;
             Ok(json!({}))
         }
-        "resolveEventUncertainty" => {
-            let _guard = state.calendar_lock.lock().await;
-            if args["confirmation"] != "button" {
-                return Err("Kalenderprüfung ausdrücklich bestätigen.".into());
-            }
-            let id = required(&args, "id")?;
-            let store = state.store.lock().map_err(failure)?;
-            let history = store.event_history().map_err(failure)?;
-            let item = history
-                .iter()
-                .find(|h| h["id"] == id)
-                .ok_or("Verlaufseintrag fehlt.")?;
-            if !matches!(item["status"].as_str(), Some("pending" | "uncertain")) {
-                return Err("Nur unklare Vorgänge manuell abschließen.".into());
-            }
-            let result = json!({"status":"acknowledged","message":"Nach manueller Kalenderprüfung abgeschlossen. Kein erneuter Schreibversuch und kein App-Rückgängig."});
-            store.finish_event_mutation(id, &result).map_err(failure)?;
-            Ok(result)
-        }
-        "reconcileEventMutations" => {
-            let _guard = state.calendar_lock.lock().await;
-            let history = state
-                .store
-                .lock()
-                .map_err(failure)?
-                .event_history()
-                .map_err(failure)?;
-            for item in history.iter().filter(|h| {
-                ["pending", "uncertain"].contains(&h["status"].as_str().unwrap_or_default())
-            }) {
-                let result = super::calendar_mutations::mutate(
-                    platform.clone(),
-                    super::calendar_mutations::MutationRequest {
-                        proposal: serde_json::from_value(item["proposal"].clone())
-                            .map_err(failure)?,
-                        recovery_only: true,
+        "resolveEventUncertainty" => serde_json::to_value(
+            super::calendar_administration::acknowledge(
+                state,
+                super::calendar_administration::AcknowledgeRequest {
+                    id: required(&args, "id")?.into(),
+                    confirmation: if args["confirmation"] == "button" {
+                        super::calendar_mutations::Confirmation::Button
+                    } else {
+                        super::calendar_mutations::Confirmation::MissingVisibleButton
                     },
-                )
-                .await?;
-                let result = serde_json::to_value(result).map_err(failure)?;
-                state
-                    .store
-                    .lock()
-                    .map_err(failure)?
-                    .finish_event_mutation(required(item, "id")?, &result)
-                    .map_err(failure)?;
-            }
-            let warnings = super::agenda::sync_warnings(&platform, state).await;
-            Ok(json!({"maintenance_warnings":warnings}))
-        }
+                },
+            )
+            .await?,
+        )
+        .map_err(failure),
+        "reconcileEventMutations" => serde_json::to_value(
+            super::calendar_administration::reconcile_events(platform, state).await?,
+        )
+        .map_err(failure),
         _ => Err("Unbekannte Kalenderfunktion.".into()),
     }
 }

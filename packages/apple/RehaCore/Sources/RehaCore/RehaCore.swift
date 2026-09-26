@@ -789,6 +789,18 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func traceArtifactPath(id: String, artifact: String) async throws  -> String
     
+    func calendarStatus() async throws  -> CalendarAdministrationStatus
+    
+    func eventHistory() async throws  -> [EventHistoryRecord]
+    
+    func eventHistoryDetail(id: String) async throws  -> EventHistoryRecord?
+    
+    func reconcileCalendarBookkeeping() async throws  -> CalendarBookkeepingResult
+    
+    func reconcileEventMutations() async throws  -> EventReconciliationResult
+    
+    func resolveEventUncertainty(request: ResolveEventUncertaintyRequest) async throws  -> EventMutationResult
+    
     func confirmEventProposal(request: EventConfirmRequest) async throws  -> EventMutationResult
     
     func eventCalendars() async throws  -> [EventCalendarDestination]
@@ -1571,6 +1583,102 @@ open func traceArtifactPath(id: String, artifact: String)async throws  -> String
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func calendarStatus()async throws  -> CalendarAdministrationStatus  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_calendar_status(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeCalendarAdministrationStatus_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func eventHistory()async throws  -> [EventHistoryRecord]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_event_history(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeEventHistoryRecord.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func eventHistoryDetail(id: String)async throws  -> EventHistoryRecord?  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_event_history_detail(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeEventHistoryRecord.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func reconcileCalendarBookkeeping()async throws  -> CalendarBookkeepingResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_reconcile_calendar_bookkeeping(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeCalendarBookkeepingResult_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func reconcileEventMutations()async throws  -> EventReconciliationResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_reconcile_event_mutations(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeEventReconciliationResult_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func resolveEventUncertainty(request: ResolveEventUncertaintyRequest)async throws  -> EventMutationResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_resolve_event_uncertainty(
+                        self.uniffiCloneHandle(),FfiConverterTypeResolveEventUncertaintyRequest_lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeEventMutationResult_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -2764,6 +2872,126 @@ public func FfiConverterTypeBatchOperation_lower(_ value: BatchOperation) -> Rus
 }
 
 
+public struct CalendarAdministrationStatus: Equatable, Hashable {
+    public var platform: CalendarPlatformStatus
+    public var calendarId: String?
+    public var displayCalendarIds: [String]
+    public var pendingImports: UInt64
+    public var pendingEvents: UInt32
+    public var pendingBookkeeping: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(platform: CalendarPlatformStatus, calendarId: String?, displayCalendarIds: [String], pendingImports: UInt64, pendingEvents: UInt32, pendingBookkeeping: UInt32) {
+        self.platform = platform
+        self.calendarId = calendarId
+        self.displayCalendarIds = displayCalendarIds
+        self.pendingImports = pendingImports
+        self.pendingEvents = pendingEvents
+        self.pendingBookkeeping = pendingBookkeeping
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarAdministrationStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarAdministrationStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarAdministrationStatus {
+        return
+            try CalendarAdministrationStatus(
+                platform: FfiConverterTypeCalendarPlatformStatus.read(from: &buf), 
+                calendarId: FfiConverterOptionString.read(from: &buf), 
+                displayCalendarIds: FfiConverterSequenceString.read(from: &buf), 
+                pendingImports: FfiConverterUInt64.read(from: &buf), 
+                pendingEvents: FfiConverterUInt32.read(from: &buf), 
+                pendingBookkeeping: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarAdministrationStatus, into buf: inout [UInt8]) {
+        FfiConverterTypeCalendarPlatformStatus.write(value.platform, into: &buf)
+        FfiConverterOptionString.write(value.calendarId, into: &buf)
+        FfiConverterSequenceString.write(value.displayCalendarIds, into: &buf)
+        FfiConverterUInt64.write(value.pendingImports, into: &buf)
+        FfiConverterUInt32.write(value.pendingEvents, into: &buf)
+        FfiConverterUInt32.write(value.pendingBookkeeping, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarAdministrationStatus_lift(_ buf: RustBuffer) throws -> CalendarAdministrationStatus {
+    return try FfiConverterTypeCalendarAdministrationStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarAdministrationStatus_lower(_ value: CalendarAdministrationStatus) -> RustBuffer {
+    return FfiConverterTypeCalendarAdministrationStatus.lower(value)
+}
+
+
+public struct CalendarBookkeepingResult: Equatable, Hashable {
+    public var pendingBookkeeping: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(pendingBookkeeping: UInt32) {
+        self.pendingBookkeeping = pendingBookkeeping
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarBookkeepingResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarBookkeepingResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarBookkeepingResult {
+        return
+            try CalendarBookkeepingResult(
+                pendingBookkeeping: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarBookkeepingResult, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.pendingBookkeeping, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarBookkeepingResult_lift(_ buf: RustBuffer) throws -> CalendarBookkeepingResult {
+    return try FfiConverterTypeCalendarBookkeepingResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarBookkeepingResult_lower(_ value: CalendarBookkeepingResult) -> RustBuffer {
+    return FfiConverterTypeCalendarBookkeepingResult.lower(value)
+}
+
+
 public struct CalendarOperation: Equatable, Hashable {
     public var kind: OperationKind
     public var id: String
@@ -2905,6 +3133,68 @@ public func FfiConverterTypeCalendarOverlap_lift(_ buf: RustBuffer) throws -> Ca
 #endif
 public func FfiConverterTypeCalendarOverlap_lower(_ value: CalendarOverlap) -> RustBuffer {
     return FfiConverterTypeCalendarOverlap.lower(value)
+}
+
+
+public struct CalendarPlatformStatus: Equatable, Hashable {
+    public var access: CalendarAccessStatus
+    public var lastReadAt: String?
+    public var calendars: [CalendarStatusItem]
+    public var unavailableCalendarIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(access: CalendarAccessStatus, lastReadAt: String?, calendars: [CalendarStatusItem], unavailableCalendarIds: [String]) {
+        self.access = access
+        self.lastReadAt = lastReadAt
+        self.calendars = calendars
+        self.unavailableCalendarIds = unavailableCalendarIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarPlatformStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarPlatformStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarPlatformStatus {
+        return
+            try CalendarPlatformStatus(
+                access: FfiConverterTypeCalendarAccessStatus.read(from: &buf), 
+                lastReadAt: FfiConverterOptionString.read(from: &buf), 
+                calendars: FfiConverterSequenceTypeCalendarStatusItem.read(from: &buf), 
+                unavailableCalendarIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarPlatformStatus, into buf: inout [UInt8]) {
+        FfiConverterTypeCalendarAccessStatus.write(value.access, into: &buf)
+        FfiConverterOptionString.write(value.lastReadAt, into: &buf)
+        FfiConverterSequenceTypeCalendarStatusItem.write(value.calendars, into: &buf)
+        FfiConverterSequenceString.write(value.unavailableCalendarIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarPlatformStatus_lift(_ buf: RustBuffer) throws -> CalendarPlatformStatus {
+    return try FfiConverterTypeCalendarPlatformStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarPlatformStatus_lower(_ value: CalendarPlatformStatus) -> RustBuffer {
+    return FfiConverterTypeCalendarPlatformStatus.lower(value)
 }
 
 
@@ -3453,6 +3743,64 @@ public func FfiConverterTypeCalendarResult_lift(_ buf: RustBuffer) throws -> Cal
 #endif
 public func FfiConverterTypeCalendarResult_lower(_ value: CalendarResult) -> RustBuffer {
     return FfiConverterTypeCalendarResult.lower(value)
+}
+
+
+public struct CalendarStatusItem: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var writable: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, writable: Bool) {
+        self.id = id
+        self.title = title
+        self.writable = writable
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarStatusItem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarStatusItem: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarStatusItem {
+        return
+            try CalendarStatusItem(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                writable: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarStatusItem, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterBool.write(value.writable, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarStatusItem_lift(_ buf: RustBuffer) throws -> CalendarStatusItem {
+    return try FfiConverterTypeCalendarStatusItem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarStatusItem_lower(_ value: CalendarStatusItem) -> RustBuffer {
+    return FfiConverterTypeCalendarStatusItem.lower(value)
 }
 
 
@@ -4214,6 +4562,80 @@ public func FfiConverterTypeEventEditProposal_lower(_ value: EventEditProposal) 
 }
 
 
+public struct EventHistoryRecord: Equatable, Hashable {
+    public var id: String
+    public var createdAt: Int64
+    public var proposal: EventEditProposal
+    public var status: EventHistoryStatus
+    public var result: EventMutationResult?
+    public var undoOf: String?
+    public var undoneBy: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, createdAt: Int64, proposal: EventEditProposal, status: EventHistoryStatus, result: EventMutationResult?, undoOf: String?, undoneBy: String?) {
+        self.id = id
+        self.createdAt = createdAt
+        self.proposal = proposal
+        self.status = status
+        self.result = result
+        self.undoOf = undoOf
+        self.undoneBy = undoneBy
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EventHistoryRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEventHistoryRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EventHistoryRecord {
+        return
+            try EventHistoryRecord(
+                id: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterInt64.read(from: &buf), 
+                proposal: FfiConverterTypeEventEditProposal.read(from: &buf), 
+                status: FfiConverterTypeEventHistoryStatus.read(from: &buf), 
+                result: FfiConverterOptionTypeEventMutationResult.read(from: &buf), 
+                undoOf: FfiConverterOptionString.read(from: &buf), 
+                undoneBy: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EventHistoryRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterInt64.write(value.createdAt, into: &buf)
+        FfiConverterTypeEventEditProposal.write(value.proposal, into: &buf)
+        FfiConverterTypeEventHistoryStatus.write(value.status, into: &buf)
+        FfiConverterOptionTypeEventMutationResult.write(value.result, into: &buf)
+        FfiConverterOptionString.write(value.undoOf, into: &buf)
+        FfiConverterOptionString.write(value.undoneBy, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventHistoryRecord_lift(_ buf: RustBuffer) throws -> EventHistoryRecord {
+    return try FfiConverterTypeEventHistoryRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventHistoryRecord_lower(_ value: EventHistoryRecord) -> RustBuffer {
+    return FfiConverterTypeEventHistoryRecord.lower(value)
+}
+
+
 public struct EventMutationRequest: Equatable, Hashable {
     public var proposal: EventEditProposal
     public var recoveryOnly: Bool
@@ -4405,6 +4827,56 @@ public func FfiConverterTypeEventPreviewRequest_lift(_ buf: RustBuffer) throws -
 #endif
 public func FfiConverterTypeEventPreviewRequest_lower(_ value: EventPreviewRequest) -> RustBuffer {
     return FfiConverterTypeEventPreviewRequest.lower(value)
+}
+
+
+public struct EventReconciliationResult: Equatable, Hashable {
+    public var maintenanceWarnings: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(maintenanceWarnings: [String]) {
+        self.maintenanceWarnings = maintenanceWarnings
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EventReconciliationResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEventReconciliationResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EventReconciliationResult {
+        return
+            try EventReconciliationResult(
+                maintenanceWarnings: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EventReconciliationResult, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.maintenanceWarnings, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventReconciliationResult_lift(_ buf: RustBuffer) throws -> EventReconciliationResult {
+    return try FfiConverterTypeEventReconciliationResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventReconciliationResult_lower(_ value: EventReconciliationResult) -> RustBuffer {
+    return FfiConverterTypeEventReconciliationResult.lower(value)
 }
 
 
@@ -6012,6 +6484,60 @@ public func FfiConverterTypeRegion_lower(_ value: Region) -> RustBuffer {
 }
 
 
+public struct ResolveEventUncertaintyRequest: Equatable, Hashable {
+    public var id: String
+    public var confirmation: EventConfirmation
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, confirmation: EventConfirmation) {
+        self.id = id
+        self.confirmation = confirmation
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ResolveEventUncertaintyRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeResolveEventUncertaintyRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResolveEventUncertaintyRequest {
+        return
+            try ResolveEventUncertaintyRequest(
+                id: FfiConverterString.read(from: &buf), 
+                confirmation: FfiConverterTypeEventConfirmation.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ResolveEventUncertaintyRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterTypeEventConfirmation.write(value.confirmation, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResolveEventUncertaintyRequest_lift(_ buf: RustBuffer) throws -> ResolveEventUncertaintyRequest {
+    return try FfiConverterTypeResolveEventUncertaintyRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResolveEventUncertaintyRequest_lower(_ value: ResolveEventUncertaintyRequest) -> RustBuffer {
+    return FfiConverterTypeResolveEventUncertaintyRequest.lower(value)
+}
+
+
 public struct ReviewSnapshot: Equatable, Hashable {
     public var revision: String
     public var document: Document
@@ -7110,6 +7636,86 @@ public func FfiConverterTypeAssistantRequest_lower(_ value: AssistantRequest) ->
 
 
 
+public enum CalendarAccessStatus: Equatable, Hashable {
+    
+    case fullAccess
+    case denied
+    case restricted
+    case notDetermined
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CalendarAccessStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarAccessStatus: FfiConverterRustBuffer {
+    typealias SwiftType = CalendarAccessStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarAccessStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .fullAccess
+        
+        case 2: return .denied
+        
+        case 3: return .restricted
+        
+        case 4: return .notDetermined
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CalendarAccessStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .fullAccess:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .denied:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .restricted:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .notDetermined:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarAccessStatus_lift(_ buf: RustBuffer) throws -> CalendarAccessStatus {
+    return try FfiConverterTypeCalendarAccessStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarAccessStatus_lower(_ value: CalendarAccessStatus) -> RustBuffer {
+    return FfiConverterTypeCalendarAccessStatus.lower(value)
+}
+
+
+
+
 public enum EventConfirmation: Equatable, Hashable {
     
     case button
@@ -7164,6 +7770,100 @@ public func FfiConverterTypeEventConfirmation_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeEventConfirmation_lower(_ value: EventConfirmation) -> RustBuffer {
     return FfiConverterTypeEventConfirmation.lower(value)
+}
+
+
+
+
+public enum EventHistoryStatus: Equatable, Hashable {
+    
+    case pending
+    case saved
+    case failed
+    case uncertain
+    case conflict
+    case acknowledged
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension EventHistoryStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEventHistoryStatus: FfiConverterRustBuffer {
+    typealias SwiftType = EventHistoryStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EventHistoryStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .pending
+        
+        case 2: return .saved
+        
+        case 3: return .failed
+        
+        case 4: return .uncertain
+        
+        case 5: return .conflict
+        
+        case 6: return .acknowledged
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: EventHistoryStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .pending:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .saved:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .failed:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .uncertain:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .conflict:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .acknowledged:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventHistoryStatus_lift(_ buf: RustBuffer) throws -> EventHistoryStatus {
+    return try FfiConverterTypeEventHistoryStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventHistoryStatus_lower(_ value: EventHistoryStatus) -> RustBuffer {
+    return FfiConverterTypeEventHistoryStatus.lower(value)
 }
 
 
@@ -8026,6 +8726,8 @@ public protocol AppleHost: AnyObject, Sendable {
     
     func calendarEventCall(command: String, arguments: String) throws  -> String
     
+    func calendarStatus() throws  -> CalendarPlatformStatus
+    
     func queryCalendar(request: CalendarReadQuery) throws  -> CalendarReadResult
     
     func resolveCalendarEvent(reference: CalendarReadReference) throws  -> CalendarReadEvent?
@@ -8091,6 +8793,29 @@ fileprivate struct UniffiCallbackInterfaceAppleHost {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeAppError_lower
+            )
+        },
+        calendarStatus: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> CalendarPlatformStatus in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceAppleHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.calendarStatus(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeCalendarPlatformStatus_lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -8672,6 +9397,54 @@ fileprivate struct FfiConverterOptionTypeCalendarResult: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeEventHistoryRecord: FfiConverterRustBuffer {
+    typealias SwiftType = EventHistoryRecord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEventHistoryRecord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEventHistoryRecord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEventMutationResult: FfiConverterRustBuffer {
+    typealias SwiftType = EventMutationResult?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEventMutationResult.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEventMutationResult.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeEventValues: FfiConverterRustBuffer {
     typealias SwiftType = EventValues?
 
@@ -9091,6 +9864,31 @@ fileprivate struct FfiConverterSequenceTypeCalendarResult: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeCalendarStatusItem: FfiConverterRustBuffer {
+    typealias SwiftType = [CalendarStatusItem]
+
+    public static func write(_ value: [CalendarStatusItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCalendarStatusItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CalendarStatusItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CalendarStatusItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCalendarStatusItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeCompletionDefault: FfiConverterRustBuffer {
     typealias SwiftType = [CompletionDefault]
 
@@ -9158,6 +9956,31 @@ fileprivate struct FfiConverterSequenceTypeEventCalendarDestination: FfiConverte
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeEventCalendarDestination.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEventHistoryRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [EventHistoryRecord]
+
+    public static func write(_ value: [EventHistoryRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEventHistoryRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EventHistoryRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EventHistoryRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEventHistoryRecord.read(from: &buf))
         }
         return seq
     }
@@ -9881,6 +10704,24 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path() != 29378) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_calendar_status() != 32073) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_event_history() != 36130) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_event_history_detail() != 17623) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_calendar_bookkeeping() != 57826) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_event_mutations() != 17463) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_resolve_event_uncertainty() != 11040) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_confirm_event_proposal() != 35994) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9923,34 +10764,37 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_applehost_calendar_event_call() != 26829) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_query_calendar() != 32314) {
+    if (uniffi_reha_ffi_checksum_method_applehost_calendar_status() != 35474) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_resolve_calendar_event() != 38362) {
+    if (uniffi_reha_ffi_checksum_method_applehost_query_calendar() != 61234) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_event_calendars() != 5172) {
+    if (uniffi_reha_ffi_checksum_method_applehost_resolve_calendar_event() != 62964) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_mutate_event() != 55978) {
+    if (uniffi_reha_ffi_checksum_method_applehost_event_calendars() != 2604) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_snapshot() != 54579) {
+    if (uniffi_reha_ffi_checksum_method_applehost_mutate_event() != 1363) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_apply() != 60963) {
+    if (uniffi_reha_ffi_checksum_method_applehost_snapshot() != 15211) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_decode_photo() != 19535) {
+    if (uniffi_reha_ffi_checksum_method_applehost_apply() != 15743) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 18410) {
+    if (uniffi_reha_ffi_checksum_method_applehost_decode_photo() != 9036) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 34042) {
+    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 49796) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 54211) {
+    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 22829) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 32097) {
         return InitializationResult.apiChecksumMismatch
     }
 

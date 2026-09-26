@@ -252,7 +252,7 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod0)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD1
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD1
-typedef void (*UniffiCallbackInterfaceAppleHostMethod1)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod1)(uint64_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -266,14 +266,14 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod2)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD3
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD3
-typedef void (*UniffiCallbackInterfaceAppleHostMethod3)(uint64_t, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod3)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
-typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -287,35 +287,42 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod5)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
-typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
-typedef void (*UniffiCallbackInterfaceAppleHostMethod7)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod7)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
-typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
-typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
-typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
+typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -326,16 +333,17 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceFree _Nonnull uniffiFree;
     UniffiCallbackInterfaceClone _Nonnull uniffiClone;
     UniffiCallbackInterfaceAppleHostMethod0 _Nonnull calendarEventCall;
-    UniffiCallbackInterfaceAppleHostMethod1 _Nonnull queryCalendar;
-    UniffiCallbackInterfaceAppleHostMethod2 _Nonnull resolveCalendarEvent;
-    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull eventCalendars;
-    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull mutateEvent;
-    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull snapshot;
-    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull apply;
-    UniffiCallbackInterfaceAppleHostMethod7 _Nonnull decodePhoto;
-    UniffiCallbackInterfaceAppleHostMethod8 _Nonnull syncAgenda;
-    UniffiCallbackInterfaceAppleHostMethod9 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod1 _Nonnull calendarStatus;
+    UniffiCallbackInterfaceAppleHostMethod2 _Nonnull queryCalendar;
+    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull resolveCalendarEvent;
+    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull eventCalendars;
+    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull mutateEvent;
+    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull snapshot;
+    UniffiCallbackInterfaceAppleHostMethod7 _Nonnull apply;
+    UniffiCallbackInterfaceAppleHostMethod8 _Nonnull decodePhoto;
+    UniffiCallbackInterfaceAppleHostMethod9 _Nonnull syncAgenda;
+    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -572,6 +580,36 @@ uint64_t uniffi_reha_ffi_fn_method_nativeapplication_stage_photo(uint64_t ptr, R
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 uint64_t uniffi_reha_ffi_fn_method_nativeapplication_trace_artifact_path(uint64_t ptr, RustBuffer id, RustBuffer artifact
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CALENDAR_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CALENDAR_STATUS
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_calendar_status(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_HISTORY
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_HISTORY
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_event_history(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_HISTORY_DETAIL
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_HISTORY_DETAIL
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_event_history_detail(uint64_t ptr, RustBuffer id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RECONCILE_CALENDAR_BOOKKEEPING
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RECONCILE_CALENDAR_BOOKKEEPING
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_reconcile_calendar_bookkeeping(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RECONCILE_EVENT_MUTATIONS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RECONCILE_EVENT_MUTATIONS
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_reconcile_event_mutations(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_resolve_event_uncertainty(uint64_t ptr, RustBuffer request
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
@@ -1271,6 +1309,42 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path(v
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CALENDAR_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CALENDAR_STATUS
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_calendar_status(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_HISTORY
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_HISTORY
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_event_history(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_HISTORY_DETAIL
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_HISTORY_DETAIL
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_event_history_detail(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECONCILE_CALENDAR_BOOKKEEPING
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECONCILE_CALENDAR_BOOKKEEPING
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_calendar_bookkeeping(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECONCILE_EVENT_MUTATIONS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECONCILE_EVENT_MUTATIONS
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_event_mutations(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_resolve_event_uncertainty(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_confirm_event_proposal(void
@@ -1352,6 +1426,12 @@ uint16_t uniffi_reha_ffi_checksum_constructor_nativespeech_new(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_EVENT_CALL
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_EVENT_CALL
 uint16_t uniffi_reha_ffi_checksum_method_applehost_calendar_event_call(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_STATUS
+uint16_t uniffi_reha_ffi_checksum_method_applehost_calendar_status(void
     
 );
 #endif

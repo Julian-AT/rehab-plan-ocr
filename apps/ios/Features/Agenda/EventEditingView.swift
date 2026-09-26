@@ -219,6 +219,7 @@ struct EventEditorView: View {
 struct EventHistoryView: View {
   @State private var reconciling = false
   @State private var reconciled = false
+  @State private var acknowledging: String?
   @State private var maintenanceWarnings: [String] = []
   let core: NativeApplication
   let initialID: String?
@@ -255,8 +256,8 @@ struct EventHistoryView: View {
         Task {
           defer { reconciling = false }
           do {
-            let response: EventResponse = try await core.eventRequest("reconcileEventMutations")
-            maintenanceWarnings = response.maintenance_warnings ?? []
+            let response = try await core.reconcileEventMutations()
+            maintenanceWarnings = response.maintenanceWarnings
             await load()
             reconciled = model.error == nil
           } catch { model.error = userMessage(error) }
@@ -276,32 +277,37 @@ struct EventHistoryView: View {
           Text(item.proposal.after?.title ?? item.proposal.before?.values.title ?? "Termin").font(
             .headline)
           Text(item.proposal.calendar_title)
-          Text(eventDate(Date(timeIntervalSince1970: item.created_at)))
+          Text(eventDate(Date(timeIntervalSince1970: item.createdAt)))
           Text(
-            item.status == "saved"
-              ? "\(item.proposal.kind == "remove" ? "Gelöscht" : "Gespeichert")\(item.undone_by == nil ? "" : " · Rückgängig angefordert")"
-              : item.status == "failed"
+            item.status == .saved
+              ? "\(item.proposal.kind == "remove" ? "Gelöscht" : "Gespeichert")\(item.undoneBy == nil ? "" : " · Rückgängig angefordert")"
+              : item.status == .failed
                 ? "Nicht ausgeführt"
-                : item.status == "acknowledged"
+                : item.status == .acknowledged
                   ? "Nach manueller Kalenderprüfung abgeschlossen"
                   : "Nicht sicher gespeichert – bitte abgleichen")
-          if ["pending", "uncertain"].contains(item.status) {
+          if [.pending, .uncertain].contains(item.status) {
             DisclosureGroup("Manuell im Kalender prüfen") {
               Text(
                 "Bitte den Termin im Systemkalender prüfen und dort bei Bedarf bereinigen. Hier wird anschließend nur der Verlauf abgeschlossen. Kein erneuter Schreibversuch und kein App-Rückgängig."
               )
               Button("Im Kalender geprüft – Verlauf abschließen") {
+                guard acknowledging == nil else { return }
+                acknowledging = item.id
+                model.error = nil
                 Task {
+                  defer { acknowledging = nil }
                   do {
-                    let _: EventResponse = try await core.eventRequest(
-                      "resolveEventUncertainty", ["id": item.id, "confirmation": "button"])
+                    let response = try await core.resolveEventUncertainty(
+                      request: ResolveEventUncertaintyRequest(id: item.id, confirmation: .button))
+                    model.result = response.message
                     await load()
                   } catch { model.error = userMessage(error) }
                 }
-              }
+              }.disabled(acknowledging != nil || model.busy || reconciling)
             }
           }
-          if item.status == "saved" && item.undone_by == nil {
+          if item.status == .saved && item.undoneBy == nil {
             AppFormAction(title: "Rückgängig") { Task { await model.undo(item.id) } }.disabled(
               model.busy)
           }
@@ -312,15 +318,14 @@ struct EventHistoryView: View {
       .onDisappear { model.interrupt() }
   }
   private func load() async {
-    struct Response: Decodable { let history: [EventHistoryItem] }
     do {
       if let initialID {
-        history = [
-          try await core.eventRequest(
-            "activityDetail", ["id": "event:\(initialID)"], as: EventHistoryItem.self)
-        ]
+        guard let record = try await core.eventHistoryDetail(id: initialID) else {
+          throw AppError.Validation(message: "Verlaufseintrag fehlt.")
+        }
+        history = [try EventHistoryItem(record)]
       } else {
-        history = try await core.eventRequest("eventHistory", as: Response.self).history
+        history = try await core.eventHistory().map(EventHistoryItem.init)
       }
     } catch { model.error = userMessage(error) }
   }

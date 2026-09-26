@@ -68,6 +68,27 @@
   und den bereits gespeicherten Prüfabschluss `acknowledged`. Dauerhafter
   Schreibstatus und nachgelagerte Erinnerungs-/Widgetwarnungen bleiben getrennt.
 
+## Kalenderstatus und Verlaufsverwaltung
+
+Status, lokaler Bookkeeping-Abgleich, Wiederanlauf unklarer Terminänderungen,
+manueller Prüfabschluss sowie Terminverlauf und dessen Details verwenden eigene
+UniFFI-Aufträge und Ergebnisse. Kalenderzugriff, beobachtete Kalender und letzte
+Lesezeit kommen über `AppleHost.calendar_status` als native Werte; gespeicherte
+Auswahl und offene Journale ergänzt der Core. Die UI dekodiert diese Antworten
+nicht mehr aus JSON. Die bisherigen Befehle delegieren an dieselbe Core-Logik.
+
+Ein manueller Abschluss verlangt weiterhin den sichtbaren Bestätigungsbutton.
+Er markiert nur das Journal als `acknowledged`, verändert weder den gespeicherten
+Vorschlag noch den Kalender und erlaubt danach kein App-Undo. Wiederanlauf liest
+nur noch offene Vorschläge als Replay-Aufträge; abgeschlossene historische
+Vorschläge müssen dafür nicht dem aktuellen Replay-Decoder entsprechen.
+
+232 Core-/FFI-Tests, Clippy ohne Warnungen, offizieller Bindingsvergleich,
+Swift–Rust–Swift-Roundtrip und vollständige VoiceModel-Probe sind bestanden.
+Belege: `.local/runs/calendar-administration-20260926-s18/`. Die Integration der
+neuen Verwaltungsansichten und des App-Adapters wird im gemeinsamen Appbuild
+geprüft; dies ist noch keine bestandene UI-Abnahme.
+
 ## Kalenderberechtigung und Mitteilungszustand
 
 `NativeBridge.requestCalendarAccess` fordert ausschließlich die Berechtigung an.
@@ -173,9 +194,9 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
 `Platform.call`, `AppleHost.calendar_event_call`,
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
 transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
-gehören Kalenderstatus, Reparatur, Verlaufsabfrage, manuelle Klärung ungewisser
-Schreibvorgänge, der Aufruf des Wiederanlaufs und Agenda-Abgleich. Der darunter
-liegende einzelne Wiederanlauf-Schreibauftrag ist bereits typisiert.
+gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
+Importdetails sowie Agenda-Abgleich. Status, Terminverlauf, Wiederanlauf und
+manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
 Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
 Auch unterhalb der bereits typisierten Import-FFI verwendet `NativeBridge` für
 Snapshot, Importoperation, Überschneidungen und Agenda-Abgleich noch den

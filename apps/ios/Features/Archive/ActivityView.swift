@@ -149,35 +149,7 @@ private struct ActivityCaptureDetail: View {
 struct CalendarStatusView: View {
   let core: NativeApplication
   let changed: () -> Void
-  private struct Status: Decodable {
-    struct Calendar: Decodable, Identifiable {
-      let id: String
-      let title: String
-      let writable: Bool
-    }
-    let access: String
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let last_read_at: String?
-    let calendars: [Calendar]
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let calendar_id: String?
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let display_calendar_ids: [String]?
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let pending_imports: Int
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let pending_events: Int
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let pending_bookkeeping: Int?
-    // swift-format-ignore: AlwaysUseLowerCamelCase
-    let unavailable_calendar_ids: [String]?
-    var unavailableCount: Int {
-      let selected = Set(
-        (display_calendar_ids ?? []) + [calendar_id].compactMap { $0 }.filter { !$0.isEmpty })
-      return selected.subtracting(calendars.map(\.id)).union(unavailable_calendar_ids ?? []).count
-    }
-  }
-  @State private var status: Status?
+  @State private var status: CalendarAdministrationStatus?
   @State private var busy = false
   @State private var error: String?
   var body: some View {
@@ -186,15 +158,16 @@ struct CalendarStatusView: View {
         Section("Zugriff und Auswahl") {
           LabeledContent(
             "Kalenderzugriff",
-            value: status.access == "fullAccess"
-              ? "Vollzugriff" : status.access == "denied" ? "Verweigert" : "Nicht verfügbar"
+            value: status.platform.access == .fullAccess
+              ? "Vollzugriff" : status.platform.access == .denied ? "Verweigert" : "Nicht verfügbar"
           )
           .accessibilityElement(children: .ignore)
           .accessibilityIdentifier("calendar-access")
           .accessibilityLabel("Kalenderzugriff")
           .accessibilityValue(
-            status.access == "fullAccess"
-              ? "Vollzugriff" : status.access == "denied" ? "Verweigert" : "Nicht verfügbar")
+            status.platform.access == .fullAccess
+              ? "Vollzugriff" : status.platform.access == .denied ? "Verweigert" : "Nicht verfügbar"
+          )
           NavigationLink("Kalenderauswahl bearbeiten") { CalendarPreferencesView(core: core) }
           if status.unavailableCount > 0 {
             LabeledContent(
@@ -212,8 +185,9 @@ struct CalendarStatusView: View {
         Section {
           LabeledContent(
             "Letzter erfolgreicher Lesevorgang",
-            value: status.last_read_at.flatMap { ISO8601DateFormatter().date(from: $0) }?.formatted(
-              date: .abbreviated, time: .standard) ?? "Noch nicht beobachtet")
+            value: status.platform.lastReadAt.flatMap { ISO8601DateFormatter().date(from: $0) }?
+              .formatted(
+                date: .abbreviated, time: .standard) ?? "Noch nicht beobachtet")
         } header: {
           AppSectionHeader(
             title: "Gelesener Kalenderstand",
@@ -222,16 +196,16 @@ struct CalendarStatusView: View {
           )
         }
         Section("Ungeklärte Schreibvorgänge") {
-          LabeledContent("Importe", value: String(status.pending_imports))
-          LabeledContent("Terminänderungen", value: String(status.pending_events))
-          if status.pending_imports > 0 {
+          LabeledContent("Importe", value: String(status.pendingImports))
+          LabeledContent("Terminänderungen", value: String(status.pendingEvents))
+          if status.pendingImports > 0 {
             NavigationLink("Importvorgänge prüfen") { RecoveryView(core: core, changed: changed) }
           }
-          if status.pending_events > 0 {
+          if status.pendingEvents > 0 {
             NavigationLink("Terminänderungen prüfen") { EventHistoryView(core: core) }
           }
         }
-        if (status.pending_bookkeeping ?? 0) > 0 {
+        if status.pendingBookkeeping > 0 {
           Section("Lokaler Planstand") {
             Text(
               "Bestätigte Kalenderänderungen bleiben erhalten. Der lokale Planstand braucht noch einen Abgleich."
@@ -257,7 +231,7 @@ struct CalendarStatusView: View {
     busy = true
     defer { busy = false }
     do {
-      status = try await core.eventRequest("calendarStatus")
+      status = try await core.calendarStatus()
       error = nil
     } catch { self.error = userMessage(error) }
   }
@@ -266,8 +240,8 @@ struct CalendarStatusView: View {
     busy = true
     defer { busy = false }
     do {
-      let _: [String: Int] = try await core.eventRequest("reconcileCalendarBookkeeping")
-      status = try await core.eventRequest("calendarStatus")
+      _ = try await core.reconcileCalendarBookkeeping()
+      status = try await core.calendarStatus()
       error = nil
       changed()
     } catch { self.error = userMessage(error) }

@@ -5,6 +5,8 @@ mod records;
 pub use records::*;
 mod agenda_queries;
 pub use agenda_queries::*;
+mod calendar_administration;
+pub use calendar_administration::*;
 mod calendar_mutations;
 pub use calendar_mutations::*;
 mod calendar_reads;

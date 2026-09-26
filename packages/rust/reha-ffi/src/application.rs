@@ -1,7 +1,7 @@
 use crate::{
-    recognition_jobs::RecognitionJobs, records::*, runtime, AppError, CalendarReadEvent,
-    CalendarReadQuery, CalendarReadReference, CalendarReadResult, EventCalendarDestination,
-    EventMutationRequest, EventMutationResult, RecognitionJob,
+    recognition_jobs::RecognitionJobs, records::*, runtime, AppError, CalendarPlatformStatus,
+    CalendarReadEvent, CalendarReadQuery, CalendarReadReference, CalendarReadResult,
+    EventCalendarDestination, EventMutationRequest, EventMutationResult, RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -300,6 +300,7 @@ pub struct JobProgress {
 #[uniffi::export(callback_interface)]
 pub trait AppleHost: Send + Sync {
     fn calendar_event_call(&self, command: String, arguments: String) -> Result<String>;
+    fn calendar_status(&self) -> Result<CalendarPlatformStatus>;
     fn query_calendar(&self, request: CalendarReadQuery) -> Result<CalendarReadResult>;
     fn resolve_calendar_event(
         &self,
@@ -324,6 +325,15 @@ pub(crate) struct HostBridge {
     jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
+    fn calendar_status(
+        &self,
+    ) -> service::Response<service::calendar_administration::PlatformStatus> {
+        self.host
+            .calendar_status()
+            .map(Into::into)
+            .map_err(platform_failure)
+    }
+
     fn query_calendar(
         &self,
         request: service::calendar_reads::Query,
@@ -382,16 +392,14 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "calendarStatus"
-                | "editSystemEvent"
-                | "resolveOwnedEvent"
-                | "inspectCalendarLinks"
-                | "recognize" => serde_json::from_str(
-                    &self
-                        .host
-                        .calendar_event_call(command.into(), args.to_string())?,
-                )
-                .map_err(storage),
+                "editSystemEvent" | "resolveOwnedEvent" | "inspectCalendarLinks" | "recognize" => {
+                    serde_json::from_str(
+                        &self
+                            .host
+                            .calendar_event_call(command.into(), args.to_string())?,
+                    )
+                    .map_err(storage)
+                }
                 "snapshot" => {
                     let live = self.host.snapshot(convert(args["records"].clone())?)?;
                     Ok(json!({"current":live.current, "protected_ids":live.protected_ids}))
@@ -1378,6 +1386,18 @@ mod host_routing_tests {
         response: Option<Value>,
     }
     impl AppleHost for Host {
+        fn calendar_status(&self) -> Result<CalendarPlatformStatus> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(CalendarPlatformStatus {
+                access: crate::CalendarAccessStatus::FullAccess,
+                last_read_at: None,
+                calendars: vec![],
+                unavailable_calendar_ids: vec![],
+            })
+        }
+
         fn query_calendar(&self, _: CalendarReadQuery) -> Result<CalendarReadResult> {
             if let Some(error) = &self.failure {
                 return Err(failure(error.clone()));
@@ -1463,6 +1483,7 @@ mod host_routing_tests {
             "getEvent",
             "eventCalendars",
             "mutateEvent",
+            "calendarStatus",
         ] {
             assert!(bridge.call(command, json!({})).is_err());
         }
@@ -1513,6 +1534,7 @@ mod host_routing_tests {
                 expected
             );
             assert_eq!(bridge.event_calendars().unwrap_err(), expected);
+            assert_eq!(bridge.calendar_status().unwrap_err(), expected);
             assert_eq!(platform_failure(failure(actual.clone())), expected);
             // Journal/maintenance projections keep their original string schema.
             assert_eq!(

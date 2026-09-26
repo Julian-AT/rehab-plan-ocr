@@ -50,6 +50,10 @@ pub struct Proposal {
 /// shared service commands and test hosts retain JSON payloads at this boundary.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
+    fn calendar_status(&self) -> Response<calendar_administration::PlatformStatus> {
+        serde_json::from_value(self.call("calendarStatus", serde_json::json!({}))?)
+            .map_err(calendar_administration::storage)
+    }
     /// Compatibility defaults serve older JSON hosts. Native adapters override
     /// both methods and never serialize a whole read payload across the FFI.
     fn query_calendar(
@@ -144,6 +148,7 @@ impl Application {
 pub mod agenda;
 pub mod agenda_queries;
 pub mod calendar;
+pub mod calendar_administration;
 pub mod calendar_mutations;
 pub mod calendar_reads;
 mod calendar_repair;

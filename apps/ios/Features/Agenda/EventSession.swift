@@ -2,20 +2,6 @@ import Foundation
 import Observation
 import RehaCore
 
-/// The remaining reconciliation endpoint returns only maintenance information here.
-struct EventResponse: Decodable {
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  var maintenance_warnings: [String]?
-}
-struct EventHistoryItem: Decodable, Identifiable {
-  let id: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let created_at: Double
-  let proposal: EventProposalView
-  let status: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let undone_by: String?
-}
 @MainActor func jsonObject<T: Encodable>(_ value: T) throws -> Any {
   try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
 }

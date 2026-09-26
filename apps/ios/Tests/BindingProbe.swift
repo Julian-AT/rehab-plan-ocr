@@ -3,7 +3,17 @@ import os
 
 final class TestHost: AppleHost, Sendable {
   let failure = OSAllocatedUnfairLock<AppError?>(initialState: nil)
+  let mutationOutcome = OSAllocatedUnfairLock<EventMutationStatus>(initialState: .failed)
+  let mutationCalls = OSAllocatedUnfairLock<Int>(initialState: 0)
   let queries = OSAllocatedUnfairLock<[CalendarReadQuery]>(initialState: [])
+  func calendarStatus() throws -> CalendarPlatformStatus {
+    precondition(!Thread.isMainThread)
+    if let error = failure.withLock({ $0 }) { throw error }
+    return CalendarPlatformStatus(
+      access: .fullAccess, lastReadAt: "2026-09-18T08:00:00Z",
+      calendars: [CalendarStatusItem(id: "selected", title: "Therapie", writable: true)],
+      unavailableCalendarIds: ["missing-calendar"])
+  }
   func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult {
     precondition(!Thread.isMainThread)
     queries.withLock { $0.append(request) }
@@ -41,13 +51,15 @@ final class TestHost: AppleHost, Sendable {
   func mutateEvent(request: EventMutationRequest) throws -> EventMutationResult {
     if let error = failure.withLock({ $0 }) { throw error }
     precondition(!Thread.isMainThread)
+    mutationCalls.withLock { $0 += 1 }
     return EventMutationResult(
-      status: .failed, event: nil, operationId: request.proposal.token,
+      status: mutationOutcome.withLock { $0 }, event: nil, operationId: request.proposal.token,
       message: "Synthetic host does not write", maintenanceWarnings: [])
   }
   func calendarEventCall(command: String, arguments: String) throws -> String {
     precondition(
-      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent"].contains(command),
+      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus"].contains(
+        command),
       "Typed effect used JSON callback")
     if let error = failure.withLock({ $0 }) { throw error }
     return "{}"
@@ -94,6 +106,10 @@ final class TestHost: AppleHost, Sendable {
       } catch {
         precondition(error as? AppError == expected, "Native failure identity changed: \(error)")
       }
+      do {
+        _ = try await core.calendarStatus()
+        preconditionFailure("Typed status failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }
     var preferences = try await core.preferences()
@@ -144,6 +160,18 @@ final class TestHost: AppleHost, Sendable {
     precondition(typedQuery.unavailableCalendarIds == ["selected"])
     precondition(typedQuery.unavailableEvents.first?.id == "missing")
     precondition(host.queries.withLock { $0.last?.selectionRevision } == scope.revision)
+    let status = try await core.calendarStatus()
+    let legacyStatusText = try await core.calendarRequest(
+      command: "calendarStatus", arguments: "{}")
+    let legacyStatus =
+      try JSONSerialization.jsonObject(with: Data(legacyStatusText.utf8)) as! [String: Any]
+    precondition(status.platform.access == .fullAccess)
+    precondition(status.platform.lastReadAt == legacyStatus["last_read_at"] as? String)
+    precondition(status.platform.unavailableCalendarIds == ["missing-calendar"])
+    precondition(status.displayCalendarIds == preferences.displayCalendarIds)
+    precondition(status.pendingEvents == (legacyStatus["pending_events"] as! NSNumber).uint32Value)
+    let bookkeeping = try await core.reconcileCalendarBookkeeping()
+    precondition(bookkeeping.pendingBookkeeping == 0)
     let queryCount = host.queries.withLock { $0.count }
     var staleRequest = typedRequest
     staleRequest.expectedScope?.revision += 2
@@ -202,6 +230,62 @@ final class TestHost: AppleHost, Sendable {
       try core.invalidateEventSession(session: editSession)
       let replay = try await core.confirmEventProposal(request: confirmation)
       precondition(replay == mutation)
+      let detail = try await core.eventHistoryDetail(id: proposal.token)
+      precondition(detail?.status == .failed && detail?.proposal.token == proposal.token)
+      precondition(detail?.result?.status == .failed && detail?.undoneBy == nil)
+      let legacyDetailText = try await core.calendarRequest(
+        command: "activityDetail", arguments: #"{"id":"event:\#(proposal.token)"}"#)
+      let legacyDetail =
+        try JSONSerialization.jsonObject(with: Data(legacyDetailText.utf8)) as! [String: Any]
+      precondition(legacyDetail["id"] as? String == detail?.id)
+      let missingDetail = try await core.eventHistoryDetail(id: "missing-event")
+      precondition(missingDetail == nil)
+      let recovery = try await core.reconcileEventMutations()
+      precondition(recovery.maintenanceWarnings.isEmpty)
+      let uncertainSession = try core.registerEventSession()
+      host.mutationOutcome.withLock { $0 = .uncertain }
+      let uncertainPreview = try await core.previewEventMutation(
+        request: EventPreviewRequest(
+          session: uncertainSession, revision: 8, kind: .create, calendarId: "selected", event: nil,
+          patch: EventEditPatch(
+            title: "Uncertain", startUtc: "2031-05-15T10:00:00Z",
+            endUtc: "2031-05-15T11:00:00Z", timezone: "Europe/Vienna", location: "Room",
+            reminder: .disabled),
+          origin: "manual"))
+      guard case .proposal(let pending) = uncertainPreview else {
+        preconditionFailure("Expected uncertain proposal")
+      }
+      let uncertain = try await core.confirmEventProposal(
+        request: EventConfirmRequest(
+          token: pending.token, session: uncertainSession, revision: 8, confirmation: .button))
+      precondition(uncertain.status == .uncertain)
+      let writesBeforeAck = host.mutationCalls.withLock { $0 }
+      do {
+        _ = try await core.calendarRequest(
+          command: "resolveEventUncertainty",
+          arguments: #"{"id":"\#(pending.token)","confirmation":"spoken"}"#)
+        preconditionFailure("Spoken manual acknowledgement was accepted")
+      } catch { guard let app = error as? AppError, case .Validation = app else { throw error } }
+      let acknowledged = try await core.resolveEventUncertainty(
+        request: ResolveEventUncertaintyRequest(
+          id: pending.token, confirmation: .button))
+      precondition(acknowledged.status == .acknowledged && acknowledged.event == nil)
+      let acknowledgedDetail = try await core.eventHistoryDetail(id: pending.token)
+      precondition(acknowledgedDetail?.status == .acknowledged)
+      precondition(acknowledgedDetail?.result?.status == .acknowledged)
+      let fullHistory = try await core.eventHistory()
+      precondition(fullHistory.contains { $0.id == pending.token && $0.status == .acknowledged })
+      _ = try await core.reconcileEventMutations()
+      precondition(host.mutationCalls.withLock { $0 } == writesBeforeAck)
+      do {
+        _ = try await core.resolveEventUncertainty(
+          request: ResolveEventUncertaintyRequest(
+            id: pending.token, confirmation: .button))
+        preconditionFailure("Already acknowledged operation was acknowledged twice")
+      } catch { guard let app = error as? AppError, case .Validation = app else { throw error } }
+      host.mutationOutcome.withLock { $0 = .failed }
+      try core.invalidateEventSession(session: uncertainSession)
+
     }
     let history = try await core.history()
     precondition(history.scans.count == 1)
