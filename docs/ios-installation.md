@@ -1,62 +1,36 @@
 > Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
 
-# iPhone installation and calendar setup
+# Native iPhone update procedure
 
-Current native release: **Laßnitzhöhe 0.3.0, build 2026092616**, installed in place on the iPhone 17 on 13 September 2026. See [clinic green, the uniform calendar and the verified update with retained data](logo-calendar-device-update.md). The instructions below describe the earlier Tauri release; do not use its older binary for a binary-only rollback after schema migration.
+The product is the SwiftUI iOS 26+ app under `apps/ios`. The old Tauri build and
+installation commands are obsolete. Current setup/build commands are in the
+[repository guide](../README.md) and [native build guide](../apps/ios/README.md).
 
-The development app is **Termine 0.2.0**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
+The last documented physical installation is build **2026092624**; see the
+[retained-data update record](zitrus-device-update.md). The device was unavailable
+for a fresh installed-build check during the current implementation. Development
+simulator builds do not update the phone.
 
-## Install the private build
+1. Finish relevant tests and prepare current simulator screenshots and listening
+   samples. Record build/source/model identities and remaining limitations.
+2. Obtain the user's explicit approval of those previews and samples, as required
+   by [AGENTS.md](../AGENTS.md). A historical approval covers its historical update.
+3. Take a fresh local backup of the app container and App Group. Keep the existing
+   signed package. Record database integrity/schema, serialized table hashes,
+   original-source hashes, preferences, event ownership and pending journals.
+4. Build/package the native app with the existing identifiers and signing team.
+   Verify signatures, entitlements, provisioning expiry, model/dependency inventory
+   and packaging checks against the actual candidate. Do not reuse old expiry claims.
+5. Update the existing installation without uninstalling. Compare persistent data
+   before and after first launch, accounting explicitly for the tested migration.
+6. Run the approved physical acceptance scenarios, including permissions, airplane
+   mode, backgrounding, interruptions and recovery. Record results and failures.
 
-The current package is `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0-20260926-s11.ipa`.
-It includes the clinic logo, HEIC import, updated source review and recognition
-improvements. Installation requires a device included in its signing profile. The
-paired iPhone 17 is included. The current profile expires **September 26, 2026,
-10:57 UTC**; build and sign a fresh package when it expires.
+Preserve `at.rehakalender.personal`, its extension identifiers,
+`group.at.rehakalender.personal`, and
+`Library/Application Support/at.rehakalender.personal`. Restore an older binary
+only with its matching verified data backup; it cannot read a newer schema safely.
 
-1. Connect the iPhone to the Mac, unlock it and accept **Trust This Computer** if prompted.
-2. Open Xcode's **Window → Devices and Simulators** and select the phone.
-3. On the phone, enable **Settings → Privacy & Security → Developer Mode**, restart and confirm. The option appears after pairing with Xcode. [Apple Developer Mode instructions](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device)
-4. In Xcode's device view, click **+** under **Installed Apps**, select the IPA and wait for installation. [Apple installation instructions](https://help.apple.com/xcode/mac/current/en.lproj/devade83d1d7.html)
-5. If iOS blocks the first launch, open **Settings → General → VPN & Device Management**, select the developer entry for the app and trust its certificate. This approval must be completed on the phone. [Apple's Personal Team instructions](https://developer.apple.com/documentation/appclip/fruta-building-a-feature-rich-app-with-swiftui)
-6. Open **Termine** on the phone.
-
-The September 26, 2026 update was installed on the connected iPhone 17 / iOS 26.6.
-The post-install database check retained all seven scan records and 32 calendar
-import records unchanged. [Current package and device verification](iphone-update-20260926-s11.md).
-Earlier installation evidence remains in [the initial delivery](simple-app-delivery.md).
-
-Use the same bundle identifier and signing team when updating. The application's retained scans and import ledger are preserved by an ordinary app update.
-
-## Save to the separate calendar
-
-1. Use **Foto aufnehmen** or **Importieren**.
-2. Open appointments to check their values against the photograph. Missing values remain pending; suggestions require acceptance.
-3. Choose **In Kalender übernehmen → Kalender verbinden** and allow calendar access. The separate **Reha Calendar** destination is reused.
-4. Check the selected appointments and destination, then choose **Auswahl geprüft – weiter**.
-5. Choose **Im Kalender speichern**. Incomplete appointments stay available for later completion. **Auswahl als ICS exportieren** is available without calendar permission.
-
-New imports select the dedicated calendar. Revisions of an existing app import keep its recorded destination. The app retains stable import IDs and marks its EventKit events for reconciliation and duplicate prevention. Calendar setup reuses its saved identifier even if the calendar is renamed.
-
-If the provider rejects calendar creation, create **Reha Calendar** in Apple Calendar and retry, or explicitly choose another writable calendar. If a previously configured calendar becomes unavailable, restore its account or choose a destination; the app does not silently create duplicates. Full access is required for direct EventKit imports and revisions. ICS export remains available without calendar permission.
-
-## Show or hide the appointments
-
-In Apple's **Calendar** app, tap **Calendars**, select or deselect **Reha Calendar**, then tap **Done**. This toggles visibility for that calendar's events. [Apple calendar visibility instructions](https://support.apple.com/en-gb/102180)
-
-An ICS file does not force a destination calendar. When importing one manually, choose **Reha Calendar** in the receiving calendar app. Previously imported ICS events are not automatically moved by this update.
-
-## Development build
-
-From the repository, with the existing generated iOS project and signing team:
-
-```sh
-source "$HOME/.cargo/env"
-APPLE_DEVELOPMENT_TEAM=<team-id> IPHONEOS_DEPLOYMENT_TARGET=17.0 \
-  npm run tauri -- ios build --target aarch64 --ci --export-method debugging \
-  --features ios-onnx -- --no-default-features
-```
-
-The build exports an IPA under `src-tauri/gen/apple/build/`. Copy the verified package to the private builds folder. Do not publish signing profiles, device identifiers, source images or clinical run outputs.
-
-The app now separates multiple date sections and rereads unresolved source crops, but recognition still requires review. See [implementation and verification details](simple-app-delivery.md). Simulator verification and a signed build do not establish physical-device OCR acceptance.
+The current [implementation ledger](implementation-plan.md) defines the complete
+release gates. No current device update, TestFlight upload or public submission
+has been performed by the implementation work recorded there.

@@ -5,19 +5,20 @@
 The 20 distinct original photos have been visually transcribed into **188 row
 occurrences**. Alternate captures and revised plans remain separate references.
 These are **unapproved drafts**, including proposed text polygons and error causes;
-no verified clinical accuracy, trained checkpoint or independent final test exists.
+no qualified clinical model or independent final test exists. Both model pipelines
+have produced synthetic smoke artifacts; see the [current status](status.md).
 Personal data and every content-bearing artifact remain in ignored private storage.
 
 ## Review and approval
 
-Open **Einstellungen → Entwickleransicht öffnen → Dataset → Annotations &
-evaluation → Foto gegen Referenz prüfen** in the native desktop app. The inventory
-and references load without running OCR. Each original has a full-image overlay,
-field enlargement with neighboring rows, editable field values and printed states.
+Use the [local reference CLI](reference-cli.md). The former desktop lab is removed.
+`lab list`, `lab get` and `lab image` expose the stored draft and original without
+running OCR. Inspect the original and field crops locally before confirming labels.
+The existing 20 originals remain development data and have zero approved references.
 
 1. Check logical page, capture series and every treatment day for all originals.
    Alternative captures, revised plans and overlapping days belong together.
-2. Click **Bestätigte Seitengruppen einfrieren** after confirming those relationships
+2. Run `reha lab freeze-groups ROOT` after confirming those relationships
    on every photo. Transitive overlap forms reproducible groups in four development
    folds. This resets overall approvals while preserving field-review progress.
 3. Compare every row with the original, including meals, continuations and notes.
@@ -27,12 +28,13 @@ field enlargement with neighboring rows, editable field values and printed state
 4. Classify fields as legible, not printed, illegible, cropped or contradictory.
    Preserve original spelling and partial printed text. Never copy a missing name
    from a similar plan. Confirm each row, complete coverage and resolve questions.
-5. Save progress at any time. **Referenz ausdrücklich für Training und Bewertung
-   freigeben** is the separate final action for that photo. Later changes revoke it.
+5. Save progress with `lab save`; confirm checked rows with `lab confirm-row` and
+   complete coverage with `lab confirm-coverage`. `lab approve` is a separate,
+   explicit human-review action. Later changes revoke the overall approval.
 
-`data/private/labels/provisional/<source-hash>.json` remains the per-original path
+`.local/datasets/private/labels/provisional/<source-hash>.json` remains the per-original path
 for drafts and approved references. The filename alone never grants approval.
-`data/private/visual-review.json` records the initial visual pass; old OCR seeds are
+`.local/datasets/private/visual-review.json` records the initial visual pass; old OCR seeds are
 archived under `labels/ocr-seed-v1`. Calendar values and old OCR are comparison
 material, never the source of the transcription.
 
@@ -60,12 +62,12 @@ without changing files. No command can turn an OCR seed into verified truth.
 
 ## Variants and exports
 
-After source relationships are confirmed, the desktop action or the CLI can freeze
+After source relationships are confirmed, the CLI can freeze
 and describe variants:
 
 ```sh
-uv run ml/data/annotation/reference-data.py --root data/private freeze
-uv run ml/data/annotation/reference-data.py --root data/private recipes
+.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private freeze
+.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private recipes
 ```
 
 There are exactly 24 recipes per original: unchanged, three quarter turns, four
@@ -78,9 +80,9 @@ outside the confirmed table boundary are masked before any variant is generated.
 Approved references are required for export and raster materialization:
 
 ```sh
-uv run ml/data/annotation/reference-data.py --root data/private export artifacts/private/fold-0 --fold 0
-uv run ml/data/annotation/reference-data.py --root data/private materialize RECIPE_ID
-uv run ml/data/annotation/reference-data.py --root data/private materialize-line RECIPE_ID LINE_ID
+.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private export .local/datasets/exports/fold-0 --fold 0
+.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private materialize RECIPE_ID
+.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private materialize-line RECIPE_ID LINE_ID
 ```
 
 Exports contain separate `detection.jsonl`, `recognition.jsonl`,
@@ -92,9 +94,9 @@ cropped/occluded labels and mirrored writing. Table labels remove full values wh
 the variant destroys their evidence. Mirrored images support orientation tests
 only. Maximum label lengths are exported, never silently truncated.
 
-`uv run ml/data/synthesis/synthetic-plans.py NEW_OUTPUT_DIRECTORY` generates 200 reproducible
+`.tools/bin/uv run --locked python ml/data/synthesis/synthetic-plans.py NEW_OUTPUT_DIRECTORY` generates 200 reproducible
 invented tables, images and exact text polygons. A generated set is available in
-`data/private/synthetic-200`. Names, rooms and treatments are sampled independently;
+`.local/datasets/private/synthetic-200`. Names, rooms and treatments are sampled independently;
 examples include similar room numbers, long names/degrees, two therapists, blank
 cells, overlapping times and identical events. Font/generator/image/label hashes
 and seeds are recorded. Synthetics are training/robustness examples, not additional
@@ -107,8 +109,8 @@ and medium models with the same dataset and configuration choices:
 
 ```sh
 cargo build --release -p reha-cli --features onnx-download
-python3 ml/evaluation/recognition/benchmark.py --models models/private/small --config data/private/config-small.json
-python3 ml/evaluation/recognition/benchmark.py --models models/private/medium --config data/private/config-medium.json
+python3 ml/evaluation/recognition/benchmark.py --models .local/models/runtime/small --config .local/datasets/private/config-small.json
+python3 ml/evaluation/recognition/benchmark.py --models .local/models/runtime/medium --config .local/datasets/private/config-medium.json
 ```
 
 The runner evaluates original photos separately, aggregates raw counts by group
@@ -119,16 +121,18 @@ character errors, row/column swaps, missing/invented rows, date/time accuracy,
 correct whole photos, review burden and automatically correct appointments.
 Correction time is not claimed to have been measured.
 
-Fine-tuning is deliberately **not started before joint reference approval**. First
-inspect errors on correct text crops. If repeated recognition errors remain, use
-official PP-OCRv6 small training weights and its dictionary, preserve full labels,
-and compare frozen-backbone and full low-learning-rate recognition runs. The shared
-budget is eight hours, at most 20 epochs per run and early stop after three
-non-improving evaluations. Run PaddlePaddle on CPU on this Mac. Record the exact
-configuration, elapsed time, data hashes and every checkpoint. Detection training
-requires evidence that remaining failures originate in detection. Training
-execution/configuration and ONNX parity measurement belong to this post-approval
-stage; no untested training runner is presented as validated here.
+Real-photo training and accuracy comparisons require approved references and
+frozen source groups. Synthetic compatibility runs do not grant those approvals.
+The matching PP-OCRv6 Small checkpoint has already completed loading, a short
+training run, export and 24/24 Paddle/ONNX comparisons; the artifact remains
+experimental. See the [recorded smoke experiment](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
+
+The production trainer must compare frozen-backbone adaptation against lower-rate
+full fine-tuning, retain the exact dictionary and derive sequence lengths from
+verified labels. Runs must retain optimizer/checkpoint state, complete lineage and
+validation-based stopping. The former eight-hour cap is removed. Detection training
+remains conditional on measured detection errors. Full resumable training,
+critical-field/correction evaluation and device export parity remain open.
 
 An adapted model may replace the unchanged pipeline only after group-wide gains,
 no additional critical date/time or missing/invented appointment errors, and
@@ -143,8 +147,9 @@ Implementation references: [PaddleOCR DB postprocessing](https://github.com/Padd
 
 `verify/` retains the supplied originals, including one byte-identical duplicate.
 Upright PNGs, hashes and conversion records are in
-`data/private/converted/verify-2026-09-26-s10/`; `data/private/raw/` is the review input.
-Research data are separate from the app's capture archive, which now retains sources until deletion by default.
+`.local/datasets/private/converted/verify-2026-09-26-s10/`; `.local/datasets/private/raw/` is the review input.
+Research data are separate from the app's capture archive, which gives new users 30-day retention for completed sources, while preserving
+existing preferences and unfinished reviews.
 `convert-images.py` preserves pixel resolution and source hashes while stripping
 EXIF/XMP from derived PNGs. `check-images.py` creates diagnostic reports and a local
 image/data HTML view; on macOS its OCR subprocesses have network access denied.
@@ -158,9 +163,9 @@ existing 20 are development data only; none of their references is currently
 approved. New captures, overlapping days and revisions must remain grouped. No
 threshold tuning, activity rules, dual-reader acceptance, model replacement or
 fine-tuning is enabled for this release without the approved evaluation set.
-The training notes above are historical research directions, outside this release.
+Synthetic training/export smoke runs are separate from these real-photo gates.
 
-`uv run ml/data/annotation/reference-data.py --root data/private readiness` reports counts
+`.tools/bin/uv run --locked python ml/data/annotation/reference-data.py --root .local/datasets/private readiness` reports counts
 without publishing patient data or granting approval. References may explicitly
 label `input_class` as `rehabilitation_plan`, `non_plan` or `unusable`; the optional
 field preserves old reference hashes when absent. Non-plan references must have
@@ -173,7 +178,7 @@ approval, just like editing any other label.
 (with the normal model, config and binary arguments) preserves the portable binary,
 configuration, model manifest and extraction-source hashes before accuracy work.
 These raw runs and times do not constitute accuracy measurements. The frozen
-20-photo run is under `artifacts/private/lassnitzhoehe-portable-baseline`.
+20-photo run is under `.local/runs/legacy/private/lassnitzhoehe-portable-baseline`.
 Use `--evaluator` to score a frozen extraction binary with an evaluator supporting
 new annotation fields; both binary hashes are recorded. Approved benchmarks report
 raw precision/recall counts, plan-only whole-plan denominators, negative cases and
