@@ -57,6 +57,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     @State private var scanner: ScanModel
     @State private var voice: VoiceModel
     @State private var openError: String?
+    @State private var linkedEvent: CalendarEvent?
     init(core: NativeApplication) {
         self.core = core
         _preferences = State(initialValue: PreferencesStore(core: core))
@@ -75,6 +76,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
             }
         }
         .environment(preferences)
+        .sheet(item: $linkedEvent) { event in EventEditorView(core: core, original: event, changed: refresh) }
         .onChange(of: tab) { old, _ in if old == .voice { voice.cancelSession(reason: "tab") }; refreshID += 1 }
         .modifier(CapturePresentation(scanner: scanner))
         .preferredColorScheme(preferences.value?.appearance == "dark" ? .dark : preferences.value?.appearance == "light" ? .light : nil)
@@ -148,24 +150,23 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
         } catch { openError = userMessage(error) }
     }
     private func openEvent(_ url: URL) async {
-        if url.scheme == "reha-calendar", url.host == "today" { tab = .appointments; return }
-        guard url.scheme == "reha-calendar", url.host == "event",
-              let id = url.pathComponents.last, UUID(uuidString: id) != nil else { return }
+        guard let link = AgendaLink(url) else { return }
+        if link == .today { tab = .appointments; return }
+        guard case .event(let id) = link else { return }
         do {
-            let history = try await core.history()
-            for scan in history.scans where scan.retained {
-                let review = try await core.loadScan(id: scan.id)
-                if review.appointments.contains(where: { ($0.calendarEventId ?? $0.id) == id }) {
-                    tab = .archive; plansPath = [scan.id]
-                    _ = try await NativeBridge.request("pendingEventOpen", ["acknowledge": id])
-                    return
-                }
-            }
+            struct Resolution: Decodable { let status: String; let event: CalendarEvent? }
+            let resolved = try await core.eventRequest("resolveOwnedEvent", ["id": id], as: Resolution.self)
             tab = .appointments
-            openError = "Der gespeicherte Termin ist unter Termine sichtbar. Das zugehörige Foto wurde bereits bereinigt."
+            switch resolved.status {
+            case "found": linkedEvent = resolved.event
+            case "deleted": openError = "Dieser Termin wurde aus dem Kalender gelöscht."
+            case "unavailable": openError = "Der Kalender ist derzeit nicht zugänglich. Zugriffsrechte und Kalenderauswahl unter Kalenderstatus prüfen."
+            default: openError = "Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."
+            }
             _ = try await NativeBridge.request("pendingEventOpen", ["acknowledge": id])
         } catch { openError = userMessage(error) }
     }
+
 }
 
 private struct MoreView: View {

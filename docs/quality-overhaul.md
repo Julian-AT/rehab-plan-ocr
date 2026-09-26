@@ -68,3 +68,15 @@ Prüfung: 128 Rust-Tests erfolgreich. Fünf weitere native Tests für Rücknahme
 Fremdmetadaten, Fünf-Sekunden-Test, verzögerte/fehlerhafte Mitteilungsantworten,
 Schlummerkapazität und Ausschalten während der Planung bestanden. App-Build erfolgreich.
 Die neue iOS-Rust-Nachprüfung ist noch nicht im XCFramework gebaut oder zur Laufzeit geprüft.
+
+## Referenzwerkzeuge und Mitteilungsnavigation
+
+Die Referenzverwaltung steht jetzt in der Rust-CLI bereit (`docs/reference-cli.md`).
+Tests decken gespeicherte Zeilenbestätigung, explizite Freigabe, Widerruf nach Änderungen
+an Werten oder Textbelegen, beschädigte Referenzen, Quellhashprüfung, Prozesslock,
+Pfadgrenzen und Versuchsarchive ab. Sie übernehmen wesentliche bisherige Web-Testfälle.
+Sieben bestehende Python-Referenztests bestanden ebenfalls.
+
+Native Terminlinks werden streng validiert und laden aktuelle EventKit-Werte.
+Gelöscht, nicht zugänglich und fehlende lokale Zuordnung sind unterschiedliche Ergebnisse.
+Die native Rücknahme-/Linkprüfung und der Simulator-App-Build bestanden.

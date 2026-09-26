@@ -24,6 +24,18 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
   func perform(_ command: String, _ request: ServiceRequest) {
     queue.async {
       do {
+        if command == "resolveOwnedEvent" {
+          let args = try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
+          let record = try JSONDecoder().decode(OwnedRecord.self, from: JSONSerialization.data(withJSONObject: args["record"] ?? [:]))
+          switch self.agenda.lookup(record) {
+          case .found(let event):
+            var current = self.snapshot(event); current["import_id"] = record.id
+            request.resolve(["status": "found", "event": current])
+          case .deleted: request.resolve(["status": "deleted"])
+          case .unavailable: request.resolve(["status": "unavailable"])
+          }
+          return
+        }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw self.fail("Kalenderzugriff fehlt.") }
         let args = try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
         switch command {

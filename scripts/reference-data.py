@@ -9,6 +9,7 @@ versioned; derived pixels live in a size-bounded cache. No network or training.
 """
 
 import argparse
+import sqlite3
 import hashlib
 import json
 import math
@@ -771,6 +772,13 @@ def main():
     line.add_argument("line_id")
     line.add_argument("--cache-mb", type=int, default=256)
     a = p.parse_args()
+    # All retained CLI writers share the Rust reference library's process lock.
+    with sqlite3.connect(a.root / ".reference-lock.sqlite3", timeout=5) as lock:
+        lock.execute("BEGIN IMMEDIATE")
+        execute(a)
+
+
+def execute(a):
     if a.command == "readiness":
         print(json.dumps(readiness(a.root), indent=2))
     elif a.command == "freeze":

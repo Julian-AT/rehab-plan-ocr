@@ -477,6 +477,24 @@ pub async fn dispatch(
         "ownedEventRecords" => Ok(
             json!({"records":state.store.lock().map_err(failure)?.owned_records().map_err(failure)?}),
         ),
+        "resolveOwnedEvent" => {
+            let id = required(&args, "id")?;
+            uuid::Uuid::parse_str(id).map_err(failure)?;
+            let _guard = state.calendar_lock.lock().await;
+            let record = state
+                .store
+                .lock()
+                .map_err(failure)?
+                .owned_record(id)
+                .map_err(failure)?;
+            match record {
+                Some(record) if record.status == "saved" => {
+                    native(&platform, "resolveOwnedEvent", json!({"record":record})).await
+                }
+                Some(_) => Ok(json!({"status":"deleted"})),
+                None => Ok(json!({"status":"missing"})),
+            }
+        }
         "calendarStatus" => {
             let mut status = native(&platform, "calendarStatus", json!({})).await?;
             let store = state.store.lock().map_err(failure)?;

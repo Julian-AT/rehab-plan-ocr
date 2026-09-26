@@ -110,8 +110,13 @@ final class EventEditingTests: XCTestCase {
         XCTAssertTrue((store.event(withIdentifier: record.external_id!)?.alarms ?? []).isEmpty)
         let readBack = try await call("getEvent", ["event": after])
         XCTAssertTrue(NSDictionary(dictionary: try XCTUnwrap(readBack["event"] as? [String: Any])).isEqual(to: after))
+        let recordJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(record))
+        let resolved = try await call("resolveOwnedEvent", ["record": recordJSON])
+        XCTAssertEqual(resolved["status"] as? String, "found")
         let removal = try await call("mutateEvent", ["proposal": ["token": UUID().uuidString, "kind": "remove", "owned_id": id, "calendar_id": calendar.calendarIdentifier, "before": after, "patch": [:], "undo_of": token]])
         XCTAssertEqual(removal["status"] as? String, "saved")
+        let deleted = try await call("resolveOwnedEvent", ["record": recordJSON])
+        XCTAssertEqual(deleted["status"] as? String, "deleted")
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             agenda.queue.async { continuation.resume(with: Result { try agenda.forget() }) }
         }

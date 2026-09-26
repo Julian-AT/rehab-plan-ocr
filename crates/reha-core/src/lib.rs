@@ -43,3 +43,6 @@ pub mod speech;
 #[cfg(any(feature = "kokoro", test))]
 #[path = "speech/text.rs"]
 pub mod speech_text;
+
+#[cfg(not(target_os = "ios"))]
+pub mod lab;

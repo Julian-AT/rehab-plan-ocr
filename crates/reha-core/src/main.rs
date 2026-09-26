@@ -10,6 +10,11 @@ fn main() {
 fn execute() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
+        #[cfg(not(target_os = "ios"))]
+        Some("lab") => {
+            let value = reha_core::lab::command(&args[2..]).map_err(Error::Invalid)?;
+            println!("{}", serde_json::to_string_pretty(&value)?);
+        }
         #[cfg(feature = "onnx")]
         Some("scan") if (5..=6).contains(&args.len()) => scan(&args)?,
         Some("experiment-crop") if args.len() == 4 => {

@@ -76,3 +76,18 @@ func eventTime(_ date: Date) -> String { date.formatted(.dateTime.hour().minute(
 func eventDate(_ date: Date) -> String { date.formatted(.dateTime.weekday(.wide).day().month(.wide).year().hour().minute().locale(Locale(identifier: "de_AT"))) }
 
 func eventDay(_ date: Date) -> String { date.formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "de_AT"))) }
+
+/// Strict routing for widget and notification URLs; external parameters are ignored by rejection.
+enum AgendaLink: Equatable {
+    case today, event(String)
+    init?(_ url: URL) {
+        guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              parts.scheme == "reha-calendar", parts.user == nil, parts.password == nil,
+              parts.port == nil, parts.query == nil, parts.fragment == nil else { return nil }
+        if parts.host == "today", parts.path.isEmpty { self = .today; return }
+        guard parts.host == "event", url.pathComponents.count == 2,
+              let id = url.pathComponents.last, UUID(uuidString: id) != nil,
+              parts.percentEncodedPath == "/\(id)" else { return nil }
+        self = .event(id)
+    }
+}

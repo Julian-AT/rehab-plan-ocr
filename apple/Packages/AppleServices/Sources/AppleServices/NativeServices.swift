@@ -52,7 +52,7 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
     })
     do {
       switch command {
-      case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent": EventEditingService.shared.perform(command, request)
+      case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent", "resolveOwnedEvent": EventEditingService.shared.perform(command, request)
       case "calendarStatus":
         calendarQueue.async { request.resolve(AgendaService.shared.calendarStatus()) }
       case "calendars": try calendars(request)

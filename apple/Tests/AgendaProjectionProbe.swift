@@ -149,6 +149,12 @@ import Foundation
         precondition(withNotes.therapist == "Anna Beispiel, MSc")
         precondition(withNotes.placeDescription == "Raum 2.14 · Laßnitzhöhe")
         precondition(next.therapist == nil && next.therapistDescription == "Therapeut nicht angegeben")
-        print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday 23/25-hour DST days and clipped 06–18 window passed")
+        let linkID = "5A99D362-901B-4FAD-8A0B-20B7B4EBCABD"
+precondition(AgendaLink(URL(string: "reha-calendar://event/\(linkID)")!) == .event(linkID))
+precondition(AgendaLink(URL(string: "reha-calendar://today")!) == .today)
+for link in ["reha-calendar://event/extra/\(linkID)", "reha-calendar://event/\(linkID)?edit=true", "reha-calendar://event/\(linkID)#extra", "reha-calendar://event/invalid", "reha-calendar://user@event/\(linkID)", "reha-calendar://today?extra=true"] {
+    precondition(AgendaLink(URL(string: link)!) == nil)
+}
+print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday 23/25-hour DST days and clipped 06–18 window passed")
     }
 }
