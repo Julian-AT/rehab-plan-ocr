@@ -8,16 +8,26 @@ use std::sync::{Arc, Mutex};
 struct Host {
     response: Mutex<Value>,
     sync_error: Mutex<bool>,
+    sync_warnings: Mutex<Vec<String>>,
 }
 impl Platform for Host {
     fn progress(&self, _: Value) {}
     fn call(&self, command: &str, _: Value) -> service::Response<Value> {
         match command {
             "inspectCalendarLinks" => Ok(self.response.lock().unwrap().clone()),
-            "agenda" if *self.sync_error.lock().unwrap() => Err("refresh unavailable".into()),
-            "agenda" => Ok(json!({})),
             _ => panic!("Calendar cleanup must not invoke {command}"),
         }
+    }
+    fn synchronize_agenda(
+        &self,
+        _: service::agenda::SyncRequest,
+    ) -> service::Response<service::agenda::SyncResult> {
+        if *self.sync_error.lock().unwrap() {
+            return Err("refresh unavailable".into());
+        }
+        Ok(service::agenda::SyncResult {
+            maintenance_warnings: self.sync_warnings.lock().unwrap().clone(),
+        })
     }
 }
 fn record(id: &str) -> Value {
@@ -65,6 +75,7 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Host>) {
         "results":[{"id":"one","status":"unavailable","reason":"calendar_missing"},{"id":"two","status":"unavailable","reason":"calendar_missing"}]}),
         ),
         sync_error: Mutex::new(false),
+        sync_warnings: Mutex::new(vec![]),
     });
     (root, state, host)
 }
@@ -259,4 +270,35 @@ async fn missing_selected_calendar_is_reported_without_guessing_its_days() {
         inspect(&state, host).await["missing_calendar_ids"],
         json!(["not-readable"])
     );
+}
+
+#[tokio::test]
+async fn successful_cleanup_preserves_all_post_commit_maintenance_warnings() {
+    let (root, state, host) = fixture();
+    let initial = inspect(&state, host.clone()).await;
+    assert!(initial["refresh_warning"].is_null());
+    *host.sync_warnings.lock().unwrap() = vec![
+        "Reminder journal unavailable".into(),
+        "Widget snapshot unavailable".into(),
+    ];
+    let preview = inspect(&state, host.clone()).await;
+    assert_eq!(
+        preview["refresh_warning"],
+        "Reminder journal unavailable\n\nWidget snapshot unavailable"
+    );
+    assert_eq!(read(&state, "one"), record("one"));
+    let result = confirm(&state, host, &preview, "one").await.unwrap();
+    assert_eq!(result["removed_count"], 1);
+    assert_eq!(result["refresh_warning"], preview["refresh_warning"]);
+    let mut expected = record("one");
+    expected["status"] = json!("detached");
+    assert_eq!(read(&state, "one"), expected);
+    assert_eq!(read(&state, "two"), record("two"));
+    drop(state);
+    let store = Store::open(root.path()).unwrap();
+    assert_eq!(
+        serde_json::to_value(store.owned_record("one").unwrap()).unwrap(),
+        expected
+    );
+    assert_eq!(store.records(Some("original-schedule")).unwrap().len(), 2);
 }
