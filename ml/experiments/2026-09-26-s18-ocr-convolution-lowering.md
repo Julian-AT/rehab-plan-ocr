@@ -53,4 +53,33 @@ in the same directory. The two retained source directories are fixed in the tool
 
 ## Result
 
-Pending execution. The prepared protocol is not a passing result.
+The predeclared experiment passes. Both retained output arrays are byte-identical
+to their saved Paddle reference, with no differing FP32 bit patterns:
+
+| Fixture | Shape | Values | Candidate maximum error | Original Conv maximum error |
+| --- | --- | ---: | ---: | ---: |
+| Frozen | 1×24×24×160 | 92,160 | 0 | 0.00000762939453125 |
+| Full | 1×24×24×320 | 184,320 | 0 | 0.00000762939453125 |
+
+All four integer geometry cases are also byte-identical, including signed zero.
+Both original-Conv controls reproduce their saved ONNX arrays byte-for-byte.
+All source and prepared-artifact hashes remain unchanged. The tool runs no Paddle
+model and does not load the stored float64 reference. No inference process remains.
+
+Private evidence is in `.local/runs/ocr-convolution-lowering-20260926-s18-001`:
+
+- Pre-inference protocol SHA-256: `654110b225a78e0576bc1c12b39ec3e423d7c238315ba3d82f4b911fc4300025`.
+- Completed report SHA-256: `461952c1d6f4c01d0c075b82565ae24c93867732a22e38cd13423a2a46b8205b`.
+- Protocol/tool commit before execution: `c41d65e`.
+
+This establishes a successful lowering for these two saved operations only. It
+does not isolate K-blocking from every other kernel/layout difference, establish
+full-model parity, preserve dynamic-width export automatically or measure device
+resources. The candidate graphs have the fixed fixture shapes. The separate
+reparameterization difference and possible later runtime differences remain open.
+The original 18/1,206 frozen, 39/1,206 full and 19/1,206 baseline parity failures
+are unchanged. `qualified` remains false; experiment 2 has not started.
+
+Seven new tests cover retained weight bytes, graph geometry, unsupported inputs,
+integer-oracle boundaries, changed-source rejection and the strict decision rule.
+Four existing operation tests, four documentation checks and Ruff pass.
