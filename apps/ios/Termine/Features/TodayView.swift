@@ -554,7 +554,7 @@ struct CalendarAgendaRow: View {
         } else {
           Text(eventTime(event.values.start)).font(.body.weight(.semibold)).monospacedDigit()
           Text(eventTime(event.values.end)).font(.subheadline).monospacedDigit().foregroundStyle(
-            .secondary)
+            AppPalette.secondaryText)
         }
       }.frame(width: timeWidth, alignment: .leading)
       VStack(alignment: .leading, spacing: AppSpacing.small) {

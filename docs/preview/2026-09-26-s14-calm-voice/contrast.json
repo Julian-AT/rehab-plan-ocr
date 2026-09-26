@@ -1,0 +1,72 @@
+[
+  {
+    "category": "therapy",
+    "mode": "light",
+    "surface": "#E8EFE9",
+    "secondary_text": "#5C5C5C",
+    "contrast": 5.72
+  },
+  {
+    "category": "therapy",
+    "mode": "dark",
+    "surface": "#1E3028",
+    "secondary_text": "#B2B2B2",
+    "contrast": 6.56
+  },
+  {
+    "category": "medical",
+    "mode": "light",
+    "surface": "#E8EEF3",
+    "secondary_text": "#5C5C5C",
+    "contrast": 5.72
+  },
+  {
+    "category": "medical",
+    "mode": "dark",
+    "surface": "#202C37",
+    "secondary_text": "#B2B2B2",
+    "contrast": 6.71
+  },
+  {
+    "category": "meal",
+    "mode": "light",
+    "surface": "#F3EBDD",
+    "secondary_text": "#5C5C5C",
+    "contrast": 5.65
+  },
+  {
+    "category": "meal",
+    "mode": "dark",
+    "surface": "#342C20",
+    "secondary_text": "#B2B2B2",
+    "contrast": 6.49
+  },
+  {
+    "category": "organization",
+    "mode": "light",
+    "surface": "#EEE8F2",
+    "secondary_text": "#5C5C5C",
+    "contrast": 5.56
+  },
+  {
+    "category": "organization",
+    "mode": "dark",
+    "surface": "#2E2635",
+    "secondary_text": "#B2B2B2",
+    "contrast": 6.85
+  },
+  {
+    "category": "other",
+    "mode": "light",
+    "surface": "#EBEDEA",
+    "secondary_text": "#5C5C5C",
+    "contrast": 5.68
+  },
+  {
+    "category": "other",
+    "mode": "dark",
+    "surface": "#272C2B",
+    "secondary_text": "#B2B2B2",
+    "contrast": 6.69
+  }
+]

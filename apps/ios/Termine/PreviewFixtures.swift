@@ -113,6 +113,12 @@ import Foundation
             end: next.addingTimeInterval(Double(7 + index) * 3600 + 1800))
         }
       }
+      if mode == "colors" {
+        let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        try add(
+          "Physiotherapie kurz", start: next.addingTimeInterval(8 * 3600 + 300),
+          end: next.addingTimeInterval(8 * 3600 + 600))
+      }
       if mode == "crowded" {
         for minute in [0, 2, 4] {
           try add(

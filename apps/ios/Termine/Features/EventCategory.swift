@@ -2,6 +2,16 @@ import Foundation
 
 enum EventCategory: String, CaseIterable {
   case therapy, medical, meal, organization, other
+  var palette: (lightAccent: UInt32, darkAccent: UInt32, lightSurface: UInt32, darkSurface: UInt32)
+  {
+    switch self {
+    case .therapy: (0x4D7C68, 0x8EB49E, 0xE8EFE9, 0x1E3028)
+    case .medical: (0x5C7892, 0x95AFCA, 0xE8EEF3, 0x202C37)
+    case .meal: (0x9A7A47, 0xCBB17D, 0xF3EBDD, 0x342C20)
+    case .organization: (0x857095, 0xB8A2C8, 0xEEE8F2, 0x2E2635)
+    case .other: (0x77817D, 0xA3ADA8, 0xEBEDEA, 0x272C2B)
+    }
+  }
   var title: String {
     switch self {
     case .therapy: "Therapie"
@@ -37,22 +47,17 @@ enum EventCategory: String, CaseIterable {
   import SwiftUI
   import UIKit
   extension EventCategory {
-    private var systemColor: UIColor {
-      switch self {
-      case .therapy: .systemGreen
-      case .medical: .systemBlue
-      case .meal: .systemOrange
-      case .organization: .systemPurple
-      case .other: .systemGray
-      }
-    }
-    var color: Color { Color(uiColor: systemColor) }
-    var surface: Color {
-      let base = systemColor
-      return Color(
+    private func adaptive(light: UInt32, dark: UInt32) -> Color {
+      Color(
         uiColor: UIColor { traits in
-          base.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.20 : 0.10)
+          let rgb = traits.userInterfaceStyle == .dark ? dark : light
+          return UIColor(
+            red: CGFloat((rgb >> 16) & 255) / 255,
+            green: CGFloat((rgb >> 8) & 255) / 255,
+            blue: CGFloat(rgb & 255) / 255, alpha: 1)
         })
     }
+    var color: Color { adaptive(light: palette.lightAccent, dark: palette.darkAccent) }
+    var surface: Color { adaptive(light: palette.lightSurface, dark: palette.darkSurface) }
   }
 #endif
