@@ -32,6 +32,34 @@ import XCTest
     show(element)
     element.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
   }
+  private func showEditorField(_ element: XCUIElement, towardEarlier: Bool = false) {
+    // A large swipe can put a field behind the navigation bar while XCTest
+    // still calls it hittable. Keep its tap point inside the visible form.
+    func viewport() -> CGRect {
+      let top = app.navigationBars["Termin bearbeiten"].frame.maxY + 12
+      let keyboard = app.keyboards.firstMatch
+      let bottom = keyboard.exists ? keyboard.frame.minY - 12 : app.frame.maxY - 44
+      return CGRect(x: 16, y: top, width: app.frame.width - 32, height: bottom - top)
+    }
+    for _ in 0..<20 {
+      let visible = viewport()
+      if element.exists, element.isHittable,
+        visible.contains(CGPoint(x: element.frame.midX, y: element.frame.midY))
+      {
+        return
+      }
+      // Lazy form rows outside the viewport may have no accessibility frame.
+      // Returning to an earlier field must still move toward the form's start.
+      let scrollBack = element.exists ? element.frame.midY < visible.minY : towardEarlier
+      let origin = app.coordinate(withNormalizedOffset: .zero).withOffset(
+        CGVector(dx: visible.midX, dy: visible.midY))
+      origin.press(
+        forDuration: 0.05,
+        thenDragTo: origin.withOffset(CGVector(dx: 0, dy: scrollBack ? 100 : -100)))
+    }
+    XCTAssertTrue(element.isHittable)
+    XCTAssertTrue(viewport().contains(CGPoint(x: element.frame.midX, y: element.frame.midY)))
+  }
   private var photoPickerCancel: XCUIElement {
     // PUPickerUnavailableView briefly exposes another "Abbrechen" with an
     // infinite frame. Wait for the loaded Photos navigation bar's real control.
@@ -204,18 +232,18 @@ import XCTest
     title.tap()
     title.typeText("Entwurf bei größter Schrift")
     let room = app.textFields["Raum"]
-    show(room)
+    showEditorField(room)
     room.tap()
     room.typeText("Langer Flur 2")
-    show(app.switches["In diesen Plan aufnehmen"].firstMatch)
+    showEditorField(app.switches["In diesen Plan aufnehmen"].firstMatch)
     capture("large-type-review-lower-fields")
     app.buttons["Abbrechen"].tap()
     XCTAssertTrue(app.buttons["Weiter bearbeiten"].waitForExistence(timeout: 5))
     app.buttons["Weiter bearbeiten"].tap()
-    for _ in 0..<10 where !title.isHittable { app.swipeDown() }
+    showEditorField(title, towardEarlier: true)
     XCTAssertTrue(title.isHittable)
     XCTAssertEqual(title.value as? String, "Entwurf bei größter Schrift")
-    show(room)
+    showEditorField(room)
     XCTAssertEqual(room.value as? String, "Langer Flur 2")
     app.buttons["Abbrechen"].tap()
     XCTAssertTrue(app.buttons["Änderungen verwerfen"].waitForExistence(timeout: 5))
