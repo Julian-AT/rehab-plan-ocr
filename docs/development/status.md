@@ -91,7 +91,9 @@ Ten local voices have 100 anonymous host listening previews and zero human score
 A separate host SpeechTranscriber setup and [100-file ASR experiment](../../ml/experiments/2026-09-26-s18-file-speech-recognition.md)
 finish successfully, exposing name/title/abbreviation discrepancies. Number
 formatting differences are not factual error scores. No voice or speech provider
-is selected from synthetic file recognition. Human listening, actual speakers,
+is selected from synthetic file recognition. A separately installed de-DE module
+also completes the same files with 100/100 identical final transcripts to de-AT;
+this comparison adds no independent speakers or prompt families. Human listening, actual speakers,
 natural endpoints and the complete iPhone route remain required.
 
 ## Remaining acceptance

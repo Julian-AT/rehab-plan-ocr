@@ -111,6 +111,13 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ### German host file-ASR evaluation — 2026-09-26
 
+Both de-AT and de-DE configurations now finish the same 100 retained audio files,
+with 100 byte-identical transcripts. Paired audio/result hashes and final segments
+are verified. The first de-DE attempt stops before transcription because its
+assets are absent; that failure and the subsequent explicit setup remain intact.
+Both Make commands expose `SPEECH_LOCALE`, defaulting to de-AT. The comparison
+selects no provider and adds no human listeners, speakers or prompt families.
+
 Explicit setup installs the host's German SpeechTranscriber assets; the separate
 transcription command requires them without requesting downloads or microphone
 access. All 100 retained synthetic listening files finish with checked audio,

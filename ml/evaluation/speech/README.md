@@ -13,7 +13,9 @@ make transcribe-listening LISTENING=.local/runs/listening-20260926-s17-003 \
 
 Setup may download the system model on the Mac. Transcription never downloads
 assets, requests microphone/speech permission or changes the iPhone. The CLI also
-accepts `--locale de-DE`; its default is de-AT. Inventory records the legacy speech
+accepts `--locale de-DE`; its default is de-AT. Both Make commands accept
+`SPEECH_LOCALE=de-DE`. Each locale needs its own installed-asset check; successful
+de-AT setup does not establish de-DE readiness. Inventory records the legacy speech
 recognizer's authorization and local-model availability without requesting access.
 Missing assets fail before processing the corpus.
 

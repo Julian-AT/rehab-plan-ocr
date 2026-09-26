@@ -50,6 +50,7 @@ test-agenda:
 	sh tooling/checks/test-agenda.sh
 
 .PHONY: prepare-listening refresh-listening transcribe-listening setup-speech-evaluation
+SPEECH_LOCALE ?= de-AT
 prepare-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
 	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples --features voice
@@ -61,11 +62,11 @@ refresh-listening:
 
 transcribe-listening:
 	@test -n "$(RUN)" -a -n "$(LISTENING)" || { echo 'Set RUN and LISTENING to local evaluation directories'; exit 2; }
-	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --listening "$(LISTENING)"
+	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --listening "$(LISTENING)" --locale "$(SPEECH_LOCALE)"
 
 setup-speech-evaluation:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new local setup directory'; exit 2; }
-	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --setup
+	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --setup --locale "$(SPEECH_LOCALE)"
 
 restore:
 	/usr/bin/env uv sync --locked

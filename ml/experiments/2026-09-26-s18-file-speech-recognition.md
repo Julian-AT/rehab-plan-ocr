@@ -30,6 +30,26 @@ Only one full text matches after ignoring case/punctuation, largely because the
 prepared references spell numbers while ASR often writes digits. That orthographic
 comparison is not a factual accuracy or voice-quality score.
 
+The de-DE configuration also completes the same 100 files after its separate
+explicit asset setup. All 100 final transcripts are byte-identical to de-AT.
+The original audio checksums, per-file result checksums and validated final
+segments agree with both retained reports. This adds no human speakers or prompt
+families and establishes no preference between the locales. The API does not
+reveal whether the two locale configurations share underlying model weights.
+
+The first de-DE attempt correctly fails before any transcription because only
+de-AT assets are installed. That failure remains in
+`speech-file-transcription-deDE-20260926-s18-001`; its report SHA-256 is
+`f507e34f567965644d1b2ff1f2f0c948f88356006318b2cb6b3d8b57894d34ad`.
+Explicit setup is retained in `speech-file-setup-deDE-20260926-s18-001`, report SHA-256
+`064ca2f805fd254c9179cb21f15987bfb97d53531ea0600600f178b6541caf00`.
+The successful `speech-file-transcription-deDE-20260926-s18-002` report has SHA-256
+`ff9249ded38ee8f2b03755adad55bfdb1bccb4824f21a43c106ab20a2e9a30c2`.
+The paired observation receipt `speech-file-locale-comparison-20260926-s18-001.json`
+has SHA-256 `096e70fc80ec57501e10526d15de3797affd5929a2dfc9d9216c99e25c1374a8`.
+All paths are below `.local/runs`. No timing comparison is made while unrelated
+OCR training is active on the host.
+
 The report and per-case inputs/results/logs are in
 `.local/runs/speech-file-transcription-20260926-s18-001`. Report SHA-256:
 `e5720b6cb778d49bac426b45b40cfa06f43c8c800456556e37b657c364b9aac8`.
