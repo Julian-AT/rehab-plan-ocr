@@ -54,3 +54,7 @@ großer Schrift hängen von der Scrollposition ab; dunkle Systemflächen zeigen 
 Rasterunterschiede. Die vollständige visuelle Freigabe bleibt offen. Der
 [Prüfbericht](../../../ml/experiments/2026-09-26-s18-visual-baseline.md) trennt diese
 Aufnahmeschwankungen von den bereits pixelgleichen Ansichten.
+
+Der [Aufnahmevertrag](capture-contract.md) dokumentiert die einzelnen neun
+historischen Abweichungen und legt überprüfbare Scrollpositionen für den nächsten
+Kandidatenlauf fest. Die Originalbilder und Vergleichsschwellen bleiben erhalten.
