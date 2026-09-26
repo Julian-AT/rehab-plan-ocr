@@ -286,6 +286,14 @@ struct EventEditorView: View {
               DatePicker("Beginn", selection: $start)
               DatePicker("Ende", selection: $end)
               TextField("Ort", text: $place)
+              if let therapist = original?.therapist {
+                LabeledContent("Therapeut:in", value: therapist)
+              }
+              if let details = original?.placeDescription,
+                details != original?.values.displayLocation
+              {
+                LabeledContent("Raum und Einrichtung", value: details)
+              }
               Picker("Erinnerung", selection: $reminder) {
                 Text("Aus").tag(nil as Int?)
                 ForEach(

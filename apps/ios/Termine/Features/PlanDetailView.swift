@@ -274,10 +274,20 @@ struct ReviewView: View {
                 Text(op.after?.title ?? op.before?.title ?? "Termin")
                 Text(op.reason).font(.subheadline).foregroundStyle(.secondary)
                 if let before = op.before {
-                  Text("Kalender: \(before.startUtc) · \(before.location)").font(.subheadline)
+                  Text(
+                    "Kalender: "
+                      + [before.startUtc, before.location].filter {
+                        !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      }.joined(separator: " · ")
+                  ).font(.subheadline)
                 }
                 if let after = op.after {
-                  Text("Plan: \(after.startUtc) · \(after.location)").font(.subheadline)
+                  Text(
+                    "Plan: "
+                      + [after.startUtc, after.location].filter {
+                        !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      }.joined(separator: " · ")
+                  ).font(.subheadline)
                 }
                 Button("Kalenderstand behalten") {
                   Task { await model.resolve(op, choice: "keep") }

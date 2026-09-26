@@ -121,12 +121,10 @@ struct TodayView: View {
   let core: NativeApplication
   let scanner: ScanModel
   let refreshID: Int
-  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
+  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   @State private var model = TodayModel()
   @State private var visibleWeek = AgendaWeek(containing: .now).start
-  @State private var measuredHeights: [String: Double] = [:]
-  @State private var scrollMinute: Double?
   @State private var scrollReset = 0
   @State private var selectedDate = Calendar.current.startOfDay(for: .now)
   @State private var observedToday = Calendar.current.startOfDay(for: .now)
@@ -180,7 +178,6 @@ struct TodayView: View {
           selectedDate = Calendar.current.startOfDay(for: .now)
           visibleWeek = week.start
           showPast = false
-          scrollMinute = nil
           scrollReset += 1
           reload()
         }
@@ -281,9 +278,9 @@ struct TodayView: View {
     let dates = (-1...1).map { Calendar.current.date(byAdding: .day, value: $0, to: selectedDate)! }
     let agendas = dates.map { DayAgenda(events: model.events(on: $0) ?? [], date: $0, now: now) }
     let windows = agendas.map { AgendaWindow(agenda: $0, now: now) }
-    let density = AgendaDensity(rawValue: density) ?? .overview
+    let density = AgendaDensity(rawValue: density) ?? .standard
     let projection = ReadableAgendaLayout(
-      windows.flatMap(\.timed), pointsPerHour: density.pointsPerHour, heights: measuredHeights)
+      [], pointsPerHour: density.pointsPerHour)
     let selected = agendas[1]
     let visible =
       !usesList(selected) && !windows[1].timed.isEmpty && !(selected.isComplete && !showPast)
@@ -312,15 +309,12 @@ struct TodayView: View {
               return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
             }
             return AnyView(
-              TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) {
-                id, height in
-                if abs((measuredHeights[id] ?? 0) - height) > 1 { measuredHeights[id] = height }
-              })
+              TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }))
           }
         }, gutter: AnyView(TimelineGutter(start: windows[1].start, layout: projection)),
         showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil,
         initialMinute: windows[1].scrollMinute, reset: scrollReset,
-        minute: $scrollMinute, selectDate: { selectedDate = $0 })
+        selectDate: { selectedDate = $0 })
       if !usesList(selected) && !windows[1].outside.isEmpty {
         DisclosureGroup("Außerhalb von 06:00–18:00") {
           ScrollView {
@@ -395,7 +389,8 @@ private struct WeekSelector: View {
         Button {
           move(-7)
         } label: {
-          Image(systemName: "chevron.left").frame(width: 44, height: 44).contentShape(.rect)
+          Image(systemName: "chevron.left").foregroundStyle(AppPalette.tint)
+            .frame(width: 44, height: 44).contentShape(.rect)
         }
         .accessibilityLabel("Vorherige Woche").accessibilityIdentifier("previous-week")
         Spacer()
@@ -404,7 +399,8 @@ private struct WeekSelector: View {
         Button {
           move(7)
         } label: {
-          Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(.rect)
+          Image(systemName: "chevron.right").foregroundStyle(AppPalette.tint)
+            .frame(width: 44, height: 44).contentShape(.rect)
         }
         .accessibilityLabel("Nächste Woche").accessibilityIdentifier("next-week")
       }
@@ -425,7 +421,7 @@ private struct WeekSelector: View {
                     .foregroundStyle(.secondary)
                   Text(date.formatted(.dateTime.day())).font(.body)
                     .frame(width: 40, height: 40)
-                    .foregroundStyle(selected ? .white : .primary)
+                    .foregroundStyle(selected ? .black : .primary)
                     .background(selected ? AppPalette.tint : .clear, in: .circle)
                 }.frame(maxWidth: .infinity).padding(.vertical, 4).contentShape(.rect)
               }.buttonStyle(.plain)
@@ -451,7 +447,6 @@ private struct TimelineCanvas: View {
   let layout: ReadableAgendaLayout
   let now: Date
   let select: (CalendarEvent) -> Void
-  let measured: (String, Double) -> Void
   var body: some View {
     GeometryReader { geometry in
       let width = max(0, geometry.size.width - 8)
@@ -465,7 +460,7 @@ private struct TimelineCanvas: View {
           TimelineAppointment(
             event: item.placement.segment.event, now: now, width: columnWidth - 4,
             height: item.height,
-            select: select, measured: { measured(item.id, $0) }
+            select: select
           )
           .offset(x: Double(item.placement.column) * columnWidth, y: item.top + 8)
         }
@@ -496,36 +491,33 @@ private struct TimelineAppointment: View {
   let width: Double
   let height: Double
   let select: (CalendarEvent) -> Void
-  let measured: (Double) -> Void
+  @SwiftUI.AppStorage(AppointmentColors.storageKey) private var colors = ""
+  @Environment(\.colorScheme) private var scheme
   var body: some View {
+    let palette = AppointmentColors(rawValue: colors).palette(
+      for: EventCategory.classify(event.values.title), dark: scheme == .dark)
     Button {
       select(event)
     } label: {
-      VStack(alignment: .leading, spacing: 3) {
-        Text(event.values.title).font(.subheadline.weight(.semibold))
+      VStack(alignment: .leading, spacing: 2) {
+        Text(event.values.title).font(.subheadline.weight(.semibold)).lineLimit(
+          height >= 88 ? 2 : 1)
         Text("\(eventTime(event.values.start))–\(eventTime(event.values.end))")
-          .font(.caption).monospacedDigit().foregroundStyle(.secondary)
-        Text(event.placeDescription).font(.caption)
-        Text(event.therapistDescription).font(.caption)
-      }.foregroundStyle(.primary).frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8).frame(width: max(0, width), alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: Double.self) {
-          Double($0.size.height)
-        } action: {
-          measured($0)
+          .font(.caption).monospacedDigit().lineLimit(1)
+        if height >= 88, let place = event.placeDescription {
+          Text(place).font(.caption).lineLimit(1)
         }
-        .frame(height: height, alignment: .topLeading)
-        .background(EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 10))
-        .overlay(alignment: .leading) {
-          RoundedRectangle(cornerRadius: 2).fill(EventCategory.classify(event.values.title).color)
-            .frame(width: 3).padding(.vertical, 8)
+        if height >= 110, let therapist = event.therapistDescription {
+          Text(therapist).font(.caption).lineLimit(1)
         }
-        .contentShape(.rect)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .padding(.horizontal, 8).padding(.vertical, height < 60 ? 3 : 6)
+      .frame(width: max(0, width), height: height, alignment: .topLeading)
+      .foregroundStyle(palette.text).background(palette.surface, in: .rect(cornerRadius: 8))
+      .clipped().contentShape(.rect)
     }.buttonStyle(.plain)
-      .accessibilityLabel(
-        event.spoken + " " + event.placeDescription + (event.values.end <= now ? " Vorbei." : "")
-      )
+      .accessibilityLabel(event.spoken + (event.values.end <= now ? " Vorbei." : ""))
       .accessibilityIdentifier("agenda-event-\(event.id)")
   }
 }
@@ -534,9 +526,13 @@ struct CalendarAgendaRow: View {
   let event: CalendarEvent
   let now: Date
   var marker: String? = nil
+  @SwiftUI.AppStorage(AppointmentColors.storageKey) private var colors = ""
+  @Environment(\.colorScheme) private var scheme
   @ScaledMetric(relativeTo: .body) private var timeWidth = 76
   @Environment(\.dynamicTypeSize) private var typeSize
   var body: some View {
+    let palette = AppointmentColors(rawValue: colors).palette(
+      for: EventCategory.classify(event.values.title), dark: scheme == .dark)
     let layout =
       typeSize.isAccessibilitySize
       ? AnyLayout(VStackLayout(alignment: .leading, spacing: AppSpacing.small))
@@ -547,35 +543,30 @@ struct CalendarAgendaRow: View {
           Text("Ganztägig").font(.subheadline)
         } else {
           Text(eventTime(event.values.start)).font(.body.weight(.semibold)).monospacedDigit()
-          Text(eventTime(event.values.end)).font(.subheadline).monospacedDigit().foregroundStyle(
-            .secondary)
+          Text(eventTime(event.values.end)).font(.subheadline).monospacedDigit()
         }
       }.frame(width: timeWidth, alignment: .leading)
       VStack(alignment: .leading, spacing: AppSpacing.small) {
         if let marker { Text(marker).font(.subheadline.weight(.semibold)) }
         Text(event.values.title).font(.body.weight(.medium))
-        Text(event.placeDescription).font(.subheadline)
-        Text(event.therapistDescription).font(.subheadline).foregroundStyle(.secondary)
+        if let place = event.placeDescription { Text(place).font(.subheadline) }
+        if let therapist = event.therapistDescription { Text(therapist).font(.subheadline) }
         if !Calendar.current.isDate(
           event.values.start, inSameDayAs: event.values.end.addingTimeInterval(-1))
         {
-          Text(span).font(.subheadline).foregroundStyle(.secondary)
+          Text(span).font(.subheadline)
         }
         Text(
           event.source.isEmpty ? event.calendar_title : "\(event.calendar_title) · \(event.source)"
         )
-        .font(.subheadline).foregroundStyle(.secondary)
-        if event.values.end <= now { Text("Vorbei").font(.subheadline).foregroundStyle(.secondary) }
+        .font(.subheadline)
+        if event.values.end <= now { Text("Vorbei").font(.subheadline) }
       }.frame(maxWidth: .infinity, alignment: .leading)
-    }.padding(8).background(
-      EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 8)
-    )
-    .overlay(alignment: .leading) {
-      Capsule().fill(EventCategory.classify(event.values.title).color).frame(width: 3).padding(
-        .vertical, 6)
-    }
-    .fixedSize(horizontal: false, vertical: true).foregroundStyle(.primary).contentShape(.rect)
-    .accessibilityElement(children: .combine)
+    }.padding(8).background(palette.surface, in: .rect(cornerRadius: 8))
+      .fixedSize(horizontal: false, vertical: true).foregroundStyle(palette.text).contentShape(
+        .rect
+      )
+      .accessibilityElement(children: .combine)
   }
   private var span: String {
     let start = event.values.start.formatted(.dateTime.day().month(.abbreviated))

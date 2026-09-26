@@ -19,7 +19,9 @@ struct AgendaEventCard: View {
       }
       Text(event.title).font(compact ? .subheadline.weight(.semibold) : .headline)
         .lineLimit(compact ? 1 : 2).fixedSize(horizontal: false, vertical: true)
-      Text(AgendaFormat.room(event)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+      if let room = AgendaFormat.room(event) {
+        Text(room).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+      }
       if showRelative && event.startDate > date {
         HStack(spacing: 4) {
           Text("In")

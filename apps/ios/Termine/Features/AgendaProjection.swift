@@ -196,16 +196,14 @@ enum AgendaDensity: String, CaseIterable {
   }
   var pointsPerHour: Double {
     switch self {
-    case .overview: 44
-    case .standard: 72
-    case .spacious: 112
+    case .overview: 96
+    case .standard: 144
+    case .spacious: 192
     }
   }
 }
 
-/// Preserve chronological positions and genuine overlaps, stretching only the
-/// intervals that need room for complete labels. Short appointments never hide
-/// their location/therapist or collide with a following appointment's hit area.
+/// A uniform time projection, independent of titles, neighbours and hit targets.
 struct ReadableAgendaLayout {
   struct Item: Identifiable {
     let placement: TimelinePlacement
@@ -214,56 +212,22 @@ struct ReadableAgendaLayout {
     var id: String { placement.id }
   }
   let items: [Item]
-  let knots: [Double]
-  let positions: [Double]
-  var height: Double { positions.last ?? 0 }
-  func minute(at y: Double) -> Double {
-    guard let upper = positions.firstIndex(where: { $0 >= y }) else { return knots.last ?? 720 }
-    guard upper > 0 else { return 0 }
-    let fraction = (y - positions[upper - 1]) / max(1, positions[upper] - positions[upper - 1])
-    return knots[upper - 1] + fraction * (knots[upper] - knots[upper - 1])
-  }
-  func y(_ minute: Double) -> Double {
-    guard let upper = knots.firstIndex(where: { $0 >= minute }) else { return height }
-    guard upper > 0 else { return 0 }
-    let fraction = (minute - knots[upper - 1]) / (knots[upper] - knots[upper - 1])
-    return positions[upper - 1] + fraction * (positions[upper] - positions[upper - 1])
-  }
-  /// All pages share the projection; overlap columns remain specific to each day.
+  let pointsPerHour: Double
+  let minutes: Double
+  var height: Double { minutes * pointsPerHour / 60 }
+  func minute(at y: Double) -> Double { min(minutes, max(0, y * 60 / pointsPerHour)) }
+  func y(_ minute: Double) -> Double { min(minutes, max(0, minute)) * pointsPerHour / 60 }
   init(segments: [DayAgenda.Segment], projection: ReadableAgendaLayout, pointsPerHour: Double) {
-    knots = projection.knots
-    positions = projection.positions
-    items = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0).map {
-      item in
-      let top = projection.y(item.segment.start)
-      return Item(
-        placement: item, top: top,
-        height: max(44, projection.y(item.segment.start + item.segment.duration) - top - 4))
-    }
+    self.init(segments, minutes: projection.minutes, pointsPerHour: projection.pointsPerHour)
   }
-  init(
-    _ segments: [DayAgenda.Segment], minutes: Double = 720, pointsPerHour: Double,
-    heights: [String: Double] = [:]
-  ) {
-    let placements = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0)
-    let knots = Set([0, minutes] + segments.flatMap { [$0.start, $0.start + $0.duration] }).sorted()
-    var positions = knots.map { $0 / 60 * pointsPerHour }
-    for item in placements.sorted(by: {
-      $0.segment.start + $0.segment.duration < $1.segment.start + $1.segment.duration
-    }) {
-      let start = knots.firstIndex(of: item.segment.start)!
-      let end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
-      let missing = max(
-        0, max(100, heights[item.id] ?? 100) + 4 - (positions[end] - positions[start]))
-      if missing > 0 { for index in end..<positions.count { positions[index] += missing } }
-    }
-    self.knots = knots
-    self.positions = positions
-    self.items = placements.map { item in
-      let start = knots.firstIndex(of: item.segment.start)!
-      let end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
-      return Item(
-        placement: item, top: positions[start], height: positions[end] - positions[start] - 4)
+  init(_ segments: [DayAgenda.Segment], minutes: Double = 720, pointsPerHour: Double) {
+    self.pointsPerHour = pointsPerHour
+    self.minutes = minutes
+    // Expanded 44-point targets use separate columns; they never stretch time.
+    items = AgendaLayout.place(segments, pointsPerHour: pointsPerHour).map {
+      Item(
+        placement: $0, top: $0.segment.start * pointsPerHour / 60,
+        height: max(44, $0.height - 4))
     }
   }
 }

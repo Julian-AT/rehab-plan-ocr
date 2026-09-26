@@ -47,7 +47,7 @@ struct SettingsSaveStatus: View {
 }
 
 struct SettingsView: View {
-  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
+  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   enum Page { case appearance, reminders, recognition, storage }
   let core: NativeApplication
@@ -88,8 +88,14 @@ struct SettingsView: View {
               Text("Hell").tag("light")
               Text("Dunkel").tag("dark")
             }.accessibilityIdentifier("appearance-picker")
-          } footer: {
-            Text("Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
+          } header: {
+            HStack {
+              Text("Erscheinungsbild")
+              Spacer()
+              ContextHelp(
+                "Erscheinungsbild",
+                "Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
+            }
           }
           Section {
             Picker("Kalendergröße", selection: $density) {
@@ -97,28 +103,29 @@ struct SettingsView: View {
             }.accessibilityIdentifier("agenda-density")
             Toggle("Tagesliste", isOn: $listView).accessibilityIdentifier("agenda-list-setting")
           } header: {
-            Text("Kalender")
-          } footer: {
-            Text(
-              "Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach links wischen: nächster Tag. Nach rechts: vorheriger Tag."
-            )
-          }
-          Section("Terminfarben") {
-            ForEach(EventCategory.allCases, id: \.rawValue) { category in
-              Label {
-                Text(category.title)
-              } icon: {
-                Circle().fill(category.color).frame(width: 12, height: 12)
-              }
+            HStack {
+              Text("Kalender")
+              Spacer()
+              ContextHelp(
+                "Kalender",
+                "Die Größe bestimmt den gleichmäßigen Stundenabstand. Kurze Termine zeigen Bezeichnung und Uhrzeit; Antippen öffnet alle Angaben. Nach links wischen: nächster Tag. Nach rechts: vorheriger Tag. Große Bedienungshilfenschrift verwendet die Tagesliste."
+              )
             }
           }
+          Section { NavigationLink("Terminfarben") { AppointmentColorsView() } }
         case .reminders:
           Section {
             Picker("Kalendererinnerung", selection: store.binding(\.reminder, fallback: nil)) {
               minuteOptions
             }
-          } footer: {
-            Text("Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
+          } header: {
+            HStack {
+              Text("Kalendererinnerung")
+              Spacer()
+              ContextHelp(
+                "Kalendererinnerung",
+                "Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
+            }
           }
           Section {
             Toggle(
@@ -169,11 +176,18 @@ struct SettingsView: View {
             if let testError {
               Text(testError).font(.subheadline).foregroundStyle(AppPalette.destructive)
             }
-          } footer: {
-            Text(
-              reminderStatus.isEmpty
-                ? "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst."
-                : reminderStatus)
+            if !reminderStatus.isEmpty {
+              Text(reminderStatus).foregroundStyle(AppPalette.destructive)
+            }
+          } header: {
+            HStack {
+              Text("App-Erinnerungen")
+              Spacer()
+              ContextHelp(
+                "App-Erinnerungen",
+                "Die App erinnert an importierte und innerhalb der App erstellte Termine. Die Testerinnerung fordert eine Anzeige nach fünf Sekunden an."
+              )
+            }
           }
         case .recognition:
           Section {
@@ -183,8 +197,14 @@ struct SettingsView: View {
             ) {
               ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
             }
-          } footer: {
-            Text("Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
+          } header: {
+            HStack {
+              Text("Erkennung")
+              Spacer()
+              ContextHelp(
+                "Erkennung",
+                "Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
+            }
           }
           Section {
             ForEach(preferences.completionDefaults, id: \.id) { item in
@@ -197,9 +217,13 @@ struct SettingsView: View {
             Button("Vorgabe hinzufügen", systemImage: "plus") { addingDefault = true }.disabled(
               preferences.completionDefaults.count >= 100)
           } header: {
-            Text("Ergänzungsvorgaben")
-          } footer: {
-            Text("Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
+            HStack {
+              Text("Ergänzungsvorgaben")
+              Spacer()
+              ContextHelp(
+                "Ergänzungsvorgaben",
+                "Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
+            }
           }
         case .storage:
           Section {
@@ -208,8 +232,14 @@ struct SettingsView: View {
               Text("30 Tage").tag(UInt32(30) as UInt32?)
               Text("90 Tage").tag(UInt32(90) as UInt32?)
             }
-          } footer: {
-            Text("Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
+          } header: {
+            HStack {
+              Text("Aufbewahrung")
+              Spacer()
+              ContextHelp(
+                "Aufbewahrung",
+                "Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
+            }
           }
           Section {
             Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }.disabled(

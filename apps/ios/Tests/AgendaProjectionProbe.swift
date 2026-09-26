@@ -157,13 +157,17 @@ import Foundation
         events: [short, adjacent, next, overlap, after], date: now, now: now, calendar: calendar
       ).timed
       let readable = ReadableAgendaLayout(
-        segments, minutes: 1440, pointsPerHour: density.pointsPerHour, heights: ["short": 180])
+        segments, minutes: 1440, pointsPerHour: density.pointsPerHour)
       for minute in stride(from: 0.0, through: 1440.0, by: 15) {
         precondition(abs(readable.minute(at: readable.y(minute)) - minute) < 0.01)
       }
-      precondition(readable.items.first { $0.id == "short" }!.height >= 180)
-      precondition(readable.items.allSatisfy { $0.height >= 100 })
-      precondition(zip(readable.positions, readable.positions.dropFirst()).allSatisfy { $0 <= $1 })
+      precondition(readable.items.first { $0.id == "short" }!.height == 44)
+      precondition(readable.items.allSatisfy { $0.height >= 44 })
+      precondition(readable.height == 24 * density.pointsPerHour)
+      for minute in stride(from: 0.0, through: 1380.0, by: 60) {
+        precondition(
+          abs(readable.y(minute + 60) - readable.y(minute) - density.pointsPerHour) < 0.001)
+      }
       for a in readable.items {
         for b in readable.items where a.id != b.id && a.placement.column == b.placement.column {
           precondition(a.top + a.height <= b.top || b.top + b.height <= a.top)
@@ -185,7 +189,7 @@ import Foundation
       now: now, calendar: calendar)
     let secondWindow = AgendaWindow(agenda: day, now: now, calendar: calendar)
     let common = ReadableAgendaLayout(
-      firstWindow.timed + secondWindow.timed, pointsPerHour: 72, heights: ["short": 200])
+      firstWindow.timed + secondWindow.timed, pointsPerHour: 72)
     let a = ReadableAgendaLayout(segments: firstWindow.timed, projection: common, pointsPerHour: 72)
     let b = ReadableAgendaLayout(
       segments: secondWindow.timed, projection: common, pointsPerHour: 72)
@@ -204,7 +208,16 @@ import Foundation
       CalendarEvent.self, from: JSONSerialization.data(withJSONObject: object))
     precondition(withNotes.therapist == "Anna Beispiel, MSc")
     precondition(withNotes.placeDescription == "Raum 2.14 · Laßnitzhöhe")
-    precondition(next.therapist == nil && next.therapistDescription == "Therapeut nicht angegeben")
+    precondition(next.therapist == nil && next.therapistDescription == nil)
+    object["metadata"] = ["notes": "Therapeut:  \nRaum: \t"]
+    var values = object["values"] as! [String: Any]
+    values["location"] = "  \n"
+    object["values"] = values
+    let missing = try! JSONDecoder().decode(
+      CalendarEvent.self, from: JSONSerialization.data(withJSONObject: object))
+    precondition(missing.placeDescription == nil && missing.therapistDescription == nil)
+    precondition(!missing.spoken.contains("angegeben") && !missing.spoken.contains("Therapeut:"))
+    precondition(AgendaDensity.allCases.map(\.pointsPerHour) == [96, 144, 192])
     let linkID = "5A99D362-901B-4FAD-8A0B-20B7B4EBCABD"
     precondition(AgendaLink(URL(string: "reha-calendar://event/\(linkID)")!) == .event(linkID))
     precondition(AgendaLink(URL(string: "reha-calendar://today")!) == .today)

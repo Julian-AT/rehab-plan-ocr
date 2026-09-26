@@ -108,6 +108,7 @@ struct StagedPhoto: Transferable, Sendable {
         scheduledIDs.removeAll()
         UserDefaults.standard.removeObject(forKey: "agenda.density")
         UserDefaults.standard.removeObject(forKey: "agenda.list")
+        UserDefaults.standard.removeObject(forKey: AppointmentColors.storageKey)
         erasedID = UUID()
         isErasing = false
         isReady = true

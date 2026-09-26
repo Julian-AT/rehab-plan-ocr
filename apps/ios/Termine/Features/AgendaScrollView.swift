@@ -40,7 +40,7 @@ private final class AxisVeto: UIGestureRecognizer {
 }
 
 /// One vertical offset and one fixed gutter for three finger-driven day pages.
-/// New data, text measurements and size changes are applied only at rest.
+/// UIKit owns the offset. Only explicit navigation or a scale change moves it.
 struct AgendaScrollView: UIViewControllerRepresentable {
   let date: Date
   let projection: ReadableAgendaLayout
@@ -50,7 +50,6 @@ struct AgendaScrollView: UIViewControllerRepresentable {
   let dataReady: Bool
   let initialMinute: Double
   let reset: Int
-  @Binding var minute: Double?
   let selectDate: (Date) -> Void
 
   func makeUIViewController(context: Context) -> Controller { Controller() }
@@ -68,7 +67,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
     private var lastSize = CGSize.zero
     private var applying = false
     private var previousReset = -1
-    private var anchorMinute: Double?
+    private var awaitingDate: Date?
     private let verticalVeto = AxisVeto(rejecting: .horizontal)
     private let nestedScrolls = NSHashTable<UIScrollView>.weakObjects()
     private var settlementTask: Task<Void, Never>?
@@ -126,50 +125,59 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       guard !applying, let value = pending ?? current, view.bounds.width > 0 else { return }
       applying = true
       defer { applying = false }
-      // Store a civil-time anchor, never a page-specific pixel offset.
-      let anchor =
-        value.reset != previousReset
-        ? value.initialMinute : (value.minute ?? anchorMinute ?? value.initialMinute)
-      if value.dataReady {
-        if value.showsTimeline { anchorMinute = anchor }
-        previousReset = value.reset
+      let old = current
+      let sizeChanged = view.bounds.size != lastSize
+      let scaleChanged = old?.projection.pointsPerHour != value.projection.pointsPerHour
+      let jump = value.dataReady && value.reset != previousReset
+      let oldY = vertical.contentOffset.y
+      let anchor = old?.projection.minute(at: oldY) ?? value.initialMinute
+      if value.dataReady { previousReset = value.reset }
+      if let old, old.date != value.date {
+        let delta = Calendar.current.dateComponents([.day], from: old.date, to: value.date).day
+        // Move the already visible neighbour into the centre, preserving its host.
+        if delta == 1 { hosts.append(hosts.removeFirst()) }
+        if delta == -1 { hosts.insert(hosts.removeLast(), at: 0) }
       }
       current = value
       pending = nil
+      awaitingDate = nil
       lastSize = view.bounds.size
       vertical.frame = view.bounds
       let height = max(view.bounds.height, value.projection.height + 52)
-      let gutterWidth: CGFloat = value.showsTimeline ? 56 : 0
-      // Empty pages use the full width; layout changes only after paging settles.
+      let gutterWidth: CGFloat = 56
       timeHost.rootView = value.gutter
       timeHost.view.isHidden = !value.showsTimeline
       timeHost.view.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: height)
       horizontal.frame = CGRect(
         x: gutterWidth, y: 0, width: view.bounds.width - gutterWidth, height: height)
       horizontal.contentSize = CGSize(width: horizontal.bounds.width * 3, height: height)
-      let y = min(max(0, value.projection.y(anchor)), max(0, height - view.bounds.height))
+      vertical.contentSize = CGSize(width: view.bounds.width, height: height)
+      let requestedY =
+        jump
+        ? value.projection.y(value.initialMinute)
+        : scaleChanged ? value.projection.y(anchor) : oldY
+      let y = min(max(0, requestedY), max(0, height - view.bounds.height))
       let pages = value.pages(view.bounds.height, y)
       for (index, host) in hosts.enumerated() {
+        let pageDate = Calendar.current.date(byAdding: .day, value: index - 1, to: value.date)!
         host.rootView = AnyView(
-          pages[index].frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top))
+          pages[index].id(pageDate).frame(
+            maxWidth: .infinity, maxHeight: .infinity, alignment: .top))
         host.view.frame = CGRect(
           x: CGFloat(index) * horizontal.bounds.width, y: 0,
           width: horizontal.bounds.width, height: height)
       }
-      vertical.contentSize = CGSize(width: view.bounds.width, height: height)
-      horizontal.contentOffset = CGPoint(x: horizontal.bounds.width, y: 0)
-      vertical.contentOffset = CGPoint(x: 0, y: y)
+      if old == nil || old?.date != value.date || sizeChanged || jump {
+        horizontal.contentOffset = CGPoint(x: horizontal.bounds.width, y: 0)
+      }
+      if jump || scaleChanged || sizeChanged {
+        vertical.contentOffset = CGPoint(x: 0, y: y)
+      }
       vertical.isScrollEnabled = value.showsTimeline
       for host in hosts {
         host.view.layoutIfNeeded()
         gateNestedScrolls(in: host.view)
       }
-    }
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-      guard !applying, scrollView === vertical, let current, current.showsTimeline else { return }
-      let anchor = current.projection.minute(at: max(0, vertical.contentOffset.y))
-      anchorMinute = anchor
-      current.minute = anchor
     }
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
       if !decelerate { settle() }
@@ -204,7 +212,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       }
     }
     private func settle() {
-      guard let current, horizontal.bounds.width > 0 else { return }
+      guard !busy, awaitingDate == nil, let current, horizontal.bounds.width > 0 else { return }
       if let pending, pending.date != current.date || pending.reset != current.reset {
         applyPending()
         return
@@ -213,6 +221,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
         2, max(0, Int((horizontal.contentOffset.x / horizontal.bounds.width).rounded())))
       if page != 1 {
         let date = Calendar.current.date(byAdding: .day, value: page - 1, to: current.date)!
+        awaitingDate = date
         current.selectDate(date)
       } else {
         applyPending()

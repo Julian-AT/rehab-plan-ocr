@@ -216,9 +216,10 @@ struct CalendarStatusView: View {
             "Letzter erfolgreicher Lesevorgang",
             value: status.last_read_at.flatMap { ISO8601DateFormatter().date(from: $0) }?.formatted(
               date: .abbreviated, time: .standard) ?? "Noch nicht beobachtet")
-          Text(
-            "Dieser Status beschreibt den auf dem iPhone lesbaren Kalenderstand. Ein iCloud-Synchronisationsstand ist nicht verfügbar."
-          ).font(.footnote).foregroundStyle(.secondary)
+          ContextHelp(
+            "Kalenderstatus",
+            "Aktualisieren liest den Kalenderstand auf diesem iPhone. Ein iCloud-Synchronisationsstand ist nicht verfügbar. Ungeklärte Änderungen werden nur im Prüfablauf bearbeitet."
+          )
         }
         Section("Ungeklärte Schreibvorgänge") {
           LabeledContent("Importe", value: String(status.pending_imports))
@@ -231,19 +232,19 @@ struct CalendarStatusView: View {
           }
         }
       }
-      Button {
-        Task { await load() }
-      } label: {
-        HStack {
-          if busy { ProgressView() }
-          Text("Aktualisieren")
-        }.frame(maxWidth: .infinity, minHeight: 44).contentShape(.rect)
-      }.disabled(busy)
-      Text(
-        "Aktualisieren liest den Zustand. Ungeklärte Änderungen werden nur im Prüfablauf bearbeitet."
-      ).font(.footnote).foregroundStyle(.secondary)
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
     }.pageTitle("Kalenderstatus").task { await load() }
+      .refreshable { await load() }
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            Task { await load() }
+          } label: {
+            if busy { ProgressView() } else { Image(systemName: "arrow.clockwise") }
+          }.frame(width: 44, height: 44).disabled(busy)
+            .accessibilityLabel("Aktualisieren").accessibilityIdentifier("refresh-calendar-status")
+        }
+      }
   }
   private func load() async {
     guard !busy else { return }

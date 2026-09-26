@@ -60,10 +60,14 @@ struct CalendarEventValues: Codable, Equatable, Sendable {
   var reminder_minutes: Int?
   var start: Date { ISO8601DateFormatter().date(from: start_utc) ?? .distantPast }
   var end: Date { ISO8601DateFormatter().date(from: end_utc) ?? .distantPast }
+  var displayLocation: String? {
+    let text = location.trimmingCharacters(in: .whitespacesAndNewlines)
+    return text.isEmpty ? nil : text
+  }
   var spoken: String {
     let until = Calendar.current.isDate(start, inSameDayAs: end) ? eventTime(end) : eventDate(end)
     return
-      "\(title), \(eventDate(start)), bis \(until). \(location.isEmpty ? "Kein Ort angegeben" : location)."
+      "\(title), \(eventDate(start)), bis \(until)." + (displayLocation.map { " \($0)." } ?? "")
   }
 }
 struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
@@ -119,10 +123,10 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
   var therapist: String? {
     note(["Therapeut", "Therapeutin", "Therapeut:in", "Therapeut/in", "Therapist"])
   }
-  var therapistDescription: String {
-    therapist.map { "Therapeut: \($0)" } ?? "Therapeut nicht angegeben"
+  var therapistDescription: String? {
+    therapist.map { "Therapeut: \($0)" }
   }
-  var placeDescription: String {
+  var placeDescription: String? {
     var parts = [values.location.trimmingCharacters(in: .whitespacesAndNewlines)]
     for label in ["Raum", "Klinik", "Abteilung"] {
       if let value = note([label]),
@@ -132,7 +136,7 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
       }
     }
     let text = parts.filter { !$0.isEmpty }.joined(separator: " · ")
-    return text.isEmpty ? "Ort nicht angegeben" : text
+    return text.isEmpty ? nil : text
   }
   var spoken: String {
     let summary: String
@@ -141,12 +145,16 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
       let span =
         Calendar.current.isDate(values.start, inSameDayAs: last) ? "" : " bis \(eventDay(last))"
       summary =
-        "\(values.title), ganztägig am \(eventDay(values.start))\(span).\(values.location.isEmpty ? "" : " " + values.location + ".")"
+        "\(values.title), ganztägig am \(eventDay(values.start))\(span)."
     } else {
-      summary = values.spoken
+      var timing = values
+      timing.location = ""
+      summary = timing.spoken
     }
     return
-      "\(summary) \(therapistDescription). Kalender \(calendar_title)\(source.isEmpty ? "" : ", " + source)."
+      ([summary] + [placeDescription, therapistDescription].compactMap { $0.map { $0 + "." } } + [
+        "Kalender \(calendar_title)\(source.isEmpty ? "" : ", " + source)."
+      ]).joined(separator: " ")
   }
 }
 

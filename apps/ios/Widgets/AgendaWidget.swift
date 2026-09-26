@@ -82,7 +82,9 @@ struct AgendaWidgetContent: View {
             Text(AgendaFormat.time(event)).font(.body.weight(.semibold)).monospacedDigit()
             VStack(alignment: .leading, spacing: 0) {
               Text(event.title).font(.subheadline.weight(.medium)).lineLimit(1)
-              Text(AgendaFormat.room(event)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+              if let room = AgendaFormat.room(event) {
+                Text(room).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+              }
             }
             Spacer(minLength: 0)
             if event.isRunning(at: entry.date) { Text("Jetzt").font(.caption) }
