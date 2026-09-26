@@ -82,15 +82,15 @@ Current verified implementation slices:
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
-The complete local baseline at `9b5eef3` passed 178 Rust tests, 232 tool tests,
-native probes and bindings. A later combined working-tree tool run passes 303
-tests in 56 groups (`/tmp/reha-tools-combined-20260926-s18-002.log`); subsequent source
-changes still need final combined verification. Later slices have their own evidence; these counts
-are not a final combined-candidate pass. The stable isolated build at `026430a`
-and its offline repeat now pass, including the real simulator bundle checks.
-Earlier failed script/sandbox runs remain preserved. Subsequent implementation
-changes, UI/visual behavior and a signed device package still need final-candidate
-verification.
+The full combined `make lint` and `make test` commands now pass at `cf4e39d`,
+including 232 Rust tests, 377 Python cases in 65 groups (seven explicit environment
+skips), all scheduled native probes and the actual Swift–Rust–Swift integration.
+The checkout is clean before and after both commands. Source archive, source
+identity and complete logs are preserved under
+`.local/runs/combined-verification-20260926-s18-002/`. This closes the earlier missing
+shell-entrypoint failure; it is not complete UI, physical-device or model acceptance.
+The earlier fresh isolated build at `026430a` and its offline repeat remain separate
+historical evidence. Later source changes still need their own combined checks.
 
 See [inventory decisions](inventory.md), [cleanup evidence](artifact-retention.md),
 [workspace/build evidence](build-reproducibility.md) and
@@ -137,13 +137,13 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The earlier 232-tool-test baseline and later 303-test working-tree run are separate observations; final combined checks remain pending. Sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
-| EventKit | Run `.local/runs/eventkit-20260926-s18-002/` passes 18 of 19 tests, with one simulator-only file-protection skip and zero failures. It includes typed import recovery and committed writes despite alarm-journal failure. Complete result and executable products are retained. |
+| Portable/native logic | Full `make lint` / `make test` pass at `cf4e39d`: 232 Rust tests, 377 Python cases (seven environment skips) and all native probes; tracked files unchanged. Sixteen monitor tests have separate retained evidence. Linux and physical-device behavior remain separate. |
+| EventKit | Run `.local/runs/eventkit-20260926-s18-004/` passes 19 of 20 tests, with one simulator-only file-protection skip and zero failures. This includes typed import recovery, committed writes despite alarm-journal failure, and a notification link retained after failed durable acknowledgement (`9d0c240`). Complete results and executable products are retained. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | The latest inspected run [35382848454](archive:github/run-35382848454) at `5718dd5` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
 | Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
-| Local audio/UI | Earlier CoreAudio aborts also occurred in an independent minimal app. The new isolated probe builds successfully on the pinned iOS 26.4 runtime, but run `.local/runs/audio-runtime-20260926-s18-resume-003` times out at simulator launch before any probe-stage record; this is not a new audio-engine result. CI run 35295159442 showed actual playback while retained accessibility values were stale. The actual playback/cancellation case passes locally in `ui-regressions-20260926-s18-002` at `a52d38b`; two large-font cases fail on test queries/scroll positions and are being corrected. This is one functional audio observation, not physical latency or complete audio acceptance. |
+| Local audio/UI | Real playback, advancing word display and cancellation pass in runs `ui-regressions-20260926-s18-002` and `003`. Large-font week/month navigation passes in run `003`; archive editing, retained title/room, cancellation and source access pass in run `004`. Test helpers now handle native date-picker values, covered tap points and virtualized fields (`9fffab3`, `cf4e39d`). Full-suite and physical latency/audio qualification remain open. Earlier failed attempts remain preserved. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
 | Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |

@@ -234,6 +234,23 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
   zusätzlich zur 20-GiB-Reserve, bevor ein Simulator startet. Zwölf gezielte
   Speicher-/Make-Prüfungen bestanden.
 
+- Dauerhafte Quittierung von Mitteilungslinks: `9d0c240`; ein absichtlich
+  unbeschreibbares Journal verliert den Link nicht. Wiederholung und erneutes
+  Öffnen bestehen; vollständiger EventKit-Lauf `eventkit-20260926-s18-004` mit
+  19 Erfolgen, einem Simulator-Dateischutz-Skip und null Fehlern. Die native
+  Mitteilungsfreigabe wartet auf einen bedienbaren und anschließend verschwundenen
+  Dialog; ein vorheriger fehlgeschlagener Lauf bleibt unverändert erhalten.
+- Große Schrift: `9fffab3`, `cf4e39d`; Monats-/Wochenwechsel und Archivprüfung
+  mit erhaltenen Eingaben und Originalzugriff bestehen tatsächlich im Simulator.
+  Sichtbare Formularbereiche und virtualisierte Felder werden gezielt angesteuert.
+  Die echte Audioausgabe mit Wortfortschritt und Abbruch besteht erneut. Kein
+  vollständiger UI-Lauf oder physischer Latenznachweis wird daraus abgeleitet.
+- Gemeinsame lokale Befehle an `cf4e39d`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 232 Rusttests, 377 Pythonfälle in
+  65 Gruppen (sieben Umgebungs-Skips), alle nativen Probes und echter FFI-Rundweg.
+  Arbeitsstand vorher/nachher sauber. Vollständige Quellen und Logs unter
+  `.local/runs/combined-verification-20260926-s18-002/`. Gesamtproduktabnahme offen.
+
 Der zuletzt vorhandene CI-Lauf `35382848454` an `5718dd5` wurde erneut lesend geprüft:
 beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.
 Die Freischaltung des Kontos ist noch nicht bestätigt. Menschliche Daten-/Stimmen-
