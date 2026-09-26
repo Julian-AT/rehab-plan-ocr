@@ -263,15 +263,16 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   private func refresh() { refreshID += 1 }
   private func pendingOpen() async {
     do {
-      let data = try await NativeBridge.request("pendingEventOpen")
-      let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-      if let id = object?["id"] as? String {
-        await openEvent(URL(string: "reha-calendar://event/\(id)")!)
+      if let id = try await NativeBridge.pendingEventOpen(), UUID(uuidString: id) != nil {
+        await openEvent(.event(id))
       }
     } catch { openError = userMessage(error) }
   }
   private func openEvent(_ url: URL) async {
     guard let link = AgendaLink(url) else { return }
+    await openEvent(link)
+  }
+  private func openEvent(_ link: AgendaLink) async {
     if link == .today {
       todayPath = []
       linkedEvent = nil
@@ -296,7 +297,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
           "Der Kalender ist derzeit nicht zugänglich. Zugriffsrechte und Kalenderauswahl unter Kalenderstatus prüfen."
       default: openError = "Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."
       }
-      _ = try await NativeBridge.request("pendingEventOpen", ["acknowledge": id])
+      _ = try await NativeBridge.pendingEventOpen(acknowledge: id)
     } catch { openError = userMessage(error) }
   }
 

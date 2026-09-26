@@ -9,6 +9,14 @@ final class AgendaNativeTests: XCTestCase {
     async throws -> String?
   {
     let native = NativeServices(agenda: service)
+    return try await withCheckedThrowingContinuation { continuation in
+      native.pendingEventOpen(acknowledge: acknowledge) { continuation.resume(with: $0) }
+    }
+  }
+  private static func legacyPendingOpen(_ service: AgendaService, acknowledge: String? = nil)
+    async throws -> String?
+  {
+    let native = NativeServices(agenda: service)
     let arguments = try JSONSerialization.data(
       withJSONObject: acknowledge.map { ["acknowledge": $0] } ?? [:])
     let response: Data = try await withCheckedThrowingContinuation { continuation in
@@ -17,6 +25,8 @@ final class AgendaNativeTests: XCTestCase {
       }
     }
     let value = try XCTUnwrap(JSONSerialization.jsonObject(with: response) as? [String: Any])
+    XCTAssertEqual(Set(value.keys), ["id"])
+    XCTAssertTrue(value["id"] is String || value["id"] is NSNull)
     return value["id"] as? String
   }
 
@@ -37,6 +47,8 @@ final class AgendaNativeTests: XCTestCase {
     let unacknowledged = try await Self.pendingOpen(service, acknowledge: "another-link")
     XCTAssertEqual(unacknowledged, id)
     XCTAssertEqual(try Data(contentsOf: file), original)
+    let legacy = try await Self.legacyPendingOpen(service)
+    XCTAssertEqual(legacy, id)
 
     // Block only this isolated journal destination, without relying on permissions.
     try FileManager.default.removeItem(at: file)
@@ -47,6 +59,12 @@ final class AgendaNativeTests: XCTestCase {
     } catch {}
     let retained = try await Self.pendingOpen(service)
     XCTAssertEqual(retained, id, "Failed acknowledgement lost the current notification link")
+    do {
+      _ = try await Self.legacyPendingOpen(service, acknowledge: id)
+      XCTFail("Legacy acknowledgement hid the storage error")
+    } catch {}
+    let legacyRetained = try await Self.legacyPendingOpen(service)
+    XCTAssertEqual(legacyRetained, id)
 
     try FileManager.default.removeItem(at: file)
     try original.write(to: file, options: .atomic)
@@ -60,6 +78,8 @@ final class AgendaNativeTests: XCTestCase {
     final.start(registerBackground: false)
     let completed = try await Self.pendingOpen(final)
     XCTAssertNil(completed, "Durably acknowledged notification reappeared after reopening")
+    let legacyCompleted = try await Self.legacyPendingOpen(final)
+    XCTAssertNil(legacyCompleted)
   }
 
   func testLocalErasureDoesNotRequireAnAccessibleCalendar() async throws {

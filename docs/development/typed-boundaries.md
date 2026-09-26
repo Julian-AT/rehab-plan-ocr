@@ -164,6 +164,27 @@ Mitteilungstests bestehen tatsächlich im Simulatorlauf `eventkit-20260926-s18-0
 Rohlogs und Quellhashes der Vertragsprüfung liegen unter
 `.local/runs/reminder-contracts-20260926-s18-001/`.
 
+## Ausstehende Mitteilungslinks
+
+Die App liest und quittiert ausstehende Terminidentitäten über
+`NativeBridge.pendingEventOpen` und den typisierten `NativeServices`-Callback.
+Der serielle Journalbesitzer liefert einen optionalen String; ausschließlich der
+Kompatibilitätseingang `perform("pendingEventOpen")` projiziert ihn auf das
+bisherige JSON mit `id: null` beziehungsweise einer Zeichenkette. Das Journalformat
+bleibt unverändert. Eine fehlgeschlagene Speicherung stellt die ausstehende
+Identität im Arbeitsspeicher wieder her; eine fremde Quittierung verändert nichts.
+
+Interne Mitteilungsidentitäten werden vor der Navigation als UUID geprüft und
+als `AgendaLink.event` weitergegeben. Externe URLs behalten den strengen
+`AgendaLink`-Decoder; intern ist keine URL-Konstruktion mit erzwungenem Unwrap mehr
+nötig. Die gemeinsame Auflösung und Quittierung benutzen denselben Ablauf.
+Die Integrationsregression prüft den typisierten Eingang und den Legacy-Eingang
+bei Schreibfehler, Wiederholung und erneutem Öffnen. Der tatsächliche Lauf
+`pending-link-20260926-s19-001` besteht 19 EventKit-Tests mit einem erwarteten
+Simulator-Dateischutz-Skip und null Fehlern. Der gemeinsame App- und UI-Testbuild
+ist ebenfalls erfolgreich; die vollständige UI-Ausführung läuft gesondert.
+Quellhashes, vollständiges Result-Bundle und ausführbare Produkte bleiben erhalten.
+
 ## Wiederanlauf nach bestätigten Kalenderänderungen
 
 Die SQLite-Transaktion für Import beziehungsweise Rücknahme legt zusammen mit
@@ -245,7 +266,7 @@ transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
 gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
 Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
-Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
+Systemeditor und weitere Plattformeffekte bleiben offen.
 Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
 `Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
 Core-Agenda-Abgleich verwendet weiterhin den Stringcallback

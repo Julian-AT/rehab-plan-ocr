@@ -117,6 +117,18 @@ public final class NativeServices: @unchecked Sendable {
   ) {
     calendarQueue.async { self.agendaService.readStatus(completion) }
   }
+  public func pendingEventOpen(
+    acknowledge: String? = nil,
+    completion: @escaping @Sendable (Result<String?, Error>) -> Void
+  ) {
+    calendarQueue.async {
+      do {
+        completion(.success(try self.agendaService.pendingOpen(acknowledge: acknowledge)))
+      } catch {
+        completion(.failure(error))
+      }
+    }
+  }
   /// Authorization changes no reminder preferences. The settings save owns activation.
   public func requestReminderPermission(
     completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
@@ -610,10 +622,11 @@ public final class NativeServices: @unchecked Sendable {
   func pendingEventOpen(_ invoke: ServiceRequest) throws {
     struct Args: Decodable { var acknowledge: String? }
     let args = try invoke.parseArgs(Args.self)
-    calendarQueue.async {
-      do {
-        invoke.resolve(try self.agendaService.pendingOpen(acknowledge: args.acknowledge))
-      } catch { invoke.reject(error) }
+    pendingEventOpen(acknowledge: args.acknowledge) { result in
+      switch result {
+      case .success(let id): invoke.resolve(["id": id as Any? ?? NSNull()])
+      case .failure(let error): invoke.reject(error)
+      }
     }
   }
   func testReminder(_ invoke: ServiceRequest) {

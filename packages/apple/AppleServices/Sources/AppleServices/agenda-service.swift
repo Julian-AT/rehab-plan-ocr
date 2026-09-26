@@ -841,7 +841,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot.presentation(at: Date())))
       as! [String: Any]
   }
-  func pendingOpen(acknowledge: String?) throws -> [String: Any] {
+  func pendingOpen(acknowledge: String?) throws -> String? {
     if let acknowledge, state.pendingOpen == acknowledge {
       state.pendingOpen = nil
       do {
@@ -852,7 +852,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         throw error
       }
     }
-    return ["id": state.pendingOpen as Any? ?? NSNull()]
+    return state.pendingOpen
   }
   func forget() throws {
     generation &+= 1
