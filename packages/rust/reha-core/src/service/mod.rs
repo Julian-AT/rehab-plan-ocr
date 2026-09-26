@@ -50,6 +50,24 @@ pub struct Proposal {
 /// shared service commands and test hosts retain JSON payloads at this boundary.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
+    /// Compatibility defaults are confined to older hosts. Native effects override
+    /// these methods and carry the existing domain values directly to UniFFI.
+    fn import_snapshot(
+        &self,
+        records: Vec<crate::contracts::ImportRecord>,
+    ) -> Response<calendar_imports::Snapshot> {
+        serde_json::from_value(self.call("snapshot", serde_json::json!({"records":records}))?)
+            .map_err(calendar_imports::invalid_response)
+    }
+    fn apply_import(
+        &self,
+        request: calendar_imports::ApplyRequest,
+    ) -> Response<crate::contracts::CalendarResult> {
+        let arguments =
+            serde_json::to_value(request).map_err(calendar_imports::invalid_response)?;
+        serde_json::from_value(self.call("apply", arguments)?)
+            .map_err(calendar_imports::invalid_response)
+    }
     fn calendar_status(&self) -> Response<calendar_administration::PlatformStatus> {
         serde_json::from_value(self.call("calendarStatus", serde_json::json!({}))?)
             .map_err(calendar_administration::storage)
@@ -149,6 +167,7 @@ pub mod agenda;
 pub mod agenda_queries;
 pub mod calendar;
 pub mod calendar_administration;
+pub mod calendar_imports;
 pub mod calendar_mutations;
 pub mod calendar_reads;
 mod calendar_repair;

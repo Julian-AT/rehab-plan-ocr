@@ -1,6 +1,5 @@
 use super::{failure, AppState, Platform, Proposal, Response};
 use crate::{contracts::*, store::ImportBatch};
-use serde_json::json;
 use std::{collections::BTreeMap, sync::Arc};
 
 fn evidence(
@@ -65,13 +64,11 @@ pub async fn prepare(
             });
         }
     }
-    let live = tokio::task::spawn_blocking(move || app.call("snapshot", json!({"records":query})))
+    let live = tokio::task::spawn_blocking(move || app.import_snapshot(query))
         .await
         .map_err(failure)??;
-    let current: BTreeMap<String, EventValues> =
-        serde_json::from_value(live["current"].clone()).map_err(failure)?;
-    let protected: Vec<String> =
-        serde_json::from_value(live["protected_ids"].clone()).unwrap_or_default();
+    let current = live.current;
+    let protected = live.protected_ids;
     let mut operations = vec![];
     for entry in batch
         .operations
@@ -216,13 +213,15 @@ pub(super) async fn approve_locked(
             .map_err(failure)?
             .start_operation(&entry.attempt_id)
             .map_err(failure)?;
-        let args = json!({"operation":op,"recovery_only":recovery_only});
-        let response = tokio::task::spawn_blocking(move || platform.call("apply", args))
+        let request = super::calendar_imports::ApplyRequest {
+            operation: op.clone(),
+            recovery_only,
+        };
+        let response = tokio::task::spawn_blocking(move || platform.apply_import(request))
             .await
             .map_err(failure)?;
         let outcome = response
             .ok()
-            .and_then(|v| serde_json::from_value::<CalendarResult>(v).ok())
             .filter(|r| r.id == op.id)
             .unwrap_or(CalendarResult {
                 maintenance_warnings: vec![],

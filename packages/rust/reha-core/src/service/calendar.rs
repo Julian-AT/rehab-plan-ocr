@@ -259,13 +259,12 @@ pub(super) async fn prepare_impl(
         }
         (runs, events, records, schedule_id, fingerprint)
     };
-    let query = json!({"records":records});
+    let query = records.clone();
     let platform = app.clone();
-    let live = tokio::task::spawn_blocking(move || platform.call("snapshot", query))
+    let live = tokio::task::spawn_blocking(move || platform.import_snapshot(query))
         .await
         .map_err(failure)??;
-    let current: BTreeMap<String, EventValues> =
-        serde_json::from_value(live["current"].clone()).map_err(failure)?;
+    let current = live.current;
     let identity_bound = records.iter().any(|record| {
         runs.iter()
             .flat_map(|r| &r.appointments)
@@ -285,8 +284,7 @@ pub(super) async fn prepare_impl(
                 .all(|a| selection.as_ref().is_none_or(|ids| ids.contains(&a.id))),
         identity_bound,
     );
-    let protected: Vec<String> =
-        serde_json::from_value(live["protected_ids"].clone()).unwrap_or_default();
+    let protected = live.protected_ids;
     calendar::protect_recurring(&mut operations, &protected);
     let selected_ids: Vec<_> = runs
         .iter()
@@ -462,14 +460,11 @@ pub async fn approve_calendar(
         }
     }
     let platform = app.clone();
-    let snapshot =
-        tokio::task::spawn_blocking(move || platform.call("snapshot", json!({"records":records})))
-            .await
-            .map_err(failure)??;
-    let current: BTreeMap<String, EventValues> =
-        serde_json::from_value(snapshot["current"].clone()).map_err(failure)?;
-    let protected: Vec<String> =
-        serde_json::from_value(snapshot["protected_ids"].clone()).unwrap_or_default();
+    let snapshot = tokio::task::spawn_blocking(move || platform.import_snapshot(records))
+        .await
+        .map_err(failure)??;
+    let current = snapshot.current;
+    let protected = snapshot.protected_ids;
     if protected != proposal.protected_event_ids
         || proposal
             .operations
@@ -537,19 +532,16 @@ pub(super) async fn execute_batch(
             .map_err(failure)?
             .start_operation(operation_id)
             .map_err(failure)?;
-        let args = json!({"operation":op,"recovery_only":recovery_only});
+        let request = super::calendar_imports::ApplyRequest {
+            operation: op.clone(),
+            recovery_only,
+        };
         let app = app.clone();
-        let result = tokio::task::spawn_blocking(move || app.call("apply", args))
+        let result = tokio::task::spawn_blocking(move || app.apply_import(request))
             .await
             .map_err(failure)?;
         let outcome = match result {
-            Ok(value) => serde_json::from_value(value).unwrap_or_else(|_| CalendarResult {
-                maintenance_warnings: vec![],
-                id: op.id.clone(),
-                status: "uncertain".into(),
-                external_id: None,
-                error: Some("Kalenderantwort unklar. Abgleich erforderlich.".into()),
-            }),
+            Ok(value) => value,
             Err(_) => CalendarResult {
                 maintenance_warnings: vec![],
                 id: op.id.clone(),
@@ -612,12 +604,14 @@ pub async fn reconcile_calendar(
             .map_err(failure)?
             .start_operation(&id)
             .map_err(failure)?;
-        let args = json!({"operation":op,"recovery_only":recovery_only});
+        let request = super::calendar_imports::ApplyRequest {
+            operation: op.clone(),
+            recovery_only,
+        };
         let app = app.clone();
-        let value = tokio::task::spawn_blocking(move || app.call("apply", args))
+        let result = tokio::task::spawn_blocking(move || app.apply_import(request))
             .await
             .map_err(failure)??;
-        let result: CalendarResult = serde_json::from_value(value).map_err(failure)?;
         state
             .store
             .lock()

@@ -279,15 +279,11 @@ pub async fn accept_and_save(
     {
         return Err("Terminzuordnung wurde geändert. Vergleich erneut laden.".into());
     }
-    let live = tokio::task::spawn_blocking(move || {
-        platform.call("snapshot", serde_json::json!({"records": records}))
-    })
-    .await
-    .map_err(failure)??;
-    let current: BTreeMap<String, EventValues> =
-        serde_json::from_value(live["current"].clone()).map_err(failure)?;
-    let protected: Vec<String> =
-        serde_json::from_value(live["protected_ids"].clone()).unwrap_or_default();
+    let live = tokio::task::spawn_blocking(move || platform.import_snapshot(records))
+        .await
+        .map_err(failure)??;
+    let current = live.current;
+    let protected = live.protected_ids;
     if current != intent.current || protected != proposal.protected_event_ids {
         return Err("Kalender wurde geändert. Vergleich erneut laden.".into());
     }
