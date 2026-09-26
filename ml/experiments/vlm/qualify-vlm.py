@@ -12,9 +12,14 @@ import json
 import platform
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+FONT_PATHS = [
+    Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+]
 _source_spec = importlib.util.spec_from_file_location(
     "vlm_download_provenance", Path(__file__).with_name("fetch-vlm.py")
 )
@@ -27,13 +32,71 @@ def sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def pin_inputs(bindings, paths):
+    selected = {}
+    for path in paths:
+        key = str(path.absolute())
+        actual = sha(path)
+        if key in bindings and bindings[key] != actual:
+            raise ValueError(f"Qualification input changed: {path}")
+        bindings[key] = actual
+        selected[key] = actual
+    return selected
+
+
+def verify_inputs(bindings):
+    for path, expected in bindings.items():
+        try:
+            if sha(path) == expected:
+                continue
+        except OSError:
+            pass
+        raise ValueError(f"Qualification input changed: {path}")
+
+
+def checked_run(command, bindings, **kwargs):
+    try:
+        return subprocess.run(command, **kwargs)
+    finally:
+        verify_inputs(bindings)
+
+
+@contextmanager
+def evidence(output, result, bindings, runtime, revision):
+    try:
+        try:
+            yield
+        finally:
+            verify_inputs(bindings)
+            current = subprocess.check_output(
+                ["git", "-C", str(runtime), "rev-parse", "HEAD"], text=True
+            ).strip()
+            dirty = subprocess.check_output(
+                ["git", "-C", str(runtime), "status", "--porcelain"], text=True
+            ).strip()
+            if current != revision or dirty:
+                raise ValueError("Pinned converter checkout changed during qualification")
+        result["status"] = "completed"
+    except BaseException as error:
+        result.update(status="failed", error=f"{type(error).__name__}: {error}")
+        for candidate in result["candidates"]:
+            candidate["compatible"] = False
+        raise
+    finally:
+        result["bound_inputs_sha256"] = bindings
+        with (output / "candidates.json").open("x") as manifest:
+            manifest.write(json.dumps(result, indent=2) + "\n")
+
+
 def qualify(args):
     if args.output.exists() or args.output.is_symlink():
         raise ValueError(
             "Use a new output directory; existing conversion and review evidence is preserved."
         )
     lock_path = ROOT / "ml/registry/runtime/vlm-experiments.lock.json"
-    lock = json.loads(lock_path.read_text())
+    lock_bytes = lock_path.read_bytes()
+    lock = json.loads(lock_bytes)
+    bindings = {str(lock_path.absolute()): hashlib.sha256(lock_bytes).hexdigest()}
     revision = subprocess.check_output(
         ["git", "-C", str(args.runtime), "rev-parse", "HEAD"], text=True
     ).strip()
@@ -49,15 +112,40 @@ def qualify(args):
         source_hashes[candidate["id"]] = _source.verify_candidate(
             sources[candidate["id"]], candidate
         )
+        for item in source_hashes[candidate["id"]]:
+            bindings[str((sources[candidate["id"]] / item["path"]).absolute())] = item["sha256"]
         manifest = sources[candidate["id"]] / "source-manifest.json"
         if manifest.is_file():
             source_manifests[candidate["id"]] = {
                 "path": str(manifest.resolve()),
                 "sha256": sha(manifest),
             }
+            bindings[str(manifest.absolute())] = source_manifests[candidate["id"]]["sha256"]
+    converter = args.runtime / "convert_hf_to_gguf.py"
+    pin_inputs(bindings, [converter, args.binary, Path(__file__).with_name("fetch-vlm.py")])
     output = args.output
     output.mkdir(parents=True, exist_ok=False)
-    converter = args.runtime / "convert_hf_to_gguf.py"
+    result = {"schema_version": 1, "candidates": [], "packaging_eligible": False}
+    with evidence(output, result, bindings, args.runtime, revision):
+        convert_and_measure(
+            args, converter, revision, source_hashes, source_manifests, bindings, result
+        )
+    print(
+        json.dumps(
+            {
+                "candidates": [
+                    {"id": c["id"], "compatible": c["compatible"]} for c in result["candidates"]
+                ],
+                "packaging_eligible": False,
+            }
+        )
+    )
+
+
+def convert_and_measure(
+    args, converter, revision, source_hashes, source_manifests, bindings, result
+):
+    output = args.output
     text = output / "paddle-f16.gguf"
     projector = output / "mmproj-paddle-f16.gguf"
     converter_commands = []
@@ -77,8 +165,9 @@ def qualify(args):
         with (output / ("convert-projector.log" if mmproj else "convert-text.log")).open(
             "x"
         ) as log:
-            subprocess.run(
+            checked_run(
                 command,
+                bindings,
                 check=True,
                 stdout=log,
                 stderr=log,
@@ -88,6 +177,7 @@ def qualify(args):
                     "TRANSFORMERS_OFFLINE": "1",
                 },
             )
+        pin_inputs(bindings, [path])
     candidates = [
         ("glm-ocr", args.glm / "GLM-OCR-Q8_0.gguf", args.glm / "mmproj-GLM-OCR-Q8_0.gguf"),
         ("paddleocr-vl-1.6", text, projector),
@@ -96,39 +186,39 @@ def qualify(args):
 
     check = output / "compatibility"
     check.mkdir(exist_ok=True)
-    font = next(
-        p
-        for p in [
-            Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
-            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
-        ]
-        if p.is_file()
-    )
+    font = next(p for p in FONT_PATHS if p.is_file())
+    pin_inputs(bindings, [font])
     image = Image.new("RGB", (800, 120), "white")
     expected = "08:00 - 08:30 Bewegung Raum 2"
     ImageDraw.Draw(image).text(
         (30, 35), expected, fill="black", font=ImageFont.truetype(str(font), 36)
     )
     image.save(check / "synthetic.png")
-    result = {
-        "schema_version": 1,
-        "binary": str(args.binary.resolve()),
-        "binary_sha256": sha(args.binary),
-        "runtime_revision": revision,
-        "lock_sha256": sha(lock_path),
-        "converter_sha256": sha(converter),
-        "converter_commands": converter_commands,
-        "source_files": source_hashes,
-        "source_manifests": source_manifests,
-        "source_verifier_sha256": sha(Path(__file__).with_name("fetch-vlm.py")),
-        "conversion_environment": {
-            name: importlib.metadata.version(name)
-            for name in ["torch", "transformers", "numpy", "sentencepiece", "protobuf"]
-        },
-        "candidates": [],
-        "packaging_eligible": False,
-    }
+    pin_inputs(bindings, [check / "synthetic.png", font])
+    result.update(
+        {
+            "schema_version": 1,
+            "binary": str(args.binary.resolve()),
+            "binary_sha256": bindings[str(args.binary.absolute())],
+            "runtime_revision": revision,
+            "lock_sha256": bindings[
+                str((ROOT / "ml/registry/runtime/vlm-experiments.lock.json").absolute())
+            ],
+            "converter_sha256": bindings[str(converter.absolute())],
+            "converter_commands": converter_commands,
+            "source_files": source_hashes,
+            "source_manifests": source_manifests,
+            "source_verifier_sha256": sha(Path(__file__).with_name("fetch-vlm.py")),
+            "conversion_environment": {
+                name: importlib.metadata.version(name)
+                for name in ["torch", "transformers", "numpy", "sentencepiece", "protobuf"]
+            },
+            "candidates": [],
+            "packaging_eligible": False,
+        }
+    )
     for family, model, projection in candidates:
+        measured = pin_inputs(bindings, [model, projection, check / "synthetic.png", args.binary])
         path = check / (family + ".json")
         command = [
             str(args.binary),
@@ -149,9 +239,14 @@ def qualify(args):
         try:
             with (check / (family + ".log")).open("w") as log:
                 subprocess.run(command, check=True, timeout=60, stdout=log, stderr=log)
-            status = json.loads(path.read_text())
+            raw = path.read_bytes()
+            bindings[str(path.absolute())] = hashlib.sha256(raw).hexdigest()
+            status = json.loads(raw)
         except (subprocess.SubprocessError, OSError, ValueError):
             pass
+        finally:
+            # Integrity failures must escape the ordinary incompatible-reader fallback.
+            verify_inputs(measured)
         compatible = bool(
             status
             and status["status"] == "complete"
@@ -162,25 +257,14 @@ def qualify(args):
                 "id": family,
                 "model": str(model.resolve()),
                 "projector": str(projection.resolve()),
-                "model_sha256": sha(model),
-                "projector_sha256": sha(projection),
+                "model_sha256": measured[str(model.absolute())],
+                "projector_sha256": measured[str(projection.absolute())],
                 "compatible": compatible,
-                "smoke_sha256": sha(path) if path.exists() else None,
-                "smoke_input_sha256": sha(check / "synthetic.png"),
+                "smoke_sha256": bindings.get(str(path.absolute())),
+                "smoke_input_sha256": measured[str((check / "synthetic.png").absolute())],
                 "packaging_eligible": False,
             }
         )
-    (output / "candidates.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(
-        json.dumps(
-            {
-                "candidates": [
-                    {"id": c["id"], "compatible": c["compatible"]} for c in result["candidates"]
-                ],
-                "packaging_eligible": False,
-            }
-        )
-    )
 
 
 if __name__ == "__main__":
