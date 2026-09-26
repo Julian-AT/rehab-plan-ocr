@@ -1,5 +1,41 @@
 # German listening development set
 
+## File recognition on the host
+
+Prepare Apple SpeechTranscriber assets explicitly, then transcribe the existing
+invented listening set through the installed German module:
+
+```sh
+make setup-speech-evaluation RUN=.local/runs/<new-setup>
+make transcribe-listening LISTENING=.local/runs/listening-20260926-s17-003 \
+  RUN=.local/runs/<new-transcription>
+```
+
+Setup may download the system model on the Mac. Transcription never downloads
+assets, requests microphone/speech permission or changes the iPhone. The CLI also
+accepts `--locale de-DE`; its default is de-AT. Inventory records the legacy speech
+recognizer's authorization and local-model availability without requesting access.
+Missing assets fail before processing the corpus.
+
+Every audio file and final segment is checked against its run ID, locale, checksum
+and bounded timestamps. Per-file logs, raw transcripts, prepared reference text,
+binary/source/platform identities and failures remain private. A new recognizer
+process is used for each file; shared system models may remain resident. File
+analysis time excludes microphone capture, conversational pauses, interpretation
+and playback. It cannot demonstrate the app's first-audio or interruption targets.
+
+An orthographic match ignores case and punctuation only. Spoken numbers rendered
+as digits are therefore marked different even when they express the same facts;
+the retained text pairs need semantic review. These machine-generated voices are
+not real speaker samples, listening judgments or an independent voice-quality
+benchmark. No voice or ASR provider is selected by this probe. Asset presence and
+the local API do not replace shipping-device airplane-mode verification.
+
+The implementation uses Apple's [audio-file analysis API](https://developer.apple.com/documentation/speech/speechanalyzer/analyzesequence(from:))
+and separate [asset installation request](https://developer.apple.com/documentation/speech/assetinventory/assetinstallationrequest(supporting:)).
+
+## Listening previews
+
 Generate private host previews with the shared Rust Victoria renderer and every
 German voice returned by the Mac's local `AVSpeechSynthesisVoice.speechVoices()`:
 

@@ -49,7 +49,7 @@ bindings check-bindings:
 test-agenda:
 	sh tooling/checks/test-agenda.sh
 
-.PHONY: prepare-listening refresh-listening
+.PHONY: prepare-listening refresh-listening transcribe-listening setup-speech-evaluation
 prepare-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
 	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples --features voice
@@ -58,6 +58,14 @@ prepare-listening:
 refresh-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to an existing listening export'; exit 2; }
 	/usr/bin/env uv run --locked python ml/evaluation/speech/listening_form.py --run "$(RUN)"
+
+transcribe-listening:
+	@test -n "$(RUN)" -a -n "$(LISTENING)" || { echo 'Set RUN and LISTENING to local evaluation directories'; exit 2; }
+	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --listening "$(LISTENING)"
+
+setup-speech-evaluation:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new local setup directory'; exit 2; }
+	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --setup
 
 restore:
 	/usr/bin/env uv sync --locked

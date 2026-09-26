@@ -109,6 +109,20 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### German host file-ASR evaluation — 2026-09-26
+
+Explicit setup installs the host's German SpeechTranscriber assets; the separate
+transcription command requires them without requesting downloads or microphone
+access. All 100 retained synthetic listening files finish with checked audio,
+run/locale/provider identities and final segment ranges. Ten voices share ten
+prompt families; zero real speakers/listeners are added. Date transcripts agree,
+while names, treatment titles and abbreviations expose differences needing review.
+The [experiment](../../ml/experiments/2026-09-26-s18-file-speech-recognition.md) retains
+exact report identities and distinguishes orthographic differences from factual
+errors. Five new regressions, all 202 tool tests, lint and the Swift build pass.
+No ASR provider or voice is selected; patient speech, natural endpoints and the
+complete physical route remain open.
+
 ### Complete critical-field definition — 2026-09-26
 
 A regression reproduces swapped rooms receiving no critical-error entry. Metric

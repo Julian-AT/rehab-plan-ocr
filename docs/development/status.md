@@ -202,6 +202,13 @@ system voices. Its anonymous browser form and audio-integrity checks pass. No
 human listener has scored the set; no voice is selected or qualified for iPhone
 release by these exports.
 
+The host SpeechTranscriber now completes all 100 retained files after a separate
+German model setup. Audio/provenance/final-segment checks and five new regressions
+pass; all 202 tool tests and lint pass. The [file-ASR experiment](../../ml/experiments/2026-09-26-s18-file-speech-recognition.md)
+records real transcript discrepancies without treating number formatting as a
+factual error or selecting a voice from ASR behavior. Real speakers/listeners,
+natural endpoints and the shipping iOS route remain untested by this file probe.
+
 ## Still required
 
 Complete uncertainty/dialogue regressions,
