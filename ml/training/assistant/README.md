@@ -96,6 +96,12 @@ operations and unsafe mutations remain in the report. Any full-answer parity
 difference fails the export gate. A passing export remains experimental until
 human dialogue, shipping iOS runtime, resource and latency qualification pass.
 
+`verify_interruption.py` limits each subprocess phase of its two-epoch proof to
+30 minutes by default (`--phase-timeout-seconds` changes this proof-only limit).
+Silent or incomplete child output still reaches the deadline, child processes are
+reaped, and failed proofs retain their logs and checkpoint with a failure report.
+The production trainer has no added wall-clock limit.
+
 Desktop prompt files are passed with `--binary-file --no-escape` so llama.cpp
 receives the same rendered template as MLX and the native adapter. The previous
 `-f` boundary dropped one final LF; historical reports remain immutable. The
