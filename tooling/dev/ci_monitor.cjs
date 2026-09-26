@@ -21,6 +21,7 @@ Options:
   --repo OWNER/REPO    Default: the configured GitHub origin
   --branch NAME       Explicit remote branch (required for dispatch)
   --commit SHA        Full commit identity (required for dispatch)
+  --target SCOPE      Dispatch full (default) or portable checks only
   --file PATH         Workflow for read-only action-pin verification
   --job ID            Download this completed job's full log while other jobs run
   --output PATH       New local evidence directory (its parent must exist)
@@ -68,6 +69,7 @@ function main(args, run = execute, read = readFileSync) {
     options: {
       help: { type: 'boolean' }, repo: { type: 'string' }, branch: { type: 'string' },
       commit: { type: 'string' }, file: { type: 'string' }, job: { type: 'string' }, output: { type: 'string' },
+      target: { type: 'string' },
     },
   });
   if (values.help || positionals.length === 0) return HELP;
@@ -80,6 +82,9 @@ function main(args, run = execute, read = readFileSync) {
   }
   if (values.commit && !/^[a-f0-9]{40}$/.test(values.commit)) {
     throw new Error('Commit must be a full lowercase SHA-1.');
+  }
+  if (values.target && (command !== 'dispatch' || !['full', 'portable'].includes(values.target))) {
+    throw new Error('--target accepts full or portable for dispatch only.');
   }
   if (values.job && (command !== 'log-failed' || !/^\d+$/.test(values.job))) {
     throw new Error('A numeric --job is supported only by log-failed.');
@@ -168,8 +173,10 @@ function main(args, run = execute, read = readFileSync) {
   }
   const remote = JSON.parse(gh('api', `repos/${repo}/commits/${encodeURIComponent(values.branch)}`));
   if (remote.sha !== values.commit) throw new Error('Remote branch does not match the requested commit.');
-  const dispatched = gh('workflow', 'run', 'verify.yml', '--repo', repo, '--ref', values.branch);
+  const input = values.target ? ['-f', `target=${values.target}`] : [];
+  const dispatched = gh('workflow', 'run', 'verify.yml', '--repo', repo, '--ref', values.branch, ...input);
   return JSON.stringify({ repository: repo, branch: values.branch, commit: remote.sha,
+    target: values.target || 'full',
     dispatched: true, response: dispatched.trim(), result: 'pending' }, null, 2);
 }
 

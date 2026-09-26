@@ -109,6 +109,16 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Explicit portable CI scope — 2026-09-26
+
+Manual dispatch keeps full verification as its default and adds an explicit
+`--target portable` for Linux tool/logic work. The target is retained in the
+dispatch receipt and visible run name. Pushes and pull requests still run both
+jobs; concurrency groups distinguish full and portable runs so one cannot cancel
+the other. Twelve monitor regressions pass, including default scope and invalid
+target rejection before network access. Hosted verification of the new scope is
+recorded separately from native acceptance.
+
 ### Reproducible OCR model cards — 2026-09-26
 
 `make register-ocr` creates a new experimental card directly from complete training

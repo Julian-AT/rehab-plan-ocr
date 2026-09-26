@@ -66,6 +66,19 @@ test('dispatch records the exact remote identity and leaves acceptance pending',
   assert.deepEqual(calls[1], ['workflow', 'run', 'verify.yml', '--repo', 'owner/repo', '--ref', 'candidate/test']);
   assert.equal(report.commit, sha);
   assert.equal(report.result, 'pending');
+  assert.equal(report.target, 'full');
+});
+
+test('portable dispatch is explicit, retains the target and rejects unsupported scopes before GitHub', () => {
+  const calls = [];
+  const report = JSON.parse(main(['dispatch', '--repo', 'owner/repo', '--branch', 'tools', '--commit', sha, '--target', 'portable'],
+    (_, args) => { calls.push(args); return args[0] === 'api' ? JSON.stringify({ sha }) : ''; }));
+  assert.equal(report.target, 'portable');
+  assert.deepEqual(calls[1].slice(-2), ['-f', 'target=portable']);
+  const never = () => { throw new Error('Unexpected subprocess'); };
+  for (const args of [['dispatch', '--target', 'skip'], ['view', '123', '--target', 'portable']]) {
+    assert.throws(() => main(args, never), /--target accepts/);
+  }
 });
 
 test('action verification checks actual pinned commits and rejects floating tags', () => {

@@ -1,13 +1,21 @@
 name: Verify native app and local tools
+run-name: Verify ${{ inputs.target || 'full' }} at ${{ github.ref_name }}
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Verification scope (portable does not qualify native app behavior)
+        required: true
+        default: full
+        type: choice
+        options: [full, portable]
 permissions:
   contents: read
 concurrency:
-  group: verify-${{ github.ref }}
+  group: verify-${{ github.ref }}-${{ inputs.target || 'full' }}
   cancel-in-progress: true
 jobs:
   portable:
@@ -22,6 +30,7 @@ jobs:
       - run: python3 tooling/dev/quality.py lint --portable
       - run: python3 tooling/dev/quality.py test --portable
   apple:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target != 'portable' }}
     runs-on: macos-26
     timeout-minutes: 120
     env:

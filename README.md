@@ -59,6 +59,14 @@ Test bewertet keine echte Sprachqualität oder natürlichen Sprechpausen.
 `make ci-status` zeigt gehostete Läufe für den konfigurierten GitHub-Remote.
 Das optionale CI-Werkzeug benötigt Node.js ab Version 22 und eine angemeldete
 GitHub CLI; `node tooling/dev/ci_monitor.cjs --help` beschreibt die Befehle.
+
+Manuelle CI-Läufe prüfen standardmäßig `full`. Für reine Änderungen an portablen
+Werkzeugen kann `dispatch --target portable` ausdrücklich nur Linux-Prüfungen
+starten; der Beleg nennt diesen Umfang. Pushes und Pull Requests prüfen weiterhin
+beide Plattformen. Unterschiedliche Prüfumfänge brechen sich auch auf derselben
+Branch nicht gegenseitig ab. Ein portabler Lauf ersetzt keine native Abnahme.
+Die Konfiguration verwendet die offiziellen
+[Workflow-Eingaben](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatchinputs).
 Ein manueller CI-Start erfordert einen ausdrücklich genannten Remote-Branch und
 dessen vollständigen Commit-Hash. Er lädt keine lokalen Änderungen hoch.
 `artifacts <Laufnummer>` zeigt aufbewahrte CI-Ergebnisse. `evidence <Laufnummer>
