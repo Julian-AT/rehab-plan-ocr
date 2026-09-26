@@ -14,6 +14,7 @@ BUILD_BASE = ROOT / ".local/builds/phonemizer"
 VERSION = "1.52.0"
 SHA256 = "bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23"
 VARIANTS = ["host", "aarch64-apple-ios", "aarch64-apple-ios-sim"]
+LIBRARIES = ("src/libespeak-ng/libespeak-ng.a", "src/ucd-tools/libucd.a")
 
 
 def sha(path):
@@ -144,7 +145,7 @@ def cache_matches(build, expected):
                 (build / name).is_file() and sha(build / name) == digest
                 for name, digest in record["artifacts"].items()
             )
-            and "src/libespeak-ng/libespeak-ng.a" in record["artifacts"]
+            and set(LIBRARIES) <= record["artifacts"].keys()
         )
     except (ValueError, KeyError, OSError):
         return False
@@ -200,9 +201,7 @@ def main():
             ],
             check=True,
         )
-        artifacts = {
-            "src/libespeak-ng/libespeak-ng.a": sha(build / "src/libespeak-ng/libespeak-ng.a")
-        }
+        artifacts = {name: sha(build / name) for name in LIBRARIES}
         if variant == "host":
             artifacts.update(
                 {

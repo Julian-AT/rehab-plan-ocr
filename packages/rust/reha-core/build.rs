@@ -42,19 +42,19 @@ fn phonemizer() {
             })
             .join("src/libespeak-ng")
         });
-    assert!(
-        directory.join("libespeak-ng.a").exists(),
-        "Build pinned eSpeak first: python3 tooling/build/build-phonemizer.py"
-    );
+    let ucd_directory = directory.parent().unwrap().join("ucd-tools");
+    for library in [
+        directory.join("libespeak-ng.a"),
+        ucd_directory.join("libucd.a"),
+    ] {
+        assert!(
+            library.is_file(),
+            "Build pinned eSpeak first: python3 tooling/build/build-phonemizer.py"
+        );
+        println!("cargo:rerun-if-changed={}", library.display());
+    }
     println!("cargo:rustc-link-search=native={}", directory.display());
     println!("cargo:rustc-link-lib=static=espeak-ng");
-    println!(
-        "cargo:rustc-link-search=native={}",
-        directory.parent().unwrap().join("ucd-tools").display()
-    );
+    println!("cargo:rustc-link-search=native={}", ucd_directory.display());
     println!("cargo:rustc-link-lib=static=ucd");
-    println!(
-        "cargo:rerun-if-changed={}",
-        directory.join("libespeak-ng.a").display()
-    );
 }

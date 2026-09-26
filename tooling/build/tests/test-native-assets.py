@@ -94,10 +94,9 @@ class PhonemizerCacheTests(unittest.TestCase):
             pin(source / "code.c", b"source version one")
             expected = phonemizer.identity(source, "simulator", ["option"], "toolchain one")
             build = root / "build"
-            name = "src/libespeak-ng/libespeak-ng.a"
-            entry = pin(build / name)
+            artifacts = {name: pin(build / name)["sha256"] for name in phonemizer.LIBRARIES}
             (build / "build-identity.json").write_text(
-                json.dumps({"identity": expected, "artifacts": {name: entry["sha256"]}})
+                json.dumps({"identity": expected, "artifacts": artifacts})
             )
             self.assertTrue(phonemizer.cache_matches(build, expected))
             for field in ["toolchain", "variant", "builder_sha256"]:
@@ -106,8 +105,25 @@ class PhonemizerCacheTests(unittest.TestCase):
             (source / "code.c").write_text("source version two")
             changed = phonemizer.identity(source, "simulator", ["option"], "toolchain one")
             self.assertFalse(phonemizer.cache_matches(build, changed))
-            (build / name).write_text("corrupt")
-            self.assertFalse(phonemizer.cache_matches(build, expected))
+            for name in phonemizer.LIBRARIES:
+                with self.subTest(library=name):
+                    (build / name).write_text("corrupt")
+                    self.assertFalse(phonemizer.cache_matches(build, expected))
+                    (build / name).unlink()
+                    self.assertFalse(phonemizer.cache_matches(build, expected))
+                    pin(build / name)
+                    self.assertTrue(phonemizer.cache_matches(build, expected))
+
+    def test_legacy_receipt_without_ucd_library_requires_rebuild(self):
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            name = "src/libespeak-ng/libespeak-ng.a"
+            entry = pin(build / name)
+            pin(build / "src/ucd-tools/libucd.a")
+            (build / "build-identity.json").write_text(
+                json.dumps({"identity": {}, "artifacts": {name: entry["sha256"]}})
+            )
+            self.assertFalse(phonemizer.cache_matches(build, {}))
 
 
 if __name__ == "__main__":
