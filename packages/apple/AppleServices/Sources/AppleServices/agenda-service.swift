@@ -22,14 +22,6 @@ struct AgendaSyncArgs: Decodable {
   var display_calendar_ids: [String]?
 }
 
-enum AgendaError: LocalizedError {
-  case message(String)
-  var errorDescription: String? {
-    if case .message(let message) = self { return message }
-    return nil
-  }
-}
-
 // EventKit and the private write-ahead journal have one serial owner, including
 // the existing calendar import bridge. Never wait for notification callbacks on main.
 final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {

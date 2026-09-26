@@ -324,6 +324,7 @@ def tests(portable):
             "capture-preparation",
             "speech-input",
             "ordered-settings",
+            "service-request",
             "diagnostics",
             "intake-erasure",
             "native-bindings",
