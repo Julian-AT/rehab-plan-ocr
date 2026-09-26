@@ -282,20 +282,15 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     }
     guard case .event(let id) = link else { return }
     do {
-      struct Resolution: Decodable {
-        let status: String
-        let event: CalendarEvent?
-      }
-      let resolved = try await core.eventRequest(
-        "resolveOwnedEvent", ["id": id], as: Resolution.self)
+      let resolved = try await core.resolveOwnedEvent(id: id)
       tab = .appointments
-      switch resolved.status {
-      case "found": linkedEvent = resolved.event
-      case "deleted": openError = "Dieser Termin wurde aus dem Kalender gelöscht."
-      case "unavailable":
+      switch resolved {
+      case .found(let event): linkedEvent = try CalendarEvent(event)
+      case .deleted: openError = "Dieser Termin wurde aus dem Kalender gelöscht."
+      case .unavailable:
         openError =
           "Der Kalender ist derzeit nicht zugänglich. Zugriffsrechte und Kalenderauswahl unter Kalenderstatus prüfen."
-      default: openError = "Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."
+      case .missing: openError = "Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."
       }
       _ = try await NativeBridge.pendingEventOpen(acknowledge: id)
     } catch { openError = userMessage(error) }

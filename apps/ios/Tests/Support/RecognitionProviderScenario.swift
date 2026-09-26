@@ -43,6 +43,9 @@
     func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
       throw denied()
     }
+    func resolveOwnedEvent(record: AgendaOwnedRecord) throws -> OwnedEventResolution {
+      throw denied()
+    }
     func forgetCalendar() throws { throw denied() }
     func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {
       throw denied()

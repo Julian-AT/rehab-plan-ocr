@@ -355,3 +355,13 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Zwischenwerte liegen innerhalb der unveränderten Toleranz. Quellen unverändert,
   kein Gesamtmodelllauf und keine Freigabe. Protokoll, Ergebnis und Hashes:
   [Diagnosebericht](../../ml/experiments/2026-09-26-s19-ocr-batchnorm-fma.md).
+
+- Typisiertes Öffnen eigener Terminlinks: **verifiziert**, 246 Core-/FFI-Tests,
+  Workspace-Clippy, offizielle Bindings, echter FFI-Rundweg und strenge native
+  Typprüfung bestehen. EventKit: 20 Erfolge, ein Simulator-Dateischutz-Skip,
+  null Fehler (`owned-link-eventkit-20260926-s19-001`). Zwei Link-UI-Fälle bestehen
+  in getrennten tatsächlichen Ausführungen (`owned-link-ui-20260926-s19-002`/`003`).
+  Die Tests öffnen URLs nun über das System in der laufenden App; das frühere
+  Testverfahren startete sie neu. Ein fehlender Link erhält ausgewählten Tag
+  und Termine. Die unvollständige gemeinsame Testauswahl wird nicht als
+  vollständiger Erfolg gezählt. Nachweise und Grenzen: [native Grenzen](typed-boundaries.md).

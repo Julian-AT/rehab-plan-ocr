@@ -200,6 +200,9 @@ private final class RecognitionTraceHost: AppleHost, Sendable {
   func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
     throw forbidden
   }
+  func resolveOwnedEvent(record: AgendaOwnedRecord) throws -> OwnedEventResolution {
+    throw forbidden
+  }
   func forgetCalendar() throws { throw forbidden }
   func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {
     throw forbidden

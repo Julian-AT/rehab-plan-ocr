@@ -111,6 +111,21 @@ extension NativeBridge {
         })
     } catch { throw Self.appError(error) }
   }
+  func resolveOwnedEvent(record: AgendaOwnedRecord) throws -> OwnedEventResolution {
+    do {
+      let result = try NativeServiceCall.waitValue(for: .resolveOwnedEvent) { completion in
+        NativeServices.shared.resolveOwnedEvent(
+          Self.nativeRecord(
+            id: record.id, calendarID: record.calendarId, externalID: record.externalId,
+            status: record.status, values: record.approved), completion: completion)
+      }
+      return switch result {
+      case .found(let event): .found(event: Self.readEvent(event))
+      case .deleted: .deleted
+      case .unavailable: .unavailable
+      }
+    } catch { throw Self.appError(error) }
+  }
   func forgetCalendar() throws {
     do {
       try NativeServiceCall.waitValue(for: .forgetCalendar) { completion in

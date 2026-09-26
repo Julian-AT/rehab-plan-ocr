@@ -37,14 +37,7 @@ final class EventEditingService: @unchecked Sendable {
             try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
           let record = try JSONDecoder().decode(
             OwnedRecord.self, from: JSONSerialization.data(withJSONObject: args["record"] ?? [:]))
-          switch self.agenda.lookup(record) {
-          case .found(let event):
-            var current = self.snapshot(event)
-            current["import_id"] = record.id
-            request.resolve(["status": "found", "event": current])
-          case .deleted: request.resolve(["status": "deleted"])
-          case .unavailable: request.resolve(["status": "unavailable"])
-          }
+          request.resolve(try self.resolveOwned(NativeCalendarRecord(record)).legacyValue)
           return
         }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
@@ -99,6 +92,22 @@ final class EventEditingService: @unchecked Sendable {
     if FileManager.default.fileExists(atPath: directory.path) {
       try FileManager.default.removeItem(at: directory)
     }
+  }
+  private func resolveOwned(_ record: NativeCalendarRecord) throws -> NativeOwnedEventResolution {
+    switch agenda.lookup(record.ownedRecord) {
+    case .found(let event):
+      var current = try NativeCalendarEvent(snapshot: snapshot(event))
+      current.importID = record.id
+      return .found(current)
+    case .deleted: return .deleted
+    case .unavailable: return .unavailable
+    }
+  }
+  func resolveOwnedEvent(
+    _ record: NativeCalendarRecord,
+    completion: @escaping @Sendable (Result<NativeOwnedEventResolution, Error>) -> Void
+  ) {
+    queue.async { completion(Result { try self.resolveOwned(record) }) }
   }
   func calendars() -> [[String: Any]] { calendarDestinations().map(\.legacyValue) }
   private func calendarDestinations() -> [NativeEventCalendarDestination] {

@@ -1,4 +1,60 @@
+use crate::{
+    application::{failure, storage},
+    runtime, AppError, CalendarReadEvent, NativeApplication,
+};
 use reha_core::service::calendar_links as core;
+
+// UniFFI records are inline values. An associated event makes a missing found
+// payload unrepresentable at this boundary.
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Debug, uniffi::Enum)]
+pub enum OwnedEventResolution {
+    Found { event: CalendarReadEvent },
+    Deleted,
+    Unavailable,
+    Missing,
+}
+impl From<core::OwnedResolution> for OwnedEventResolution {
+    fn from(value: core::OwnedResolution) -> Self {
+        match value {
+            core::OwnedResolution::Found { event } => Self::Found {
+                event: (*event).into(),
+            },
+            core::OwnedResolution::Deleted => Self::Deleted,
+            core::OwnedResolution::Unavailable => Self::Unavailable,
+            core::OwnedResolution::Missing => Self::Missing,
+        }
+    }
+}
+impl TryFrom<OwnedEventResolution> for core::OwnedResolution {
+    type Error = AppError;
+    fn try_from(value: OwnedEventResolution) -> Result<Self, AppError> {
+        Ok(match value {
+            OwnedEventResolution::Found { event } => Self::Found {
+                event: Box::new(event.try_into()?),
+            },
+            OwnedEventResolution::Deleted => Self::Deleted,
+            OwnedEventResolution::Unavailable => Self::Unavailable,
+            OwnedEventResolution::Missing => Self::Missing,
+        })
+    }
+}
+#[uniffi::export]
+impl NativeApplication {
+    pub async fn resolve_owned_event(&self, id: String) -> Result<OwnedEventResolution, AppError> {
+        let state = self.state.clone();
+        let host = self.bridge.clone();
+        runtime()
+            .spawn(async move {
+                core::resolve_owned(host, &state, &id)
+                    .await
+                    .map(Into::into)
+                    .map_err(failure)
+            })
+            .await
+            .map_err(storage)?
+    }
+}
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct CalendarLinkInspection {

@@ -9,6 +9,8 @@ final class TestHost: AppleHost, Sendable {
   let agendaRequests = OSAllocatedUnfairLock<[AgendaSyncRequest]>(initialState: [])
   let agendaWarnings = OSAllocatedUnfairLock<[String]>(initialState: [])
   let linkRecords = OSAllocatedUnfairLock<[[AgendaOwnedRecord]]>(initialState: [])
+  let ownedRecords = OSAllocatedUnfairLock<[AgendaOwnedRecord]>(initialState: [])
+  let ownedResolution = OSAllocatedUnfairLock<OwnedEventResolution>(initialState: .unavailable)
   func calendarStatus() throws -> CalendarPlatformStatus {
     precondition(!Thread.isMainThread)
     if let error = failure.withLock({ $0 }) { throw error }
@@ -63,7 +65,7 @@ final class TestHost: AppleHost, Sendable {
     precondition(
       ![
         "queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus", "agenda",
-        "inspectCalendarLinks",
+        "inspectCalendarLinks", "resolveOwnedEvent",
       ]
       .contains(
         command),
@@ -93,6 +95,12 @@ final class TestHost: AppleHost, Sendable {
       results: records.map {
         CalendarLinkResult(id: $0.id, state: .unavailable(reason: "calendar_missing"))
       })
+  }
+  func resolveOwnedEvent(record: AgendaOwnedRecord) throws -> OwnedEventResolution {
+    precondition(!Thread.isMainThread)
+    ownedRecords.withLock { $0.append(record) }
+    if let error = failure.withLock({ $0 }) { throw error }
+    return ownedResolution.withLock { $0 }
   }
   func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult {
     precondition(!Thread.isMainThread)
@@ -399,6 +407,63 @@ final class TestHost: AppleHost, Sendable {
     precondition(transferred?.approved == imported.approved)
     precondition(transferred?.origin == "import" && transferred?.importId == imported.id)
     precondition(transferred?.operationId == imported.operationId)
+    let liveEvent = CalendarReadEvent(
+      id: "moved-occurrence", externalId: "repaired-external", calendarId: "hidden-moved",
+      calendarTitle: "Erfundener Kalender", source: "Local", occurrence: imported.approved.startUtc,
+      recurring: false, systemOnly: false, writable: true,
+      values: CalendarReadValues(
+        title: "Aktueller Titel", startUtc: imported.approved.startUtc,
+        endUtc: imported.approved.endUtc, timezone: imported.approved.timezone,
+        location: "Raum 3", reminderMinutes: nil),
+      metadataJson: #"{"notes":"Unverändert","alarms":[{"relative":-600}],"future":[true,null]}"#,
+      fingerprint: "existing-fingerprint", importId: imported.id)
+    for expected: OwnedEventResolution in [.found(event: liveEvent), .deleted, .unavailable] {
+      host.ownedResolution.withLock { $0 = expected }
+      let actual = try await reopened.resolveOwnedEvent(id: imported.id)
+      if case .found(var received) = actual, case .found(let supplied) = expected {
+        let actualMetadata = try JSONSerialization.jsonObject(
+          with: Data(received.metadataJson.utf8))
+        let expectedMetadata = try JSONSerialization.jsonObject(
+          with: Data(supplied.metadataJson.utf8))
+        precondition(
+          NSDictionary(dictionary: actualMetadata as! [String: Any]).isEqual(
+            to: expectedMetadata as! [String: Any]))
+        received.metadataJson = supplied.metadataJson
+        precondition(received == supplied)
+      } else {
+        precondition(actual == expected)
+      }
+      let legacyText = try await reopened.calendarRequest(
+        command: "resolveOwnedEvent", arguments: #"{"id":"\#(imported.id)"}"#)
+      let legacy = try JSONSerialization.jsonObject(with: Data(legacyText.utf8)) as! [String: Any]
+      switch expected {
+      case .found:
+        precondition(legacy["status"] as? String == "found")
+        let event = legacy["event"] as! [String: Any]
+        precondition(event["import_id"] as? String == imported.id)
+        precondition(event["external_id"] as? String == liveEvent.externalId)
+      case .deleted: precondition(legacy["status"] as? String == "deleted")
+      case .unavailable: precondition(legacy["status"] as? String == "unavailable")
+      case .missing: preconditionFailure("Unexpected fixture")
+      }
+    }
+    precondition(host.ownedRecords.withLock { $0.allSatisfy { $0 == transferred } })
+    for expected in nativeFailures {
+      host.failure.withLock { $0 = expected }
+      do {
+        _ = try await reopened.resolveOwnedEvent(id: imported.id)
+        preconditionFailure("Owned lookup failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
+    }
+    host.failure.withLock { $0 = nil }
+    let missingLink = try await reopened.resolveOwnedEvent(id: UUID().uuidString)
+    precondition(missingLink == .missing)
+    do {
+      _ = try await reopened.resolveOwnedEvent(id: "invalid")
+      preconditionFailure("Invalid link accepted")
+    } catch AppError.Validation {}
+    let lookupHistory = try await reopened.history()
+    precondition(lookupHistory.imports == retained.imports)
     let linkReport = try await reopened.calendarRequest(
       command: "inspectCalendarRepair", arguments: "{}")
     let inspectedRecords = host.linkRecords.withLock { $0.last! }

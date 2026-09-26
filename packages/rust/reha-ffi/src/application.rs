@@ -2,7 +2,7 @@ use crate::{
     recognition_jobs::RecognitionJobs, records::*, runtime, AgendaOwnedRecord, AgendaSyncRequest,
     AgendaSyncResult, AppError, CalendarLinkInspection, CalendarPlatformStatus, CalendarReadEvent,
     CalendarReadQuery, CalendarReadReference, CalendarReadResult, EventCalendarDestination,
-    EventMutationRequest, EventMutationResult, RecognitionJob,
+    EventMutationRequest, EventMutationResult, OwnedEventResolution, RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -317,6 +317,7 @@ pub trait AppleHost: Send + Sync {
         &self,
         records: Vec<AgendaOwnedRecord>,
     ) -> Result<CalendarLinkInspection>;
+    fn resolve_owned_event(&self, record: AgendaOwnedRecord) -> Result<OwnedEventResolution>;
     fn forget_calendar(&self) -> Result<()>;
     fn overlaps(
         &self,
@@ -330,6 +331,15 @@ pub(crate) struct HostBridge {
     jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
+    fn resolve_owned_event(
+        &self,
+        record: reha_core::store::OwnedEventRecord,
+    ) -> service::Response<service::calendar_links::OwnedResolution> {
+        self.host
+            .resolve_owned_event(record.into())
+            .and_then(TryInto::try_into)
+            .map_err(platform_failure)
+    }
     fn inspect_calendar_links(
         &self,
         records: Vec<reha_core::store::OwnedEventRecord>,
@@ -442,7 +452,7 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "editSystemEvent" | "resolveOwnedEvent" | "recognize" => serde_json::from_str(
+                "editSystemEvent" | "recognize" => serde_json::from_str(
                     &self
                         .host
                         .calendar_event_call(command.into(), args.to_string())?,
@@ -1496,6 +1506,18 @@ mod host_routing_tests {
             }
             Ok(self.response.clone().unwrap_or_else(|| json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()})).to_string())
         }
+        fn resolve_owned_event(&self, record: AgendaOwnedRecord) -> Result<OwnedEventResolution> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push(("typedOwnedEvent".into(), json!(record)));
+            }
+            Ok(OwnedEventResolution::Unavailable)
+        }
         fn inspect_calendar_links(
             &self,
             records: Vec<AgendaOwnedRecord>,
@@ -1687,7 +1709,7 @@ mod host_routing_tests {
             progress: Mutex::new(HashMap::new()),
             jobs: Arc::new(RecognitionJobs::default()),
         };
-        for command in ["recognize", "resolveOwnedEvent", "editSystemEvent"] {
+        for command in ["recognize", "editSystemEvent"] {
             let args = json!({"base64":"synthetic-crop", "budget_ms":1234});
             let result = bridge.call(command, args.clone()).unwrap();
             assert_eq!(result["received_command"], command);
@@ -1695,6 +1717,7 @@ mod host_routing_tests {
         }
         for command in [
             "unregistered-effect",
+            "resolveOwnedEvent",
             "queryEvents",
             "getEvent",
             "eventCalendars",

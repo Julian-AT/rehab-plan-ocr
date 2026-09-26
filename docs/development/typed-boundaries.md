@@ -309,6 +309,40 @@ Resultat und ausführbare Produkte bleiben separat erhalten.
 
 ## Ausstehende Mitteilungslinks
 
+Das anschließende Öffnen eines eigenen Termins verwendet ebenfalls eigene
+UniFFI-Aufträge und Ergebnisse: `NativeApplication.resolveOwnedEvent`,
+`Platform.resolve_owned_event` und der gleichnamige typisierte `AppleHost`-Callback.
+Gefunden, gelöscht, nicht erreichbar und fehlende lokale Zuordnung sind getrennte
+Varianten; ein gefundener Termin besitzt immer einen vollständigen Lesewert.
+Die EventKit-Suche bleibt auf ihrer seriellen Queue. Identitätsmarker, Suche ohne
+alte externe ID, logische Alarme und gespeicherte Zuordnung behalten ihre Regeln.
+Ein ausdrücklich geöffneter eigener Link darf einen ausgeblendeten Kalender lesen;
+gewöhnliche Agenda-/Sprachabfragen bleiben an die sichtbare Auswahl gebunden.
+Weder diese Auflösung noch ihre Fehler schreiben Kalender oder lokale Besitzdaten.
+Der ältere Befehl delegiert an denselben Core-Ablauf; nur alte Hosts verwenden
+den JSON-Adapter. `HostBridge` registriert diesen Stringeffekt nicht mehr.
+
+246 Core-/FFI-Tests, Workspace-Clippy, offizielle Bindings, echter nativer
+Rundweg und strenge iOS-26-Swift-6-Typprüfung bestehen in
+`typed-owned-link-20260926-s19-001`/`002`. Die erste native Probe setzte irrtümlich
+eine feste JSON-Schlüsselreihenfolge voraus; die korrigierte Probe prüft sämtliche
+Terminwerte und den vollständigen Metadateninhalt. Fehleridentität, unveränderte
+Importhistorie, lokale Sperre und ungültige/fehlende/gelöschte Zuordnung sind geprüft.
+Der tatsächliche EventKit-Lauf `owned-link-eventkit-20260926-s19-001` besteht mit
+20 Erfolgen, einem erwarteten Simulator-Dateischutz-Skip und null Fehlern.
+Er vergleicht beide Eingänge bei Fund und Löschung und prüft außerdem fehlende
+externe IDs, fremde Marker und fehlende Kalender, einschließlich erhaltener Alarmmetadaten.
+
+Die gemeinsamen App-/UI-Builds bestehen. Der neue UI-Fall erhält ausgewählten Tag
+und Termine beim Öffnen eines fehlenden Links in der laufenden App. Beide
+Linktests verwenden jetzt `XCUIDevice.shared.system.open`; `XCUIApplication.open`
+hatte die App neu gestartet und konnte deshalb Zustandserhalt nicht belegen.
+Der ursprüngliche negative Lauf bleibt als Fehler erhalten. `owned-link-ui-20260926-s19-002`
+führt trotz zweier angeforderter Fälle nur den Heute-Test aus; erst der separate
+Lauf `003` belegt den fehlenden Link. Beide tatsächlich ausgeführten Fälle bestehen
+ohne Fehler/Skip. Vollständige Resultate, Quellstände und ausführbare Produkte
+bleiben erhalten. Dies ersetzt keine vollständige UI- oder Geräteabnahme.
+
 Die App liest und quittiert ausstehende Terminidentitäten über
 `NativeBridge.pendingEventOpen` und den typisierten `NativeServices`-Callback.
 Der serielle Journalbesitzer liefert einen optionalen String; ausschließlich der

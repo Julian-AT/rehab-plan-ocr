@@ -89,6 +89,15 @@ pub trait Platform: Send + Sync {
             serde_json::json!({"records": records}),
         )?)
     }
+    fn resolve_owned_event(
+        &self,
+        record: crate::store::OwnedEventRecord,
+    ) -> Response<calendar_links::OwnedResolution> {
+        serde_json::from_value(
+            self.call("resolveOwnedEvent", serde_json::json!({"record":record}))?,
+        )
+        .map_err(calendar_reads::invalid_response)
+    }
     /// Compatibility defaults serve older JSON hosts. Native adapters override
     /// both methods and never serialize a whole read payload across the FFI.
     fn query_calendar(

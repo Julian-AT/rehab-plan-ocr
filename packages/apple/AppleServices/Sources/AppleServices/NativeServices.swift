@@ -340,6 +340,16 @@ public final class NativeServices: @unchecked Sendable {
       completion($0)
     }
   }
+  public func resolveOwnedEvent(
+    _ record: NativeCalendarRecord,
+    completion: @escaping @Sendable (Result<NativeOwnedEventResolution, Error>) -> Void
+  ) {
+    measured(.calendarRead) { done in
+      calendarReads.resolveOwnedEvent(record, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
   public func importOverlaps(
     events: [String: NativeImportValues], exclude: [String],
     completion: @escaping @Sendable (Result<[NativeImportOverlap], Error>) -> Void

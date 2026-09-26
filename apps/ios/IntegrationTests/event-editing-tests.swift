@@ -641,6 +641,40 @@ final class EventEditingTests: XCTestCase {
       let recordJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(record))
       let resolved = try await call("resolveOwnedEvent", ["record": recordJSON])
       XCTAssertEqual(resolved["status"] as? String, "found")
+      func typed(_ value: NativeCalendarRecord) async throws -> NativeOwnedEventResolution {
+        try await withCheckedThrowingContinuation { continuation in
+          editing.resolveOwnedEvent(value) { continuation.resume(with: $0) }
+        }
+      }
+      let nativeRecord = NativeCalendarRecord(record)
+      let nativeResolved = try await typed(nativeRecord)
+      XCTAssertTrue(NSDictionary(dictionary: try nativeResolved.legacyValue).isEqual(to: resolved))
+      guard case .found(let nativeEvent) = nativeResolved else {
+        return XCTFail("Typed lookup lost the saved owned event")
+      }
+      XCTAssertEqual(nativeEvent.importID, id)
+      XCTAssertEqual(nativeEvent.externalID, record.external_id)
+      var missingExternal = nativeRecord
+      missingExternal.externalID = nil
+      let recoveredIdentity = try await typed(missingExternal)
+      XCTAssertTrue(
+        NSDictionary(dictionary: try recoveredIdentity.legacyValue).isEqual(to: resolved))
+      var missingCalendar = missingExternal
+      missingCalendar.calendarID = UUID().uuidString
+      if case .unavailable = try await typed(missingCalendar) {
+      } else {
+        XCTFail("Missing calendar was classified as deletion")
+      }
+      let ownedEvent = try XCTUnwrap(store.event(withIdentifier: record.external_id!))
+      let marker = ownedEvent.url
+      ownedEvent.url = URL(string: "https://example.invalid/foreign-event")
+      try store.save(ownedEvent, span: .thisEvent, commit: true)
+      if case .unavailable = try await typed(nativeRecord) {
+      } else {
+        XCTFail("A foreign ownership marker was accepted")
+      }
+      ownedEvent.url = marker
+      try store.save(ownedEvent, span: .thisEvent, commit: true)
       let removal = try await call(
         "mutateEvent",
         [
@@ -653,6 +687,8 @@ final class EventEditingTests: XCTestCase {
       XCTAssertEqual(removal["status"] as? String, "saved")
       let deleted = try await call("resolveOwnedEvent", ["record": recordJSON])
       XCTAssertEqual(deleted["status"] as? String, "deleted")
+      let nativeDeleted = try await typed(nativeRecord)
+      XCTAssertTrue(NSDictionary(dictionary: try nativeDeleted.legacyValue).isEqual(to: deleted))
       try await withCheckedThrowingContinuation {
         (continuation: CheckedContinuation<Void, Error>) in
         agenda.queue.async { continuation.resume(with: Result { try agenda.forget() }) }

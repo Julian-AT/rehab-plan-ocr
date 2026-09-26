@@ -322,14 +322,21 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, RustBuffer, R
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
-typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
-typedef void (*UniffiCallbackInterfaceAppleHostMethod12)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod12)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD13
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD13
+typedef void (*UniffiCallbackInterfaceAppleHostMethod13)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -350,8 +357,9 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceAppleHostMethod8 _Nonnull decodePhoto;
     UniffiCallbackInterfaceAppleHostMethod9 _Nonnull syncAgenda;
     UniffiCallbackInterfaceAppleHostMethod10 _Nonnull inspectCalendarLinks;
-    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod12 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull resolveOwnedEvent;
+    UniffiCallbackInterfaceAppleHostMethod12 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod13 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -628,6 +636,11 @@ uint64_t uniffi_reha_ffi_fn_method_nativeapplication_reconcile_event_mutations(u
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_EVENT_UNCERTAINTY
 uint64_t uniffi_reha_ffi_fn_method_nativeapplication_resolve_event_uncertainty(uint64_t ptr, RustBuffer request
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_OWNED_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_RESOLVE_OWNED_EVENT
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_resolve_owned_event(uint64_t ptr, RustBuffer id
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
@@ -1385,6 +1398,12 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_resolve_event_uncerta
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RESOLVE_OWNED_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RESOLVE_OWNED_EVENT
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_resolve_owned_event(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_confirm_event_proposal(void
@@ -1538,6 +1557,12 @@ uint16_t uniffi_reha_ffi_checksum_method_applehost_sync_agenda(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_INSPECT_CALENDAR_LINKS
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_INSPECT_CALENDAR_LINKS
 uint16_t uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_OWNED_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_OWNED_EVENT
+uint16_t uniffi_reha_ffi_checksum_method_applehost_resolve_owned_event(void
     
 );
 #endif

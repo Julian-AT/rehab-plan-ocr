@@ -1,7 +1,48 @@
-//! Read-only ownership evidence. No calendar snapshot or write crosses this boundary.
-use super::{calendar_reads::invalid_response, Response};
-use serde::Deserialize;
+//! Read-only ownership inspection and explicit lookup of retained event links.
+use super::{calendar_reads::invalid_response, failure, AppState, Platform, Response};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::Arc;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum OwnedResolution {
+    Found {
+        event: Box<super::calendar_reads::Event>,
+    },
+    Deleted,
+    Unavailable,
+    Missing,
+}
+
+/// Explicit owned-event links may open a hidden calendar; ordinary agenda reads
+/// still use their captured visible scope. This lookup never repairs or writes.
+pub async fn resolve_owned(
+    platform: Arc<dyn Platform>,
+    state: &AppState,
+    id: &str,
+) -> Response<OwnedResolution> {
+    if id.is_empty() {
+        return Err("id fehlt.".into());
+    }
+    uuid::Uuid::parse_str(id).map_err(failure)?;
+    let _guard = state.calendar_lock.lock().await;
+    let record = state
+        .store
+        .lock()
+        .map_err(failure)?
+        .owned_record(id)
+        .map_err(failure)?;
+    match record {
+        Some(record) if record.status == "saved" => {
+            tokio::task::spawn_blocking(move || platform.resolve_owned_event(record))
+                .await
+                .map_err(failure)?
+        }
+        Some(_) => Ok(OwnedResolution::Deleted),
+        None => Ok(OwnedResolution::Missing),
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Inspection {

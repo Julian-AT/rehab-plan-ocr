@@ -805,6 +805,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func resolveEventUncertainty(request: ResolveEventUncertaintyRequest) async throws  -> EventMutationResult
     
+    func resolveOwnedEvent(id: String) async throws  -> OwnedEventResolution
+    
     func confirmEventProposal(request: EventConfirmRequest) async throws  -> EventMutationResult
     
     func eventCalendars() async throws  -> [EventCalendarDestination]
@@ -1719,6 +1721,22 @@ open func resolveEventUncertainty(request: ResolveEventUncertaintyRequest)async 
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeEventMutationResult_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func resolveOwnedEvent(id: String)async throws  -> OwnedEventResolution  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_resolve_owned_event(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeOwnedEventResolution_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -9188,6 +9206,89 @@ public func FfiConverterTypeOperationKind_lower(_ value: OperationKind) -> RustB
 
 
 
+public enum OwnedEventResolution: Equatable, Hashable {
+    
+    case found(event: CalendarReadEvent
+    )
+    case deleted
+    case unavailable
+    case missing
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension OwnedEventResolution: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOwnedEventResolution: FfiConverterRustBuffer {
+    typealias SwiftType = OwnedEventResolution
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OwnedEventResolution {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .found(event: try FfiConverterTypeCalendarReadEvent.read(from: &buf)
+        )
+        
+        case 2: return .deleted
+        
+        case 3: return .unavailable
+        
+        case 4: return .missing
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OwnedEventResolution, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .found(event):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeCalendarReadEvent.write(event, into: &buf)
+            
+        
+        case .deleted:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unavailable:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .missing:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOwnedEventResolution_lift(_ buf: RustBuffer) throws -> OwnedEventResolution {
+    return try FfiConverterTypeOwnedEventResolution.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOwnedEventResolution_lower(_ value: OwnedEventResolution) -> RustBuffer {
+    return FfiConverterTypeOwnedEventResolution.lower(value)
+}
+
+
+
+
 public enum PrintedState: Equatable, Hashable {
     
     case unreviewed
@@ -9459,6 +9560,8 @@ public protocol AppleHost: AnyObject, Sendable {
     func syncAgenda(request: AgendaSyncRequest) throws  -> AgendaSyncResult
     
     func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws  -> CalendarLinkInspection
+    
+    func resolveOwnedEvent(record: AgendaOwnedRecord) throws  -> OwnedEventResolution
     
     func forgetCalendar() throws 
     
@@ -9757,6 +9860,31 @@ fileprivate struct UniffiCallbackInterfaceAppleHost {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeCalendarLinkInspection_lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeAppError_lower
+            )
+        },
+        resolveOwnedEvent: { (
+            uniffiHandle: UInt64,
+            record: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> OwnedEventResolution in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceAppleHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.resolveOwnedEvent(
+                     record: try FfiConverterTypeAgendaOwnedRecord_lift(record)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeOwnedEventResolution_lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -11567,6 +11695,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_resolve_event_uncertainty() != 11040) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_resolve_owned_event() != 19930) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_confirm_event_proposal() != 35994) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -11645,10 +11776,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links() != 41104) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 56600) {
+    if (uniffi_reha_ffi_checksum_method_applehost_resolve_owned_event() != 61319) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 9555) {
+    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 60980) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 42251) {
         return InitializationResult.apiChecksumMismatch
     }
 

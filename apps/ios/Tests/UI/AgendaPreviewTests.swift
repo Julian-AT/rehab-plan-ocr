@@ -83,13 +83,42 @@ import XCTest
     XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
     XCTAssertNotEqual(app.buttons.matching(selection).firstMatch.label, today)
     app.tabBars.buttons["Mehr"].tap()
-    app.open(try XCTUnwrap(URL(string: "reha-calendar://today")))
+    XCUIDevice.shared.system.open(try XCTUnwrap(URL(string: "reha-calendar://today")))
     XCTAssertTrue(app.buttons["agenda-today"].waitForExistence(timeout: 8))
     expectation(
       for: NSPredicate(format: "label == %@", today),
       evaluatedWith: app.buttons.matching(selection).firstMatch)
     waitForExpectations(timeout: 8)
     capture("today-deep-link")
+  }
+
+  func testMissingOwnedLinkKeepsSelectedDayAndAppointments() throws {
+    launch("readable")
+    app.swipeLeft()
+    let title = "Physiotherapie Tag 1"
+    XCTAssertTrue(row(title).waitForExistence(timeout: 8))
+    let selectedDay = app.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")
+    ).firstMatch.label
+    app.tabBars.buttons["Mehr"].tap()
+    XCUIDevice.shared.system.open(
+      try XCTUnwrap(URL(string: "reha-calendar://event/\(UUID().uuidString)")))
+    let alert = app.alerts["Termin öffnen"]
+    XCTAssertTrue(alert.waitForExistence(timeout: 10))
+    XCTAssertTrue(
+      alert.staticTexts["Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."].exists)
+    alert.buttons["OK"].tap()
+    XCTAssertTrue(row(title).waitForExistence(timeout: 8))
+    XCTAssertEqual(
+      app.buttons.matching(
+        NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")
+      ).firstMatch.label, selectedDay)
+    XCTAssertEqual(
+      app.buttons.matching(
+        NSPredicate(
+          format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", title)
+      ).count, 1)
+    capture("missing-owned-event-link")
   }
 
   func testSwipingAndCompleteAppointmentLabels() {

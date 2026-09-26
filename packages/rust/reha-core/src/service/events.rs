@@ -11,12 +11,6 @@ fn required<'a>(v: &'a Value, key: &str) -> Response<&'a str> {
         .filter(|s| !s.is_empty())
         .ok_or_else(|| format!("{key} fehlt.").into())
 }
-async fn native(platform: &Arc<dyn Platform>, name: &'static str, args: Value) -> Response<Value> {
-    let platform = platform.clone();
-    tokio::task::spawn_blocking(move || platform.call(name, args))
-        .await
-        .map_err(failure)?
-}
 /// Compatibility command adapter. New application callers use agenda_queries directly.
 pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> Response<Value> {
     let request = super::agenda_queries::Request {
@@ -87,24 +81,10 @@ pub async fn dispatch(
         "ownedEventRecords" => Ok(
             json!({"records":state.store.lock().map_err(failure)?.owned_records().map_err(failure)?}),
         ),
-        "resolveOwnedEvent" => {
-            let id = required(&args, "id")?;
-            uuid::Uuid::parse_str(id).map_err(failure)?;
-            let _guard = state.calendar_lock.lock().await;
-            let record = state
-                .store
-                .lock()
-                .map_err(failure)?
-                .owned_record(id)
-                .map_err(failure)?;
-            match record {
-                Some(record) if record.status == "saved" => {
-                    native(&platform, "resolveOwnedEvent", json!({"record":record})).await
-                }
-                Some(_) => Ok(json!({"status":"deleted"})),
-                None => Ok(json!({"status":"missing"})),
-            }
-        }
+        "resolveOwnedEvent" => serde_json::to_value(
+            super::calendar_links::resolve_owned(platform, state, required(&args, "id")?).await?,
+        )
+        .map_err(failure),
         "inspectCalendarRepair" | "confirmCalendarRepair" => {
             super::calendar_repair::run(platform, state, command, args).await
         }
