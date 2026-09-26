@@ -67,13 +67,36 @@
     "commonly_authorized_devices": 1,
     "physical_acceptance": "pending"
   },
-  "installed_on_device": false,
+  "installed_on_device": true,
   "limitations": [
     "Simulator does not provide local German dictation",
     "Free Foundation Models replies fail on this simulator due to missing system model data",
     "Screen recording contains no audio; unchanged Victoria WAV samples are linked separately",
     "Microphone transcription and physical audio routes require device acceptance"
   ],
+  "device_delivery": {
+    "installed_build": "2026092611",
+    "installation_verified": true,
+    "startup_verified": true,
+    "calendar_display_verified": true,
+    "fresh_backup_files": 103,
+    "fresh_backup_bytes": 534520095,
+    "content_tables_unchanged": 13,
+    "durable_files_identical": 68,
+    "durable_files_semantically_identical": 1,
+    "original_images": 14,
+    "schema_unchanged": true,
+    "settings_changes": [
+      {
+        "key": "appearance",
+        "before": "dark",
+        "after": "light"
+      }
+    ],
+    "settings_change_attribution": "awaiting user clarification",
+    "strict_initial_comparison_passed": false,
+    "report": "../../smooth-voice-device-update.md"
+  },
   "record_kind": "historical-technical-record",
   "original_attestation": "external-private-archive"
 }

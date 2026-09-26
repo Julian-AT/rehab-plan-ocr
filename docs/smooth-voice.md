@@ -2,7 +2,7 @@
 
 # Ruhiger Gesprächsbildschirm – Build 2026092611
 
-Version 0.3.0. Diese Überarbeitung ersetzt den Orb-Entwurf aus Build 2026092610. Die [neue Simulatorvorschau](preview/2026-09-26-s12-smooth-voice/README.md) ist die Grundlage für die nächste Gerätefreigabe.
+Version 0.3.0. Diese Überarbeitung ersetzt den Orb-Entwurf aus Build 2026092610. Nach Freigabe der [Simulatorvorschau](preview/2026-09-26-s12-smooth-voice/README.md) ist der Build [auf dem iPhone installiert](smooth-voice-device-update.md).
 
 ## Oberfläche
 
@@ -20,6 +20,6 @@ Die [Vorschau mit Prüfnachweisen](preview/2026-09-26-s12-smooth-voice/README.md
 
 Die schon bekannten Simulatorgrenzen gelten weiterhin: lokale deutsche Diktiererkennung ist dort nicht verfügbar, freie Foundation-Models-Antworten scheitern an fehlenden Systemmodelldaten. Mikrofontranskription und freie Antworten müssen deshalb auf dem iPhone geprüft werden. Diese Überarbeitung ändert die betroffenen Schnittstellen nicht.
 
-Das Geräteupdate wartet auf ausdrückliche Freigabe der neuen Vorschau und der Hörproben gemäß `AGENTS.md`. Danach frisch sichern, ohne Deinstallation aktualisieren und dauerhafte Daten vergleichen. Bis dahin bleibt Build 2026092609 installiert.
+Das Geräteupdate wurde ausdrücklich freigegeben und mit frischer Sicherung ohne Deinstallation durchgeführt. Build 2026092611 ist installiert; [App-Start, erhaltene Inhalte und die einzelne Änderung der Darstellungseinstellung](smooth-voice-device-update.md) sind dokumentiert.
 
 API-Grundlage: Apples [MeshGradient](https://developer.apple.com/documentation/swiftui/meshgradient) für die interpolierten Verläufe und native SwiftUI-Schaltflächen.

@@ -31,6 +31,6 @@ Der dreisekündige Bildschirmmitschnitt hat keine Audiospur. Er zeigt tatsächli
 
 Die bereits bekannten Simulatorgrenzen bleiben: lokale deutsche Diktiererkennung ist dort nicht verfügbar; freie Foundation-Models-Antworten scheitern an fehlenden Systemmodelldaten. Echte Mikrofontranskription, freie Modellantworten und die Audioausgabe des iPhones benötigen die anschließende Geräteprüfung.
 
-Das Update ist noch nicht auf dem iPhone installiert. Gemäß `AGENTS.md` folgt die Installation nach ausdrücklicher Freigabe dieser Vorschau und der Hörproben, mit frischer Sicherung und Datenvergleich. Auf dem iPhone bleibt bis dahin Build 2026092609.
+Nach ausdrücklicher Freigabe wurde Build 2026092611 auf dem iPhone 17 installiert und gestartet. Frische Sicherung und Datenvergleich sind dokumentiert: alle Inhalte sind erhalten; einzig die Darstellungseinstellung wechselte von Dunkel auf Hell. [Geräteupdate und Vergleich](../../smooth-voice-device-update.md).
 
 [Umsetzung](../../smooth-voice.md) · [Kalender- und Kameravorschau der enthaltenen Änderungen](../2026-09-26-s12-fluid/README.md).
