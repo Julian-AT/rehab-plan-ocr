@@ -10,7 +10,7 @@ make restore-assistant-training
 make restore-assistant-export
 ```
 
-The assistant environment requires an Apple Silicon Mac. Both commands install
+The assistant environment requires an Apple Silicon Mac. These commands install
 dependencies under ignored `.local/envs/`. Keep original documents, model weights,
 checkpoints, generated samples and run logs under `.local/`. The verified private
 migration is complete; ignored aliases preserve historical references. Never put

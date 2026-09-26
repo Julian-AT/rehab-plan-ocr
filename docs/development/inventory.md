@@ -82,6 +82,32 @@ fremden Algorithmen oder realer Sprechenden wird damit nicht behauptet.
 
 ## Geprüfte Kandidaten ab 8d81c4c
 
+Die Inhaltsprüfung wurde am 26. September 2026 über die Produktbereiche hinaus auf
+Tests, Trainings-/Datenwerkzeuge und Auswertungen erweitert. Die einzelnen
+privaten Belege unter `.local/maintenance` enthalten vollständige Dateizuordnung,
+Hashes, konkrete Verbraucher, Entscheidungen und die Grenzen ihrer Aussage.
+Spätere Änderungen erhalten eigene Ergänzungsbelege; frühere Berichte bleiben
+unverändert. Diese Lektüre ersetzt weder gemeinsame Tests noch Geräteabnahme.
+
+| Inhaltsbereich | Beleg vom 26. September 2026 | Nachgewiesener Umfang |
+|---|---|---|
+| Rust-Domäne, Speicherung, Services, FFI | `core-domain`, `store`, `service`, `ffi`, `parser`, `ocr-runtime`, jeweils `-content-review-20260926-s21-001.json` | Produktlogik, Fehler-/Speichergrenzen, echte FFI-Verbraucher; ausdrücklich ausgeschlossene eingebettete Testbereiche werden gesondert ergänzt. |
+| Rust-Unterstützung | `rust-support-content-review-20260926-s21-001.json` | 33 Dateien einschließlich Integrationstests und manueller Beispiele; fachlich unterschiedliche Regressionen bleiben erhalten. |
+| Apple-Produktpfade | `apple-services`, `app-shell`, `intake`, `views`, `audio`, `conversation`, jeweils `-content-review-20260926-s21-001.json` | Darstellung, Aufnahme, native Effekte, Gesprächs- und Audiozuständigkeit. Die neue Umbenennungsregel hat den eigenen Ergänzungsbeleg `conversation-rename-rule-20260926-s21-001.json`. |
+| Apple-Testquellen | `apple-tests-content-review-20260926-s21-001.json`, `integration-tests-content-review-20260926-s21-001.json` | 69 Host-/UI-Dateien und sieben Integrationsdateien; 74 UI- und 22 Integrationstestmethoden. Neue gemeinsame Simulatorläufe bleiben getrennt erforderlich. |
+| Datenwerkzeuge | `data-tools-content-inventory-20260926-s21-001.json` | 29 Dateien; echte Originale werden durch den historischen Kopierbefehl nicht mehr gelöscht. Menschliche Freigaben werden nicht erzeugt. |
+| Training und Wiederaufnahme | `training-content-review-20260926-s21-002.json` | 49 Dateien, getrennte gelockte Umgebungen und archivierte Kompatibilitätsquellen; geprüfte Zustände und atomare Veröffentlichung wiederhergestellter Quellen. |
+| OCR-Auswertung | `recognition-evaluation-content-review-20260926-s21-001.json` | 41 Dateien; gemessene Modelle/Pixel werden vor und nach Ausführung gebunden. Alte Diagnosen bleiben nach Herkunft eingeordnet. |
+| Sprache, Geräteauswertung und Fixtures | `speech-device-fixtures-content-review-20260926-s21-001.json` | 29 Dateien; Hörformulare bleiben an tatsächlich gesprochene Referenztexte gebunden. Keine menschliche Hörbewertung behauptet. |
+| Build- und Entwicklungswerkzeuge | `build-tools`, `dev-tools`, jeweils `-content-review-20260926-s21-001.json`; `apple-build-boundary-content-review-20260926-s21-001.json` | Compiler-/Generatorwege, Quellengrenzen und echte Make-Verbraucher. Der zusätzliche explizite Modellkandidat hat den separaten Build-Delta-Beleg `build-tools-content-review-20260926-s21-002-delta.json`. |
+| Prüfwerkzeuge | `checks-tools-content-review-20260926-s21-001.json` | 67 Dateien einschließlich 53 Shell-Einstiegen; tatsächliche Testfälle und Summary müssen übereinstimmen, der exakte Pixelvertrag umfasst auch Alpha. Spätere gemeinsame Router-Quelllisten werden separat belegt. |
+| Releasewerkzeuge und Tests | `release-content-review-20260926-s21-001.json`, `release-tests-content-review-20260926-s21-001.json` | Neun Implementierungen und acht Testdateien; Paket-/Signatur-/Originalschutz. Alle acht synthetischen Testdateien bestanden, keine aktuelle physische Freigabe. |
+| Dokumentation und Fremdherkunft | `docs-content-review-20260926-s21-001.json`, `vad-vendored-content-review-20260926-s21-001.json` | 144 Dokumentations-/Nachweisdateien und 26 unveränderte Upstream-VAD-Dateien. Aktuelle Abschlussindizes bleiben bis zu ihrer abschließenden Aktualisierung getrennt. |
+
+Die vollständige Zusammenführung auf die endgültigen Dateihashes und der noch
+laufende Modell-/Experimentvergleich bleiben offen. Der automatische
+Verbraucherklassifikator allein wird weiterhin nicht als Inhaltsfreigabe ausgegeben.
+
 | Kandidat | Verbraucher/Prüfung | Entscheidung |
 |---|---|---|
 | `tooling/build/portable.dockerfile`, `.dockerignore` | Container kopierte `crates`, obwohl Cargo `packages/rust` verwendet; weder Make noch CI definiert einen Containerpfad. Der unterstützte Linux-Pfad führt `quality.py` auf Ubuntu aus. | Entfernt; alter Inhalt über Git `8d81c4c` wiederherstellbar. Kein unterstützter Build verwendet diesen Container. |
