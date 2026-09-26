@@ -93,3 +93,27 @@ Der neue Plan `.local/maintenance/model-objects-20260926-s21-002.json` hat SHA25
 sein abgeschlossener Beleg `model-objects-20260926-s21-002.receipt.json` SHA256
 `db309ef85b6cf11ffd99a86189b654d2e8743563219dfe24b3111363053f5d9d`.
 Die vorherigen Pläne und Belege bleiben erhalten.
+
+Anschließend wurden genau die drei bytegleichen `assistant.gguf` aus
+`assistant-export-upgrade-stage1-20260926-s21-001`, `assistant-export-upgrade-stage2-20260926-s21-001`
+und `assistant-export-upgrade-stage3-20260926-s21-001` unter `.local/runs/` zusammengeführt.
+Der separat geprüfte private Adapter nutzt den vorhandenen Clone-/Lease-/Receipt-Ablauf;
+die öffentlichen Baseline- und Smoke-Einstiege wurden nicht erweitert. Alle drei
+Zielpfade behalten Inhalt und eigene Metadaten, einschließlich der Modi 0444, 0444
+und 0644, mit neuen voneinander getrennten Inodes. Die Referenz
+`assistant-development-002/deployment/assistant.gguf` bleibt einschließlich ihres
+Inodes `76430971` unverändert. Der gebundene Inhalt umfasst je 1.198.182.240 Bytes
+mit SHA256 `0dfee2695c0c1bf44bbb1aa2bd9d59ce17c723fdf8b76f9a0ad2ad96da0f44a2`;
+historische Export-, Paritäts- und Checkpointbelege wurden erneut geprüft.
+
+Der tatsächliche Abschlussbeleg zeigt einen Anstieg des freien Volumenplatzes von
+39.794.434.048 auf 40.988.610.560 Bytes: beobachtet **+1.194.176.512 Bytes**.
+Diese Differenz umfasst Systemaktivität und misst keine exklusiv freigegebenen
+APFS-Extents. Die logische Größe der drei Ziele ist keine Speichergewinnzusage.
+Modellqualität und neue Antworten wurden bei dieser Aktion nicht geprüft.
+
+Der private Plan `.local/maintenance/assistant-export-stage123-cow-20260926-s21-001/plan.json`
+hat SHA256 `866d9f71cae4e0603ff699d0449dd539d14b4d88db585168ef2ef32fa3d2c79d`,
+sein Abschlussbeleg `plan.receipt.json` SHA256
+`76beacb02c29810765a93ad55173245b8f5a03131f0450b854359077a5e024c4`.
+Der Originalreview und alle früheren Pläne und Abschlussbelege bleiben unverändert.
