@@ -262,7 +262,10 @@ struct VoiceSnapshot {
       failed("Ich habe keine Sprache erkannt.")
       return
     }
-    let parsed = VoiceRules.parse(text)
+    let now = Date.now
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+    let parsed = VoiceRules.parse(text, now: now, calendar: calendar)
     if parsed.action == .cancel {
       cancelSession()
       return
@@ -274,7 +277,9 @@ struct VoiceSnapshot {
           "Es wird nichts geändert. Was möchten Sie wissen?"), question: .action)
       return
     }
-    if VoiceRules.hasInvalidDate(text) {
+    if VoiceRules.hasInvalidDate(
+      text, now: now, calendar: question == .date ? intent.calendar : calendar)
+    {
       say("Dieses Datum ist ungültig. Bitte das Datum noch einmal nennen.")
       return
     }
@@ -282,7 +287,7 @@ struct VoiceSnapshot {
       repeatResponse()
       return
     }
-    if let request = interpretation.rules.match(text) {
+    if let request = interpretation.rules.match(text, now: now, calendar: calendar) {
       question = .action
       await answerCalendar(request)
       return
@@ -294,7 +299,7 @@ struct VoiceSnapshot {
       failures = 0
       await advanceCreation()
     case .date:
-      if let date = VoiceRules.date(text, now: .now, calendar: .current) {
+      if let date = VoiceRules.date(text, now: now, calendar: intent.calendar) {
         intent.newDate = date
         self.date = date
         failures = 0
@@ -335,7 +340,7 @@ struct VoiceSnapshot {
       say("Zum Speichern bitte die große Schaltfläche antippen.")
     case .action:
       guard ![.unsupported, .next, .list].contains(parsed.action) else {
-        await converse(text)
+        await converse(text, now: now, calendar: calendar)
         return
       }
       intent = parsed
@@ -391,7 +396,7 @@ struct VoiceSnapshot {
         question: .action)
     }
   }
-  private func converse(_ text: String) async {
+  private func converse(_ text: String, now: Date, calendar: Calendar) async {
     failures = 0
     if case .unavailable(let reason) = interpretation.availability {
       say(
@@ -406,7 +411,7 @@ struct VoiceSnapshot {
     await calendarConversation.begin(token)
     guard session == current, modelToken == token, !Task.isCancelled else { return }
     do {
-      let context = try await calendarConversation.context()
+      let context = try await calendarConversation.context(now: now, calendar: calendar)
       let history = rounds.dropLast().suffix(6).map {
         [
           "user": $0.user,
@@ -414,7 +419,7 @@ struct VoiceSnapshot {
         ]
       }
       let request = InterpretationRequest(
-        text: text, context: context, history: history, now: .now,
+        text: text, context: context, history: history, now: now, calendar: calendar,
         deadline: ContinuousClock.now.advanced(by: .seconds(30)))
       let task = Task { @MainActor [interpretation] in
         try await interpretation.interpret(request)
@@ -453,7 +458,7 @@ struct VoiceSnapshot {
       case .create, .update, .remove:
         let action: VoiceIntent.Action =
           result.action == .create ? .create : result.action == .update ? .update : .remove
-        intent = result.change ?? VoiceIntent()
+        intent = result.change ?? VoiceIntent(timezone: calendar.timeZone.identifier)
         intent.action = action
         selected = nil
         if action == .create {
@@ -516,7 +521,7 @@ struct VoiceSnapshot {
     question = .action
     intent = VoiceIntent()
     intent.action = action
-    if action == .list { intent.date = Calendar.current.startOfDay(for: .now) }
+    if action == .list { intent.date = intent.calendar.startOfDay(for: .now) }
     selected = nil
     candidates = []
     if action == .create {
@@ -532,13 +537,14 @@ struct VoiceSnapshot {
         CalendarQuestion(
           detail: intent.action == .next ? .next : .list, date: intent.date,
           days: intent.action == .next && intent.date == nil ? 90 : 1,
-          calendarName: intent.calendarName))
+          calendarName: intent.calendarName, timezone: intent.timezone))
       return
     }
     let current = session
+    let calendar = intent.calendar
     do {
-      let start = intent.date ?? Calendar.current.startOfDay(for: .now)
-      let end = Calendar.current.date(
+      let start = intent.date ?? calendar.startOfDay(for: .now)
+      let end = calendar.date(
         byAdding: .day, value: intent.date == nil && intent.action != .list ? 90 : 1, to: start)!
       let iso = ISO8601DateFormatter()
       let response = try await core.eventRequest(
@@ -556,8 +562,8 @@ struct VoiceSnapshot {
       } else {
         if let minutes = intent.referenceTime {
           found = found.filter {
-            Calendar.current.component(.hour, from: $0.values.start) * 60
-              + Calendar.current.component(.minute, from: $0.values.start) == minutes
+            calendar.component(.hour, from: $0.values.start) * 60
+              + calendar.component(.minute, from: $0.values.start) == minutes
           }
         }
         let terms = VoiceRules.referenceWords(intent.referenceText)
@@ -579,7 +585,8 @@ struct VoiceSnapshot {
       }
       if intent.action == .next || intent.action == .list {
         say(
-          response.warning + candidates.prefix(5).map(\.spoken).joined(separator: " ")
+          response.warning
+            + candidates.prefix(5).map { $0.spoken(in: calendar.timeZone) }.joined(separator: " ")
             + (candidates.count > 5 ? " Weitere Termine stehen auf dem Bildschirm." : ""),
           question: .action)
       } else if candidates.count == 1 {
@@ -601,7 +608,7 @@ struct VoiceSnapshot {
     } else if intent.action == .update {
       await advance()
     } else {
-      say(event.spoken, question: .action)
+      say(event.spoken(in: intent.calendar.timeZone), question: .action)
     }
   }
   func editSlots() async {
@@ -613,12 +620,12 @@ struct VoiceSnapshot {
       intent.title = title
       intent.origins["title"] = .choice
     case .date:
-      intent.newDate = Calendar.current.startOfDay(for: date)
+      intent.newDate = intent.calendar.startOfDay(for: date)
       intent.origins["new_date"] = .choice
     case .time:
       intent.newTime =
-        Calendar.current.component(.hour, from: time) * 60
-        + Calendar.current.component(.minute, from: time)
+        intent.calendar.component(.hour, from: time) * 60
+        + intent.calendar.component(.minute, from: time)
       intent.origins["new_time"] = .choice
     case .duration:
       guard duration > 0 else { return }
@@ -659,7 +666,7 @@ struct VoiceSnapshot {
   }
   private func prepare() async {
     let current = session
-    let calendar = Calendar.current
+    let calendar = intent.calendar
     if intent.newDate == nil && selected != nil { intent.origins["new_date"] = .context }
     if intent.newTime == nil && selected != nil { intent.origins["new_time"] = .context }
     if intent.duration == nil && selected != nil { intent.origins["duration"] = .context }

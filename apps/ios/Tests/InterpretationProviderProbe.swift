@@ -28,6 +28,16 @@ import Foundation
     let direct = try await router.interpret(request("Termine morgen"))
     precondition(direct.identity.provider == "complete-rules" && direct.value.query != nil)
     precondition(provider.calls == 0, "Exact rules must work without starting an unavailable model")
+    var newYork = Calendar(identifier: .gregorian)
+    newYork.timeZone = TimeZone(identifier: "America/New_York")!
+    let evening = ISO8601DateFormatter().date(from: "2026-09-16T02:00:00Z")!
+    let zonedRequest = InterpretationRequest(
+      text: "Termine heute", context: "{}", history: [], now: evening,
+      calendar: newYork, deadline: .now + .seconds(5))
+    let zonedRules = try await router.interpret(zonedRequest)
+    precondition(zonedRules.value.query?.timezone == "America/New_York")
+    precondition(zonedRules.value.query?.date == newYork.startOfDay(for: evening))
+    precondition(provider.calls == 0)
     do {
       _ = try await router.interpret(request("Termine morgen außer Gymnastik"))
       preconditionFailure("Unavailable model called")
@@ -96,6 +106,32 @@ import Foundation
       action: .calendar, query: query, change: nil, reply: nil
     ).validated()
     precondition(decoded.query?.reference == "r1" && decoded.query?.detail == .room)
+    let zonedQuery = CalendarUnderstanding.Query(
+      detail: .list, date: "2026-09-15", days: 1, title: "", excluding: "", calendarName: nil,
+      reference: nil, ordinal: 0, usesLastPage: false, after: "21:00", before: "23:00")
+    let zonedApple = try CalendarUnderstanding(
+      action: .calendar, query: zonedQuery, change: nil, reply: nil
+    ).validated(calendar: newYork)
+    precondition(zonedApple.query?.date == newYork.startOfDay(for: evening))
+    precondition(zonedApple.query?.timezone == "America/New_York")
+    let changed = try CalendarUnderstanding.Change(
+      title: nil, date: "2026-09-15", time: "22:00", duration: nil
+    ).validated(action: .update, calendar: newYork)
+    precondition(changed.timezone == "America/New_York" && changed.newTime == 1320)
+    precondition(changed.newDate == newYork.startOfDay(for: evening))
+    precondition(
+      changed.calendar.date(bySettingHour: 22, minute: 0, second: 0, of: changed.newDate!)
+        == evening)
+    let zonedCustom = try AssistantInterpretation.decode(
+      #"{"action":"update","query":{"reference":"r1"},"change":{"date":"2026-09-15","time":"22:00"}}"#,
+      references: ["r1"], timezone: "America/New_York")
+    precondition(zonedCustom.change?.timezone == changed.timezone)
+    precondition(zonedCustom.change?.newDate == changed.newDate)
+    precondition(zonedCustom.change?.newTime == changed.newTime)
+    let zonedMutation = VoiceRules.parse(
+      "Verschiebe den Termin auf heute um 22 Uhr", now: evening, calendar: newYork)
+    precondition(zonedMutation.timezone == "America/New_York")
+    precondition(zonedMutation.newDate == changed.newDate && zonedMutation.newTime == 1320)
     for title in ["", String(repeating: "x", count: 201)] {
       do {
         _ = try CalendarUnderstanding.Change(title: title, date: nil, time: nil, duration: nil)

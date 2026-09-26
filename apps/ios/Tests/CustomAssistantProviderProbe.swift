@@ -11,14 +11,34 @@ import Foundation
     let context = String(
       decoding: try JSONSerialization.data(withJSONObject: fixture["app_context"]!), as: UTF8.self)
     let text = fixture["utterance"] as! String
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Vienna")!
     func request(history: [[String: String]] = [], input: String? = nil) -> InterpretationRequest {
       InterpretationRequest(
         text: input ?? text, context: context, history: history,
-        now: CalendarConversation.civilDate("2031-05-15")!, deadline: .now + .seconds(5))
+        now: CalendarConversation.civilDate("2031-05-15", calendar: calendar)!,
+        calendar: calendar, deadline: .now + .seconds(5))
     }
     let prompt = try AssistantPrompt(request: request(), system: system)
     let rendered = try prompt.render(history: [])
     precondition(rendered == fixture["expected_prompt"] as! String)
+    let original = request()
+    var wrongZone = calendar
+    wrongZone.timeZone = TimeZone(identifier: "America/New_York")!
+    for mismatched in [
+      InterpretationRequest(
+        text: original.text, context: original.context, history: [], now: original.now,
+        calendar: wrongZone, deadline: original.deadline),
+      InterpretationRequest(
+        text: original.text, context: original.context, history: [],
+        now: original.now.addingTimeInterval(86400), calendar: calendar, deadline: original.deadline
+      ),
+    ] {
+      do {
+        _ = try AssistantPrompt(request: mismatched, system: system)
+        preconditionFailure("Prompt and request used inconsistent civil dates")
+      } catch InterpretationError.invalidRequest {}
+    }
     let history = [
       ["user": "Älteste Frage", "spoken_answer": "Älteste Antwort"],
       ["user": "Mittlere Frage", "displayed_answer": "Mittlere Antwort"],

@@ -35,6 +35,8 @@ establish current device behavior or authorize an update.
 - Conversation day boundaries, live references, pagination and spoken times retain
   the request's timezone. A reproduced DST cache collision is fixed; deterministic
   23/25-hour and cross-zone regressions pass with the simulator build.
+  Rules, Apple/custom interpretation and pending mutation confirmation now also
+  retain one captured civil clock; stale custom prompt dates/zones are rejected.
 - German month names/ordinals, invalid dates, mixed-format self-corrections and
   negated field values have executable regressions. Short rejections drop pending
   mutations. The corresponding new UI scenario is still blocked by audio aborts.

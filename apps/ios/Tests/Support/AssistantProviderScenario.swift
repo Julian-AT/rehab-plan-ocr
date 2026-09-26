@@ -36,7 +36,7 @@
         let now = CalendarConversation.civilDate("2031-05-15", calendar: calendar)!
         func request(_ text: String) -> InterpretationRequest {
           InterpretationRequest(
-            text: text, context: context, history: [], now: now,
+            text: text, context: context, history: [], now: now, calendar: calendar,
             deadline: .now + .seconds(30))
         }
         let simple = try await router.interpret(request("Termine morgen"))

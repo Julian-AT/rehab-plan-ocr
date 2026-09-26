@@ -80,6 +80,14 @@ private actor ZonedCalendarFixture {
     let context = try await reference.context()
     precondition(
       context.contains("2026-09-15"), "Discussed civil date was reformatted in device zone")
+    let capturedContext = try await reference.context(
+      now: date("2026-09-16T02:00:00Z"), calendar: newYork)
+    let values =
+      try JSONSerialization.jsonObject(with: Data(capturedContext.utf8)) as! [String: Any]
+    precondition(values["today"] as? String == "2026-09-15")
+    precondition(values["timezone"] as? String == "America/New_York")
+    let visible = values["last_page"] as! [[String: String]]
+    precondition(visible.first?["date"] == "2026-09-15")
     let pagingFixture = ZonedCalendarFixture(
       (0..<6).map { index in
         event("page-\(index)", "2026-09-16T02:0\(index):00Z", "2026-09-16T02:1\(index):00Z")

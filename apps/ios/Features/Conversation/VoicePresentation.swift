@@ -320,10 +320,14 @@ private struct VoiceDetailsView: View {
         }
         if model.question == .date {
           DatePicker("Datum", selection: $model.date, displayedComponents: .date)
+            .environment(\.calendar, model.intent.calendar)
+            .environment(\.timeZone, model.intent.calendar.timeZone)
           AppFormAction(title: "Datum übernehmen") { Task { await model.editSlots() } }
         }
         if model.question == .time {
           DatePicker("Uhrzeit", selection: $model.time, displayedComponents: .hourAndMinute)
+            .environment(\.calendar, model.intent.calendar)
+            .environment(\.timeZone, model.intent.calendar.timeZone)
           AppFormAction(title: "Uhrzeit übernehmen") { Task { await model.editSlots() } }
         }
         if model.question == .duration {

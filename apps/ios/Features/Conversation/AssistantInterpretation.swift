@@ -33,6 +33,7 @@ enum AssistantInterpretation {
     func change(_ value: AssistantChange, action: VoiceIntent.Action) throws -> VoiceIntent {
       var result = VoiceIntent()
       result.action = action
+      result.timezone = timezone
       result.title = value.title
       if let date = value.date {
         guard let parsed = CalendarConversation.civilDate(date, calendar: calendar) else {

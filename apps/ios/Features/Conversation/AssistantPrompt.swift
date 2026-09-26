@@ -26,11 +26,12 @@ struct AssistantPrompt {
     try request.validate()
     let context = try JSONDecoder().decode(Context.self, from: Data(request.context.utf8))
     guard let zone = TimeZone(identifier: context.timezone), !system.isEmpty,
-      system.utf8.count <= 16_384, !request.text.contains("<|"), !system.contains("<|")
+      system.utf8.count <= 16_384, !request.text.contains("<|"), !system.contains("<|"),
+      zone == request.calendar.timeZone
     else { throw InterpretationError.invalidRequest }
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = zone
-    guard CalendarConversation.civilDate(context.today, calendar: calendar) != nil else {
+    guard context.today == CalendarConversation.day(request.now, calendar: calendar) else {
       throw InterpretationError.invalidRequest
     }
     let references = context.lastPage.map(\.reference)

@@ -21,7 +21,20 @@ struct InterpretationRequest: Sendable {
   let context: String
   let history: [[String: String]]
   let now: Date
+  let calendar: Calendar
   let deadline: ContinuousClock.Instant
+
+  init(
+    text: String, context: String, history: [[String: String]], now: Date,
+    calendar: Calendar = .current, deadline: ContinuousClock.Instant
+  ) {
+    self.text = text
+    self.context = context
+    self.history = history
+    self.now = now
+    self.calendar = calendar
+    self.deadline = deadline
+  }
 
   func validate() throws {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -55,7 +68,8 @@ struct ConversationInterpretation: Sendable {
       else { throw InterpretationError.invalidRequest }
     }
     if let change {
-      guard change.newTime.map({ (0..<1440).contains($0) }) ?? true,
+      guard TimeZone(identifier: change.timezone) != nil,
+        change.newTime.map({ (0..<1440).contains($0) }) ?? true,
         change.duration.map({ (1...1440).contains($0) }) ?? true,
         change.title.map({
           !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 200
@@ -114,12 +128,12 @@ extension InterpretationProvider {
   let capabilities: Set<InterpretationCapability> = [.calendar]
   let availability = InterpretationAvailability.available
 
-  func match(_ text: String, now: Date = .now) -> CalendarQuestion? {
-    CalendarQuestion.direct(text, now: now)
+  func match(_ text: String, now: Date = .now, calendar: Calendar = .current) -> CalendarQuestion? {
+    CalendarQuestion.direct(text, now: now, calendar: calendar)
   }
   func interpret(_ request: InterpretationRequest) async throws -> ConversationInterpretation {
     try Task.checkCancellation()
-    guard let question = match(request.text, now: request.now) else {
+    guard let question = match(request.text, now: request.now, calendar: request.calendar) else {
       throw InterpretationError.invalidRequest
     }
     return ConversationInterpretation(action: .calendar, query: question)
@@ -140,7 +154,8 @@ extension InterpretationProvider {
     try Task.checkCancellation()
     guard ContinuousClock.now < request.deadline else { throw InterpretationError.deadlineExceeded }
     let provider: any InterpretationProvider =
-      rules.match(request.text, now: request.now) == nil ? generation : rules
+      rules.match(request.text, now: request.now, calendar: request.calendar) == nil
+      ? generation : rules
     if case .unavailable(let reason) = provider.availability {
       throw InterpretationError.unavailable(reason)
     }

@@ -96,6 +96,26 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### One civil clock through interpretation and confirmation — 2026-09-26
+
+Each voice/text turn now captures its civil calendar and instant before awaiting
+context generation. Rules, Apple structured decoding and custom-model prompts use
+that captured clock. Context today/visible-reference dates agree with the request;
+the custom prompt rejects a mismatched day or timezone. Pending mutations retain
+their timezone through date/time collection, event lookup, date pickers and preview
+construction, including the typed custom-model adapter.
+
+Five targeted probes pass: common interpretation, custom provider, calendar
+timezone, conversation state and German voice rules. New cases cover a New York
+22:00 appointment while the host runs in Vienna, matching Apple/custom/rule date
+conversion and rejection of stale prompt dates/zones. Repository lint, the regular
+simulator build and built-bundle verification pass. The normal build initially
+stopped at its disk reserve; verified duplicate download ranges and completed
+compiler intermediates were removed with local receipts before rerunning it.
+Authoritative weights, originals, backups, finished app products and result logs
+remain intact. Physical timezone changes and full voice UI qualification remain
+separate acceptance work.
+
 ### Shared unsigned and signed bundle verification — 2026-09-26
 
 `make verify-bundle` checks the built app and all three extensions against the

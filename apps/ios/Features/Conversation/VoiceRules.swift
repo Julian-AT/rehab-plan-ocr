@@ -38,6 +38,12 @@ struct VoiceIntent: Equatable, Sendable {
   var duration: Int?
   var title: String?
   var corrected = false
+  var timezone = TimeZone.current.identifier
+  var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: timezone) ?? .current
+    return calendar
+  }
 }
 enum VoiceRules {
   private static let expressions = VoiceRegexCache()
@@ -248,6 +254,7 @@ enum VoiceRules {
   {
     let text = normalized(input)
     var result = VoiceIntent()
+    result.timezone = calendar.timeZone.identifier
     result.corrected = !matches(correctionPattern, text).isEmpty
     if let named = matches(
       "(?:im|in|aus|vom) kalender (.+?)(?: am | um | auf | heute| morgen|$)", text

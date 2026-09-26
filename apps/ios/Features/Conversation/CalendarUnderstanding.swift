@@ -46,8 +46,8 @@ import FoundationModels
     )
     var before: String?
 
-    func validated() throws -> CalendarQuestion {
-      let parsed = date.flatMap { CalendarConversation.civilDate($0) }
+    func validated(calendar: Calendar = .current) throws -> CalendarQuestion {
+      let parsed = date.flatMap { CalendarConversation.civilDate($0, calendar: calendar) }
       guard date == nil || parsed != nil, (1...90).contains(days), (0...5).contains(ordinal),
         title.count <= 160, excluding.count <= 160,
         let detail = CalendarQuestion.Detail(rawValue: String(describing: detail))
@@ -60,7 +60,8 @@ import FoundationModels
       let question = CalendarQuestion(
         detail: detail, date: parsed, days: days, title: title, excluding: excluding,
         calendarName: calendarName, reference: reference, ordinal: ordinal,
-        usesLastPage: usesLastPage, afterMinutes: lower, beforeMinutes: upper)
+        usesLastPage: usesLastPage, afterMinutes: lower, beforeMinutes: upper,
+        timezone: calendar.timeZone.identifier)
       guard question.validTimeBounds else { throw CalendarUnderstandingError.invalidRequest }
       return question
     }
@@ -71,9 +72,11 @@ import FoundationModels
     @Guide(description: "Neue Uhrzeit HH:mm, sonst nil.") var time: String?
     @Guide(description: "Neue Dauer in Minuten, sonst nil.") var duration: Int?
 
-    func validated(action: VoiceIntent.Action) throws -> VoiceIntent {
+    func validated(action: VoiceIntent.Action, calendar: Calendar = .current) throws -> VoiceIntent
+    {
       var intent = VoiceIntent()
       intent.action = action
+      intent.timezone = calendar.timeZone.identifier
       if let title {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, title.count <= 200
         else {
@@ -82,7 +85,7 @@ import FoundationModels
       }
       intent.title = title
       if let date {
-        guard let parsed = CalendarConversation.civilDate(date) else {
+        guard let parsed = CalendarConversation.civilDate(date, calendar: calendar) else {
           throw CalendarUnderstandingError.invalidRequest
         }
         intent.newDate = parsed
@@ -103,7 +106,7 @@ import FoundationModels
 }
 
 extension CalendarUnderstanding {
-  func validated() throws -> ConversationInterpretation {
+  func validated(calendar: Calendar = .current) throws -> ConversationInterpretation {
     let value = self
     let action: ConversationInterpretation.Action
     switch value.action {
@@ -116,8 +119,8 @@ extension CalendarUnderstanding {
     }
     let mutation: VoiceIntent.Action =
       value.action == .create ? .create : value.action == .update ? .update : .remove
-    let query = try value.query?.validated()
-    let change = try value.change?.validated(action: mutation)
+    let query = try value.query?.validated(calendar: calendar)
+    let change = try value.change?.validated(action: mutation, calendar: calendar)
     switch value.action {
     case .calendar:
       guard query != nil, change == nil, value.reply == nil else {
@@ -177,7 +180,7 @@ extension CalendarUnderstanding {
   func interpret(_ request: InterpretationRequest) async throws -> ConversationInterpretation {
     let value = try await respond(
       text: request.text, context: request.context, history: request.history)
-    return try value.validated()
+    return try value.validated(calendar: request.calendar)
   }
   private var prepared: LanguageModelSession?
   private var preparedAddress: VoiceAddress?

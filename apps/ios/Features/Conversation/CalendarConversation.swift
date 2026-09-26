@@ -60,19 +60,20 @@ actor CalendarConversation {
     formatter.dateFormat = "yyyy-MM-dd"
     return formatter.string(from: date)
   }
-  func context() throws -> String {
+  func context(now: Date = .now, calendar: Calendar = .current) throws -> String {
     let discussedDate = lastQuestion.flatMap { question in
       question.date.map { Self.day($0, calendar: question.calendar) }
     }
     let value: [String: Any] = [
-      "today": Self.day(.now), "now_local": eventDate(.now),
-      "timezone": TimeZone.current.identifier,
+      "today": Self.day(now, calendar: calendar),
+      "now_local": eventDate(now, timezone: calendar.timeZone),
+      "timezone": calendar.timeZone.identifier,
       "last_discussed_date": discussedDate ?? "",
       "last_page": lastPage.compactMap { id -> [String: Any]? in
         guard let event = references[id] else { return nil }
         return [
           "reference": id, "title": String(event.values.title.prefix(120)),
-          "date": Self.day(event.values.start),
+          "date": Self.day(event.values.start, calendar: calendar),
         ]
       },
     ]
