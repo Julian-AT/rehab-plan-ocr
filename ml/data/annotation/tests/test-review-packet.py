@@ -18,6 +18,11 @@ spec = importlib.util.spec_from_file_location(
 )
 fixture = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixture)
+privacy_spec = importlib.util.spec_from_file_location(
+    "packet_privacy_fixtures", Path(__file__).with_name("test-privacy.py")
+)
+privacy_fixture = importlib.util.module_from_spec(privacy_spec)
+privacy_spec.loader.exec_module(privacy_fixture)
 
 
 class PacketTests(unittest.TestCase):
@@ -137,6 +142,47 @@ class PacketTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Source changed while building"):
                 review_packet.build(self.root, self.output)
         self.assertFalse((self.output / "manifest.json").exists())
+
+
+class PacketPrivacyGroupTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = privacy_fixture.PrivacyTests(
+            "test_intake_relationships_cannot_cross_frozen_groups"
+        )
+        self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.output = tempfile.TemporaryDirectory()
+        self.addCleanup(self.output.cleanup)
+
+    def build(self):
+        root = self.fixture.root
+        before = {p: review_packet.sha(p) for p in root.rglob("*") if p.is_file()}
+        output = Path(self.output.name) / "packet"
+        result = review_packet.build(root, output)
+        self.assertEqual(before, {p: review_packet.sha(p) for p in root.rglob("*") if p.is_file()})
+        return result, (output / "index.html").read_text()
+
+    def test_individual_privacy_reviews_and_collective_export_check_are_separate(self):
+        result, page = self.build()
+        self.assertEqual(result["counts"]["approved_privacy_reviews"], 4)
+        self.assertEqual(result["privacy_export_check"], {"passed": True, "error": None})
+        self.assertIn("Datenschutz-Einzelprüfungen", page)
+        self.assertIn("Zweckprüfung für Export: bestanden", page)
+        self.assertFalse(result["grants_approval"])
+
+    def test_cross_group_relationship_conflict_is_visible_without_erasing_local_reviews(self):
+        def shared_family(value):
+            for entry in value["entries"]:
+                entry["related_ids"].append("shared_revision_family")
+
+        self.fixture.update_receipt(shared_family)
+        result, page = self.build()
+        self.assertEqual(result["counts"]["approved_privacy_reviews"], 4)
+        self.assertFalse(result["privacy_export_check"]["passed"])
+        self.assertIn("one frozen source group", result["privacy_export_check"]["error"])
+        self.assertIn("Zweckprüfung für Export: nicht bestanden", page)
+        self.assertIn("one frozen source group", page)
+        self.assertFalse(result["grants_approval"])
 
 
 if __name__ == "__main__":

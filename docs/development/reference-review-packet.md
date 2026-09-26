@@ -15,6 +15,13 @@ Werkzeuge [reference-data.py](../../ml/data/annotation/reference-data.py) und
 Datenschutzstatus. Das Paket startet weder OCR noch Training und verändert keine
 Originale, Referenzen, Gruppierungen oder Einwilligungsbelege.
 
+Die Übersicht zählt vorhandene Bestätigungen je Original und zeigt davon getrennt
+die gemeinsame Datenschutz- und Zweckprüfung für einen Export. Eine über mehrere
+eingefrorene Gruppen verteilte Intake-Beziehung wird mit dem konkreten Fehler
+angezeigt, auch wenn jede Datenschutz-Einzelprüfung gültig ist. Bestehende
+Bestätigungen bleiben erhalten. Die gemeinsame Prüfung ersetzt keine Feld-,
+Referenz- oder Cropfreigabe und erteilt selbst keine neue Freigabe.
+
 `index.html` direkt im lokalen Browser öffnen. Alle Assets liegen im Paket;
 Netzwerkzugriffe sind durch die lokale Content Security Policy gesperrt.
 Originale können in voller Auflösung geöffnet werden. Es gibt vier getrennte

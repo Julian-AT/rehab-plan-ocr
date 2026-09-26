@@ -303,6 +303,12 @@ def build(root, output):
             privacy_approved += 1
         except (ValueError, FileNotFoundError):
             pass
+    privacy_export_check = {"passed": False, "error": None}
+    try:
+        reference.validate_privacy(root, references)
+        privacy_export_check["passed"] = True
+    except (ValueError, FileNotFoundError) as error:
+        privacy_export_check["error"] = str(error)
     output.mkdir(parents=True, mode=0o700)
     for name in ["assets", "sources", "snapshots", "pages"]:
         (output / name).mkdir(mode=0o700)
@@ -356,7 +362,18 @@ def build(root, output):
         + f"{counts['originals']} Originale · {counts['rows']} vorläufige Terminzeilen · {counts['text_polygons']} Textpolygone."
         + "</p>"
     )
-    body += f"<p>Vorhandene gültige Freigaben: {counts['approved_references']} Referenzen, {counts['approved_crops']} vollständige Crops, {counts['approved_privacy_reviews']} Datenschutzprüfungen. Bestätigte Beziehungen: {counts['confirmed_relationships']}.</p>"
+    body += f"<p>Vorhandene Bestätigungen am jeweiligen Original: {counts['approved_references']} Referenzen, {counts['approved_crops']} vollständige Crops, {counts['approved_privacy_reviews']} Datenschutz-Einzelprüfungen. Bestätigte Beziehungen: {counts['confirmed_relationships']}.</p>"
+    body += (
+        '<p class="notice">Gruppenübergreifende Datenschutz- und Zweckprüfung für Export: '
+        + ("bestanden." if privacy_export_check["passed"] else "nicht bestanden.")
+        + " Diese Prüfung ersetzt keine Feld-, Referenz- oder Cropfreigabe."
+        + (
+            " Grund: " + escaped(privacy_export_check["error"])
+            if privacy_export_check["error"]
+            else ""
+        )
+        + "</p>"
+    )
     body += "<p>Je Original zuerst Tagesgrenzen und Vollständigkeit, danach Felder, Crop-Geometrie und Datenschutz getrennt prüfen. Arbeitsnotizen herunterladen und bei späterer Sitzung wieder laden. Das Paket verändert keine Originale, Referenzen oder Einwilligungen. Die bestehende Referenz-CLI bleibt für geprüfte Änderungen und ausdrückliche Freigaben zuständig.</p><ol>"
     body += (
         "".join(
@@ -376,6 +393,7 @@ def build(root, output):
         "grants_approval": False,
         "source_inputs_unchanged": True,
         "counts": counts,
+        "privacy_export_check": privacy_export_check,
         "records": records,
         "input_sha256": {str(p.relative_to(root)): value for p, value in inputs.items()},
         "tool_sha256": {
