@@ -306,3 +306,94 @@ async fn successful_cleanup_preserves_all_post_commit_maintenance_warnings() {
     );
     assert_eq!(store.records(Some("original-schedule")).unwrap().len(), 2);
 }
+
+#[tokio::test]
+async fn typed_requests_keep_legacy_reports_selection_guards_and_durable_results() {
+    use service::{
+        calendar_mutations::Confirmation,
+        calendar_repair::{self, Request, Selection},
+    };
+    let (root, state, host) = fixture();
+    let legacy = inspect(&state, host.clone()).await;
+    let report = calendar_repair::execute(host.clone(), &state, Request::Inspect)
+        .await
+        .unwrap();
+    assert_eq!(serde_json::to_value(&report).unwrap(), legacy);
+    let issue = report.issues.iter().find(|v| v.id == "one").unwrap();
+    let selection = Selection {
+        id: issue.id.clone(),
+        fingerprint: issue.fingerprint.clone(),
+    };
+    assert!(calendar_repair::execute(
+        host.clone(),
+        &state,
+        Request::Confirm {
+            selection: vec![selection.clone()],
+            confirmation: Confirmation::MissingVisibleButton,
+        }
+    )
+    .await
+    .is_err());
+    assert_eq!(read(&state, "one"), record("one"));
+    for choices in [
+        vec![],
+        vec![selection.clone(), selection.clone()],
+        vec![Selection {
+            fingerprint: "stale".into(),
+            ..selection.clone()
+        }],
+    ] {
+        assert!(calendar_repair::execute(
+            host.clone(),
+            &state,
+            Request::Confirm {
+                selection: choices,
+                confirmation: Confirmation::Button,
+            }
+        )
+        .await
+        .is_err());
+        assert_eq!(read(&state, "one"), record("one"));
+    }
+    *host.sync_warnings.lock().unwrap() = vec!["After durable cleanup".into()];
+    let result = calendar_repair::execute(
+        host.clone(),
+        &state,
+        Request::Confirm {
+            selection: vec![selection.clone()],
+            confirmation: Confirmation::Button,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(result.removed_count, 1);
+    assert_eq!(
+        result.refresh_warning.as_deref(),
+        Some("After durable cleanup")
+    );
+    assert_eq!(result.issues.len(), 1);
+    assert_eq!(result.issues[0].id, "two");
+    assert_eq!(read(&state, "two"), record("two"));
+    assert!(calendar_repair::execute(
+        host,
+        &state,
+        Request::Confirm {
+            selection: vec![selection],
+            confirmation: Confirmation::Button,
+        }
+    )
+    .await
+    .is_err());
+    drop(state);
+    let reopened = Store::open(root.path()).unwrap();
+    let kept = reopened.owned_record("one").unwrap().unwrap();
+    assert_eq!(kept.status, "detached");
+    assert_eq!(
+        serde_json::to_value(kept.approved).unwrap(),
+        record("one")["approved"]
+    );
+    assert_eq!(
+        reopened.records(Some("original-schedule")).unwrap().len(),
+        2
+    );
+}

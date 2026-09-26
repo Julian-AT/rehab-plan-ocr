@@ -301,5 +301,13 @@ den bestandenen 68-Test-Lauf qualifiziert.
   20 Erfolgen, einem erwarteten Dateischutz-Skip und null Fehlern unter
   `typed-calendar-links-20260926-s19-002`. Gemeinsamer App-/UI-Testbuild und der
   Reparaturdialog für nicht erreichbare Kalender bestehen unter
-  `calendar-links-ui-20260926-s19-001`. Der Anzeige-/Bestätigungsauftrag des
-  Reparaturberichts bleibt als nächste typisierte Grenze offen.
+  `calendar-links-ui-20260926-s19-001`. Der folgende Schritt typisiert auch den
+  Anzeige-/Bestätigungsauftrag des Reparaturberichts.
+- Typisierter Reparaturbericht und explizite Auswahlbestätigung: **verifiziert**,
+  240 Core-/FFI-Tests, Workspace-Clippy, offizielle Bindings und nativer Rundweg
+  erfolgreich (`typed-repair-report-20260926-s19-002`). Ungültige Bestätigungsart,
+  leere/doppelte/veraltete Auswahl und Wiederanlauf mit erhaltener Importhistorie
+  sind geprüft. Gemeinsamer App-/UI-Testbuild und ein Reparaturdialog-Test bestehen
+  ohne Fehler/Skip in `repair-report-ui-20260926-s19-001`; dessen erhaltenes Paket
+  besteht die Prüfung aller zwölf Mach-O-Dateien, Ressourcen und Notices.
+  Der vollständige gemeinsame Endlauf und die Geräteabnahme bleiben separat.

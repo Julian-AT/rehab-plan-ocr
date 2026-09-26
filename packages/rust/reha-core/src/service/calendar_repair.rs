@@ -10,21 +10,37 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Deserialize)]
-struct Selection {
-    id: String,
-    fingerprint: String,
+#[derive(Clone, Debug, Deserialize)]
+pub struct Selection {
+    pub id: String,
+    pub fingerprint: String,
 }
-#[derive(Serialize)]
-struct Issue {
-    id: String,
-    fingerprint: String,
-    calendar_id: String,
-    title: String,
-    start_utc: String,
-    end_utc: String,
-    timezone: String,
-    reason: String,
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Issue {
+    pub id: String,
+    pub fingerprint: String,
+    pub calendar_id: String,
+    pub title: String,
+    pub start_utc: String,
+    pub end_utc: String,
+    pub timezone: String,
+    pub reason: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Report {
+    pub issues: Vec<Issue>,
+    pub missing_calendar_ids: Vec<String>,
+    pub relinked_count: u64,
+    pub removed_count: u64,
+    pub cleanup_blocked: bool,
+    pub refresh_warning: Option<String>,
+}
+pub enum Request {
+    Inspect,
+    Confirm {
+        selection: Vec<Selection>,
+        confirmation: super::calendar_mutations::Confirmation,
+    },
 }
 fn fingerprint(record: &OwnedEventRecord) -> Response<String> {
     Ok(format!(
@@ -43,10 +59,32 @@ pub async fn run(
     if confirming && args["confirmation"] != "button" {
         return Err("Die ausgewählten Zuordnungen ausdrücklich bestätigen.".into());
     }
-    let selected: Vec<Selection> = if confirming {
-        serde_json::from_value(args["selection"].clone()).map_err(failure)?
+    let request = if confirming {
+        Request::Confirm {
+            selection: serde_json::from_value(args["selection"].clone()).map_err(failure)?,
+            confirmation: super::calendar_mutations::Confirmation::Button,
+        }
     } else {
-        vec![]
+        Request::Inspect
+    };
+    serde_json::to_value(execute(platform, state, request).await?).map_err(failure)
+}
+
+pub async fn execute(
+    platform: Arc<dyn Platform>,
+    state: &AppState,
+    request: Request,
+) -> Response<Report> {
+    let (confirming, selected) = match request {
+        Request::Inspect => (false, vec![]),
+        Request::Confirm {
+            selection,
+            confirmation: super::calendar_mutations::Confirmation::Button,
+        } => (true, selection),
+        Request::Confirm {
+            confirmation: super::calendar_mutations::Confirmation::MissingVisibleButton,
+            ..
+        } => return Err("Die ausgewählten Zuordnungen ausdrücklich bestätigen.".into()),
     };
     if confirming && (selected.is_empty() || selected.len() > 1000) {
         return Err("Bitte die zu bereinigenden Zuordnungen auswählen.".into());
@@ -197,7 +235,12 @@ pub async fn run(
         let warnings = super::agenda::sync_warnings(&platform, state).await;
         (!warnings.is_empty()).then(|| warnings.join("\n\n"))
     };
-    Ok(json!({"issues": issues, "missing_calendar_ids": missing,
-        "relinked_count": relinked, "removed_count": removed,
-        "cleanup_blocked": blocked, "refresh_warning": refresh_warning}))
+    Ok(Report {
+        issues,
+        missing_calendar_ids: missing,
+        relinked_count: relinked,
+        removed_count: removed,
+        cleanup_blocked: blocked,
+        refresh_warning,
+    })
 }

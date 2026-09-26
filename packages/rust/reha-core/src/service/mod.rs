@@ -188,7 +188,7 @@ pub mod calendar_imports;
 pub mod calendar_links;
 pub mod calendar_mutations;
 pub mod calendar_reads;
-mod calendar_repair;
+pub mod calendar_repair;
 pub mod inference;
 pub mod scan;
 pub mod settings;

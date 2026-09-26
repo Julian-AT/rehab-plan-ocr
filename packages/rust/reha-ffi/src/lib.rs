@@ -16,6 +16,8 @@ mod calendar_reads;
 pub use calendar_reads::*;
 mod calendar_links;
 pub use calendar_links::*;
+mod calendar_repair;
+pub use calendar_repair::*;
 mod recognition_jobs;
 pub use recognition_jobs::RecognitionJob;
 mod speech;

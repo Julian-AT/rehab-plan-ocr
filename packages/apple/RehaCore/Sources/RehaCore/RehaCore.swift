@@ -815,6 +815,10 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func registerEventSession() throws  -> String
     
+    func confirmCalendarRepair(selection: [CalendarRepairSelection], confirmation: EventConfirmation) async throws  -> CalendarRepairReport
+    
+    func inspectCalendarRepair() async throws  -> CalendarRepairReport
+    
 }
 open class NativeApplication: NativeApplicationProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -1781,6 +1785,38 @@ open func registerEventSession()throws  -> String  {
             self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
+}
+    
+open func confirmCalendarRepair(selection: [CalendarRepairSelection], confirmation: EventConfirmation)async throws  -> CalendarRepairReport  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_confirm_calendar_repair(
+                        self.uniffiCloneHandle(),FfiConverterSequenceTypeCalendarRepairSelection.lower(selection),FfiConverterTypeEventConfirmation_lower(confirmation)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeCalendarRepairReport_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func inspectCalendarRepair()async throws  -> CalendarRepairReport  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_inspect_calendar_repair(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeCalendarRepairReport_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
 }
     
 
@@ -4051,6 +4087,208 @@ public func FfiConverterTypeCalendarReadValues_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeCalendarReadValues_lower(_ value: CalendarReadValues) -> RustBuffer {
     return FfiConverterTypeCalendarReadValues.lower(value)
+}
+
+
+public struct CalendarRepairIssue: Equatable, Hashable {
+    public var id: String
+    public var fingerprint: String
+    public var calendarId: String
+    public var title: String
+    public var startUtc: String
+    public var endUtc: String
+    public var timezone: String
+    public var reason: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, fingerprint: String, calendarId: String, title: String, startUtc: String, endUtc: String, timezone: String, reason: String) {
+        self.id = id
+        self.fingerprint = fingerprint
+        self.calendarId = calendarId
+        self.title = title
+        self.startUtc = startUtc
+        self.endUtc = endUtc
+        self.timezone = timezone
+        self.reason = reason
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarRepairIssue: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarRepairIssue: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarRepairIssue {
+        return
+            try CalendarRepairIssue(
+                id: FfiConverterString.read(from: &buf), 
+                fingerprint: FfiConverterString.read(from: &buf), 
+                calendarId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                startUtc: FfiConverterString.read(from: &buf), 
+                endUtc: FfiConverterString.read(from: &buf), 
+                timezone: FfiConverterString.read(from: &buf), 
+                reason: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarRepairIssue, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.fingerprint, into: &buf)
+        FfiConverterString.write(value.calendarId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.startUtc, into: &buf)
+        FfiConverterString.write(value.endUtc, into: &buf)
+        FfiConverterString.write(value.timezone, into: &buf)
+        FfiConverterString.write(value.reason, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairIssue_lift(_ buf: RustBuffer) throws -> CalendarRepairIssue {
+    return try FfiConverterTypeCalendarRepairIssue.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairIssue_lower(_ value: CalendarRepairIssue) -> RustBuffer {
+    return FfiConverterTypeCalendarRepairIssue.lower(value)
+}
+
+
+public struct CalendarRepairReport: Equatable, Hashable {
+    public var issues: [CalendarRepairIssue]
+    public var missingCalendarIds: [String]
+    public var relinkedCount: UInt64
+    public var removedCount: UInt64
+    public var cleanupBlocked: Bool
+    public var refreshWarning: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(issues: [CalendarRepairIssue], missingCalendarIds: [String], relinkedCount: UInt64, removedCount: UInt64, cleanupBlocked: Bool, refreshWarning: String?) {
+        self.issues = issues
+        self.missingCalendarIds = missingCalendarIds
+        self.relinkedCount = relinkedCount
+        self.removedCount = removedCount
+        self.cleanupBlocked = cleanupBlocked
+        self.refreshWarning = refreshWarning
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarRepairReport: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarRepairReport: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarRepairReport {
+        return
+            try CalendarRepairReport(
+                issues: FfiConverterSequenceTypeCalendarRepairIssue.read(from: &buf), 
+                missingCalendarIds: FfiConverterSequenceString.read(from: &buf), 
+                relinkedCount: FfiConverterUInt64.read(from: &buf), 
+                removedCount: FfiConverterUInt64.read(from: &buf), 
+                cleanupBlocked: FfiConverterBool.read(from: &buf), 
+                refreshWarning: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarRepairReport, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeCalendarRepairIssue.write(value.issues, into: &buf)
+        FfiConverterSequenceString.write(value.missingCalendarIds, into: &buf)
+        FfiConverterUInt64.write(value.relinkedCount, into: &buf)
+        FfiConverterUInt64.write(value.removedCount, into: &buf)
+        FfiConverterBool.write(value.cleanupBlocked, into: &buf)
+        FfiConverterOptionString.write(value.refreshWarning, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairReport_lift(_ buf: RustBuffer) throws -> CalendarRepairReport {
+    return try FfiConverterTypeCalendarRepairReport.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairReport_lower(_ value: CalendarRepairReport) -> RustBuffer {
+    return FfiConverterTypeCalendarRepairReport.lower(value)
+}
+
+
+public struct CalendarRepairSelection: Equatable, Hashable {
+    public var id: String
+    public var fingerprint: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, fingerprint: String) {
+        self.id = id
+        self.fingerprint = fingerprint
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarRepairSelection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarRepairSelection: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarRepairSelection {
+        return
+            try CalendarRepairSelection(
+                id: FfiConverterString.read(from: &buf), 
+                fingerprint: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarRepairSelection, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.fingerprint, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairSelection_lift(_ buf: RustBuffer) throws -> CalendarRepairSelection {
+    return try FfiConverterTypeCalendarRepairSelection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarRepairSelection_lower(_ value: CalendarRepairSelection) -> RustBuffer {
+    return FfiConverterTypeCalendarRepairSelection.lower(value)
 }
 
 
@@ -10372,6 +10610,56 @@ fileprivate struct FfiConverterSequenceTypeCalendarReadUnavailableEvent: FfiConv
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeCalendarRepairIssue: FfiConverterRustBuffer {
+    typealias SwiftType = [CalendarRepairIssue]
+
+    public static func write(_ value: [CalendarRepairIssue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCalendarRepairIssue.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CalendarRepairIssue] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CalendarRepairIssue]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCalendarRepairIssue.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCalendarRepairSelection: FfiConverterRustBuffer {
+    typealias SwiftType = [CalendarRepairSelection]
+
+    public static func write(_ value: [CalendarRepairSelection], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCalendarRepairSelection.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CalendarRepairSelection] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CalendarRepairSelection]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCalendarRepairSelection.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeCalendarResult: FfiConverterRustBuffer {
     typealias SwiftType = [CalendarResult]
 
@@ -11274,6 +11562,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_register_event_session() != 19439) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_confirm_calendar_repair() != 44869) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_inspect_calendar_repair() != 55140) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_recognitionjob_attempt_id() != 33303) {

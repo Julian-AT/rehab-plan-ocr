@@ -4,50 +4,7 @@ import SwiftUI
 struct CalendarRepairView: View {
   let core: NativeApplication
   let changed: () -> Void
-  private struct Issue: Decodable, Identifiable {
-    let id: String
-    let fingerprint: String
-    let title: String
-    let start: String
-    let end: String
-    let reason: String
-    enum CodingKeys: String, CodingKey {
-      case id, fingerprint, title, reason
-      case start = "start_utc"
-      case end = "end_utc"
-    }
-    var date: Date? { ISO8601DateFormatter().date(from: start) }
-    var explanation: String {
-      switch reason {
-      case "calendar_missing": "Der zugehörige Kalender ist nicht erreichbar."
-      case "ambiguous": "Mehrere Termine passen zu dieser Zuordnung."
-      default: "Der verknüpfte Termin wurde nicht eindeutig wiedergefunden."
-      }
-    }
-    var interval: String {
-      guard let date else { return "Datum unbekannt" }
-      guard let end = ISO8601DateFormatter().date(from: end) else { return eventTime(date) }
-      return
-        "\(eventTime(date))–\(Calendar.current.isDate(date, inSameDayAs: end) ? eventTime(end) : eventDate(end))"
-    }
-  }
-  private struct Report: Decodable {
-    let issues: [Issue]
-    let missingCalendarIDs: [String]
-    let relinked: Int
-    let removed: Int
-    let blocked: Bool
-    let warning: String?
-    enum CodingKeys: String, CodingKey {
-      case issues
-      case missingCalendarIDs = "missing_calendar_ids"
-      case relinked = "relinked_count"
-      case removed = "removed_count"
-      case blocked = "cleanup_blocked"
-      case warning = "refresh_warning"
-    }
-  }
-  @State private var report: Report?
+  @State private var report: CalendarRepairReport?
   @State private var selection = Set<String>()
   @State private var busy = false
   @State private var confirming = false
@@ -67,22 +24,22 @@ struct CalendarRepairView: View {
       }
       if busy { ProcessingRow(text: "Kalender prüfen …") }
       if let report {
-        if report.relinked > 0 || report.removed > 0 {
+        if report.relinkedCount > 0 || report.removedCount > 0 {
           Section("Ergebnis") {
-            if report.relinked > 0 {
-              Text("Wiederhergestellte Zuordnungen: \(report.relinked)")
+            if report.relinkedCount > 0 {
+              Text("Wiederhergestellte Zuordnungen: \(report.relinkedCount)")
             }
-            if report.removed > 0 { Text("Entfernte Zuordnungen: \(report.removed)") }
+            if report.removedCount > 0 { Text("Entfernte Zuordnungen: \(report.removedCount)") }
           }
         }
-        if report.blocked {
+        if report.cleanupBlocked {
           Section {
             Text(
               "Bitte zuerst die ungeklärten Schreibvorgänge im Kalenderstatus prüfen. Danach ist die Bereinigung möglich."
             )
           }
         }
-        if !report.missingCalendarIDs.isEmpty {
+        if !report.missingCalendarIds.isEmpty {
           Section("Nicht erreichbare Kalender") {
             Text(
               "Mindestens ein ausgewählter Kalender ist nicht erreichbar. Betroffene Tage lassen sich deshalb nicht vollständig bestimmen."
@@ -93,7 +50,7 @@ struct CalendarRepairView: View {
         if report.issues.isEmpty {
           Section {
             Text(
-              report.missingCalendarIDs.isEmpty
+              report.missingCalendarIds.isEmpty
                 ? "Keine offenen Terminzuordnungen gefunden."
                 : "Keine einzelnen Terminzuordnungen zu bereinigen.")
           }
@@ -101,7 +58,7 @@ struct CalendarRepairView: View {
           Section {
             Button(selection.count == report.issues.count ? "Auswahl aufheben" : "Alle auswählen") {
               selection = selection.count == report.issues.count ? [] : Set(report.issues.map(\.id))
-            }.disabled(report.blocked || busy)
+            }.disabled(report.cleanupBlocked || busy)
           } footer: {
             Text(
               "Die folgenden Angaben zeigen den zuletzt bekannten Stand. Eine fehlende Zuordnung bedeutet nicht, dass der Termin abgesagt wurde."
@@ -112,7 +69,7 @@ struct CalendarRepairView: View {
           }
           ForEach(days.keys.sorted(), id: \.self) { day in
             Section(day == .distantPast ? "Datum unbekannt" : eventDay(day)) {
-              ForEach((days[day] ?? []).sorted { $0.start < $1.start }) { issue in
+              ForEach((days[day] ?? []).sorted { $0.startUtc < $1.startUtc }, id: \.id) { issue in
                 Button {
                   if selection.contains(issue.id) {
                     selection.remove(issue.id)
@@ -135,7 +92,7 @@ struct CalendarRepairView: View {
                     .rect)
                 }
                 .buttonStyle(.plain)
-                .disabled(report.blocked || busy)
+                .disabled(report.cleanupBlocked || busy)
                 .accessibilityAddTraits(selection.contains(issue.id) ? .isSelected : [])
                 .accessibilityIdentifier("repair-issue-\(issue.id)")
               }
@@ -144,11 +101,11 @@ struct CalendarRepairView: View {
           Section {
             Button("Ausgewählte Zuordnungen entfernen (\(selection.count))", role: .destructive) {
               confirming = true
-            }.disabled(selection.isEmpty || report.blocked || busy)
+            }.disabled(selection.isEmpty || report.cleanupBlocked || busy)
               .accessibilityIdentifier("confirm-calendar-repair")
           }
         }
-        if let warning = report.warning {
+        if let warning = report.refreshWarning {
           Section {
             Text(
               "Zuordnungen geprüft. Der Kalender konnte anschließend nicht vollständig aktualisiert werden: \(warning)"
@@ -186,19 +143,34 @@ struct CalendarRepairView: View {
     error = nil
     defer { busy = false }
     do {
-      var arguments: [String: Any] = [:]
       if confirm {
-        arguments = [
-          "confirmation": "button",
-          "selection": (report?.issues ?? [])
+        report = try await core.confirmCalendarRepair(
+          selection: (report?.issues ?? [])
             .filter { selection.contains($0.id) }
-            .map { ["id": $0.id, "fingerprint": $0.fingerprint] },
-        ]
+            .map { CalendarRepairSelection(id: $0.id, fingerprint: $0.fingerprint) },
+          confirmation: .button)
+      } else {
+        report = try await core.inspectCalendarRepair()
       }
-      report = try await core.eventRequest(
-        confirm ? "confirmCalendarRepair" : "inspectCalendarRepair", arguments, as: Report.self)
       selection = []
       changed()
     } catch { self.error = userMessage(error) }
+  }
+}
+
+extension CalendarRepairIssue {
+  fileprivate var date: Date? { ISO8601DateFormatter().date(from: startUtc) }
+  fileprivate var explanation: String {
+    switch reason {
+    case "calendar_missing": "Der zugehörige Kalender ist nicht erreichbar."
+    case "ambiguous": "Mehrere Termine passen zu dieser Zuordnung."
+    default: "Der verknüpfte Termin wurde nicht eindeutig wiedergefunden."
+    }
+  }
+  fileprivate var interval: String {
+    guard let date else { return "Datum unbekannt" }
+    guard let end = ISO8601DateFormatter().date(from: endUtc) else { return eventTime(date) }
+    return
+      "\(eventTime(date))–\(Calendar.current.isDate(date, inSameDayAs: end) ? eventTime(end) : eventDate(end))"
   }
 }

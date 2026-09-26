@@ -262,9 +262,27 @@ Produkte sind separat erhalten. Der erste
 Simulatorstart wurde vor Kompilierung beendet, um den fehlenden expliziten
 Dateieintrag im Integrationstestprojekt zu ergänzen; er ist kein bestandener Test.
 
-Der App-Auftrag zur Anzeige/Bestätigung des Reparaturberichts bleibt vorerst
-der dokumentierte Legacy-Eingang. Dieser Schritt typisiert den Plattformeffekt,
-nicht bereits sämtliche verbleibenden Produktgrenzen.
+Auch Anzeige und Bestätigung des Reparaturberichts verwenden jetzt eigene
+UniFFI-Methoden: `inspectCalendarRepair` und `confirmCalendarRepair`. Bericht,
+Probleme und ausgewählte Identitäten samt Fingerprint werden direkt übertragen.
+Die sichtbare Auswahl und der bestehende Bestätigungsdialog bleiben erhalten;
+`Confirmation::MissingVisibleButton` kann keine Bereinigung autorisieren.
+Die bisherigen JSON-Befehle delegieren an denselben typisierten Core-Ablauf und
+behalten ihre Ergebnisform. Bestätigte Werte, Importhistorie und Journale werden
+nicht migriert. Leere, doppelte und veraltete Auswahl wird vor der Änderung
+abgewiesen; spätere Wartungsfehler bleiben vom dauerhaften Ergebnis getrennt.
+
+240 Core-/FFI-Tests einschließlich zehn Reparaturregressionen, Workspace-Clippy,
+offizieller Bindingsvergleich und der echte Swift–Rust–Swift-Rundweg bestehen
+in `typed-repair-report-20260926-s19-002`. Die native Probe bestätigt die Auswahl,
+öffnet den Bestand erneut und prüft erhaltene Importhistorie und Wartungswarnungen.
+Der erste Compilerlauf fehlte wegen einer unbehandelten ungültigen Bestätigungsart;
+dieser Fall ist ergänzt und wird ausdrücklich zurückgewiesen. Der gemeinsame
+App-/UI-Testbuild und der Reparaturdialog für nicht erreichbare Kalender bestehen
+in `repair-report-ui-20260926-s19-001`: ein Test, null Fehler und null Skips. Das
+aufbewahrte Simulatorpaket besteht die Prüfung sämtlicher zwölf Mach-O-Dateien,
+Modelle, Notices und Datenschutzmanifeste. Quellen, vollständiges Resultat und
+Produkte bleiben erhalten; der UI-Fall ersetzt keine Bestätigungs-/Geräteabnahme.
 
 ## Ausstehende Mitteilungslinks
 
@@ -365,9 +383,9 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
 `Platform.call`, `AppleHost.calendar_event_call`,
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
 transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
-gehören der Anzeige-/Bestätigungsauftrag der Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
-Importdetails. Status, Terminverlauf, Wiederanlauf und
-manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
+gehören gemischte Archivseiten und deren Aufnahme-/Importdetails. Status,
+Terminverlauf, Wiederanlauf, Kalenderlink-Reparatur und manuelle Klärung ungewisser
+Terminänderungen sind bereits typisiert.
 Weitere Plattformeffekte bleiben offen; Systemeditor und Besitzmarkerprüfung
 verwenden die oben beschriebenen typisierten Grenzen.
 Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten

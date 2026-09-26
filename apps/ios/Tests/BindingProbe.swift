@@ -138,6 +138,10 @@ final class TestHost: AppleHost, Sendable {
         _ = try await core.calendarRequest(command: "inspectCalendarRepair", arguments: "{}")
         preconditionFailure("Typed ownership inspection failure disappeared")
       } catch { precondition(error as? AppError == expected) }
+      do {
+        _ = try await core.inspectCalendarRepair()
+        preconditionFailure("Typed repair request failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }
     var preferences = try await core.preferences()
@@ -404,6 +408,35 @@ final class TestHost: AppleHost, Sendable {
     precondition(linkIssue["reason"] as? String == "calendar_missing")
     precondition(linkIssue["title"] as? String == imported.approved.title)
     precondition(linkResponse["removed_count"] as? Int == 0)
+    let typedLinks = try await reopened.inspectCalendarRepair()
+    let typedIssue = typedLinks.issues.first { $0.id == imported.id }!
+    precondition(typedIssue.fingerprint == linkIssue["fingerprint"] as? String)
+    precondition(typedIssue.calendarId == imported.calendarId)
+    precondition(typedIssue.title == imported.approved.title)
+    precondition(typedIssue.startUtc == imported.approved.startUtc)
+    precondition(typedIssue.endUtc == imported.approved.endUtc)
+    precondition(typedIssue.timezone == imported.approved.timezone)
+    precondition(typedIssue.reason == linkIssue["reason"] as? String)
+    precondition(typedLinks.missingCalendarIds == linkResponse["missing_calendar_ids"] as? [String])
+    precondition(typedLinks.removedCount == 0 && !typedLinks.cleanupBlocked)
+    do {
+      _ = try await reopened.confirmCalendarRepair(selection: [], confirmation: .button)
+      preconditionFailure("Empty selection was accepted")
+    } catch AppError.Validation {}
+    host.agendaWarnings.withLock { $0 = ["Reminder unavailable", "Widget unavailable"] }
+    let selectedLink = CalendarRepairSelection(
+      id: typedIssue.id, fingerprint: typedIssue.fingerprint)
+    let detached = try await reopened.confirmCalendarRepair(
+      selection: [selectedLink], confirmation: .button)
+    precondition(detached.removedCount == 1)
+    precondition(detached.refreshWarning == "Reminder unavailable\n\nWidget unavailable")
+    host.agendaWarnings.withLock { $0 = [] }
+    let repairedReopen = try await openApplication(
+      root: root, models: "/unavailable-test-model", host: host)
+    let retainedAfterRepair = try await repairedReopen.history()
+    precondition(retainedAfterRepair.imports == retained.imports)
+    let afterRepair = try await repairedReopen.inspectCalendarRepair()
+    precondition(afterRepair.issues.isEmpty)
     let jobID = UUID().uuidString
     let job = try core.registerJob(id: jobID)
     try core.cancelJob(id: job.attemptId())
