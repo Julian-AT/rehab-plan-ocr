@@ -1,0 +1,26 @@
+:root { color-scheme: light; font: 18px/1.5 system-ui, sans-serif; color: #18302a; background: #f5f7f5; }
+body { margin: 0; }
+main { max-width: 1100px; margin: auto; padding: 1.5rem; }
+h1, h2 { line-height: 1.2; }
+h2 { margin-top: 2.5rem; scroll-margin-top: 9rem; }
+a { color: #12554b; text-underline-offset: .2em; }
+button, input, select, textarea { font: inherit; }
+button { min-height: 48px; padding: .5rem 1rem; background: #155a4e; color: white; border: 2px solid transparent; border-radius: .5rem; cursor: pointer; }
+label { display: block; margin: .7rem 0; font-weight: 600; }
+textarea, select { display: block; box-sizing: border-box; width: 100%; margin-top: .3rem; padding: .5rem; background: white; color: #18302a; border: 1px solid #738d84; border-radius: .3rem; }
+textarea { resize: vertical; font-weight: 400; }
+fieldset { border: 1px solid #a1b4ab; margin: 1rem 0; border-radius: .5rem; }
+legend { font-weight: 700; }
+.notice { border-left: .4rem solid #ad6000; padding: 1rem; background: #fff3db; }
+.toolbar { position: sticky; top: 0; padding: .6rem; background: #edf3ee; border: 1px solid #81998d; z-index: 2; }
+.toolbar label { font-size: .85rem; display: inline-block; margin: .3rem; }
+#status { display: block; font-size: .85rem; }
+nav { margin: 1rem 0; }
+details { margin: .8rem 0; border: 1px solid #9eb2a8; border-radius: .5rem; padding: .8rem; background: white; }
+summary { min-height: 44px; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.image-view { display: block; width: 100%; max-height: 700px; border: 1px solid #81998d; background: #ddd; margin: 1rem 0; scroll-margin-top: 9rem; }
+.image-view polygon { fill: none; stroke: #006bb8; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.image-view rect.mask { fill: #b4450055; stroke: #a33800; stroke-width: 2; vector-effect: non-scaling-stroke; }
+:focus-visible { outline: 3px solid #bd5c00; outline-offset: 3px; }
+@media (max-width: 640px) { main { padding: .7rem; } .toolbar { position: static; } h2 { scroll-margin-top: 1rem; } }
+@media print { .toolbar, nav, button { display: none; } details { break-inside: avoid; } }
