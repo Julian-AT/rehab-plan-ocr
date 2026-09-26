@@ -9,12 +9,18 @@ import XCTest
       ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", mode] + extra
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
+    expectation(
+      for: NSPredicate(format: "enabled == true"), evaluatedWith: app.tabBars.buttons["Termine"])
+    waitForExpectations(timeout: 20)
   }
-  override func tearDown() {
+  override func tearDown() async throws {
     guard let app else { return }
     app.terminate()
     app.launchArguments = ["--agenda-fixture", "cleanup"]
     app.launch()
+    // The shell appears only after PreviewFixtures.prepare has restored the
+    // original preferences and removed the synthetic calendars.
+    XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
     app.terminate()
   }
   private var pager: XCUIElement { app.scrollViews["agenda-days"].firstMatch }
@@ -89,10 +95,29 @@ import XCTest
     app.navigationBars["Gesprächsdetails"].buttons.firstMatch.tap()
     expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
     waitForExpectations(timeout: 50)
-    Thread.sleep(forTimeInterval: 1)
-    capture("07-text-waehrend-victoria")
-    Thread.sleep(forTimeInterval: 3)
+    let response = app.staticTexts["voice-response"]
+    expectation(
+      for: NSPredicate { object, _ in
+        MainActor.assumeIsolated {
+          guard let response = object as? XCUIElement else { return false }
+          return (Int(response.value as? String ?? "") ?? -1) >= 0
+        }
+      },
+      evaluatedWith: response)
+    waitForExpectations(timeout: 10)
+    capture("07-text-waehrend-sprachausgabe")
+    let firstWord = Int(response.value as? String ?? "") ?? -1
+    expectation(
+      for: NSPredicate { object, _ in
+        MainActor.assumeIsolated {
+          guard let response = object as? XCUIElement else { return false }
+          return (Int(response.value as? String ?? "") ?? -1) > firstWord
+        }
+      },
+      evaluatedWith: response)
+    waitForExpectations(timeout: 10)
     capture("08-text-folgt-audio")
+    XCTAssertEqual(state.value as? String, "playback")
     app.buttons["stop-speech"].tap()
     XCTAssertEqual(state.value as? String, "idle")
     XCTAssertFalse(app.staticTexts["voice-response"].exists)
