@@ -33,4 +33,35 @@ make diagnose-ocr-convolution-trace DIAGNOSTIC_RUN=.local/runs/<prepared-run>
 
 Preparation performs no inference. Execution runs serially after simulator work,
 requires the twenty-GiB reserve plus two GiB temporary capacity, and refuses to
-reuse a started run. Actual results remain pending until execution.
+reuse a started run.
+
+## Actual result
+
+Protocol/tool commit before inference: `73263f0`. Run
+`.local/runs/ocr-convolution-trace-20260926-s19-001` reproduced all three historical
+optimized comparisons exactly. The candidate still fails one of 748,400 values
+with unchanged tokens; the original unfused control still passes this case.
+Disabling optimization does not close the candidate gate: one value still fails,
+with maximum absolute difference 0.00006449222564697266.
+
+The selected dynamic Paddle output and saved unfused Paddle output are bitwise
+equal. All sixteen fetched outputs in the first batch preserve both providers'
+complete control output bit-for-bit. The first convolution is exact. The first
+remaining rounding difference is the immediately following BatchNorm output
+`p2o.pd_op.batch_norm_.0.0`, program index 340: maximum absolute difference
+0.00000095367431640625 across 184,320 values, with no intermediate tolerance
+violation. No earlier float output is unmapped. This identifies the earliest
+operation in the explicitly unoptimized diagnostic configuration; it does not
+attribute all later error to this operation or qualify the optimized deployment.
+
+Execution stopped after the first sixteen of 302 mapped outputs as predeclared.
+The report and first differing tensors are retained; temporary batch graphs are
+removed. All protected source hashes remain unchanged. No new model, threshold
+or full-corpus result was produced. The next bounded investigation should replay
+this BatchNorm with identical operands and parameters before proposing a change.
+
+Protocol SHA-256:
+`0120c777ae5087a24b8da74665edad055664ebd4ead54d97c5c5967cf5454527`.
+
+Report SHA-256:
+`3445922ce35f5f1961df9e1db39a570acbd47b5c57c558f65391dd7cd44595ac`.
