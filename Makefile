@@ -123,6 +123,7 @@ help:
 	@echo 'Archive: make archive RELEASE_RUN=.local/releases/<new-name>; package again only into a new run with explicit RELEASE_ARCHIVE=<existing-archive>'
 	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package RELEASE_RUN=<reserved-run>'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
+	@echo 'Dependency audit: make download-dependency-audit setup-dependency-audit; update-dependency-advisories AUDIT_DB=<new-snapshot>; audit-dependencies additionally requires AUDIT_COMMIT and AUDIT_RUN'
 	@echo 'Hosted CI: make ci-status; make test-ci-monitor; node tooling/dev/ci_monitor.cjs --help'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
@@ -152,6 +153,25 @@ bootstrap doctor format lint test:
 
 test-tools:
 	python3 tooling/dev/quality.py test-tools
+
+# Audit tool restoration and advisory updates are explicit network/setup steps.
+.PHONY: download-dependency-audit setup-dependency-audit update-dependency-advisories audit-dependencies test-dependency-audit
+download-dependency-audit:
+	python3 tooling/release/audit_dependencies.py download
+
+setup-dependency-audit:
+	python3 tooling/release/audit_dependencies.py setup $(if $(AUDIT_ARCHIVE),--archive "$(AUDIT_ARCHIVE)")
+
+update-dependency-advisories:
+	@test -n "$(AUDIT_DB)" || { echo 'Set AUDIT_DB to a new advisory snapshot directory'; exit 2; }
+	python3 tooling/release/audit_dependencies.py update --db "$(AUDIT_DB)"
+
+audit-dependencies:
+	@test -n "$(AUDIT_DB)" -a -n "$(AUDIT_COMMIT)" -a -n "$(AUDIT_RUN)" || { echo 'Set AUDIT_DB, its exact AUDIT_COMMIT and a new AUDIT_RUN'; exit 2; }
+	python3 tooling/release/audit_dependencies.py run --db "$(AUDIT_DB)" --commit "$(AUDIT_COMMIT)" --output "$(AUDIT_RUN)"
+
+test-dependency-audit:
+	/usr/bin/env uv run --locked python tooling/release/tests/test-audit-dependencies.py
 
 .PHONY: ci-status test-ci-monitor
 ci-status:
