@@ -4,6 +4,42 @@ import UserNotifications
 import WidgetKit
 import XCTest
 
+private enum NotificationPermissionFixtureError: Error {
+  case unavailable(UNAuthorizationStatus)
+  case dialogNotAccepted
+}
+
+/// Each reminder test establishes its own permission instead of relying on test order.
+func requireTestNotificationAuthorization() async throws {
+  let initial = await UNUserNotificationCenter.current().notificationSettings()
+  if initial.authorizationStatus == .authorized { return }
+  guard initial.authorizationStatus == .notDetermined else {
+    throw NotificationPermissionFixtureError.unavailable(initial.authorizationStatus)
+  }
+  let permission = Task {
+    try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+  }
+  let dismissed = await MainActor.run {
+    let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons["Allow"]
+    let visible = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "exists == true AND hittable == true"), object: allow)
+    guard XCTWaiter.wait(for: [visible], timeout: 10) == .completed else { return false }
+    allow.tap()
+    return allow.waitForNonExistence(timeout: 5)
+  }
+  guard dismissed else {
+    permission.cancel()
+    throw NotificationPermissionFixtureError.dialogNotAccepted
+  }
+  guard try await permission.value else {
+    throw NotificationPermissionFixtureError.unavailable(.denied)
+  }
+  let confirmed = await UNUserNotificationCenter.current().notificationSettings()
+  guard confirmed.authorizationStatus == .authorized else {
+    throw NotificationPermissionFixtureError.unavailable(confirmed.authorizationStatus)
+  }
+}
+
 /// Counts attempted network-source synchronization without initiating one.
 /// The service owns EventKit access; the counter has its own lock for assertions.
 private final class LocalOnlyEventStore: EKEventStore {
@@ -312,27 +348,7 @@ final class AgendaNativeTests: XCTestCase {
       XCTAssertEqual(external.url.absoluteString, "reha-calendar://today")
       XCTAssertNotEqual(external.id, foreign.eventIdentifier)
       try store.remove(foreign, span: .thisEvent, commit: true)
-      let permission = Task {
-        try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
-      }
-      let permissionDismissed = await MainActor.run {
-        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons[
-          "Allow"]
-        let visible = XCTNSPredicateExpectation(
-          predicate: NSPredicate(format: "exists == true AND hittable == true"), object: allow)
-        guard XCTWaiter.wait(for: [visible], timeout: 10) == .completed else { return false }
-        allow.tap()
-        return allow.waitForNonExistence(timeout: 5)
-      }
-      guard permissionDismissed else {
-        permission.cancel()
-        XCTFail("Notification permission dialog could not be accepted")
-        return
-      }
-      let allowed = try await permission.value
-      XCTAssertTrue(allowed)
-      let settings = await UNUserNotificationCenter.current().notificationSettings()
-      XCTAssertEqual(settings.authorizationStatus, .authorized)
+      try await requireTestNotificationAuthorization()
       let activated = try await sync(ReminderPreferences(enabled: true))
       XCTAssertNil(activated.reminders.error)
       let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()

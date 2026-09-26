@@ -612,6 +612,7 @@ final class EventEditingTests: XCTestCase {
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
         throw XCTSkip("Simulator calendar access required")
       }
+      try await requireTestNotificationAuthorization()
       let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
       try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
       defer { try? FileManager.default.removeItem(at: root) }
