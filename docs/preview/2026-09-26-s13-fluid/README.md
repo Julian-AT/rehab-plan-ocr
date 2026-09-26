@@ -3,7 +3,9 @@
 # Vorschau: Kalender und Sprachgespräch
 
 Version **0.3.0 (2026092614)** · 26. September 2026 · iPhone-17-Simulator mit iOS 26.4.
-Alle Aufnahmen verwenden erfundene Termine. Dieser Stand wurde nicht auf dem persönlichen iPhone installiert.
+Alle Aufnahmen verwenden erfundene Termine. Nach freigegebener Installation wurde dieser Stand
+vom Nutzer abgelehnt. Auf dem iPhone ist wieder Build 2026092613 installiert;
+siehe [Gerätebericht und Datenvergleich](../../fluid-device-update.md).
 
 ## Bewegungsaufnahmen
 
@@ -56,12 +58,12 @@ iOS-Release-Build ohne Signierung und die Lint-Prüfungen sind erfolgreich.
 
 Die [Umsetzungsbeschreibung](../../uniform-calendar-conversation.md) erklärt die Änderungen und
 Abnahmegrenzen. [Prüfergebnisse und Herkunft](verification.json) dokumentieren die automatisierten
-Prüfungen; [Prüfsummen](sha256.json) identifizieren die Vorschauartefakte.
+Prüfungen vor der Gerätefreigabe; [Prüfsummen](sha256.json) identifizieren die Vorschauartefakte.
 
 Offen bleiben echte Mikrofonrunden, Denkpausen, Hintergrundgeräusche, Hineinsprechen,
 Audio-Unterbrechungen und VoiceOver auf dem iPhone sowie die Reaktionsziele:
 Pegel ≤150 ms, Wiedergabestopp ≤250 ms nach bestätigtem Hineinsprechen,
 vorbereitete Kalenderantworten Median ≤3 s / p95 ≤5 s. Kalter Start wird getrennt gemessen.
 
-**Vor einem Geräteupdate ist eine ausdrückliche Freigabe dieser Vorschau und Hörproben erforderlich.**
-Danach: frisch sichern, ohne Deinstallation aktualisieren und dauerhafte Daten nach dem ersten Start vergleichen.
+**Build 2026092614 wurde nach dem Geräteversuch abgelehnt und zurückgenommen.**
+Eine erneute Installation dieses Stands ist nicht freigegeben.

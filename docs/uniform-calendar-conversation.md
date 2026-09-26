@@ -3,8 +3,10 @@
 # Gleichmäßiger Kalender und automatische Gesprächsrunden
 
 Stand 26. September 2026 · Version 0.3.0 · Build 2026092614.
-Die neue [Simulatorvorschau mit Victoria-Hörproben](preview/2026-09-26-s13-fluid/README.md)
-benötigt eine eigene Freigabe. Die Freigabe des vorherigen Builds gilt nicht für diesen Stand.
+Die [Simulatorvorschau mit Victoria-Hörproben](preview/2026-09-26-s13-fluid/README.md)
+dokumentiert diesen Entwicklungsstand. Nach freigegebenem Geräteupdate wurde er wegen
+verschlechterter Bedienung vom Nutzer abgelehnt und auf dem iPhone wieder durch
+Build 2026092613 ersetzt; siehe [Gerätebericht](fluid-device-update.md).
 
 ## Kalender und Darstellung
 
@@ -129,9 +131,10 @@ Start ist separat zu messen. Simulator-PCMs ersetzen weder reale Mikrofontranskr
 noch Echo-, Bluetooth-, Hintergrundgeräusch- oder Unterbrechungsprüfungen auf dem Gerät.
 Aussprache und Verständlichkeit der Hörproben benötigen zusätzlich menschliche Hörabnahme.
 
-Nach ausdrücklicher Freigabe: frische Sicherung, Update ohne Deinstallation, dauerhafte
-Daten vor/nach Installation und nach erstem Start vergleichen. Es wurde kein Geräteupdate
-für diesen Stand freigegeben oder durchgeführt.
+Das ausdrücklich freigegebene Update auf Build 2026092614 und der anschließend gewünschte
+Rückwechsel auf Build 2026092613 erfolgten mit frischen Sicherungen und ohne Deinstallation.
+Der aktuelle Geräte- und Datenstand ist im [Gerätebericht](fluid-device-update.md) dokumentiert.
+Build 2026092614 ist vom Nutzer nicht abgenommen.
 
 API-Grundlagen: [Apples kontextbezogene Hilfe](https://developer.apple.com/design/human-interface-guidelines/offering-help),
 [Vorwärmen von Modellsitzungen](https://developer.apple.com/documentation/foundationmodels/optimizing-key-value-caching-in-language-model-sessions),
