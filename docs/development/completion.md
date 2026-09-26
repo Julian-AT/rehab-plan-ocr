@@ -115,15 +115,20 @@ kein eigenes Modell übertrifft hier die Baseline. Das sind bekannte synthetisch
 Crops im Paddle-Lauf, keine ausgeführte iOS-/ONNX-Planerkennung. Alte 320er-Ergebnisse
 und numerische Exportfehler bleiben erhalten.
 
-Der reproduzierbare Python-Abhängigkeitsaudit ist auf seinem gebundenen Stand
-vollständig ausgeführt, mit **sieben betroffenen Paketversionen / 24 Advisorygruppen**
-negativ. Danach wurden Torch 2.13.0 mit Setuptools 83.0.0 sowie Protobuf 6.33.5
-für den Assistentenexport einzeln geprüft und in den Exportlock übernommen.
-Beide vollständigen GGUF-Dateien bleiben in beiden Stufen bytegleich. Das ist
-Exportkompatibilität; weder neue Inferenzqualität noch die Synchronisierung der
-bisherigen kanonischen Exportumgebung ist damit belegt. Eine frische gemeinsame
-Advisoryauswertung nach den verbleibenden Migrationen steht aus;
-[Befunde und Offline-Nachweis](dependency-audit.md).
+Der frische Python-Abhängigkeitsaudit nach den drei qualifizierten
+Assistentenexport-Upgrades bindet alle fünf aktuellen Locks. Abfrage und
+netzgesperrter Replay sind vollständig: **drei betroffene Paketversionen,
+17 Advisorygruppen und 25 aktive Advisorydatensätze** bleiben offen. Betroffen
+sind ONNX 1.17.0 im OCR-Lock sowie ONNX 1.18.0 und Torch 2.8.0 im getrennten
+Victoria-Exportlock. Der Assistentenexport hat in dieser datierten Abfrage keine
+Treffer; seine beiden vollständigen GGUF-Dateien blieben in allen drei Stufen
+bytegleich. Ein separater erfolgreicher Offline-Sync hat die kanonische
+Assistentenexport-Umgebung auf genau **35 Pakete** gebracht; die erfassten Metadaten
+entsprechen dem qualifizierten Stage3-Kandidaten bis auf den erwarteten
+Umgebungspfad. Die gebundenen Eingaben blieben unverändert. Lockaudit,
+Installationsnachweis und Exportkompatibilität belegen keine neue Modellqualität.
+Historische negative Befunde bleiben erhalten;
+[Befunde, Fixgrenzen sowie Offline-Audit und Sync-Nachweis](dependency-audit.md).
 
 Der getrennte [ONNX-Runtime-Vergleich](../../ml/experiments/2026-09-26-s21-onnxruntime-upgrade-comparison.md)
 hat alle 3.618 Fälle und technischen Kontrollen abgeschlossen. Version 1.30

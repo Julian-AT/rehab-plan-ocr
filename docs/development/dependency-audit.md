@@ -292,10 +292,65 @@ Complete weight, environment, converter, prompt and source bindings match before
 and after the run. The promoted lock SHA256 is
 `68fcde6c01c55a55343e2a1db7f68a5bc9dddafd19380656f94ee21717222a37`.
 
-This promotes the qualified manifest/lock only; existing canonical environments
-are not synchronized. Original inputs, all duplicate GGUFs, environments and
-historical reports remain retained. No new answers, refusion or model-quality
-claim result from these conversions. The historical 40-answer parity is referenced
-only through identical artifact bytes. This dated export-closure query does not
-supersede the earlier five-lock audit or clear its remaining findings; a current
-five-lock audit must bind the changed lock separately.
+The conversion qualification and canonical environment synchronization have
+separate evidence. The offline sync of `.local/envs/assistant-export` completed
+at 15:25:51 UTC with exit 0 and exactly **35 installed packages**. Its captured
+metadata matches the qualified Stage3 candidate apart from the expected environment
+path, and all bound inputs remained unchanged. The retained report is
+`.local/maintenance/assistant-export-canonical-sync-20260926-s21-001/report.json`,
+SHA256 `d119a8a043cd69290603c534f45f59bfa840216f0d5b48fc3d27caca0ec40e91`.
+The sync used no network downloads, model imports, inference or compiler.
+
+The sync establishes the installed state separately from the lock and conversion
+results. It does not generate new answers, refusion or model-quality evidence.
+Historical 40-answer parity is referenced only through identical artifact bytes;
+original inputs and historical reports remain retained. The following fresh
+five-lock audit binds the promoted lock and records the remaining findings.
+
+### Five-lock audit after assistant export Stage3 on 2026-09-26
+
+The fresh query binds all five current canonical locks, including the promoted
+35-package assistant export lock: **152 package/version pairs**, 242 registry
+occurrences and four excluded virtual projects. Snapshot
+`.local/audits/python-osv-post-stage3-20260926-s21-001` has receipt SHA256
+`206d500e9a770a8117196301c176210368f971136d5b1545d52e71175034d0be`.
+The replay at `.local/audits/python-review-post-stage3-20260926-s21-001/report.json`
+(SHA256 `d983c537420e27c1ec5fd4ce688f4c57fe6c69fd1a84e11f3eeb58e5c64b584c`)
+completed with network access denied by the operating system; its connection
+counterprobe returned `EPERM`. Exit 1 records **three affected package versions,
+17 alias-connected vulnerability groups and 25 active advisory records**, with
+none withdrawn. The historical seven-version audit remains unchanged.
+
+| Remaining version | Actual consumer | Highest explicit stable fixed boundary in returned advisories |
+| --- | --- | --- |
+| ONNX 1.17.0 | OCR converter and graph diagnostics; nine groups | 1.22.0 |
+| ONNX 1.18.0 | Separate Victoria ONNX export/checker; eight groups | 1.22.0 |
+| Torch 2.8.0 | Separate Victoria weight loading and ONNX export; eight groups | 2.13.0; specific caveat below |
+
+The two ONNX versions share advisory groups, so the table counts do not add to
+the global total. Root tools, assistant training and assistant export locks have
+no returned matches in this dated query. These are development/conversion
+packages, not Python shipped in the iOS app. The lock audit neither inventories
+installed environments nor clears the separate native ONNX Runtime findings.
+
+The explicit ONNX 1.22.0 and Torch 2.13.0 fix boundaries are candidate-selection
+evidence, not blanket remediation claims. In particular, PYSEC-2026-139 /
+CVE-2026-4538 only records `last_affected=2.10.0`, with no fixed event;
+[the referenced Torch PR](https://github.com/pytorch/pytorch/pull/176791)
+is closed without merging. No returned match for Torch 2.13.0 therefore does not
+prove that specific fix. The older ONNX PYSEC-2025-148 record likewise specifies
+`last_affected=1.17.0`, rather than naming a fixed release.
+
+Current official Paddle2ONNX **2.1.0** still declares
+[`onnx>=1.16.1,<=1.17.0`](https://github.com/PaddlePaddle/Paddle2ONNX/blob/v2.1.0/pyproject.toml);
+no released successor supplies a compatible ONNX 1.22.0 dependency range.
+[Upstream PR1579](https://github.com/PaddlePaddle/Paddle2ONNX/pull/1579)
+explains the bound: Polygraphy constant folding can raise the model IR beyond
+ORT 1.22 support, and recommends `--optimize_tool=None` for newer ONNX. The current
+OCR exporter already sets that option. A separately reviewed private candidate
+can therefore test only ONNX 1.22.0 plus its required `ml_dtypes`, holding
+Paddle 3.3.1, Paddle2ONNX 2.1.0, ORT 1.22 and other packages fixed. This requires an
+explicit dependency override and exact original/export/IR/opset/protobuf-byte
+comparison first. Any changed bytes remain a failed byte gate requiring separate
+numerical diagnosis. No candidate environment, export or canonical pin change
+was performed by this audit.
