@@ -15,7 +15,6 @@ import math
 import os
 import platform
 import random
-import shutil
 import subprocess
 import sys
 import time
@@ -25,6 +24,9 @@ from pathlib import Path
 
 from contract import CRITICAL, advance, field_name, sha, validate_dataset, write
 from preflight import ROOT
+
+sys.path.insert(0, str(ROOT))
+from ml.training.storage import checkpoint_peak, require_storage  # noqa: E402
 
 UPSTREAM = ROOT / ".local/upstream/PaddleOCR"
 DICTIONARY = UPSTREAM / "ppocr/utils/dict/ppocrv6_dict.txt"
@@ -47,6 +49,7 @@ def lineage(dataset_path):
         "reference_tool_sha256": sha(ROOT / "ml/data/annotation/reference-data.py"),
         "privacy_tool_sha256": sha(ROOT / "ml/data/annotation/privacy.py"),
         "compatibility_tool_sha256": sha(Path(__file__).with_name("run_identity.py")),
+        "storage_tool_sha256": sha(ROOT / "ml/training/storage.py"),
         "python": sys.version,
         "platform": platform.platform(),
     }
@@ -127,6 +130,18 @@ def summary(rows):
 def checkpoint(run, epoch, model, optimizer, state, metrics):
     import paddle
 
+    require_storage(
+        ROOT,
+        run,
+        4,
+        checkpoint_peak(
+            model.state_dict(),
+            optimizer.state_dict(),
+            trainable=[
+                parameter for parameter in model.parameters() if not parameter.stop_gradient
+            ],
+        ),
+    )
     parent = run / "checkpoints"
     parent.mkdir(exist_ok=True)
     temporary = parent / (".incomplete-" + uuid.uuid4().hex)
@@ -173,6 +188,7 @@ def latest_checkpoint(run):
 
 
 def execute(run, pause_after_epoch=None):
+    require_storage(ROOT, run, 4)
     import numpy as np
     import paddle
     import yaml
@@ -340,8 +356,16 @@ def execute(run, pause_after_epoch=None):
     for epoch in range(state["epoch"] + 1, config["max_epochs"] + 1):
         if state["stopped"]:
             break
-        if shutil.disk_usage(run).free < 4 * 1024**3:
-            raise ValueError("Less than 4 GiB free; checkpoints retained for resume")
+        require_storage(
+            ROOT,
+            run,
+            4,
+            checkpoint_peak(
+                model.state_dict(),
+                optimizer.state_dict(),
+                trainable=[p for p in model.parameters() if not p.stop_gradient],
+            ),
+        )
         epoch_seed = config["seed"] + epoch
         random.seed(epoch_seed)
         np.random.seed(epoch_seed)
@@ -409,6 +433,7 @@ def execute(run, pause_after_epoch=None):
     selected = json.loads((best / "checkpoint.json").read_text())
     if selected["training_sha256"] != sha(best / "training.pdstate"):
         raise ValueError("Selected checkpoint checksum changed")
+    require_storage(ROOT, run, 4, checkpoint_peak(model.state_dict(), {}))
     paddle.save(
         paddle.load(str(best / "training.pdstate"))["model"], str(run / "selected.pdparams")
     )

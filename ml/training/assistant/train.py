@@ -12,7 +12,6 @@ import json
 import math
 import os
 import platform
-import shutil
 import sys
 import uuid
 from collections import defaultdict
@@ -30,6 +29,7 @@ from ml.training.assistant.contract import (  # noqa: E402
     write,
 )
 from ml.training.assistant.restore import verify  # noqa: E402
+from ml.training.storage import checkpoint_peak, require_storage  # noqa: E402
 
 BASE = ROOT / ".local/models/assistant/qwen3-0.6b"
 
@@ -40,6 +40,7 @@ def lineage(dataset):
         Path(__file__).with_name("contract.py"),
         Path(__file__).with_name("prepare.py"),
         ROOT / "ml/evaluation/conversation/intent.py",
+        ROOT / "ml/training/storage.py",
     ]
     return {
         "dataset_sha256": sha(dataset),
@@ -110,6 +111,14 @@ def checkpoint(run, epoch, model, optimizer, state, metrics, settings):
     import mlx.core as mx
     from mlx.utils import tree_flatten
 
+    require_storage(
+        ROOT,
+        run,
+        3,
+        checkpoint_peak(
+            model.trainable_parameters(), optimizer.state, random=list(mx.random.state)
+        ),
+    )
     parent = run / "checkpoints"
     parent.mkdir(exist_ok=True)
     temporary = parent / (".incomplete-" + uuid.uuid4().hex)
@@ -260,6 +269,7 @@ def evaluate(model, tokenizer, rows, tokens, settings):
 
 
 def execute(run, pause_after_epoch=None):
+    require_storage(ROOT, run, 3)
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
@@ -326,10 +336,14 @@ def execute(run, pause_after_epoch=None):
     for epoch in range(state["epoch"] + 1, settings["max_epochs"] + 1):
         if state["stopped"]:
             break
-        if shutil.disk_usage(run).free < 3 * 1024**3:
-            raise RuntimeError(
-                "Training paused before the next epoch: preserve a 3 GiB disk reserve"
-            )
+        require_storage(
+            ROOT,
+            run,
+            3,
+            checkpoint_peak(
+                model.trainable_parameters(), optimizer.state, random=list(mx.random.state)
+            ),
+        )
         model.train()
         # The epoch permutation does not depend on validation generation or an
         # interrupted epoch. Dropout is fixed at zero in the saved configuration.
