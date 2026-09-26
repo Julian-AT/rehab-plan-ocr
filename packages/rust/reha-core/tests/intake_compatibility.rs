@@ -352,3 +352,65 @@ async fn attempt_journal_failure_does_not_leave_recognition_locked() {
         b"retained bytes"
     );
 }
+#[test]
+fn individual_intakes_and_pdf_replay_do_not_decode_unrelated_history() {
+    use reha_core::{contracts::PipelineConfig, store::Store};
+    let root = tempfile::tempdir().unwrap();
+    let mut store = Store::open(root.path()).unwrap();
+    // Historical evidence is deliberately unreadable. Looking up a different
+    // capture must neither deserialize it nor let it block durable ingestion.
+    store.connection.execute(
+        "INSERT INTO intakes VALUES('unrelated','hash','old',0,'unavailable config','deleted',NULL)",
+        [],
+    ).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let bytes = b"%PDF-synthetic-original";
+    let first = store
+        .stage_intake(&id, "plan.pdf", bytes, &PipelineConfig::default(), 1)
+        .unwrap();
+    assert_eq!(first.status, "stored");
+    assert!(store.intake("missing").unwrap().is_none());
+    assert_eq!(
+        store.intake(&id).unwrap().unwrap().source_hash,
+        first.source_hash
+    );
+    let pages = store.pdf_pages(&id, 2).unwrap();
+    let replay = store
+        .stage_intake(&id, "replayed.pdf", bytes, &PipelineConfig::default(), 2)
+        .unwrap();
+    assert_eq!(replay.filename, "plan.pdf");
+    assert_eq!(replay.status, "document");
+    assert_eq!(store.pdf_pages(&id, 2).unwrap(), pages);
+    assert!(store
+        .stage_intake(
+            &id,
+            "changed.pdf",
+            b"%PDF-changed",
+            &PipelineConfig::default(),
+            2
+        )
+        .is_err());
+    store.intake_status(&id, "deleted", None).unwrap();
+    assert!(store.pdf_pages(&id, 2).is_err());
+    assert!(store
+        .stage_intake(&id, "plan.pdf", bytes, &PipelineConfig::default(), 2)
+        .is_err());
+}
+
+#[test]
+fn pdf_header_rejects_short_and_invalid_originals_with_the_existing_error() {
+    use reha_core::{contracts::PipelineConfig, store::Store};
+    let root = tempfile::tempdir().unwrap();
+    let mut store = Store::open(root.path()).unwrap();
+    for bytes in [b"%PDF".as_slice(), b"wrong-header".as_slice()] {
+        let id = uuid::Uuid::new_v4().to_string();
+        store
+            .stage_intake(&id, "plan.pdf", bytes, &PipelineConfig::default(), 1)
+            .unwrap();
+        assert!(store
+            .pdf_pages(&id, 1)
+            .unwrap_err()
+            .to_string()
+            .contains("Keine lesbare PDF-Datei."));
+    }
+}

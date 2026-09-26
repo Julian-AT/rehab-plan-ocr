@@ -748,10 +748,9 @@ impl NativeApplication {
                     None
                 } else {
                     let intake = store
-                        .intakes()
+                        .intake(&id)
                         .map_err(storage)?
-                        .into_iter()
-                        .find(|i| i.id == id && i.status != "deleted")
+                        .filter(|i| i.status != "deleted")
                         .ok_or(AppError::ExpiredScan)?;
                     Some((
                         intake,

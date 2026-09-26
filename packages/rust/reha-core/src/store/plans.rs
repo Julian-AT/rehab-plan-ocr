@@ -2,6 +2,7 @@ use super::Store;
 use crate::{Error, Result};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Plan {
@@ -78,11 +79,7 @@ impl Store {
             ));
         }
         self.scan_dir(source)?;
-        if self
-            .intakes()?
-            .iter()
-            .any(|i| i.id == source && i.status == "deleted")
-        {
+        if self.intake(source)?.is_some_and(|i| i.status == "deleted") {
             return Err(Error::Invalid(
                 "Die Originaldatei wurde gelöscht und wird nicht erneut eingelesen.".into(),
             ));
@@ -97,8 +94,11 @@ impl Store {
             }
             return Ok(ids);
         }
-        let bytes = std::fs::read(self.source_path(source)?)?;
-        if !bytes.starts_with(b"%PDF-") {
+        let mut header = Vec::with_capacity(5);
+        std::fs::File::open(self.source_path(source)?)?
+            .take(5)
+            .read_to_end(&mut header)?;
+        if header != b"%PDF-" {
             return Err(Error::Invalid("Keine lesbare PDF-Datei.".into()));
         }
         let ids: Vec<_> = (0..count)

@@ -1,6 +1,6 @@
 use super::Store;
 use crate::{contracts::PipelineConfig, Error, Result};
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, Metadata},
@@ -68,6 +68,27 @@ pub struct Intake {
     pub status: String,
     pub error: Option<String>,
 }
+
+fn intake_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(Intake, String)> {
+    Ok((
+        Intake {
+            id: row.get(0)?,
+            source_hash: row.get(1)?,
+            filename: row.get(2)?,
+            imported_at: row.get(3)?,
+            config: PipelineConfig::default(),
+            status: row.get(5)?,
+            error: row.get(6)?,
+        },
+        row.get(4)?,
+    ))
+}
+
+fn decode_intake((mut intake, config): (Intake, String)) -> Result<Intake> {
+    intake.config = serde_json::from_str(&config)?;
+    Ok(intake)
+}
+
 impl Store {
     /// The original is immutable and synced before acknowledging capture storage.
     /// Pipeline artifacts may be replaced; intake.bin must never be overwritten.
@@ -86,7 +107,7 @@ impl Store {
             ));
         }
         let hash = crate::hash(bytes);
-        if let Some(old) = self.intakes()?.into_iter().find(|v| v.id == id) {
+        if let Some(old) = self.intake(id)? {
             if old.source_hash != hash || old.status == "deleted" {
                 return Err(Error::Invalid("Aufnahme-ID wird bereits verwendet.".into()));
             }
@@ -113,37 +134,26 @@ impl Store {
         .sync_all()?;
         self.intake_status(id, "stored", None)?;
         self.ensure_page(id, now)?;
-        self.intakes()?
-            .into_iter()
-            .find(|v| v.id == id)
+        self.intake(id)?
             .ok_or_else(|| Error::Invalid("Aufnahme fehlt.".into()))
     }
+
+    pub fn intake(&self, id: &str) -> Result<Option<Intake>> {
+        self.connection
+            .query_row(
+                "SELECT id,source_hash,filename,imported_at,config,status,error FROM intakes WHERE id=?1",
+                [id],
+                intake_row,
+            )
+            .optional()?
+            .map(decode_intake)
+            .transpose()
+    }
+
     pub fn intakes(&self) -> Result<Vec<Intake>> {
         let mut q = self.connection.prepare("SELECT id,source_hash,filename,imported_at,config,status,error FROM intakes ORDER BY imported_at DESC,id")?;
-        let rows = q.query_map([], |r| {
-            Ok((
-                r.get(0)?,
-                r.get(1)?,
-                r.get(2)?,
-                r.get(3)?,
-                r.get::<_, String>(4)?,
-                r.get(5)?,
-                r.get(6)?,
-            ))
-        })?;
-        rows.map(|r| {
-            let (id, source_hash, filename, imported_at, config, status, error) = r?;
-            Ok(Intake {
-                id,
-                source_hash,
-                filename,
-                imported_at,
-                config: serde_json::from_str(&config)?,
-                status,
-                error,
-            })
-        })
-        .collect()
+        let rows = q.query_map([], intake_row)?;
+        rows.map(|row| decode_intake(row?)).collect()
     }
     pub fn intake_status(&self, id: &str, status: &str, error: Option<&str>) -> Result<()> {
         self.connection.execute(

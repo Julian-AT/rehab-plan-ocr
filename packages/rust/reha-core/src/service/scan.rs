@@ -348,10 +348,9 @@ pub async fn retry_scan(
             None
         } else {
             let intake = store
-                .intakes()
+                .intake(&id)
                 .map_err(failure)?
-                .into_iter()
-                .find(|v| v.id == id && v.status != "deleted")
+                .filter(|v| v.status != "deleted")
                 .ok_or("Aufnahme wurde gelöscht oder fehlt.")?;
             Some((
                 intake,
