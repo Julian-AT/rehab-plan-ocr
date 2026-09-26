@@ -221,6 +221,7 @@ async fn successful_failed_and_panicking_workers_all_release_their_attempt() {
         .await
         .unwrap();
     assert_eq!(app.bridge.jobs.len(), 0);
+    assert!(app.job_progress(id.clone()).unwrap().state == JobState::Completed);
     let job = app.register_job(id.clone()).unwrap();
     assert!(matches!(
         app.recognition_job(job, id.clone(), async { Err::<(), _>(AppError::Busy) })
@@ -228,9 +229,10 @@ async fn successful_failed_and_panicking_workers_all_release_their_attempt() {
         Err(AppError::Busy)
     ));
     assert_eq!(app.bridge.jobs.len(), 0);
+    assert!(app.job_progress(id.clone()).unwrap().state == JobState::Failed);
     let job = app.register_job(id.clone()).unwrap();
     assert!(matches!(
-        app.recognition_job(job, id, async {
+        app.recognition_job(job, id.clone(), async {
             panic!("synthetic worker panic");
             #[allow(unreachable_code)]
             Ok(())
@@ -240,4 +242,131 @@ async fn successful_failed_and_panicking_workers_all_release_their_attempt() {
     ));
     assert_eq!(app.bridge.jobs.len(), 0);
     assert!(!app.recognition_busy());
+    assert!(app.job_progress(id).unwrap().state == JobState::Failed);
+}
+
+#[tokio::test]
+async fn late_progress_cannot_reopen_a_terminal_attempt() {
+    let (_dir, app) = application().await;
+    for expected in [JobState::Completed, JobState::Failed, JobState::Cancelled] {
+        let id = uuid::Uuid::new_v4().to_string();
+        let job = app.register_job(id.clone()).unwrap();
+        let attempt = job.cancellation_flag();
+        if expected == JobState::Cancelled {
+            job.cancel();
+        }
+        let _ = app
+            .recognition_job(job, id.clone(), async move {
+                if expected == JobState::Failed {
+                    Err(AppError::Busy)
+                } else {
+                    Ok(())
+                }
+            })
+            .await;
+        assert!(app.job_progress(id.clone()).unwrap().state == expected);
+        app.bridge.update_progress(
+            &attempt,
+            service::progress::ProgressUpdate::new(&id, "Verspäteter Worker"),
+        );
+        assert!(
+            app.job_progress(id.clone()).unwrap().state == expected,
+            "late progress reopened a terminal attempt"
+        );
+        assert_eq!(app.bridge.jobs.len(), 0);
+    }
+}
+
+#[tokio::test]
+async fn late_progress_from_an_older_attempt_cannot_replace_a_retry() {
+    let (_dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let first = app.register_job(id.clone()).unwrap();
+    let first_attempt = first.cancellation_flag();
+    app.recognition_job(first.clone(), id.clone(), async { Ok(()) })
+        .await
+        .unwrap();
+    let retry = app.register_job(id.clone()).unwrap();
+    assert_ne!(first.attempt_id(), retry.attempt_id());
+    let (entered, entering) = tokio::sync::oneshot::channel();
+    let (finish, finishing) = tokio::sync::oneshot::channel();
+    let worker = app.clone();
+    let scan = id.clone();
+    let task = tokio::spawn(async move {
+        worker
+            .recognition_job(retry, scan, async move {
+                entered.send(()).unwrap();
+                finishing.await.unwrap();
+                Ok(())
+            })
+            .await
+    });
+    entering.await.unwrap();
+    app.bridge.update_progress(
+        &first_attempt,
+        service::progress::ProgressUpdate::new(&id, "Verspäteter erster Versuch"),
+    );
+    app.bridge
+        .finish_progress(&id, &first_attempt, JobState::Failed);
+    let observed = app.job_progress(id).unwrap();
+    // Drain the controlled worker before asserting, including on a red run.
+    finish.send(()).unwrap();
+    task.await.unwrap().unwrap();
+    assert_eq!(app.bridge.jobs.len(), 0);
+    assert_eq!(observed.stage, "Foto vorbereiten");
+    assert!(observed.state == JobState::Running);
+}
+
+#[tokio::test]
+async fn typed_progress_preserves_fields_and_ignores_unowned_or_legacy_updates() {
+    let (_dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let job = app.register_job(id.clone()).unwrap();
+    let attempt = job.cancellation_flag();
+    let worker = app.clone();
+    let scan = id.clone();
+    let observed = app
+        .recognition_job(job, id.clone(), async move {
+            let initial = worker.job_progress(scan.clone()).unwrap();
+            assert_eq!(initial.id, scan);
+            assert_eq!(initial.stage, "Foto vorbereiten");
+            assert_eq!(initial.elapsed_ms, 0);
+            assert_eq!(initial.budget_ms, 60_000);
+            assert!(!initial.draft_available);
+            assert!(initial.state == JobState::Running);
+            worker.bridge.update_progress(
+                &attempt,
+                service::progress::ProgressUpdate {
+                    id: scan.clone(),
+                    stage: "Prüfbarer Entwurf".into(),
+                    elapsed_ms: 1234,
+                    budget_ms: 59_000,
+                    draft_available: true,
+                },
+            );
+            worker
+                .bridge
+                .progress(json!({"id":scan,"stage":"Legacy ohne Identität"}));
+            worker.bridge.update_progress(
+                &Arc::new(AtomicBool::new(false)),
+                service::progress::ProgressUpdate::new(&scan, "Fremder Versuch"),
+            );
+            let unknown = uuid::Uuid::new_v4().to_string();
+            worker.bridge.update_progress(
+                &attempt,
+                service::progress::ProgressUpdate::new(&unknown, "Unbekannter Scan"),
+            );
+            assert!(worker.job_progress(unknown).is_none());
+            Ok(worker.job_progress(scan).unwrap())
+        })
+        .await
+        .unwrap();
+    assert_eq!(observed.id, id);
+    assert_eq!(observed.stage, "Prüfbarer Entwurf");
+    assert_eq!(observed.elapsed_ms, 1234);
+    assert_eq!(observed.budget_ms, 59_000);
+    assert!(observed.draft_available);
+    assert!(observed.state == JobState::Running);
+    assert!(app.job_progress(id).unwrap().state == JobState::Completed);
+    assert_eq!(app.bridge.jobs.len(), 0);
 }

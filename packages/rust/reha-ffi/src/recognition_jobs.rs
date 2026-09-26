@@ -128,6 +128,10 @@ impl RecognitionJob {
     }
 }
 impl RecognitionJob {
+    pub(crate) fn cancellation_flag(&self) -> Arc<AtomicBool> {
+        self.cancelled.clone()
+    }
+
     pub(crate) fn start(
         self: &Arc<Self>,
         registry: &Arc<RecognitionJobs>,

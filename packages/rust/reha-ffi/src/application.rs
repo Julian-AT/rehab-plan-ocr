@@ -323,10 +323,25 @@ pub trait AppleHost: Send + Sync {
         exclude: Vec<String>,
     ) -> Result<Vec<CalendarOverlap>>;
 }
+struct ProgressEntry {
+    attempt: Arc<AtomicBool>,
+    value: JobProgress,
+}
 pub(crate) struct HostBridge {
     host: Box<dyn AppleHost>,
-    progress: Mutex<HashMap<String, JobProgress>>,
+    progress: Mutex<HashMap<String, ProgressEntry>>,
     jobs: Arc<RecognitionJobs>,
+}
+impl HostBridge {
+    fn finish_progress(&self, id: &str, attempt: &Arc<AtomicBool>, state: JobState) {
+        if let Ok(mut progress) = self.progress.lock() {
+            if let Some(entry) = progress.get_mut(id) {
+                if Arc::ptr_eq(&entry.attempt, attempt) && entry.value.state == JobState::Running {
+                    entry.value.state = state;
+                }
+            }
+        }
+    }
 }
 impl Platform for HostBridge {
     fn recognize_text(
@@ -496,20 +511,22 @@ impl Platform for HostBridge {
         };
         run().map_err(platform_failure)
     }
-    fn progress(&self, value: Value) {
-        if let Some(id) = value["id"].as_str() {
-            if let Ok(mut map) = self.progress.lock() {
-                map.insert(
-                    id.into(),
-                    JobProgress {
-                        id: id.into(),
-                        stage: value["stage"].as_str().unwrap_or("").into(),
-                        elapsed_ms: value["elapsed_ms"].as_u64().unwrap_or(0),
-                        budget_ms: 60000,
-                        draft_available: value["draft_available"].as_bool().unwrap_or(false),
-                        state: JobState::Running,
-                    },
-                );
+    // Legacy notifications have no attempt identity. Only the typed path may
+    // update native progress; a delayed notification cannot revive a finished job.
+    fn progress(&self, _: Value) {}
+    fn update_progress(
+        &self,
+        attempt: &Arc<AtomicBool>,
+        update: service::progress::ProgressUpdate,
+    ) {
+        if let Ok(mut progress) = self.progress.lock() {
+            if let Some(entry) = progress.get_mut(&update.id) {
+                if Arc::ptr_eq(&entry.attempt, attempt) && entry.value.state == JobState::Running {
+                    entry.value.stage = update.stage;
+                    entry.value.elapsed_ms = update.elapsed_ms;
+                    entry.value.budget_ms = update.budget_ms;
+                    entry.value.draft_available = update.draft_available;
+                }
             }
         }
     }
@@ -1235,7 +1252,12 @@ impl NativeApplication {
         self.bridge.jobs.cancel(&id)
     }
     pub fn job_progress(&self, id: String) -> Option<JobProgress> {
-        self.bridge.progress.lock().ok()?.get(&id).cloned()
+        self.bridge
+            .progress
+            .lock()
+            .ok()?
+            .get(&id)
+            .map(|entry| entry.value.clone())
     }
     /// Independent of decoding/model availability. Safe to acknowledge only after this returns.
     pub async fn stage_photo(&self, id: String, path: String) -> Result<IntakeSummary> {
@@ -1302,15 +1324,15 @@ impl NativeApplication {
         }
         impl Drop for ProgressFinish {
             fn drop(&mut self) {
-                if let Ok(mut progress) = self.bridge.progress.lock() {
-                    if let Some(p) = progress.get_mut(&self.id) {
-                        p.state = if self.job.is_cancelled() {
-                            JobState::Cancelled
-                        } else {
-                            self.state
-                        };
-                    }
-                }
+                self.bridge.finish_progress(
+                    &self.id,
+                    &self.job.cancellation_flag(),
+                    if self.job.is_cancelled() {
+                        JobState::Cancelled
+                    } else {
+                        self.state
+                    },
+                );
             }
         }
         let mut guard = CancelOnDrop {
@@ -1322,9 +1344,23 @@ impl NativeApplication {
             .spawn(async move {
                 let _lease = lease;
                 if let Ok(mut progress) = bridge.progress.lock() {
-                    progress.retain(|_, p| p.state == JobState::Running);
+                    progress.retain(|_, entry| entry.value.state == JobState::Running);
+                    let update = service::progress::ProgressUpdate::new(&id, "Foto vorbereiten");
+                    progress.insert(
+                        id.clone(),
+                        ProgressEntry {
+                            attempt: job.cancellation_flag(),
+                            value: JobProgress {
+                                id: update.id,
+                                stage: update.stage,
+                                elapsed_ms: update.elapsed_ms,
+                                budget_ms: update.budget_ms,
+                                draft_available: update.draft_available,
+                                state: JobState::Running,
+                            },
+                        },
+                    );
                 }
-                bridge.progress(json!({"id":id,"stage":"Foto vorbereiten"}));
                 let mut progress = ProgressFinish {
                     bridge,
                     id,

@@ -54,7 +54,13 @@ pub async fn import_image(
             ],
         )
         .map_err(failure)?;
-    app.progress(json!({"id":request.id,"stage":"Original gespeichert","draft_available":false}));
+    let cancel = app
+        .cancellation_flag(&request.id)
+        .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
+    app.update_progress(
+        &cancel,
+        super::progress::ProgressUpdate::new(&request.id, "Original gespeichert"),
+    );
     let source_hash = reha_core::hash(&request.bytes);
     if !request.force {
         let store = state.store.lock().map_err(failure)?;
@@ -74,9 +80,6 @@ pub async fn import_image(
             }
         }
     }
-    let cancel = app
-        .cancellation_flag(&request.id)
-        .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
     {
         let mut active = state.cancel.lock().map_err(failure)?;
         if !active.is_empty() {
@@ -411,7 +414,16 @@ pub async fn retry_scan(
         let mut task = tokio::task::spawn_blocking(move || {
             let result = (|| {
                 let cancel = worker_cancel;
-                app.progress( json!({"id":scan_id,"stage":"Lokales Modell laden und Felder nachlesen","elapsed_ms":started.elapsed().as_millis() as u64,"budget_ms":60000,"draft_available":true}));
+                app.update_progress(
+                    &cancel,
+                    super::progress::ProgressUpdate {
+                        id: scan_id.clone(),
+                        stage: "Lokales Modell laden und Felder nachlesen".into(),
+                        elapsed_ms: started.elapsed().as_millis() as u64,
+                        budget_ms: super::progress::BUDGET_MS,
+                        draft_available: true,
+                    },
+                );
                 let (mut run, dir) = {
                     let store = shared.store.lock().map_err(failure)?;
                     (

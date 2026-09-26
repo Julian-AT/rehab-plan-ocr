@@ -174,6 +174,11 @@ pub trait Platform: Send + Sync {
             )
             .map_err(failure)
     }
+    /// Typed native updates carry the same attempt identity as cancellation.
+    /// Older hosts retain their JSON notification hook through this default.
+    fn update_progress(&self, _attempt: &Arc<AtomicBool>, update: progress::ProgressUpdate) {
+        self.progress(update.legacy());
+    }
     fn progress(&self, value: serde_json::Value);
     fn cancelled(&self, _id: &str) -> bool {
         false
@@ -224,6 +229,7 @@ pub mod calendar_mutations;
 pub mod calendar_reads;
 pub mod calendar_repair;
 pub mod inference;
+pub mod progress;
 pub mod scan;
 pub mod settings;
 pub mod text_recognition;

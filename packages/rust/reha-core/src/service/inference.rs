@@ -35,7 +35,6 @@ pub fn process(
         contracts::*,
         pipeline::{self, RecognitionOutput, ScanInput},
     };
-    use serde_json::json;
     use std::time::Instant;
 
     let bytes = &request.bytes;
@@ -51,7 +50,7 @@ pub fn process(
             .map_err(failure)?
             .and_then(|id| store.load_run(&id).ok())
     };
-    let last_notification = std::sync::Mutex::new(None::<std::time::Instant>);
+    let notifications = std::sync::Mutex::new(super::progress::ProgressThrottle::default());
     let draft_saved = AtomicBool::new(false);
     let progress = |stage: &str, run: Option<&PipelineRun>| {
         if let Some(run) = run.filter(|_| !cancel.load(std::sync::atomic::Ordering::Relaxed)) {
@@ -77,12 +76,20 @@ pub fn process(
                 }
             }
         }
-        let mut last = last_notification.lock().unwrap_or_else(|p| p.into_inner());
-        if last.is_some_and(|time| time.elapsed() < std::time::Duration::from_millis(100)) {
+        let mut notifications = notifications.lock().unwrap_or_else(|p| p.into_inner());
+        if !notifications.allows(Instant::now()) {
             return;
         }
-        *last = Some(std::time::Instant::now());
-        app.progress( json!({"id": request.id, "stage": stage, "elapsed_ms": started.elapsed().as_millis() as u64, "budget_ms": 60000, "draft_available": draft_saved.load(std::sync::atomic::Ordering::Relaxed)}));
+        app.update_progress(
+            &cancel,
+            super::progress::ProgressUpdate {
+                id: request.id.clone(),
+                stage: stage.into(),
+                elapsed_ms: started.elapsed().as_millis() as u64,
+                budget_ms: super::progress::BUDGET_MS,
+                draft_available: draft_saved.load(std::sync::atomic::Ordering::Relaxed),
+            },
+        );
     };
     progress("Foto laden", None);
 
