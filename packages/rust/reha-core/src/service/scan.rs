@@ -369,7 +369,8 @@ pub async fn retry_scan(
                 .ok_or("Aufnahme wurde gelöscht oder fehlt.")?;
             Some((
                 intake,
-                std::fs::read(store.source_path(&id).map_err(failure)?).map_err(failure)?,
+                crate::photo_source::read(store.source_path(&id).map_err(failure)?)
+                    .map_err(failure)?,
             ))
         }
     };

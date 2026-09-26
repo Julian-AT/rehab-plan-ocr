@@ -23,6 +23,13 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, AppError>;
+fn read_photo_source(path: &std::path::Path) -> Result<Vec<u8>> {
+    reha_core::photo_source::read(path).map_err(|error| match error {
+        reha_core::Error::Invalid(message) => AppError::Validation { message },
+        other => storage(other),
+    })
+}
+
 fn convert<T: Serialize, U: DeserializeOwned>(value: T) -> Result<U> {
     serde_json::from_value(serde_json::to_value(value).map_err(storage)?).map_err(storage)
 }
@@ -741,7 +748,7 @@ impl NativeApplication {
                         .ok_or(AppError::ExpiredScan)?;
                     Some((
                         intake,
-                        std::fs::read(store.source_path(&id).map_err(storage)?).map_err(storage)?,
+                        read_photo_source(&store.source_path(&id).map_err(storage)?)?,
                     ))
                 }
             };
@@ -1220,12 +1227,7 @@ impl NativeApplication {
     pub async fn stage_photo(&self, id: String, path: String) -> Result<IntakeSummary> {
         self.blocking(move |s| {
             let path = PathBuf::from(path);
-            if std::fs::metadata(&path).map_err(storage)?.len() > 40 * 1024 * 1024 {
-                return Err(AppError::Validation {
-                    message: "Foto maximal 40 MB.".into(),
-                });
-            }
-            let bytes = std::fs::read(&path).map_err(storage)?;
+            let bytes = read_photo_source(&path)?;
             let store = s.store.lock().map_err(storage)?;
             convert(
                 store
@@ -1342,17 +1344,9 @@ impl NativeApplication {
         let id = request.id.clone();
         self.recognition_job(job.clone(), id.clone(), async move {
             let path = PathBuf::from(&request.path);
-            let bytes = tokio::task::spawn_blocking(move || {
-                let metadata = std::fs::metadata(&path).map_err(storage)?;
-                if metadata.len() > 40 * 1024 * 1024 {
-                    return Err(AppError::Validation {
-                        message: "Foto maximal 40 MB.".into(),
-                    });
-                }
-                std::fs::read(path).map_err(storage)
-            })
-            .await
-            .map_err(storage)??;
+            let bytes = tokio::task::spawn_blocking(move || read_photo_source(&path))
+                .await
+                .map_err(storage)??;
             let corners = if request.page_corners.is_empty() {
                 None
             } else {
