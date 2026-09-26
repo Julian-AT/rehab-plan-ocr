@@ -23,10 +23,18 @@ def fetch(url):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--tier", choices=["small", "tiny", "medium"], default="small")
+    parser.add_argument(
+        "--update-lock", action="store_true", help="Explicitly create/update model pins"
+    )
+    parser.add_argument(
+        "--offline", action="store_true", help="Verify local assets without downloading"
+    )
     args = parser.parse_args()
     destination = ROOT / "models/private" / args.tier
     destination.mkdir(parents=True, exist_ok=True)
     manifest_path = ROOT / "models" / f"{args.tier}.lock.json"
+    if not manifest_path.exists() and not args.update_lock:
+        raise SystemExit("Model lock missing; use --update-lock explicitly to select a model.")
     manifest = (
         json.loads(manifest_path.read_text())
         if manifest_path.exists()
@@ -39,6 +47,8 @@ def main():
         }
     )
     if not manifest["files"]:
+        if not args.update_lock or args.offline:
+            raise SystemExit("Model lock has no pinned files.")
         for component in ["det", "rec"]:
             repo = f"PaddlePaddle/PP-OCRv6_{args.tier}_{component}_onnx"
             metadata = json.loads(fetch(f"https://huggingface.co/api/models/{repo}"))
@@ -50,10 +60,14 @@ def main():
                     }
                 )
     for entry in manifest["files"]:
+        if not args.update_lock and not entry.get("sha256"):
+            raise SystemExit(f"Missing pinned checksum: {entry['path']}")
         path = destination / entry["path"]
         if path.exists() and entry.get("sha256") == hashlib.sha256(path.read_bytes()).hexdigest():
             print(f"Verified {entry['path']}")
             continue
+        if args.offline:
+            raise SystemExit(f"Missing or corrupt local model: {entry['path']}; run make restore.")
         content = fetch(entry["url"])
         digest = hashlib.sha256(content).hexdigest()
         if entry.get("sha256") and digest != entry["sha256"]:
@@ -67,11 +81,14 @@ def main():
     characters = config["PostProcess"]["character_dict"]
     # Paddle CTC: blank token first, space appended by CTCLabelDecode.
     dictionary = [""] + characters + [" "]
-    (destination / "dictionary.json").write_text(json.dumps(dictionary, ensure_ascii=False))
-    manifest["dictionary_sha256"] = hashlib.sha256(
-        (destination / "dictionary.json").read_bytes()
-    ).hexdigest()
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    dictionary_bytes = json.dumps(dictionary, ensure_ascii=False).encode("utf-8")
+    digest = hashlib.sha256(dictionary_bytes).hexdigest()
+    if not args.update_lock and manifest.get("dictionary_sha256") != digest:
+        raise SystemExit("Dictionary differs from the pinned deployment dictionary.")
+    (destination / "dictionary.json").write_bytes(dictionary_bytes)
+    if args.update_lock:
+        manifest["dictionary_sha256"] = digest
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Ready: {destination}")
 

@@ -9,7 +9,7 @@ bindings() {
   cargo build --locked -p reha-ffi --features bindgen
   generated=$(mktemp -d)
   target/debug/reha-bindgen generate target/debug/libreha_ffi.dylib --language swift --metadata-no-deps --no-format --out-dir "$generated"
-  if [ "$mode" = check-bindings ]; then
+  if [ "$mode" != bindings ]; then
     diff -u packages/apple/RehaCore/Sources/RehaCore/RehaCore.swift "$generated/RehaCore.swift"
     diff -u packages/apple/RehaCore/Headers/RehaCoreFFI.h "$generated/RehaCoreFFI.h"
     diff -u packages/apple/RehaCore/Headers/module.modulemap "$generated/RehaCoreFFI.modulemap"
@@ -28,7 +28,12 @@ framework() {
   python3 scripts/build-phonemizer.py
   python3 scripts/fetch-speech-model.py
   mkdir -p apps/ios/build/ffi/device apps/ios/build/ffi/simulator
-  for variant in device simulator; do
+  case "$mode" in
+    simulator | test) variants=simulator ;;
+    device) variants=device ;;
+    *) variants='device simulator' ;;
+  esac
+  for variant in $variants; do
     case "$variant" in
       device) triple=aarch64-apple-ios ;;
       simulator) triple=aarch64-apple-ios-sim ;;
@@ -41,10 +46,11 @@ framework() {
     if [ "${REHA_LOW_DISK:-0}" = 1 ]; then rm -r "target/$triple/release"; fi
   done
   assembled=$(mktemp -d)
-  xcodebuild -create-xcframework \
-    -library apps/ios/build/ffi/device/libRehaCoreFFI.a -headers packages/apple/RehaCore/Headers \
-    -library apps/ios/build/ffi/simulator/libRehaCoreFFI.a -headers packages/apple/RehaCore/Headers \
-    -output "$assembled/RehaCoreFFI.xcframework"
+  set -- -create-xcframework
+  for variant in $variants; do
+    set -- "$@" -library "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" -headers packages/apple/RehaCore/Headers
+  done
+  xcodebuild "$@" -output "$assembled/RehaCoreFFI.xcframework"
   if [ -d packages/apple/RehaCore/RehaCoreFFI.xcframework ]; then rm -r packages/apple/RehaCore/RehaCoreFFI.xcframework; fi
   mv "$assembled/RehaCoreFFI.xcframework" packages/apple/RehaCore/
   rmdir "$assembled"

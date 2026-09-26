@@ -18,9 +18,9 @@ import certifi
 ROOT = Path(__file__).resolve().parents[1]
 URL = "https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.22.0.zip"
 lock_path = ROOT / "models/ios-runtime.lock.json"
-lock = (
-    json.loads(lock_path.read_text()) if lock_path.exists() else {"version": "1.22.0", "url": URL}
-)
+lock = json.loads(lock_path.read_text())
+if not lock.get("sha256") or not lock.get("bytes"):
+    raise SystemExit("iOS runtime needs a committed checksum and size before restoration")
 root = ROOT / "models/private/runtime"
 root.mkdir(parents=True, exist_ok=True)
 cache = root / "onnxruntime-1.22.0.zip"
@@ -34,9 +34,8 @@ else:
     ) as response:
         data = response.read()
 digest = hashlib.sha256(data).hexdigest()
-if lock.get("sha256") and lock["sha256"] != digest:
+if lock["sha256"] != digest or lock["bytes"] != len(data):
     raise SystemExit("iOS runtime checksum mismatch")
-lock.update(sha256=digest, bytes=len(data))
 cache.write_bytes(data)
 with zipfile.ZipFile(io.BytesIO(data)) as archive:
     for target, folder in [
@@ -63,4 +62,3 @@ with zipfile.ZipFile(io.BytesIO(data)) as archive:
         universal.unlink()
         print(f"Installed static ORT {lock['version']} for {target}: {len(binary)} bytes")
     (root / "LICENSE").write_bytes(archive.read("LICENSE"))
-lock_path.write_text(json.dumps(lock, indent=2) + "\n")
