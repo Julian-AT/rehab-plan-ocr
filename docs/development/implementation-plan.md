@@ -121,7 +121,17 @@ required full commit first. Six isolated tests cover read-only commands, argumen
 isolation, stale-branch rejection and pinned action verification. The helper is
 optional developer tooling (Node.js 22+ and authenticated GitHub CLI), available
 through `make ci-status` and `make test-ci-monitor`; no app dependency is added.
-Hosted qualification of the newer commits is still pending.
+The first new [hosted run](archive:github/run-35284272361)
+at `75ff16f` passes the complete portable job. Apple passes bootstrap/lint but
+fails restoring assets: Apple's Make cannot locate a bare executable using its
+newly exported PATH. A clean-PATH regression reproduces the failure locally.
+Direct uv/cargo recipes now use `env` to resolve the inherited recipe path; the
+regression passes, along with all 143 tool tests, seven monitor tests and lint.
+CI builds/verifies both unsigned bundles before native/UI tests, avoiding a
+secondary missing-bundle error after failed setup. Completed-job logs can be read
+while the other job runs, after verifying their run identity. Full Apple hosted
+qualification remains pending. Raw evidence is retained in
+`.local/runs/hosted-ci-20260926-s18-001`.
 
 ### One civil clock through interpretation and confirmation — 2026-09-26
 

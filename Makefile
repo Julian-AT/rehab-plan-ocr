@@ -1,5 +1,7 @@
 .PHONY: help bootstrap doctor format lint test test-tools test-ios build verify bindings check-bindings test-agenda restore convert verify-assets package restore-ocr-training restore-assistant-training restore-assistant-export
 export PATH := $(CURDIR)/.tools/bin:$(HOME)/.cargo/bin:$(PATH)
+# Apple Make resolves bare executables before applying this exported PATH.
+# env performs lookup in the recipe environment, including bootstrapped tools.
 TARGET ?= simulator
 
 help:
@@ -47,19 +49,19 @@ test-agenda:
 .PHONY: prepare-listening refresh-listening
 prepare-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
-	cargo build --locked -p reha-cli --example voice_samples --features voice
-	uv run --locked python ml/evaluation/speech/listening.py --run "$(RUN)"
+	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples --features voice
+	/usr/bin/env uv run --locked python ml/evaluation/speech/listening.py --run "$(RUN)"
 
 refresh-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to an existing listening export'; exit 2; }
-	uv run --locked python ml/evaluation/speech/listening_form.py --run "$(RUN)"
+	/usr/bin/env uv run --locked python ml/evaluation/speech/listening_form.py --run "$(RUN)"
 
 restore:
-	uv sync --locked
-	uv sync --locked --script tooling/build/export-victoria.py
-	uv run --locked --with cmake==3.31.6 cmake --version
-	uv run --locked python tooling/build/fetch-models.py --tier small
-	uv run --locked python tooling/build/fetch-ios-runtime.py
+	/usr/bin/env uv sync --locked
+	/usr/bin/env uv sync --locked --script tooling/build/export-victoria.py
+	/usr/bin/env uv run --locked --with cmake==3.31.6 cmake --version
+	/usr/bin/env uv run --locked python tooling/build/fetch-models.py --tier small
+	/usr/bin/env uv run --locked python tooling/build/fetch-ios-runtime.py
 	python3 tooling/build/build-phonemizer.py --source-only
 	python3 tooling/build/fetch-speech-model.py restore
 
@@ -147,7 +149,7 @@ migrate-private:
 .PHONY: intake
 intake:
 	@test -n "$(REQUEST)" -a -n "$(BATCH)" || { echo 'Set REQUEST and a new BATCH below .local/datasets/incoming'; exit 2; }
-	uv run --locked python ml/data/annotation/intake.py "$(REQUEST)" "$(BATCH)"
+	/usr/bin/env uv run --locked python ml/data/annotation/intake.py "$(REQUEST)" "$(BATCH)"
 
 OCR_MODE ?= frozen-backbone
 OCR_EPOCHS ?= 100
@@ -159,12 +161,12 @@ FOLD ?= 0
 .PHONY: generate-synthetic
 generate-synthetic:
 	@test -n "$(DATASET)" || { echo 'Set DATASET to a new synthetic export directory'; exit 2; }
-	uv run --locked python ml/data/synthesis/synthetic-plans.py "$(DATASET)" --font "$(FONT)" --count "$(SYNTHETIC_COUNT)"
+	/usr/bin/env uv run --locked python ml/data/synthesis/synthetic-plans.py "$(DATASET)" --font "$(FONT)" --count "$(SYNTHETIC_COUNT)"
 
 .PHONY: verify-augmentation
 verify-augmentation:
 	@test -n "$(SOURCE_DATASET)" -a -n "$(RUN)" || { echo 'Set SOURCE_DATASET and a new verification RUN directory'; exit 2; }
-	uv run --locked python ml/data/augmentation/verify.py --source "$(SOURCE_DATASET)" --output "$(RUN)" --font "$(FONT)" --limit "$(SYNTHETIC_SOURCES)"
+	/usr/bin/env uv run --locked python ml/data/augmentation/verify.py --source "$(SOURCE_DATASET)" --output "$(RUN)" --font "$(FONT)" --limit "$(SYNTHETIC_SOURCES)"
 
 .PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data train-ocr resume-ocr export-ocr
 restore-ocr-assets: restore-ocr-training

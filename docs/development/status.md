@@ -55,8 +55,9 @@ establish current device behavior or authorize an update.
 - Shared package verification now checks the app, three extensions, exact model
   bundles including the OCR dictionary, privacy declarations and notices. The
   actual simulator and fresh unsigned device builds pass, as do 142 tool tests
-  and lint. CI includes these content checks; hosted and signed-release evidence
-  remain pending.
+  and lint. The first current hosted run passes the portable job; Apple reveals a
+  clean-PATH Make failure now reproduced and fixed locally (143 tool tests pass).
+  Full Apple hosted and signed-release evidence remain pending.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture

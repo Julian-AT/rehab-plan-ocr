@@ -18,6 +18,7 @@ Options:
   --branch NAME       Explicit remote branch (required for dispatch)
   --commit SHA        Full commit identity (required for dispatch)
   --file PATH         Workflow for read-only action-pin verification
+  --job ID            Download this completed job's full log while other jobs run
   --help              Show this help without invoking GitHub
 
 Requires Node.js 22+ and an authenticated GitHub CLI. Read commands never dispatch
@@ -48,7 +49,7 @@ function main(args, run = execute, read = readFileSync) {
     args, allowPositionals: true,
     options: {
       help: { type: 'boolean' }, repo: { type: 'string' }, branch: { type: 'string' },
-      commit: { type: 'string' }, file: { type: 'string' },
+      commit: { type: 'string' }, file: { type: 'string' }, job: { type: 'string' },
     },
   });
   if (values.help || positionals.length === 0) return HELP;
@@ -61,6 +62,9 @@ function main(args, run = execute, read = readFileSync) {
   }
   if (values.commit && !/^[a-f0-9]{40}$/.test(values.commit)) {
     throw new Error('Commit must be a full lowercase SHA-1.');
+  }
+  if (values.job && (command !== 'log-failed' || !/^\d+$/.test(values.job))) {
+    throw new Error('A numeric --job is supported only by log-failed.');
   }
   if (values.branch && (values.branch.startsWith('-') || /[\s\x00-\x1f]/.test(values.branch))) {
     throw new Error('Invalid branch name.');
@@ -81,7 +85,15 @@ function main(args, run = execute, read = readFileSync) {
     return gh('run', 'view', id, '--repo', repo,
       '--json', 'databaseId,headSha,headBranch,event,status,conclusion,workflowName,url,jobs');
   }
-  if (command === 'log-failed') return gh('run', 'view', id, '--repo', repo, '--log-failed');
+  if (command === 'log-failed') {
+    if (!values.job) return gh('run', 'view', id, '--repo', repo, '--log-failed');
+    const endpoint = `repos/${repo}/actions/jobs/${values.job}`;
+    const job = JSON.parse(gh('api', endpoint));
+    if (String(job.run_id) !== id || job.status !== 'completed') {
+      throw new Error('Job must be completed and belong to the requested run.');
+    }
+    return gh('api', `${endpoint}/logs`);
+  }
   if (command === 'check-actions') {
     const workflow = values.file || '.github/workflows/verify.yml';
     const uses = [...read(workflow, 'utf8').matchAll(/^\s*-?\s*uses:\s*([^\s#]+).*$/gm)];

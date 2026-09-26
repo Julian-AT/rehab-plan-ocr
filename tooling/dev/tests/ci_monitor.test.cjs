@@ -34,6 +34,19 @@ test('only GitHub origins are used implicitly', () => {
   assert.throws(() => main(['runs'], () => 'https://elsewhere.example/owner/repo'), /Origin/);
 });
 
+test('failed logs can select a completed numeric job without waiting on unrelated jobs', () => {
+  const calls = [];
+  main(['log-failed', '123', '--repo', 'owner/repo', '--job', '456'],
+    (binary, args) => {
+      calls.push(args);
+      return calls.length === 1 ? JSON.stringify({run_id: 123, status: 'completed'}) : 'Failure evidence';
+    });
+  assert.deepEqual(calls[1], ['api', 'repos/owner/repo/actions/jobs/456/logs']);
+  assert.throws(() => main(['log-failed', '123', '--job', '--secret']), /job/);
+  assert.throws(() => main(['log-failed', '123', '--repo', 'owner/repo', '--job', '456'],
+    () => JSON.stringify({run_id: 999, status: 'completed'})), /belong/);
+});
+
 test('dispatch rejects a stale remote identity before creating any workflow event', () => {
   const calls = [];
   assert.throws(() => main(['dispatch', '--repo', 'owner/repo', '--branch', 'candidate', '--commit', sha],
