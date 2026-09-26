@@ -6,11 +6,11 @@ options:
   createIntermediateGroups: true
 packages:
   RehaCore:
-    path: Packages/RehaCore
+    path: ../../packages/apple/RehaCore
   AppleServices:
-    path: Packages/AppleServices
+    path: ../../packages/apple/AppleServices
   VoiceActivity:
-    path: Packages/VoiceActivity
+    path: ../../packages/apple/VoiceActivity
 settings:
   base:
     DEVELOPMENT_TEAM: ZP2PFF43D2
@@ -29,14 +29,14 @@ targets:
     sources:
       - path: Termine
       - path: SharedIntake
-      - path: ../models/private/small
+      - path: ../../models/private/small
         name: models
         type: folder
         buildPhase: resources
-      - path: ../models/private/kokoro-german
+      - path: ../../models/private/kokoro-german
         type: folder
         buildPhase: resources
-      - path: ../licenses
+      - path: ../../licenses
         type: folder
         buildPhase: resources
     dependencies:
@@ -123,8 +123,8 @@ targets:
     type: app-extension
     platform: iOS
     sources:
-      - path: ../ios/Widgets
-      - path: Packages/AppleServices/Sources/AppleServices/AgendaShared
+      - path: Widgets
+      - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.widgets
@@ -148,8 +148,8 @@ targets:
     type: app-extension
     platform: iOS
     sources:
-      - path: ../ios/NotificationContent
-      - path: Packages/AppleServices/Sources/AppleServices/AgendaShared
+      - path: NotificationContent
+      - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     dependencies:
       - sdk: UserNotificationsUI.framework
       - sdk: UserNotifications.framework

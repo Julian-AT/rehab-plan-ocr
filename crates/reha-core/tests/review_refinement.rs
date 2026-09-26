@@ -2,7 +2,7 @@ use reha_core::{calendar, contracts::*, geometry, parser, refinement, review, st
 use std::collections::BTreeMap;
 fn run() -> PipelineRun {
     let mut r: PipelineRun =
-        serde_json::from_str(include_str!("../../../public/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
     review::migrate(&mut r).unwrap();
     r
 }
@@ -250,7 +250,7 @@ fn v1_migration_keeps_edits_bindings_and_expires_refinement_evidence() {
     let temp = tempfile::tempdir().unwrap();
     let store = Store::open(temp.path()).unwrap();
     let mut r: PipelineRun =
-        serde_json::from_str(include_str!("../../../public/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
     r.document.imported_at = 100;
     r.appointments[0].title = "Old manual edit".into();
     r.review_confirmed = true;

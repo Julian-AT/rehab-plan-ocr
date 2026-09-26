@@ -7,9 +7,9 @@ export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 if [ "${1:-}" = --built ]; then shift; else sh scripts/build-native.sh simulator; fi
 # Build tests before signing the simulator copy. A subsequent `test` build would
 # reinstall the unsigned product and lose its App Group entitlements.
-xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Debug \
+xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath apple/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
+  -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
 simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
 printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)
@@ -26,12 +26,12 @@ xcrun simctl bootstatus "$simulator" -b
 app="$staging/Laßnitzhöhe.app"
 # File-provider metadata can reappear immediately under Documents. Sign a
 # disposable local copy, as the private packaging verifier does.
-ditto apple/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
+ditto apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
 xattr -cr "$app"
-codesign --force --sign - --entitlements apple/Extensions/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
-codesign --force --sign - --entitlements apple/Extensions/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
-codesign --force --sign - --entitlements apple/ShareExtension/Share.entitlements "$app/PlugIns/RehaShare.appex"
-codesign --force --sign - --entitlements apple/Termine/Termine.entitlements "$app"
+codesign --force --sign - --entitlements apps/ios/Extensions/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
+codesign --force --sign - --entitlements apps/ios/Extensions/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
+codesign --force --sign - --entitlements apps/ios/ShareExtension/Share.entitlements "$app/PlugIns/RehaShare.appex"
+codesign --force --sign - --entitlements apps/ios/Termine/Termine.entitlements "$app"
 if ! xcrun simctl install "$simulator" "$app"; then
   # A freshly booted simulator can still be initializing its icon services.
   sleep 3
@@ -50,23 +50,23 @@ for metadata in groups.glob("*/.com.apple.mobile_container_manager.metadata.plis
     if plistlib.loads(metadata.read_bytes()).get("MCMMetadataIdentifier") == "group.com.apple.FileProvider.LocalStorage":
         folder = metadata.parent / "File Provider Storage"
         folder.mkdir(exist_ok=True)
-        shutil.copy2("public/synthetic-day.png", folder / "Testplan.png")
+        shutil.copy2("tests/fixtures/synthetic-day.png", folder / "Testplan.png")
         break
 else:
     raise RuntimeError("Test simulator has no local Files provider")
 PY
 if [ "${REHA_UI_NEW_PHOTO:-0}" = 1 ]; then
   # Different source bytes exercise new recognition instead of duplicate reuse.
-  sips -s format jpeg public/synthetic-day.png --out "$staging/new-photo.jpg" >/dev/null
+  sips -s format jpeg tests/fixtures/synthetic-day.png --out "$staging/new-photo.jpg" >/dev/null
   xcrun simctl addmedia "$simulator" "$staging/new-photo.jpg"
 else
-  xcrun simctl addmedia "$simulator" public/synthetic-day.png
+  xcrun simctl addmedia "$simulator" tests/fixtures/synthetic-day.png
 fi
 python3 - "$staging" <<'PYRUN'
 import plistlib, sys
 from pathlib import Path
 staging = Path(sys.argv[1])
-products = Path("apple/build/DerivedData/Build/Products").resolve()
+products = Path("apps/ios/build/DerivedData/Build/Products").resolve()
 source = next(products.glob("Termine_iphonesimulator*.xctestrun"))
 run = plistlib.loads(source.read_bytes())
 def absolute(value):

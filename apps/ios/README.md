@@ -33,7 +33,7 @@ Run commands from the repository root. `test` creates and removes its own simula
 sh scripts/build-native.sh archive
 ```
 
-This uses the existing signing team and generates `apple/build/Termine.xcarchive`, `Termine.ipa` and `package-verification.json`. Packaging verifies signatures, app/extension identities, App Group entitlements, profile validity, model checksums and bundled licences. The validation copy is made outside the file-provider-managed workspace to avoid Finder metadata invalidating strict signature checks.
+This uses the existing signing team and generates `apps/ios/build/Termine.xcarchive`, `Termine.ipa` and `package-verification.json`. Packaging verifies signatures, app/extension identities, App Group entitlements, profile validity, model checksums and bundled licences. The validation copy is made outside the file-provider-managed workspace to avoid Finder metadata invalidating strict signature checks.
 
 Use `package-verification.json` for the actual profile expiry dates. Rebuild and sign before the earliest expiry, then install in place. Do not uninstall the existing app: its data intentionally remains local and excluded from iCloud backup.
 
@@ -45,20 +45,20 @@ The production identity remains `at.rehakalender.personal`, with the existing wi
 
 An unavailable calendar is displayed as unavailable; it is not treated as proof of deletion. Calendar comparison records no human approval. One save action accepts the displayed ready selection and durably journals its write intent; unresolved appointments remain for later. Pending and uncertain operations are reconciled before a new proposal. Swift cancellation signals the individual job, while approved calendar transactions retain an owned runtime task to finish bookkeeping.
 
-Physical-device acceptance is still a release gate. See [migration evidence and remaining checks](../docs/native-iphone-migration.md). Keep the Tauri release available until that gate passes.
+Physical-device acceptance is still a release gate. See [migration evidence and remaining checks](../../docs/native-iphone-migration.md). Keep the Tauri release available until that gate passes.
 
-See [one-confirmation behavior and verification](../docs/one-confirmation.md).
+See [one-confirmation behavior and verification](../../docs/one-confirmation.md).
 
-Build 2026092605 adds per-plan calendar selection, separate display preferences, external event editing/undo and local German voice assistance. It is installed on the iPhone 17, with backup and schema-7 data retention verified. See [implementation, test results and remaining device acceptance](../docs/calendar-voice-implementation.md).
+Build 2026092605 adds per-plan calendar selection, separate display preferences, external event editing/undo and local German voice assistance. It is installed on the iPhone 17, with backup and schema-7 data retention verified. See [implementation, test results and remaining device acceptance](../../docs/calendar-voice-implementation.md).
 
-Build 2026092606 replaces system TTS with bundled German Supertonic 3 voices and repairs menu presentation and playback actions. See [UI refresh and verification](../docs/ui-voice-refresh.md).
+Build 2026092606 replaces system TTS with bundled German Supertonic 3 voices and repairs menu presentation and playback actions. See [UI refresh and verification](../../docs/ui-voice-refresh.md).
 
-Build 2026092607 adds the monochrome native interface with a dedicated Sprechen tab and checksum-pinned offline Kokoro/Martin (24 kHz). It is installed on the iPhone 17 after approval, backup and data-retention verification. See [device delivery and remaining audio acceptance](../docs/kokoro-device-update.md) and [preview and verification](../docs/apple-voice-preview.md). eSpeak-NG is statically linked for phonemes only; the corresponding-source and GPL notices are in `licenses/kokoro-source.txt`.
+Build 2026092607 adds the monochrome native interface with a dedicated Sprechen tab and checksum-pinned offline Kokoro/Martin (24 kHz). It is installed on the iPhone 17 after approval, backup and data-retention verification. See [device delivery and remaining audio acceptance](../../docs/kokoro-device-update.md) and [preview and verification](../../docs/apple-voice-preview.md). eSpeak-NG is statically linked for phonemes only; the corresponding-source and GPL notices are in `licenses/kokoro-source.txt`.
 
-Build 2026092608 adds the native weekly day timeline, quiet voice surface and ordered immediate settings persistence. See [implementation and verification](../docs/native-minimal-iphone.md). It is installed on the iPhone 17 after explicit approval, a fresh backup and a successful [retained-data comparison](../docs/native-minimal-device-update.md).
+Build 2026092608 adds the native weekly day timeline, quiet voice surface and ordered immediate settings persistence. See [implementation and verification](../../docs/native-minimal-iphone.md). It is installed on the iPhone 17 after explicit approval, a fresh backup and a successful [retained-data comparison](../../docs/native-minimal-device-update.md).
 
-Build 2026092609 adds the requested offline Victoria voice, green appointment blocks and a 06:00–18:00 timeline. Ten UI tests, the calendar projection probe and 60 core tests passed. [Preview and implementation](../docs/victoria-calendar-update.md). Build 2026092609 is installed on the iPhone 17 without uninstalling; a fresh backup, successful launch and full retained-data comparison are verified.
+Build 2026092609 adds the requested offline Victoria voice, green appointment blocks and a 06:00–18:00 timeline. Ten UI tests, the calendar projection probe and 60 core tests passed. [Preview and implementation](../../docs/victoria-calendar-update.md). Build 2026092609 is installed on the iPhone 17 without uninstalling; a fresh backup, successful launch and full retained-data comparison are verified.
 
-Build 2026092611 replaces the irregular orb with a circular animated green mesh, interpolated audio response, a native conversation button and conversation details in the top toolbar. [Current implementation and preview](../docs/smooth-voice.md). Installed on the iPhone 17 after explicit approval; [fresh backup, startup and retained-data comparison](../docs/smooth-voice-device-update.md) are documented.
+Build 2026092611 replaces the irregular orb with a circular animated green mesh, interpolated audio response, a native conversation button and conversation details in the top toolbar. [Current implementation and preview](../../docs/smooth-voice.md). Installed on the iPhone 17 after explicit approval; [fresh backup, startup and retained-data comparison](../../docs/smooth-voice-device-update.md) are documented.
 
-Build 2026092610 adds day swipes, complete location/therapist labels, persistent calendar density, direct on-device dictation without an app-managed speech asset installer, local free conversation and the native Apple camera. [Implementation and previous preview](../docs/fluid-calendar-voice.md).
+Build 2026092610 adds day swipes, complete location/therapist labels, persistent calendar density, direct on-device dictation without an app-managed speech asset installer, local free conversation and the native Apple camera. [Implementation and previous preview](../../docs/fluid-calendar-voice.md).

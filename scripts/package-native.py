@@ -10,7 +10,7 @@ import tempfile
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ARCHIVE_ROOT = ROOT / "apple/build/Laßnitzhöhe.xcarchive"
+ARCHIVE_ROOT = ROOT / "apps/ios/build/Laßnitzhöhe.xcarchive"
 ARCHIVE_INFO = plistlib.loads((ARCHIVE_ROOT / "Info.plist").read_bytes())
 ARCHIVE = ARCHIVE_ROOT / "Products" / ARCHIVE_INFO["ApplicationProperties"]["ApplicationPath"]
 BUNDLE = "at.rehakalender.personal"
@@ -75,11 +75,11 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         assert hashlib.sha256((app / "kokoro-german" / entry["path"]).read_bytes()).hexdigest() == entry["sha256"]
     for name, digest in json.loads((ROOT / "licenses/manifest.json").read_text()).items():
         assert hashlib.sha256((app / "licenses" / name).read_bytes()).hexdigest() == digest
-    output = ROOT / "apple/build/Laßnitzhöhe.ipa"
+    output = ROOT / "apps/ios/build/Laßnitzhöhe.ipa"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(payload), str(output))
     report = {"profiles": profiles, "sha256": hashlib.sha256(output.read_bytes()).hexdigest(), "bytes": output.stat().st_size,
               "version": VERSION, "build": build_version,
               "model_files_verified": len(manifest["files"]), "speech_model_files_verified": len(speech_manifest["files"]), "signatures_verified": True,
               "commonly_authorized_devices": len(common_devices), "physical_acceptance": "pending"}
-    (ROOT / "apple/build/package-verification.json").write_text(json.dumps(report, indent=2) + "\n")
+    (ROOT / "apps/ios/build/package-verification.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))

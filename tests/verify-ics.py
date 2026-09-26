@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 binary = ROOT / "target/release/reha"
 with tempfile.TemporaryDirectory() as temporary:
     folder = Path(temporary)
-    run = json.loads((ROOT / "public/sample-run.json").read_text())
+    run = json.loads((ROOT / "tests/fixtures/sample-run.json").read_text())
     draft = folder / "draft.json"
     draft.write_text(json.dumps(run))
     blocked = subprocess.run(

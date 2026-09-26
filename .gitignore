@@ -18,7 +18,7 @@ dist/
 .venv/
 **/.build/
 **/.tauri/
-/tests/ios/*.xcodeproj/
+**/*.xcodeproj/
 __pycache__/
 *.pyc
 *.tsbuildinfo
@@ -38,8 +38,8 @@ __pycache__/
 /verify/
 
 # Standalone native build products; XcodeGen specification is authoritative.
-/apple/build/
-/apple/*.xcodeproj/
+/apps/ios/build/
+/apps/ios/*.xcodeproj/
 **/xcuserdata/
 
 # Local visual references; never bundle or publish.

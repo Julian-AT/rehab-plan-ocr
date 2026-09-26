@@ -59,10 +59,10 @@ ein nicht zugänglicher Kalender verhindert diesen Löschvorgang.
 
 ## Native Ansichten und Projektneuerzeugung
 
-- `ios/Widgets/AgendaWidget.swift`: kleine/mittlere Homescreen- und rechteckige
+- `apps/ios/Widgets/AgendaWidget.swift`: kleine/mittlere Homescreen- und rechteckige
   Sperrbildschirmansicht. Kalenderarithmetik bestimmt Tageswechsel einschließlich
   Sommerzeit. Vorberechnete Einträge berücksichtigen Beginn, Ende und Veraltung.
-- `ios/NotificationContent/NotificationViewController.swift`: gemeinsame SwiftUI-
+- `apps/ios/NotificationContent/NotificationViewController.swift`: gemeinsame SwiftUI-
   Terminkarte in der aufgeklappten Systemmitteilung, mit Systemaktionen zum Öffnen
   und Schlummern. `UserNotificationsUI.framework` ist ausdrücklich im Target
   verlinkt; ein Swift-Protokollimport allein lädt den Erweiterungskontext nicht.
@@ -89,7 +89,7 @@ npm run test:e2e
 cargo test -p reha-core
 sh scripts/test-agenda.sh
 sh scripts/build-ios.sh simulator
-xcodegen generate --spec tests/ios/project.yml
+xcodegen generate --spec apps/ios/IntegrationTests/project.yml
 ```
 
 Der Simulator-Build signiert App und Extensions lokal ad hoc mit ihren

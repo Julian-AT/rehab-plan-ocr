@@ -19,12 +19,12 @@ const temporary = mkdtempSync(join(tmpdir(), "reha-icons-"));
 const cli = join(root, "node_modules/@tauri-apps/cli/tauri.js");
 const icons = join(root, "src-tauri/icons");
 try {
-  const artwork = join(root, "src-tauri/icon-artwork/ios.png");
+  const artwork = join(root, "assets/icon-artwork/ios.png");
   const macos = join(temporary, "macos.svg");
   writeFileSync(
     macos,
     readFileSync(
-      join(root, "src-tauri/icon-artwork/macos-template.svg"),
+      join(root, "assets/icon-artwork/macos-template.svg"),
       "utf8",
     ).replace(
       "{{ARTWORK}}",
@@ -75,7 +75,7 @@ try {
       );
       copyFileSync(
         join(output, "master/1024x1024.png"),
-        join(root, "src-tauri/icon-artwork/macos.png"),
+        join(root, "assets/icon-artwork/macos.png"),
       );
     }
   }

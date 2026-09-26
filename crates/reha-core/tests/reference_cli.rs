@@ -261,7 +261,7 @@ fn archive_preserves_declared_nested_evidence_and_excludes_models() {
     let (root, _) = dataset();
     let source = tempfile::tempdir().unwrap();
     let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../public/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
     run.document.id = uuid::Uuid::new_v4().to_string();
     run.stages[0].artifacts = vec!["refinement/crop.png".into(), "model.onnx".into()];
     std::fs::create_dir(source.path().join("refinement")).unwrap();

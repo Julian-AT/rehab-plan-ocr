@@ -127,10 +127,10 @@ Logs, dataset readiness and synthetic simulator screenshots are preserved locall
 in `artifacts/private/lassnitzhoehe-verification`. Build checks were run locally;
 the GitHub workflow was not executed in this session.
 
-The signed archive path is `apple/build/Laßnitzhöhe.xcarchive`; packaging discovers
+The signed archive path is `apps/ios/build/Laßnitzhöhe.xcarchive`; packaging discovers
 the product from archive metadata and verifies identities, versions, entitlements,
 model/license hashes and every signature. The package is
-`apple/build/Laßnitzhöhe.ipa`. This build additionally needs an intake App Group and
+`apps/ios/build/Laßnitzhöhe.ipa`. This build additionally needs an intake App Group and
 share-extension provisioning profile. Signing is restricted to explicit archive
 mode; it does not install or publish the application.
 

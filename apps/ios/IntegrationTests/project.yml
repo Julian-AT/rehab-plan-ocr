@@ -1,0 +1,43 @@
+name: RehaSmoke
+options:
+  bundleIdPrefix: at.rehakalender.tests
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  RehaSmoke:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - smoke-tests.swift
+      - agenda-native-tests.swift
+      - event-editing-tests.swift
+      - notification-race-tests.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/event-editing.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationAdapter.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationDeadline.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/LocalDiagnostics.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/ServiceRequest.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/calendar-contracts.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/agenda-service.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
+      - ../Widgets
+      - ../NotificationContent
+      - dedicated-calendar-tests.swift
+      - app-storage-tests.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/dedicated-calendar.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/app-storage.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Simulator integration tests use invented appointments and remove them afterward.
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: AGENDA_TESTING
+        SWIFT_VERSION: "5.0"
+schemes:
+  RehaSmoke:
+    build:
+      targets:
+        RehaSmoke: [test]
+    test:
+      targets:
+        - RehaSmoke

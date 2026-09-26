@@ -8,7 +8,7 @@ fn main() {
     );
     let mut store = Store::open(&root).unwrap();
     let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../public/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
     reha_core::review::migrate(&mut run).unwrap();
     run.document.imported_at = chrono::Utc::now().timestamp();
     run.document.filename = "synthetic-day.png".into();
@@ -17,7 +17,7 @@ fn main() {
     for file in ["source.bin", "original.png", "page.png"] {
         std::fs::write(
             dir.join(file),
-            include_bytes!("../../../public/synthetic-day.png"),
+            include_bytes!("../../../tests/fixtures/synthetic-day.png"),
         )
         .unwrap();
     }
@@ -64,7 +64,7 @@ fn main() {
             for file in ["source.bin", "original.png", "page.png"] {
                 std::fs::write(
                     dir.join(file),
-                    include_bytes!("../../../public/synthetic-day.png"),
+                    include_bytes!("../../../tests/fixtures/synthetic-day.png"),
                 )
                 .unwrap();
             }

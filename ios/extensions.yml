@@ -4,8 +4,8 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - path: ../../../ios/Widgets
-      - path: ../../../apple/Packages/AppleServices/Sources/AppleServices/AgendaShared
+      - path: ../../../apps/ios/Widgets
+      - path: ../../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.widgets
@@ -34,8 +34,8 @@ targets:
       - sdk: UserNotificationsUI.framework
       - sdk: UserNotifications.framework
     sources:
-      - path: ../../../ios/NotificationContent
-      - path: ../../../apple/Packages/AppleServices/Sources/AppleServices/AgendaShared
+      - path: ../../../apps/ios/NotificationContent
+      - path: ../../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.notification-content

@@ -86,7 +86,7 @@ test("failed retained capture requires explicit source deletion and never calls 
 test("HEIC file without MIME type reaches native import unchanged and opens review", async ({
   page,
 }) => {
-  const fixture = JSON.parse(readFileSync("public/sample-run.json", "utf8"));
+  const fixture = JSON.parse(readFileSync("tests/fixtures/sample-run.json", "utf8"));
   // This checks file selection, byte transfer and review. Actual HEIC decoding,
   // orientation and original retention are covered by the native Rust tests.
   await page.addInitScript((run) => {

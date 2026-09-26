@@ -4,7 +4,7 @@
 
 # Native iPhone migration — 11 September 2026
 
-The native iOS 26+ app is implemented under `apple/`. It uses the production bundle identity and the existing local store. **Installed on the paired iPhone 17; launch and in-place data retention are verified. Full physical performance and accessibility acceptance remain pending.** The Tauri macOS, research, and iOS build paths remain available.
+The native iOS 26+ app is implemented under `apps/ios/`. It uses the production bundle identity and the existing local store. **Installed on the paired iPhone 17; launch and in-place data retention are verified. Full physical performance and accessibility acceptance remain pending.** The Tauri macOS, research, and iOS build paths remain available.
 
 ## Compatibility boundary
 
@@ -44,7 +44,7 @@ The following checks are reproducible from the repository root:
 
 Local results: **77 Rust tests, 13 frontend unit tests, 56 Swift policy checks, 12 agenda browser tests and 3 native simulator UI flows passed**. The strict Swift 6/Rust integration probe and binding consistency check passed. Native unsigned device linking and both legacy Tauri iOS build variants passed. The simulator recognition flow completed with the bundled ONNX model.
 
-Local logs are in `/tmp/reha-*.log`. XCTest result bundles are under `apple/build/DerivedData/Logs/Test/`. Build products and logs are intentionally not tracked. The CI workflow in `.github/workflows/verify.yml` uses the same build entry points and keeps signing out of PR checks; it has not been run on GitHub during this session.
+Local logs are in `/tmp/reha-*.log`. XCTest result bundles are under `apps/ios/build/DerivedData/Logs/Test/`. Build products and logs are intentionally not tracked. The CI workflow in `.github/workflows/verify.yml` uses the same build entry points and keeps signing out of PR checks; it has not been run on GitHub during this session.
 
 A real retained **simulator** installation was backed up before replacing its app bundle. Backup: `/tmp/reha-native-simulator-upgrade-20260926-s11-185348`, containing the previous application, private container, shared container and `before.json` / `after.json` database summaries. On native launch, `PRAGMA integrity_check` returned `ok`, and every serialized table hash matched before/after: 2 scans, 8 imports, 8 operations, 1 preferences row and 1 schedule. This establishes simulator in-place compatibility only; it does not establish physical-device acceptance.
 
@@ -56,7 +56,7 @@ The signed app preserves:
 - App Group: `group.at.rehakalender.personal`
 - Private storage: `Library/Application Support/at.rehakalender.personal`
 
-The archive is `apple/build/Termine.xcarchive`; the installable package is `apple/build/Termine.ipa`. `apple/build/package-verification.json` records the verified package hash and actual provisioning expiry. The current profiles expire on 18 September 2026; re-sign and install before the earliest timestamp in that report. Keep the signing Mac and existing team access available for renewal.
+The archive is `apps/ios/build/Termine.xcarchive`; the installable package is `apps/ios/build/Termine.ipa`. `apps/ios/build/package-verification.json` records the verified package hash and actual provisioning expiry. The current profiles expire on 18 September 2026; re-sign and install before the earliest timestamp in that report. Keep the signing Mac and existing team access available for renewal.
 
 ## Remaining physical release gate
 

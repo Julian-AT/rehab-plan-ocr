@@ -32,5 +32,5 @@ The combined native application includes GPL-covered code. If redistributing it,
 provide the corresponding application and dependency source, build scripts and
 license texts under GPL-compatible terms, including this eSpeak source and patch.
 Individual original MIT-licensed project files retain their notices. The complete
-build recipe is scripts/build-native.sh and apple/project.yml. These notices do
+build recipe is scripts/build-native.sh and apps/ios/project.yml. These notices do
 not replace corresponding-source delivery obligations for a distributed binary.

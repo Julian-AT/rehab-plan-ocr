@@ -40,7 +40,7 @@ iCloud storage/synchronization is explained by
 
 ## Findings in this repository
 
-- The shipping iPhone shell is SwiftUI (`apple/Termine`), with generated UniFFI
+- The shipping iPhone shell is SwiftUI (`apps/ios/Termine`), with generated UniFFI
   bindings to `RehaCore` and native `AppleServices`; Tauri is a retained alternate
   shell. Putting the implementation inside Tauri would invert this architecture.
 - `CalendarSetupView` writes one global `preferences.calendarId`. `PlanModel.load`

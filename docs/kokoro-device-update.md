@@ -42,7 +42,7 @@ Die neue App wurde installiert, gestartet und direkt über die Entwicklerverbind
 Für Wiederholungen kann ausschließlich die Testkennung mit `REHA_TEST_BUNDLE_IDENTIFIER` an ein vorhandenes Profil angepasst werden. Der Standard bleibt `at.rehakalender.personal.native-tests`; `at.rehakalender.tests.RehaSmoke` wurde mit dem vorhandenen Profil erfolgreich gebaut und signiert. Die Kennungen der produktiven App und ihrer Erweiterungen werden dadurch nicht verändert. Der folgende Geräte-Testlauf scheiterte anschließend am belegten App-Limit, bevor ein Test ausgeführt wurde:
 
 ```sh
-xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Release \
+xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release \
   -destination 'platform=iOS,id=<iPhone-UDID>' \
   -derivedDataPath /tmp/reha-kokoro-device-build -parallel-testing-enabled NO \
   -only-testing:TermineUITests/NativeFlowTests/testNeuralPlaybackStopAndRepeat \

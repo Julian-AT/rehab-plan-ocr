@@ -4371,7 +4371,7 @@ coremltools
 
 BSD-3-Clause License
 
-https://github.com/apple/coremltools
+https://github.com/apps/ios/coremltools
 
 Copyright (c) 2020, Apple Inc. All rights reserved.
 

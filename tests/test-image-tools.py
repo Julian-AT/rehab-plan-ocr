@@ -85,7 +85,7 @@ class ConversionTests(unittest.TestCase):
 
 class ReportTests(unittest.TestCase):
     def test_diagnostics_preserve_duplicate_appointments(self):
-        run = json.loads((ROOT / "public/sample-run.json").read_text())
+        run = json.loads((ROOT / "tests/fixtures/sample-run.json").read_text())
         result = checker.summarize(run)
         self.assertEqual(result["appointments"], 8)
         self.assertEqual(result["missing_end_or_duration"], 1)
@@ -97,7 +97,7 @@ class ReportTests(unittest.TestCase):
             output = Path(temporary)
             destination = output / "document-01"
             destination.mkdir()
-            run = json.loads((ROOT / "public/sample-run.json").read_text())
+            run = json.loads((ROOT / "tests/fixtures/sample-run.json").read_text())
             run["appointments"][0]["title"] = (
                 '<script src="https://example.invalid"></script>'
             )

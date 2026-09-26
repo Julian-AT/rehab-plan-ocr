@@ -16,7 +16,7 @@ destination are preserved. No hosted recognition or production server is needed.
   All 18 iOS sizes and desktop alpha margins were validated; Apple's asset compiler
   and ESLint passed, and the macOS debug app was rebuilt and restarted. The current
   version was also installed on the connected iPhone at the user's subsequent
-  request. See [artwork](../src-tauri/icon-artwork/README.md) and
+  request. See [artwork](../assets/icon-artwork/README.md) and
   [iPhone update verification](iphone-update-20260926-s11.md).
 - Local HEIC/HEIF import on macOS through ImageIO, alongside the existing iOS
   decoder. File inputs accept extensions even without a MIME type. Full-resolution

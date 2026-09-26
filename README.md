@@ -39,7 +39,7 @@ npm run tauri -- dev
 
 App icons use the clinic's green emblem on white, with transparent rounded macOS
 artwork and an opaque iOS asset catalog. Run `npm run icons` to regenerate them;
-see [icon artwork and build integration](src-tauri/icon-artwork/README.md).
+see [icon artwork and build integration](assets/icon-artwork/README.md).
 
 Photo import accepts JPEG, PNG, **HEIC and HEIF** on macOS and iOS, including
 uppercase filename extensions. macOS decodes HEIC locally through ImageIO at full
@@ -128,7 +128,7 @@ python3 tests/test-dataset.py
 uv run tests/verify-ics.py
 ```
 
-Browser tests serve the exported `out/` build in Chromium and mobile WebKit. Native tests in `tests/ios/` exercise an installed simulator build; calendar writes use invented appointments and are removed afterward. Linux execution uses `docker/portable.dockerfile` with networking disabled during inference.
+Browser tests serve the exported `out/` build in Chromium and mobile WebKit. Native tests in `apps/ios/IntegrationTests/` exercise an installed simulator build; calendar writes use invented appointments and are removed afterward. Linux execution uses `docker/portable.dockerfile` with networking disabled during inference.
 
 Read [verification](docs/verification.md) and [status](docs/status.md) for measured results and remaining checks. Physical iPhone performance and clinic accuracy are not established. No model has been trained, and no final holdout has been evaluated.
 

@@ -10,7 +10,7 @@ src-tauri/gen
 plugins/calendar/ios/.build
 plugins/calendar/ios/.tauri
 package-lock.json
-public/sample-run.json
+tests/fixtures/sample-run.json
 licenses
 
 verify

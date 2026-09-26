@@ -79,9 +79,9 @@ Die [einzelnen UI-Ergebnisse](preview/2026-09-26-s12/verification-results.json) 
 Nach Wiederherstellung des Mac-Audios können die drei offenen UI-Fälle gezielt mit `xcodebuild` ausgeführt werden, beispielsweise:
 
 ```sh
-xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Debug \
+xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
   -destination 'platform=iOS Simulator,id=<Testsimulator-ID>' \
-  -derivedDataPath apple/build/DerivedData -parallel-testing-enabled NO \
+  -derivedDataPath apps/ios/build/DerivedData -parallel-testing-enabled NO \
   -only-testing:TermineUITests/AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt \
   -only-testing:TermineUITests/NativeFlowTests/testNeuralPlaybackStopAndRepeat \
   -only-testing:TermineUITests/NativeFlowTests/testVoiceTabIsExplicitAndPlaybackStopsOnTabChange \
