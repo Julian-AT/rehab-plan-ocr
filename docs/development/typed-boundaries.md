@@ -197,6 +197,31 @@ sämtliche Felder eines bestätigten Imports und mehrere Wartungswarnungen.
 Belege: `.local/runs/typed-agenda-effect-20260926-s19-001*.log`. Der gemeinsame
 Appbuild und die vollständige Simulatorabnahme des neuen Standes folgen separat.
 
+## Sichtbare Bearbeitung im Systemkalender
+
+Der aktive Aufruf überträgt Kalenderkennung, externe Terminidentität,
+Serienvorkommen und erwarteten Beginn als `NativeCalendarReference` an
+`NativeServices.editSystemEvent`. Der serielle EventKit-Besitzer löst exakt
+dieses Vorkommen auf; der Systemeditor prüft es anschließend mit seinem eigenen
+MainActor-Store erneut. Es gehen keine EventKit-Objekte über die Queuegrenze.
+Der sichtbare Systemeditor bleibt für Bestätigung und tatsächliche Änderungen
+zuständig. Das Öffnen übernimmt weder fremde Termine noch verändert es ihre
+Metadaten oder die App-Journale.
+
+`NativeSystemEventEditAction` unterscheidet Abbruch, Speichern und Löschen. Der
+Legacy-Eingang projiziert die drei bekannten Abschlüsse weiterhin auf
+`{"reload": true}`. Fehler behalten ihre native Kategorie. Die Completion ist
+an die konkrete Editorinstanz gebunden und wird vor Auslieferung entnommen;
+doppelte oder verspätete Delegate-Aufrufe können keine spätere Sitzung abschließen.
+Die neue Integration prüft ein konkretes Serienvorkommen, alle drei Antworten,
+Legacyform, fehlende Identität, Fehlerart und unveränderte Kalenderdaten.
+Strenge Swift-6-Typprüfung einschließlich Integrationstests und Erweiterungen
+sowie die Kalenderlesevertragsprobe bestehen. Die tatsächliche EventKit-Ausführung
+`system-editor-20260926-s19-001` besteht mit 20 Erfolgen, einem erwarteten
+Simulator-Dateischutz-Skip und null Fehlern. Der neue Serienvorkommens-Test
+ist darin enthalten; vollständiges Resultat, Quellpatch und ausführbare Produkte
+bleiben privat erhalten. Der gemeinsame Appbuild folgt separat.
+
 ## Ausstehende Mitteilungslinks
 
 Die App liest und quittiert ausstehende Terminidentitäten über
@@ -299,7 +324,7 @@ transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
 gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
 Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
-Systemeditor und weitere Plattformeffekte bleiben offen.
+Weitere Plattformeffekte bleiben offen; der Systemeditor verwendet die unten beschriebene typisierte Grenze.
 Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
 `Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
 Core-Agenda-Abgleich verwendet ebenfalls typisierte Aufträge und Ergebnisse;

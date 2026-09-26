@@ -12,6 +12,105 @@ final class EventEditingTests: XCTestCase {
     }
     return try JSONSerialization.jsonObject(with: response) as? [String: Any] ?? [:]
   }
+  func testTypedSystemEditorResolvesOnlyTheSelectedOccurrence() async throws {
+    #if targetEnvironment(simulator)
+      guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        throw XCTSkip("Simulator calendar access required")
+      }
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let agenda = AgendaService(storageRoot: root, widgetRoot: root)
+      agenda.start(registerBackground: false)
+      let store = agenda.store
+      let calendar = EKCalendar(for: .event, eventStore: store)
+      calendar.title = "Erfundene Systembearbeitung"
+      calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+      try store.saveCalendar(calendar, commit: true)
+      defer { try? store.removeCalendar(calendar, commit: true) }
+      let event = EKEvent(eventStore: store)
+      event.calendar = calendar
+      event.title = "Erfundene Serie"
+      event.startDate = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) + 7200)
+      event.endDate = event.startDate.addingTimeInterval(1800)
+      event.timeZone = TimeZone(identifier: "Europe/Vienna")
+      event.notes = "Unveränderte fremde Notiz"
+      event.url = URL(string: "https://example.org/original")
+      event.recurrenceRules = [
+        EKRecurrenceRule(
+          recurrenceWith: .daily, interval: 1, end: EKRecurrenceEnd(occurrenceCount: 3))
+      ]
+      try store.save(event, span: .thisEvent, commit: true)
+      let iso = ISO8601DateFormatter()
+      editing = EventEditingService(isForeground: { true }, agenda: agenda)
+      let query: [String: Any] = [
+        "calendar_ids": [calendar.calendarIdentifier],
+        "start_utc": iso.string(from: event.startDate.addingTimeInterval(-3600)),
+        "end_utc": iso.string(from: event.startDate.addingTimeInterval(4 * 86400)), "records": [],
+      ]
+      let before = try await call("queryEvents", query)
+      let events = try XCTUnwrap(before["events"] as? [[String: Any]])
+      XCTAssertEqual(events.count, 3)
+      let selected = try XCTUnwrap(events.dropFirst().first)
+      let reference = try NativeCalendarReference(legacy: selected)
+      let expectedOccurrence = try XCTUnwrap(iso.date(from: reference.occurrence))
+      let expectedStart = try XCTUnwrap(iso.date(from: reference.expectedStartUTC))
+      for action in [NativeSystemEventEditAction.cancelled, .saved, .deleted] {
+        editing = EventEditingService(
+          isForeground: { true }, agenda: agenda,
+          presentEditor: { resolved, done in
+            XCTAssertEqual(resolved.calendarID, reference.calendarID)
+            XCTAssertEqual(resolved.externalID, reference.externalID)
+            XCTAssertEqual(resolved.occurrence, expectedOccurrence)
+            XCTAssertEqual(resolved.start, expectedStart)
+            done(.success(action))
+          })
+        let received: NativeSystemEventEditAction = try await withCheckedThrowingContinuation {
+          continuation in
+          editing.editSystemEvent(reference) { continuation.resume(with: $0) }
+        }
+        XCTAssertEqual(received, action)
+        let legacy = try await call("editSystemEvent", ["event": selected])
+        XCTAssertEqual(legacy["reload"] as? Bool, true)
+        XCTAssertEqual(legacy.count, 1)
+      }
+      editing = EventEditingService(
+        isForeground: { true }, agenda: agenda,
+        presentEditor: { _, done in
+          done(.failure(NativeServiceError.permissionDenied))
+        })
+      do {
+        let _: NativeSystemEventEditAction = try await withCheckedThrowingContinuation {
+          continuation in
+          editing.editSystemEvent(reference) { continuation.resume(with: $0) }
+        }
+        XCTFail("Presentation error must retain its type")
+      } catch { XCTAssertEqual(error as? NativeServiceError, .permissionDenied) }
+      editing = EventEditingService(
+        isForeground: { true }, agenda: agenda,
+        presentEditor: { _, done in
+          XCTFail("An unavailable occurrence must never open an editor")
+          done(.success(.cancelled))
+        })
+      var missing = reference
+      missing.externalID = UUID().uuidString
+      do {
+        let _: NativeSystemEventEditAction = try await withCheckedThrowingContinuation {
+          continuation in
+          editing.editSystemEvent(missing) { continuation.resume(with: $0) }
+        }
+        XCTFail("Missing occurrence must fail")
+      } catch {
+        guard case .invalidInput = error as? NativeServiceError else {
+          XCTFail("Unexpected failure: \(error)")
+          return
+        }
+      }
+      let after = try await call("queryEvents", query)
+      XCTAssertTrue(
+        NSDictionary(dictionary: before).isEqual(to: after),
+        "Opening and interpreting the system editor must not write or adopt a calendar event")
+    #endif
+  }
   func testTypedImportRecoveryCannotCreateMissingEvents() async throws {
     #if targetEnvironment(simulator)
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {

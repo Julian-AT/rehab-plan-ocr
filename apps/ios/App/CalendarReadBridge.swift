@@ -3,6 +3,18 @@ import Foundation
 import RehaCore
 
 extension NativeBridge {
+  @MainActor static func editSystemEvent(_ event: CalendarEvent) async throws
+    -> NativeSystemEventEditAction
+  {
+    let reference = NativeCalendarReference(
+      calendarID: event.calendar_id, externalID: event.external_id,
+      occurrence: event.occurrence, expectedStartUTC: event.values.start_utc)
+    do {
+      return try await withCheckedThrowingContinuation { continuation in
+        NativeServices.shared.editSystemEvent(reference) { continuation.resume(with: $0) }
+      }
+    } catch { throw appError(error) }
+  }
   func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult {
     let query = NativeCalendarQuery(
       calendarIDs: request.calendarIds, startUTC: request.startUtc,
