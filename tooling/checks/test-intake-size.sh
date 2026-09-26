@@ -7,3 +7,8 @@ swiftc -swift-version 6 -strict-concurrency=complete -module-cache-path "$probe/
   apps/ios/Shared/Intake/IntakeGate.swift apps/ios/Shared/Intake/IntakeReceipt.swift apps/ios/Shared/Intake/IntakeProviderRequest.swift \
   apps/ios/Tests/IntakeSizeProbe.swift -o "$probe/intake-size"
 "$probe/intake-size"
+swiftc -swift-version 6 -strict-concurrency=complete -module-cache-path "$probe/modules" \
+  apps/ios/Shared/Intake/IntakeGate.swift apps/ios/Shared/Intake/IntakeReceipt.swift apps/ios/Shared/Intake/IntakeProviderRequest.swift \
+  apps/ios/Shared/Intake/IntakeInbox.swift apps/ios/Features/Capture/IntakeAdmission.swift \
+  apps/ios/Tests/IntakeInboxProbe.swift -o "$probe/intake-inbox"
+"$probe/intake-inbox"

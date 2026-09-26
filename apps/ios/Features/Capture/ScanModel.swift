@@ -174,7 +174,7 @@ struct StagedPhoto: Transferable, Sendable {
           try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
           let destination = folder.appendingPathComponent(id).appendingPathExtension(
             photo.url.pathExtension)
-          try FileManager.default.copyItem(at: photo.url, to: destination)
+          _ = try IntakeInbox.stage(photo.url, at: destination)
           try FileManager.default.removeItem(at: photo.url)
           return destination
         }.value
@@ -474,15 +474,10 @@ struct StagedPhoto: Transferable, Sendable {
         let staged = try await Task.detached {
           let scoped = url.startAccessingSecurityScopedResource()
           defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-          try IntakeStaging.validateSize(url)
           let root = try AppStorage.prepare().appendingPathComponent("inbox")
-          try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
           let destination = root.appendingPathComponent(id).appendingPathExtension(
             url.pathExtension)
-          if destination != url && !FileManager.default.fileExists(atPath: destination.path) {
-            try FileManager.default.copyItem(at: url, to: destination)
-          }
-          return destination
+          return try IntakeInbox.stage(url, at: destination)
         }.value
         guard canRetain(attempt) else { return }
         _ = try await core.stagePhoto(id: id, path: staged.path)
@@ -615,15 +610,10 @@ struct StagedPhoto: Transferable, Sendable {
       guard admission.accepts(ticket), generation == documentGeneration else { return }
       let urls = try await Task.detached {
         let folder = try AppStorage.prepare().appendingPathComponent("inbox")
-        return
-          (try? FileManager.default.contentsOfDirectory(
-            at: folder, includingPropertiesForKeys: [.isRegularFileKey])) ?? []
+        return try IntakeInbox.pending(in: folder)
       }.value
       for url in urls {
         guard admission.accepts(ticket), generation == documentGeneration else { return }
-        guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
-          continue
-        }
         let name = url.deletingPathExtension().lastPathComponent
         let id = UUID(uuidString: name) == nil ? UUID().uuidString : name
         guard !attempts.contains(id), let attempt = register(id, ticket: ticket),
