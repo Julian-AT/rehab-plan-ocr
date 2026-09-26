@@ -246,15 +246,20 @@ def reference_files(root):
     return sorted(paths)
 
 
-def reference_scopes(value, evidence, inherited=""):
+def reference_scopes(value, evidence, inherited="", *, receipt_inventory=False):
     """Keep epoch context inside each run record of a combined report.
 
-    A path->hash pair for metadata we retain is a reference to that receipt,
-    not to its tensor payload. Other paths, checkpoint hashes and unknown
+    The explicit protected_receipt_sha256 provenance inventory describes
+    metadata preservation, not tensor use. Other receipt-path/hash maps are
+    actual references and must protect their complete checkpoint. Other paths, checkpoint hashes and unknown
     evidence remain protective. Historical reports themselves are untouched.
     """
     if isinstance(value, dict):
-        items = {k: v for k, v in value.items() if k not in evidence or evidence[k] != v}
+        items = {
+            k: v
+            for k, v in value.items()
+            if not receipt_inventory or k not in evidence or evidence[k] != v
+        }
         direct = []
         for key, child in items.items():
             direct.append(key)
@@ -273,9 +278,14 @@ def reference_scopes(value, evidence, inherited=""):
                 and type(child) is int
             },
         )
-        for child in items.values():
+        for key, child in items.items():
             if isinstance(child, (dict, list)):
-                yield from reference_scopes(child, evidence, inherited + "\n" + context)
+                yield from reference_scopes(
+                    child,
+                    evidence,
+                    inherited + "\n" + context,
+                    receipt_inventory=key == "protected_receipt_sha256",
+                )
     elif isinstance(value, list):
         for child in value:
             yield from reference_scopes(child, evidence, inherited)

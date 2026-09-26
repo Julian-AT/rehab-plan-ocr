@@ -126,9 +126,9 @@ use a different path for the fully checked deletion plan.
 
 Only unreferenced intermediate tensor payloads are removed. Original datasets,
 selected/exported weights, model cards, pins, checkpoint receipts, configurations,
-metrics and historical reports stay in place. A checked path/hash pair referring
-to retained metadata protects that receipt without treating it as a consumer of
-all tensor bytes; an actual model/checkpoint hash still protects the whole state.
+metrics and historical reports stay in place. Only the explicit `protected_receipt_sha256` provenance inventory treats checked
+metadata path/hash pairs as receipt preservation rather than tensor consumption.
+Failure maps and other checkpoint-hash references protect the complete state.
 Combined model cards are evaluated in each run's own scope. New references after
 the plan prevent deletion of the newly needed state.
 

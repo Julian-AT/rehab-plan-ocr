@@ -198,6 +198,22 @@ class CheckpointRetentionTests(unittest.TestCase):
         self.assertTrue(receipt.exists())
         self.assertFalse(receipt.with_name("training.pdstate").exists())
 
+    def test_failure_receipt_path_hash_map_keeps_the_complete_checkpoint(self):
+        self.fixture()
+        receipt = self.run / "checkpoints/epoch-0003/checkpoint.json"
+        self.save(
+            self.root / ".local/runs/failure/report.json",
+            {
+                "failed_checkpoint_inputs": {
+                    str(receipt.relative_to(self.root)): artifacts.sha(receipt),
+                },
+            },
+        )
+        self.assertNotIn(
+            str(receipt.with_name("training.pdstate").relative_to(self.root)),
+            c.inventory(self.root, [self.run_name])["files"],
+        )
+
     def test_actual_checkpoint_receipt_hash_still_protects_weights(self):
         self.fixture()
         receipt = self.run / "checkpoints/epoch-0003/checkpoint.json"
