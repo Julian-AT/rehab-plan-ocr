@@ -364,6 +364,32 @@ import XCTest
     XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
     capture("11-kalender-dunkel")
   }
+  func testLargestTypeWeekArrowsMoveTheDisplayedDay() throws {
+    launch(
+      "readable",
+      extra: [
+        "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        "--preview-now", "2026-09-28T06:00:00Z",
+      ])
+    let date = app.descendants(matching: .any).matching(identifier: "agenda-date").firstMatch
+    XCTAssertTrue(date.waitForExistence(timeout: 8))
+    XCTAssertTrue(row("Physiotherapie Tag 0").waitForExistence(timeout: 8))
+    let originalDate = try XCTUnwrap(date.value as? String)
+    let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch
+    XCTAssertTrue(week.staticTexts["September 2026"].exists)
+
+    app.buttons["next-week"].tap()
+    XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
+    XCTAssertNotEqual(date.value as? String, originalDate)
+    XCTAssertTrue(week.staticTexts["Oktober 2026"].exists)
+
+    app.buttons["previous-week"].tap()
+    XCTAssertTrue(row("Physiotherapie Tag 0").waitForExistence(timeout: 8))
+    XCTAssertEqual(date.value as? String, originalDate)
+    XCTAssertTrue(week.staticTexts["September 2026"].exists)
+    capture("large-type-week-navigation")
+  }
+
   func testLargestTypeUsesDayListAndNativeSettings() throws {
     launch(
       "full",

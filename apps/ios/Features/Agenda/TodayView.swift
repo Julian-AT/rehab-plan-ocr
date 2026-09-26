@@ -479,7 +479,13 @@ private struct WeekSelector: View {
       .accessibilityElement(children: .contain).accessibilityIdentifier("agenda-week")
   }
   private func move(_ days: Int) {
-    visibleWeek = Calendar.current.date(byAdding: .day, value: days, to: visibleWeek)!
+    if typeSize.isAccessibilitySize {
+      // Without the weekday strip, the arrows must move the displayed day too.
+      selection = Calendar.current.date(byAdding: .day, value: days, to: selection)!
+      visibleWeek = AgendaWeek(containing: selection).start
+    } else {
+      visibleWeek = Calendar.current.date(byAdding: .day, value: days, to: visibleWeek)!
+    }
   }
 }
 
