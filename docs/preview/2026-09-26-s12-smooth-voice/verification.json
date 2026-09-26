@@ -1,0 +1,79 @@
+{
+  "version": "0.3.0",
+  "build": "2026092611",
+  "simulator": "iPhone 17 / iOS 26.4",
+  "passed_ui_tests": 5,
+  "ui_tests": {
+    "AgendaPreviewTests/testConversationWithoutAssetSetup": {
+      "result": "passed",
+      "seconds": 32.044,
+      "log": "reha-smooth-ui.log"
+    },
+    "AgendaPreviewTests/testLargestTypeUsesDayListAndNativeSettings": {
+      "result": "passed",
+      "seconds": 16.577,
+      "log": "reha-smooth-ui.log"
+    },
+    "AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt": {
+      "result": "passed",
+      "seconds": 33.033,
+      "log": "reha-smooth-ui.log"
+    },
+    "AgendaPreviewTests/testVoiceIdleDetailsCancelAndUnavailableRecognition": {
+      "result": "passed",
+      "seconds": 20.104,
+      "log": "reha-smooth-ui.log"
+    },
+    "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable": {
+      "result": "passed",
+      "seconds": 12.735,
+      "log": "reha-smooth-reduced.log"
+    }
+  },
+  "reduced_motion": "identical orb screenshots one second apart",
+  "audio_motion": "different orb screenshots during real Victoria playback",
+  "audio_meter": {
+    "peak_level": 0.3959056053862429,
+    "playing_frames": 105,
+    "time": 1789231145.028713
+  },
+  "device_archive": "passed",
+  "package": {
+    "profiles": [
+      {
+        "bundle": "at.rehakalender.personal",
+        "expires_utc": null
+      },
+      {
+        "bundle": "at.rehakalender.personal.notification-content",
+        "expires_utc": null
+      },
+      {
+        "bundle": "at.rehakalender.personal.share",
+        "expires_utc": null
+      },
+      {
+        "bundle": "at.rehakalender.personal.widgets",
+        "expires_utc": null
+      }
+    ],
+    "sha256": "4718df3ef461dd2daa18bda83547ef8dcb311ce0518165b790dc6f394e5a87e0",
+    "bytes": 339918272,
+    "version": "0.3.0",
+    "build": "2026092611",
+    "model_files_verified": 4,
+    "speech_model_files_verified": 15,
+    "signatures_verified": true,
+    "commonly_authorized_devices": 1,
+    "physical_acceptance": "pending"
+  },
+  "installed_on_device": false,
+  "limitations": [
+    "Simulator does not provide local German dictation",
+    "Free Foundation Models replies fail on this simulator due to missing system model data",
+    "Screen recording contains no audio; unchanged Victoria WAV samples are linked separately",
+    "Microphone transcription and physical audio routes require device acceptance"
+  ],
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

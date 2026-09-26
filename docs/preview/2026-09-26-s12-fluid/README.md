@@ -2,6 +2,8 @@
 
 # Vorschau: Kalender, grüner Orb und Apple-Kamera
 
+Der Gesprächsbildschirm wurde inzwischen überarbeitet: [aktuelle Vorschau von Build 2026092611](../2026-09-26-s12-smooth-voice/README.md). Die Kalender- und Kameraänderungen unten bleiben enthalten.
+
 **Laßnitzhöhe 0.3.0 · Build 2026092610.** Echte Aufnahmen aus dem iPhone-17-Simulator mit iOS 26.4. Alle Termine und Namen sind synthetisch.
 
 | Kalender mit Ort und Therapeut | Sprechen mit grünem Orb |

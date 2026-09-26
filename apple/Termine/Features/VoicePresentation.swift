@@ -26,45 +26,58 @@ struct VoicePresentation {
     }
 }
 
-/// Slow organic motion gives the orb a living surface; measured microphone or
-/// playback energy controls the stronger response. Reduce Motion freezes both.
-private struct FluidOrbShape: Shape {
-    let time: Double
-    let energy: Double
-    func path(in rect: CGRect) -> Path {
-        let radius = min(rect.width, rect.height) * 0.43
-        var path = Path()
-        for index in 0...128 {
-            let angle = Double(index) / 128 * .pi * 2
-            let wave = sin(angle * 3 + time * 1.2) * 0.045 + sin(angle * 5 - time * 0.8) * 0.025
-            let r = radius * (1 + wave * (0.5 + energy * 2.5))
-            let point = CGPoint(x: rect.midX + cos(angle) * r, y: rect.midY + sin(angle) * r)
-            if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+/// Audio changes interpolate independently of the clock, so incoming meter
+/// samples never snap the surface. The silhouette always remains a circle.
+@Animatable
+private struct VoiceOrbSurface: View {
+    var energy: Double
+    @AnimatableIgnored var time: Double
+
+    private static let mint = Color(red: 0.69, green: 0.97, blue: 0.80)
+    private static let light = Color(red: 0.92, green: 1, blue: 0.95)
+    private static let deep = Color(red: 0, green: 0.38, blue: 0.22)
+
+    var body: some View {
+        let drift = 0.055 + energy * 0.07
+        let x = Float(sin(time * 0.55) * drift)
+        let y = Float(cos(time * 0.43) * drift)
+        MeshGradient(width: 4, height: 4, points: [
+            [0, 0], [0.33, 0], [0.67, 0], [1, 0],
+            [0, 0.33], [0.33 + x, 0.33 + y], [0.67 + y, 0.33 - x], [1, 0.33],
+            [0, 0.67], [0.33 - y, 0.67 + x], [0.67 - x, 0.67 - y], [1, 0.67],
+            [0, 1], [0.33, 1], [0.67, 1], [1, 1]
+        ], colors: [
+            Self.mint, Self.light, Self.mint, AppPalette.tint,
+            Self.mint, Self.light, AppPalette.tint, Self.deep,
+            AppPalette.tint, Self.mint, Self.mint, AppPalette.tint,
+            Self.deep, AppPalette.tint, Self.deep, Self.deep
+        ])
+        .overlay {
+            Ellipse().fill(Self.light.opacity(0.55))
+                .frame(width: 180, height: 70 + energy * 30)
+                .blur(radius: 22)
+                .rotationEffect(.degrees(-35 + sin(time * 0.32) * 24))
+                .offset(x: sin(time * 0.38) * 35, y: cos(time * 0.46) * 40)
         }
-        path.closeSubpath(); return path
+        .clipShape(.circle)
+        .overlay {
+            Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5)
+        }
+        .scaleEffect(1 + energy * 0.045)
+        .shadow(color: AppPalette.tint.opacity(0.10 + energy * 0.05), radius: 18 + energy * 10, y: 6)
     }
 }
+
 struct VoiceOrb: View {
     let state: VoicePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { context in
-            let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+        TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { context in
             let energy = reduceMotion ? 0 : min(1, pow(max(0, state.level), 0.6))
-            let shape = FluidOrbShape(time: t, energy: energy)
-            ZStack {
-                RadialGradient(colors: [Color(red: 0.8, green: 1, blue: 0.85), AppPalette.tint, Color(red: 0, green: 0.28, blue: 0.13)], center: .topLeading, startRadius: 5, endRadius: 255)
-                Ellipse().fill(.white.opacity(0.7))
-                    .frame(width: 130, height: 100).blur(radius: 24)
-                    .offset(x: -28 + sin(t * 0.7) * 22, y: -40 + cos(t * 0.9) * 18)
-                Ellipse().fill(Color(red: 0.25, green: 0.95, blue: 0.48).opacity(0.85))
-                    .frame(width: 135 + energy * 60, height: 105).blur(radius: 22)
-                    .rotationEffect(.radians(t * 0.35))
-                    .offset(x: 35 * cos(t * 0.6), y: 35 + sin(t * 0.8) * 22)
-            }.clipShape(shape)
-                .overlay { shape.stroke(.white.opacity(0.28), lineWidth: 1) }
-                .scaleEffect(reduceMotion ? 1 : 1 + sin(t * 1.1) * 0.018 + energy * 0.1)
-                .shadow(color: AppPalette.tint.opacity(0.12), radius: 20, y: 8)
+            VoiceOrbSurface(energy: energy, time: reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate)
+                .frame(width: 224, height: 224)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: energy)
         }.frame(width: 248, height: 248)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(state.title).accessibilityValue(state.phase.rawValue)
@@ -98,30 +111,24 @@ struct VoiceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) {
-                Button {
-                    Task { if model.recorder.state == .recording { await model.endTurn() } else { await model.beginTurn() } }
-                } label: {
-                    HStack(spacing: 12) {
-                        Text(model.recorder.state == .recording ? "✓" : "🎙️").font(.largeTitle)
-                        Text(model.recorder.state == .recording ? "Fertig" : "Sprechen").font(.title3.weight(.semibold))
-                    }.frame(minWidth: 190, minHeight: 48)
-                }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.large)
-                    .accessibilityLabel(model.recorder.state == .recording ? "Fertig" : "Sprechen")
-                    .accessibilityIdentifier(model.recorder.state == .recording ? "finish-speaking" : "speak")
-                    .accessibilityHint(model.recorder.state == .recording ? "Aufnahme beenden und auswerten" : "Aufnahme starten")
-                    .disabled(model.busy || model.edits.busy || (model.recorder.state != .idle && model.recorder.state != .recording) || model.edits.proposal != nil)
-                Button("Gesprächsdetails", systemImage: "ellipsis.bubble") { details = true }
-                    .font(.subheadline).controlHeight().foregroundStyle(.secondary)
-                    .accessibilityIdentifier("voice-details")
-            }.padding(.horizontal).padding(.bottom, 12).padding(.top, 16)
+            Button(model.recorder.state == .recording ? "Fertig" : "Gespräch starten",
+                   systemImage: model.recorder.state == .recording ? "checkmark" : "mic") {
+                Task { if model.recorder.state == .recording { await model.endTurn() } else { await model.beginTurn() } }
+            }
+            .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.extraLarge)
+            .accessibilityIdentifier(model.recorder.state == .recording ? "finish-speaking" : "speak")
+            .accessibilityHint(model.recorder.state == .recording ? "Aufnahme beenden und auswerten" : "Aufnahme starten")
+            .disabled(model.busy || model.edits.busy || (model.recorder.state != .idle && model.recorder.state != .recording) || model.edits.proposal != nil)
+            .padding(.horizontal).padding(.bottom, 24).padding(.top, 20)
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Abbrechen", systemImage: "xmark") { model.cancelSession() }
                     .accessibilityIdentifier("stop-speech")
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Gesprächsdetails", systemImage: "text.bubble") { details = true }
+                    .accessibilityIdentifier("voice-details")
                 Button("Spracheinstellungen", systemImage: "slider.horizontal.3") { model.cancelSession(); settings = true }
                     .accessibilityIdentifier("voice-settings")
             }

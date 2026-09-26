@@ -2,7 +2,7 @@
 
 # Kalender, Gespräch und native Kamera – Build 2026092610
 
-Version 0.3.0. Simulatorvorschau und signiertes Updatepaket; auf dem iPhone bleibt bis zur Freigabe Build 2026092609 installiert.
+Version 0.3.0. Historischer Zwischenstand; der Gesprächsbildschirm wurde mit [Build 2026092611](smooth-voice.md) überarbeitet. Auf dem iPhone bleibt bis zur Freigabe der neuen Vorschau Build 2026092609 installiert.
 
 ## Bedienung
 

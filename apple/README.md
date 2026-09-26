@@ -59,4 +59,6 @@ Build 2026092608 adds the native weekly day timeline, quiet voice surface and or
 
 Build 2026092609 adds the requested offline Victoria voice, green appointment blocks and a 06:00–18:00 timeline. Ten UI tests, the calendar projection probe and 60 core tests passed. [Preview and implementation](../docs/victoria-calendar-update.md). Build 2026092609 is installed on the iPhone 17 without uninstalling; a fresh backup, successful launch and full retained-data comparison are verified.
 
-Build 2026092610 adds day swipes, complete location/therapist labels, persistent calendar density, a green fluid audio-reactive orb, direct on-device dictation without an app-managed speech asset installer, local free conversation and the native Apple camera. [Implementation and preview acceptance](../docs/fluid-calendar-voice.md). The device update awaits preview approval.
+Build 2026092611 replaces the irregular orb with a circular animated green mesh, interpolated audio response, a native conversation button and conversation details in the top toolbar. [Current implementation and preview](../docs/smooth-voice.md). The device update awaits approval of this revised preview.
+
+Build 2026092610 adds day swipes, complete location/therapist labels, persistent calendar density, direct on-device dictation without an app-managed speech asset installer, local free conversation and the native Apple camera. [Implementation and previous preview](../docs/fluid-calendar-voice.md).

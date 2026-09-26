@@ -87,6 +87,9 @@ import UIKit
         launch("one")
         app.tabBars.buttons["Sprechen"].tap()
         XCTAssertLessThan(app.buttons["stop-speech"].frame.maxY, voiceState.frame.minY)
+        XCTAssertLessThan(app.buttons["voice-details"].frame.maxY, voiceState.frame.minY)
+        XCTAssertTrue(app.buttons["voice-details"].isHittable)
+        XCTAssertEqual(app.buttons["speak"].label, "Gespräch starten")
         XCTAssertEqual(app.buttons["speak"].frame.midX, app.frame.midX, accuracy: 12)
         capture("06-gruener-orb-und-sprechen")
         app.buttons["voice-settings"].tap()
@@ -109,6 +112,9 @@ import UIKit
         back("Gesprächsdetails"); app.buttons["stop-speech"].tap()
         XCTAssertEqual(voiceState.value as? String, "idle")
         XCTAssertTrue(app.buttons["speak"].isEnabled)
+        app.terminate(); launch("one", extra: ["--preview-dark"])
+        app.tabBars.buttons["Sprechen"].tap()
+        capture("31-sprechen-dunkel")
     }
     func testEmptyAndNoSelectionAreDistinct() {
         launch("empty")
@@ -201,6 +207,7 @@ import UIKit
         app.tabBars.buttons["Sprechen"].tap()
         XCTAssertTrue(app.buttons["speak"].isHittable)
         XCTAssertTrue(app.buttons["stop-speech"].isHittable)
+        XCTAssertTrue(app.buttons["voice-details"].isHittable)
         capture("12-sprechen-groesste-schrift")
         try app.performAccessibilityAudit(for: [.elementDetection, .sufficientElementDescription, .trait])
         app.tabBars.buttons["Mehr"].tap(); capture("13-mehr-groesste-schrift")
@@ -331,8 +338,10 @@ import UIKit
         back("Gesprächsdetails")
         expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: voiceState)
         waitForExpectations(timeout: 45)
+        let initialOrb = voiceState.screenshot().pngRepresentation
         // Keep genuine playback visible long enough to review the recorded motion.
         Thread.sleep(forTimeInterval: 3)
+        XCTAssertNotEqual(initialOrb, voiceState.screenshot().pngRepresentation)
         capture("24-sprechen-echte-wiedergabe")
         app.buttons["stop-speech"].tap()
         XCTAssertEqual(voiceState.value as? String, "idle")
@@ -352,6 +361,9 @@ import UIKit
         app.tabBars.buttons["Sprechen"].tap()
         XCTAssertTrue(app.buttons["speak"].isHittable)
         XCTAssertEqual(voiceState.value as? String, "idle")
+        let stillOrb = voiceState.screenshot().pngRepresentation
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertEqual(stillOrb, voiceState.screenshot().pngRepresentation)
         capture("26-bewegung-reduziert")
     }
 }

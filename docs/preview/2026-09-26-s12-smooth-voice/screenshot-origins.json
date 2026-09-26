@@ -1,0 +1,38 @@
+[
+  {
+    "file": "sprechen-dunkel.png",
+    "test": "AgendaPreviewTests/testConversationWithoutAssetSetup()",
+    "source": "DF6E60AB-1D34-4F96-BA04-FB76999B4A46.png",
+    "timestamp": 1789231099.067
+  },
+  {
+    "file": "sprechen-hell.png",
+    "test": "AgendaPreviewTests/testConversationWithoutAssetSetup()",
+    "source": "0CDC60CF-88AC-4F26-A631-20C0631C999C.png",
+    "timestamp": 1789231079.175
+  },
+  {
+    "file": "sprechen-grosse-schrift.png",
+    "test": "AgendaPreviewTests/testLargestTypeUsesDayListAndNativeSettings()",
+    "source": "A19F3A88-DD23-4CC4-92C3-78B306A30696.png",
+    "timestamp": 1789231111.01
+  },
+  {
+    "file": "echte-wiedergabe.png",
+    "test": "AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt()",
+    "source": "E9C7AF42-3F50-4D9B-9648-AEB78692FD1E.png",
+    "timestamp": 1789231135.946
+  },
+  {
+    "file": "gespraechsdetails.png",
+    "test": "AgendaPreviewTests/testVoiceIdleDetailsCancelAndUnavailableRecognition()",
+    "source": "3ADFC471-8314-4A6C-8915-5A879ACE025B.png",
+    "timestamp": 1789231161.635
+  },
+  {
+    "file": "bewegung-reduziert.png",
+    "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable()",
+    "source": "54194B7E-76D0-492A-82DB-887829D23C44.png",
+    "timestamp": 1789231207.51
+  }
+]

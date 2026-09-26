@@ -1,0 +1,12 @@
+{
+  "test": "AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt()",
+  "source_video": "6A8904D0-7813-4BCE-A387-58244AC004B9.mp4",
+  "source_start_unix": 1789231121.105,
+  "playback_frame_unix": 1789231135.946,
+  "clip_start_seconds": 11.841000080108643,
+  "clip_duration_seconds": 3.0,
+  "audio_track": false,
+  "synthetic_audio_levels": false,
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}
