@@ -339,3 +339,12 @@ den bestandenen 68-Test-Lauf qualifiziert.
   zwei vorhandene Ansichts-/Originalfälle bestehen ohne Fehler/Skip in
   `plan-pages-ui-20260926-s19-001`; dessen Paketprüfung ist ebenfalls erfolgreich.
   Dies ist kein erneuter vollständiger UI-/Geräte-Endlauf.
+
+- Gemeinsame lokale Befehle an `160c99a`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 242 Rusttests, 393 Pythonfälle in
+  68 Gruppen (neun ausdrückliche Umgebungs-Skips), sämtliche vorgesehenen
+  nativen Probes und echter Swift–Rust–Swift-Rundweg. Checkout vorher/nachher
+  sauber; Quellen, Befehle und vollständige Logs bleiben unter
+  `.local/runs/combined-verification-20260926-s19-003/` erhalten. Dieser Nachweis
+  umfasst das typisierte Anhängen weiterer Planseiten und die wiederherstellbaren
+  VLM-Werkzeuge; UI-, Modell-, Geräte- und Veröffentlichungsabnahme bleiben separat.

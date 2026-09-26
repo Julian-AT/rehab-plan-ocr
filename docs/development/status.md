@@ -83,13 +83,14 @@ Current verified implementation slices:
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
-The full combined `make lint` and `make test` commands pass at `e590917`,
-including 240 Rust tests, 388 Python cases in 67 groups (nine explicit environment
+The full combined `make lint` and `make test` commands pass at `160c99a`,
+including 242 Rust tests, 393 Python cases in 68 groups (nine explicit environment
 skips), all scheduled native probes and the actual Swift–Rust–Swift integration.
 The checkout is clean before and after both commands. Source archive, source
 identity and complete logs are preserved under
-`.local/runs/combined-verification-20260926-s19-002/`. This includes typed ownership
-inspection and repair reports/confirmation. It is not complete UI, physical-device
+`.local/runs/combined-verification-20260926-s19-003/`. This includes typed ownership
+inspection, repair reports/confirmation, retained-page append and the restored
+isolated VLM tooling. It is not complete UI, physical-device
 or model acceptance. Previous combined runs remain unchanged. The earlier fresh
 isolated build at `026430a` and its offline repeat are separate historical evidence;
 later source changes still require a fresh-checkout build.
