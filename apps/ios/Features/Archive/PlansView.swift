@@ -7,11 +7,12 @@ struct PlansView: View {
   let scanner: ScanModel
   let refreshID: Int
   @State private var model = PlansModel(describe: userMessage)
+  @State private var thumbnailRefreshID = 0
   var body: some View {
     List {
       if let error = model.error {
         Text(error).foregroundStyle(.secondary)
-        Button("Erneut versuchen") { Task { await model.refresh(core, revision: refreshID) } }
+        Button("Erneut versuchen") { Task { await refresh() } }
       }
       if model.loaded {
         if model.plans.isEmpty {
@@ -22,7 +23,7 @@ struct PlansView: View {
         ForEach(model.plans, id: \.id) { plan in
           NavigationLink(value: plan.id) {
             ArchiveRow(
-              core: core, plan: plan,
+              core: core, plan: plan, refreshID: thumbnailRefreshID,
               processing: scanner.running
                 && (scanner.currentID == plan.id || plan.pageIds.contains(scanner.currentID ?? "")))
           }
@@ -49,15 +50,20 @@ struct PlansView: View {
         }
       }
     }
-    .task(id: refreshID) { await model.refresh(core, revision: refreshID) }
-    .refreshable { await model.refresh(core, revision: refreshID) }
+    .task(id: refreshID) { await refresh() }
+    .refreshable { await refresh() }
+  }
+  private func refresh() async {
+    await model.refresh(core, revision: refreshID)
+    guard !Task.isCancelled else { return }
+    thumbnailRefreshID += 1
   }
 }
 private struct ArchiveRow: View {
   let core: NativeApplication
   let plan: PlanSummary
+  let refreshID: Int
   let processing: Bool
-  @State private var thumbnail: UIImage?
   @Environment(\.dynamicTypeSize) private var typeSize
   private var status: String {
     if processing { return "Wird erkannt" }
@@ -73,7 +79,14 @@ private struct ArchiveRow: View {
   var body: some View {
     HStack(alignment: .top, spacing: AppSpacing.section) {
       if !typeSize.isAccessibilitySize {
-        Group {
+        ArtifactThumbnail(
+          request: ArtifactThumbnailRequest(
+            page: plan.pageIds.first, refresh: refreshID, processing: processing),
+          locate: { page in
+            URL(fileURLWithPath: try await core.artifactPath(id: page, artifact: "page.png"))
+          },
+          load: { try await DisplayImage.load($0, maximum: 160) }
+        ) { thumbnail in
           if let thumbnail {
             Image(uiImage: thumbnail).resizable().scaledToFill()
           } else {
@@ -89,12 +102,6 @@ private struct ArchiveRow: View {
           .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
       }
     }.padding(.vertical, AppSpacing.small).accessibilityElement(children: .combine)
-      .task(id: plan.id) {
-        guard let page = plan.pageIds.first,
-          let path = try? await core.artifactPath(id: page, artifact: "page.png")
-        else { return }
-        thumbnail = try? await DisplayImage.load(URL(fileURLWithPath: path), maximum: 160)
-      }
   }
 }
 func planDateRange(_ dates: [String], fallback: Int64) -> String {
