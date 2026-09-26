@@ -64,6 +64,14 @@ struct CalendarAlarmDescriptor {
   var proximity: Bool = false
 }
 enum AlarmOwnership {
+  static func journalEntry(for url: URL?, in journal: [String: AlarmJournalEntry])
+    -> AlarmJournalEntry?
+  {
+    guard let url, let id = url.pathComponents.last,
+      url.absoluteString == "reha-calendar://event/\(id)"
+    else { return nil }
+    return journal[id]
+  }
   static func matches(_ alarms: [CalendarAlarmDescriptor], minutes: Int?) -> Bool {
     guard let minutes else { return alarms.isEmpty }
     guard alarms.count == 1, let alarm = alarms.first else { return false }

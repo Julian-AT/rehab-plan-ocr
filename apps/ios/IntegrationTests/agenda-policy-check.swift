@@ -128,6 +128,24 @@ struct AgendaPolicyChecks {
       !ReminderPolicy.canSnooze(start: now.addingTimeInterval(300), now: now),
       "Snooze at start refused")
     let original = AlarmJournalEntry(expectedMinutes: 10, approvedMinutes: 10)
+    let ownedID = "6A7B43D1-1181-4A30-AB96-1708C30DBAB4"
+    let journal = [ownedID: original]
+    let approvedEntry = AlarmOwnership.journalEntry(
+      for: URL(string: "reha-calendar://event/\(ownedID)"), in: journal)
+    check(
+      approvedEntry?.approvedMinutes == 10,
+      "Exact owned marker resolves its approved alarm")
+    for url in [
+      nil, URL(string: "https://example.org/\(ownedID)"),
+      URL(string: "reha-calendar://other/\(ownedID)"),
+      URL(string: "reha-calendar://event/\(ownedID)/"),
+      URL(string: "reha-calendar://event/\(ownedID)?foreign=true"),
+      URL(string: "reha-calendar://event/unknown"),
+    ] {
+      check(
+        AlarmOwnership.journalEntry(for: url, in: journal) == nil,
+        "Foreign URLs cannot borrow an owned alarm journal by matching its last path component")
+    }
     let ours = [CalendarAlarmDescriptor(relativeOffset: -600)]
     check(
       AlarmOwnership.manageable(ours, recurring: false, writable: true, entry: original),

@@ -359,7 +359,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   // Existing review comparisons use the logical app-managed alarm. This does not
   // change stored approved values. Unknown/manual alarms always stay visible.
   func logicalReminder(for event: EKEvent, actual: Int?) -> Int? {
-    guard let id = event.url?.lastPathComponent, let entry = state.journal[id],
+    guard let entry = AlarmOwnership.journalEntry(for: event.url, in: state.journal),
       manageable(event, entry: entry)
     else { return actual }
     return entry.approvedMinutes
@@ -367,9 +367,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   /// Only a journaled, still-manageable app alarm is normalized for edit receipts.
   /// Foreign and externally changed alarms keep their complete physical snapshot.
   func comparisonAlarmEntry(for event: EKEvent) -> AlarmJournalEntry? {
-    guard let id = event.url?.lastPathComponent,
-      event.url?.absoluteString == "reha-calendar://event/\(id)",
-      let entry = state.journal[id], manageable(event, entry: entry)
+    guard let entry = AlarmOwnership.journalEntry(for: event.url, in: state.journal),
+      manageable(event, entry: entry)
     else { return nil }
     return entry
   }
