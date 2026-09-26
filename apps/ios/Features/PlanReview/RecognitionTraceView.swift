@@ -125,8 +125,11 @@ struct RecognitionTraceView: View {
     }
     .task { timezone = (try? await core.preferences().timezone) ?? TimeZone.current.identifier }
     .onDisappear {
-      model.close()
-      if let stagedPhoto { try? FileManager.default.removeItem(at: stagedPhoto) }
+      let captured = stagedPhoto
+      Task {
+        await model.close()
+        if let captured { try? FileManager.default.removeItem(at: captured) }
+      }
     }
     .onChange(of: model.busy) {
       if !model.busy, let stagedPhoto {

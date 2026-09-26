@@ -13,7 +13,7 @@ struct CalendarView: View {
   @State private var complete = false
   @State private var busy = false
   @State private var error: String?
-  @State private var exportURL: URL?
+  @State private var exportedFile = TemporaryCalendarExport()
   @State private var outcome: SaveOutcome?
   @State private var previousScans: [ScanSummary] = []
   @State private var previousID = ""
@@ -35,7 +35,7 @@ struct CalendarView: View {
             systemImage: "square.and.arrow.up"
           ) { Task { await export() } }
           .disabled(busy || assessment?.readyIds.isEmpty != false)
-          if let exportURL { ShareLink("Kalenderdatei teilen", item: exportURL) }
+          if let exportURL = exportedFile.url { ShareLink("Kalenderdatei teilen", item: exportURL) }
         }
         Section {
           DisclosureGroup("Bisherigen Plan ersetzen") {
@@ -117,7 +117,10 @@ struct CalendarView: View {
         .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
           replacement.invalidate()
         }
-        .onDisappear { replacement.invalidate() }
+        .onDisappear {
+          replacement.invalidate()
+          Task { await exportedFile.close() }
+        }
         .sheet(isPresented: $history) {
           ImportHistoryView(
             core: core, documentID: original.document.id, initialBatchID: outcome?.batchId)
@@ -133,20 +136,16 @@ struct CalendarView: View {
     } catch { self.error = userMessage(error) }
   }
   private func export() async {
-    guard let assessment else { return }
+    guard !busy, let assessment else { return }
     busy = true
     defer { busy = false }
     do {
-      let preferences = try await core.preferences()
-      let content = try await core.exportDraftIcs(
-        id: original.document.id, revision: assessment.revision, timezone: original.timezone,
-        reminder: preferences.reminder, selection: assessment.readyIds)
-      exportURL = try await Task.detached {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(
-          "Termine-\(UUID().uuidString).ics")
-        try content.write(to: url, atomically: true, encoding: .utf8)
-        return url
-      }.value
+      try await exportedFile.write {
+        let preferences = try await core.preferences()
+        return try await core.exportDraftIcs(
+          id: original.document.id, revision: assessment.revision, timezone: original.timezone,
+          reminder: preferences.reminder, selection: assessment.readyIds)
+      }
       error = nil
       await load()
     } catch {

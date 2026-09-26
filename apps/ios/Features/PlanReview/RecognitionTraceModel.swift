@@ -11,14 +11,15 @@ import RehaCore
   private(set) var original: URL?
   private(set) var page: URL?
   private(set) var core: NativeApplication?
-  private var folder: URL?
+  private var workspace: AppTemporaryStore.Lease?
+  private var disposing = false
   private var task: Task<Void, Never>?
   private var jobID: String?
   private var closed = false
   private var cancelRequested = false
 
   func start(_ source: URL, timezone: String) {
-    guard !busy else { return }
+    guard !busy, !disposing else { return }
     busy = true
     closed = false
     cancelRequested = false
@@ -30,22 +31,27 @@ import RehaCore
     task = Task {
       await dispose()
       do {
+        let lease = try await AppTemporaryStore.shared.acquire(.recognition) { [weak self] in
+          await self?.close()
+        }
+        workspace = lease
+        if closed || cancelRequested {
+          await dispose()
+          busy = false
+          task = nil
+          return
+        }
+        let root = try await AppTemporaryStore.shared.create(lease)
         let work = try await Task.detached(priority: .userInitiated) {
           let manager = FileManager.default
-          let root = manager.temporaryDirectory.appendingPathComponent(
-            "RecognitionTrace", isDirectory: true
-          )
-          .appendingPathComponent(UUID().uuidString, isDirectory: true)
-          try manager.createDirectory(at: root, withIntermediateDirectories: true)
-          var protected = root
-          var values = URLResourceValues()
-          values.isExcludedFromBackup = true
-          try protected.setResourceValues(values)
           let access = source.startAccessingSecurityScopedResource()
           defer { if access { source.stopAccessingSecurityScopedResource() } }
           do {
-            let size = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size > 0, size <= 40 * 1024 * 1024 else {
+            let attributes = try manager.attributesOfItem(atPath: source.path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? NSNumber,
+              size.int64Value > 0, size.int64Value <= 40 * 1024 * 1024
+            else {
               throw AppError.Validation(message: "Bitte ein Bild bis 40 MB auswählen.")
             }
             let input = root.appendingPathComponent("Eingang").appendingPathExtension(
@@ -53,17 +59,17 @@ import RehaCore
             try manager.copyItem(at: source, to: input)
             try manager.setAttributes(
               [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-              ofItemAtPath: root.path)
+              ofItemAtPath: input.path)
             return (root, input)
           } catch {
             try? manager.removeItem(at: root)
             throw error
           }
         }.value
-        folder = work.0
         if closed || cancelRequested {
           await dispose()
           busy = false
+          task = nil
           return
         }
         let resources = Bundle.main.resourceURL!
@@ -80,6 +86,7 @@ import RehaCore
         if closed || cancelRequested {
           await dispose()
           busy = false
+          task = nil
           return
         }
         progress = "Bild vorbereiten"
@@ -119,6 +126,7 @@ import RehaCore
       } catch { self.error = userMessage(error) }
       busy = false
       if closed { await dispose() }
+      task = nil
     }
   }
   func cancel() {
@@ -126,15 +134,19 @@ import RehaCore
     if let jobID { try? core?.cancelJob(id: jobID) }
     progress = "Erkennung wird beendet …"
   }
-  func close() {
+  func close() async {
     closed = true
     trace = nil
     original = nil
     page = nil
     cancel()
-    if !busy { Task { await dispose() } }
+    let pending = task
+    await pending?.value
+    await dispose()
   }
   private func dispose() async {
+    disposing = true
+    defer { disposing = false }
     // Rust may still be releasing a cancelled inference worker. Never delete
     // its workspace while it is writing a partial result.
     while core?.recognitionBusy() == true {
@@ -146,9 +158,9 @@ import RehaCore
     original = nil
     page = nil
     error = nil
-    if let folder {
-      try? FileManager.default.removeItem(at: folder)
-      self.folder = nil
+    if let workspace {
+      try? await AppTemporaryStore.shared.release(workspace)
+      self.workspace = nil
     }
   }
 }

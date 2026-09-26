@@ -59,6 +59,7 @@ struct StagedPhoto: Transferable, Sendable {
     guard !isReady, !isErasing else { return }
     erasureError = nil
     do {
+      try await AppTemporaryStore.shared.prepare()
       let pending = try await Task.detached { try IntakeStaging.gate().snapshot().erasing }.value
       if pending {
         try await eraseLocalData(preferences)
@@ -80,6 +81,7 @@ struct StagedPhoto: Transferable, Sendable {
     let task = Task { @MainActor in
       do {
         try await Task.detached { try IntakeStaging.gate().beginErasure() }.value
+        try await AppTemporaryStore.shared.erase()
         _ = await preferences.flush()
         while !admission.isDrained || !tasks.isEmpty || core.recognitionBusy() {
           try await Task.sleep(for: .milliseconds(50))
@@ -96,6 +98,7 @@ struct StagedPhoto: Transferable, Sendable {
           try IntakeStaging.gate().finishErasure()
         }.value
         await preferences.reset()
+        await AppTemporaryStore.shared.resume()
         progress = nil
         error = nil
         finishedID = nil
