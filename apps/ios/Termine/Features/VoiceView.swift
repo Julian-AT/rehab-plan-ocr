@@ -32,7 +32,7 @@ struct VoiceSnapshot {
   private let calendarConversation: CalendarConversation
   private let understanding = CalendarUnderstandingSession()
   private var modelToken = UUID()
-  enum Question { case action, event, title, date, time, duration, confirmation }
+  typealias Question = ConversationState.Question
   let core: NativeApplication
   let recorder = LocalSpeechRecorder()
   let edits: EventSession
@@ -43,12 +43,26 @@ struct VoiceSnapshot {
   var response = ""
   private var preparedResponse = ConversationReply()
   var failure: String?
-  var question: Question = .action
+  private var interaction = ConversationState.idle
+  var question: Question {
+    get { interaction.question }
+    set {
+      interaction.ask(newValue)
+      if newValue == .action {
+        candidates = []
+        selected = nil
+        edits.interrupt()
+      }
+    }
+  }
   var failures = 0
   var busy = false
   var candidates: [CalendarEvent] = []
   var selected: CalendarEvent?
-  var intent = VoiceIntent()
+  var intent: VoiceIntent {
+    get { interaction.intent }
+    set { interaction.intent = newValue }
+  }
   var title = ""
   var date = Calendar.current.startOfDay(for: .now)
   var time = Date()
@@ -253,11 +267,16 @@ struct VoiceSnapshot {
           "Es wird nichts geändert. Was möchten Sie wissen?"), question: .action)
       return
     }
+    if VoiceRules.hasInvalidDate(text) {
+      say("Dieses Datum ist ungültig. Bitte das Datum noch einmal nennen.")
+      return
+    }
     if CalendarQuestion.isRepeat(text) {
       repeatResponse()
       return
     }
-    if question == .action, let request = CalendarQuestion.direct(text) {
+    if let request = CalendarQuestion.direct(text) {
+      question = .action
       await answerCalendar(request)
       return
     }
@@ -481,10 +500,10 @@ struct VoiceSnapshot {
     recorder.cancelTurn()
     edits.interrupt()
     failures = 0
+    question = .action
     intent = VoiceIntent()
     intent.action = action
     if action == .list { intent.date = Calendar.current.startOfDay(for: .now) }
-    question = .action
     selected = nil
     candidates = []
     if action == .create {
@@ -616,7 +635,9 @@ struct VoiceSnapshot {
     if intent.action == .create {
       await advanceCreation()
     } else if intent.action == .update {
-      if intent.newTime == nil && intent.newDate == nil {
+      if intent.newTime == nil && intent.newDate == nil && intent.title == nil
+        && intent.duration == nil
+      {
         say("Auf welche Uhrzeit soll der Termin verschoben werden?", question: .time)
       } else {
         await prepare()
@@ -655,10 +676,14 @@ struct VoiceSnapshot {
       return
     }
     let iso = ISO8601DateFormatter()
-    var patch: [String: JSONValue] = [
-      "start_utc": .string(iso.string(from: start)),
-      "end_utc": .string(iso.string(from: start.addingTimeInterval(length))),
-    ]
+    var patch: [String: JSONValue] = [:]
+    let changesStart = intent.action == .create || intent.newTime != nil || intent.newDate != nil
+    let effectiveStart = changesStart ? start : selected?.values.start ?? start
+    if changesStart { patch["start_utc"] = .string(iso.string(from: start)) }
+    if changesStart || intent.duration != nil {
+      patch["end_utc"] = .string(iso.string(from: effectiveStart.addingTimeInterval(length)))
+    }
+    if let title = intent.title { patch["title"] = .string(title) }
     do {
       let p = try await core.preferences()
       guard session == current else { return }

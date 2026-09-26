@@ -111,42 +111,47 @@ import FoundationModels
     let stable = instructions(address)
     let outputBudget = 700
     let overhead = 256
-    let fixed: Int
+    let fixed: Int?
     if let cached = fixedTokenCount[address] {
       fixed = cached
     } else if #available(iOS 26.4, macOS 26.4, *) {
       let instructionTokens = try await model.tokenCount(for: Instructions(stable))
       let schemaTokens = try await model.tokenCount(for: CalendarUnderstanding.generationSchema)
-      fixed = instructionTokens + schemaTokens
-      fixedTokenCount[address] = fixed
+      let count = instructionTokens + schemaTokens
+      fixed = count
+      fixedTokenCount[address] = count
     } else {
-      // UTF-8 bytes form a conservative bound for older systems without tokenizer access.
-      fixed =
-        stable.utf8.count + (try JSONEncoder().encode(CalendarUnderstanding.generationSchema)).count
+      // Bytes are not tokens. On iOS 26.0–26.3 the provider determines whether
+      // the request fits; retries remove history only, never the current request.
+      fixed = nil
     }
     var prior = Array(history.suffix(6))
-    var prompt: String
     while true {
       let memory = String(decoding: try JSONEncoder().encode(prior), as: UTF8.self)
-      prompt = "Kontext (JSON): \(context)\nVerlauf (JSON): \(memory)\nAktuelle Äußerung: \(text)"
-      let tokens: Int
-      if #available(iOS 26.4, macOS 26.4, *) {
-        tokens = try await model.tokenCount(for: prompt)
-      } else {
-        tokens = prompt.utf8.count
+      let prompt =
+        "Kontext (JSON): \(context)\nVerlauf (JSON): \(memory)\nAktuelle Äußerung: \(text)"
+      if #available(iOS 26.4, macOS 26.4, *), let fixed {
+        let tokens = try await model.tokenCount(for: prompt)
+        if fixed + tokens + outputBudget + overhead > model.contextSize {
+          guard !prior.isEmpty else { throw CalendarUnderstandingError.contextTooLarge }
+          prior.removeFirst()
+          continue
+        }
       }
-      if fixed + tokens + outputBudget + overhead <= model.contextSize { break }
-      guard !prior.isEmpty else { throw CalendarUnderstandingError.contextTooLarge }
-      prior.removeFirst()
+      try Task.checkCancellation()
+      let conversation = preparedAddress == address ? prepared : nil
+      prepared = nil
+      let session = conversation ?? LanguageModelSession(instructions: stable)
+      do {
+        let response = try await session.respond(
+          to: prompt, generating: CalendarUnderstanding.self,
+          options: GenerationOptions(sampling: .greedy, maximumResponseTokens: outputBudget))
+        try Task.checkCancellation()
+        return response.content
+      } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
+        guard !prior.isEmpty else { throw CalendarUnderstandingError.contextTooLarge }
+        prior.removeFirst()
+      }
     }
-    try Task.checkCancellation()
-    let conversation = preparedAddress == address ? prepared : nil
-    prepared = nil
-    let session = conversation ?? LanguageModelSession(instructions: stable)
-    let response = try await session.respond(
-      to: prompt, generating: CalendarUnderstanding.self,
-      options: GenerationOptions(sampling: .greedy, maximumResponseTokens: outputBudget))
-    try Task.checkCancellation()
-    return response.content
   }
 }

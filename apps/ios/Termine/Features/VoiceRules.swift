@@ -97,19 +97,43 @@ enum VoiceRules {
       }
     }
   }
+  private static let datePattern =
+    #"\b(?:übermorgen|morgen|heute|sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag|\d{1,2}[./]\d{1,2}[./]\d*)\b|\b\d{1,2}[./]\d{1,2}[./](?!\d)"#
+
+  private static func dateContext(_ input: String) -> String {
+    let text = normalized(input)
+    if let correction = matches(#"\b(?:nein|sondern|ich meine)\s+(.+)$"#, text).last,
+      !matches(datePattern, correction[1]).isEmpty
+    {
+      return correction[1]
+    }
+    return text
+  }
+
+  static func hasInvalidDate(_ text: String, now: Date = .now, calendar: Calendar = .current)
+    -> Bool
+  {
+    matches(#"\b\d{1,2}[./]\d{1,2}[./]\d*"#, dateContext(text)).contains {
+      date($0[0], now: now, calendar: calendar) == nil
+    }
+  }
+
   static func date(_ text: String, now: Date, calendar: Calendar) -> Date? {
-    let text = normalized(text)
+    let context = dateContext(text)
+    guard let token = matches(datePattern, context).last?.first else { return nil }
     let today = calendar.startOfDay(for: now)
-    if text.contains("übermorgen") { return calendar.date(byAdding: .day, value: 2, to: today) }
-    if text.contains("morgen") { return calendar.date(byAdding: .day, value: 1, to: today) }
-    if text.contains("heute") { return today }
-    if let value = matches("\\b(\\d{1,2})[./](\\d{1,2})[./](\\d{4})?", text).last,
+    if let offset = ["heute": 0, "morgen": 1, "übermorgen": 2][token] {
+      return calendar.date(byAdding: .day, value: offset, to: today)
+    }
+    if let value = matches(#"^(\d{1,2})[./](\d{1,2})[./](\d{4})?$"#, token).first,
       let day = Int(value[1]), let month = Int(value[2])
     {
       let year = Int(value[3]) ?? calendar.component(.year, from: now)
-      let components = DateComponents(year: year, month: month, day: day)
-      guard let date = calendar.date(from: components), calendar.component(.day, from: date) == day,
-        calendar.component(.month, from: date) == month
+      guard (1...9999).contains(year),
+        let date = calendar.date(from: DateComponents(year: year, month: month, day: day)),
+        calendar.component(.day, from: date) == day,
+        calendar.component(.month, from: date) == month,
+        calendar.component(.year, from: date) == year
       else { return nil }
       return date
     }
@@ -117,11 +141,9 @@ enum VoiceRules {
       "sonntag": 1, "montag": 2, "dienstag": 3, "mittwoch": 4, "donnerstag": 5, "freitag": 6,
       "samstag": 7,
     ]
-    // Last named weekday wins after an explicit self-correction.
-    let found = matches("\\b(sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag)\\b", text)
-    if let day = found.last.flatMap({ days[$0[1]] }) {
+    if let day = days[token] {
       var offset = (day - calendar.component(.weekday, from: today) + 7) % 7
-      if text.contains("nächsten") && offset == 0 { offset = 7 }
+      if context.contains("nächsten") && offset == 0 { offset = 7 }
       return calendar.date(byAdding: .day, value: offset, to: today)
     }
     return nil

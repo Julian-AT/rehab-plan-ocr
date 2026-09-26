@@ -28,6 +28,19 @@ import Foundation
     precondition(parse("Wann ist mein nächster Termin").action == .next)
     precondition(parse("Soll ich meine Medikamente ändern?").action != .create)
     precondition(VoiceRules.date("31.02.2026", now: now, calendar: calendar) == nil)
+    for invalid in ["31.02.2026", "29.02.2025", "12.09.202", "12.09.20261"] {
+      precondition(VoiceRules.hasInvalidDate(invalid, now: now, calendar: calendar), invalid)
+    }
+    for (input, day) in [
+      ("morgen nein heute", 12), ("übermorgen nein morgen", 13), ("morgen nein am 14.09.2026", 14),
+      ("31.02.2026 nein morgen", 13),
+    ] {
+      precondition(
+        calendar.component(.day, from: VoiceRules.date(input, now: now, calendar: calendar)!)
+          == day, input)
+      precondition(!VoiceRules.hasInvalidDate(input, now: now, calendar: calendar), input)
+    }
+    precondition(VoiceRules.date("vormorgen", now: now, calendar: calendar) == nil)
     precondition(VoiceRules.time("25:30") == nil)
     precondition(VoiceRules.time("10:99") == nil)
     precondition(VoiceRules.time("um zehn Uhr dreißig") == 630)
