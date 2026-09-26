@@ -32,8 +32,10 @@ or cancel workflows. Dispatch never pushes commits or changes the remote branch.
 `;
 
 function execute(binary, args) {
+  // Complete UI result bundles include retained video and can exceed a gigabyte.
+  const timeout = binary === 'gh' && args[0] === 'run' && args[1] === 'download' ? 300000 : 60000;
   return execFileSync(binary, args, {
-    encoding: 'utf8', timeout: 60000, maxBuffer: 32 * 1024 * 1024,
+    encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024,
     env: { ...process.env, GH_PROMPT_DISABLED: '1', GH_PAGER: 'cat' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
