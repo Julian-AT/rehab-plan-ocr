@@ -12,6 +12,9 @@ import XCTest
         ? ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] : [])
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Mehr"].waitForExistence(timeout: 25))
+    expectation(
+      for: NSPredicate(format: "enabled == true"), evaluatedWith: app.tabBars.buttons["Mehr"])
+    waitForExpectations(timeout: 20)
   }
   override func tearDown() async throws {
     guard let app else { return }
@@ -230,7 +233,14 @@ import XCTest
       for button in [photos, files] {
         edgeTap(button)
         XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
+        expectation(
+          for: NSPredicate(format: "hittable == true"), evaluatedWith: app.buttons["Abbrechen"])
+        waitForExpectations(timeout: 10)
         app.buttons["Abbrechen"].tap()
+        expectation(
+          for: NSPredicate(format: "hittable == true"), evaluatedWith: app.navigationBars["Tracing"]
+        )
+        waitForExpectations(timeout: 15)
       }
       app.navigationBars["Tracing"].buttons.firstMatch.tap()
       show(app.buttons["Diagnose"])

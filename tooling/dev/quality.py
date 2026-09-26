@@ -296,6 +296,7 @@ def tests(portable):
     run("sh", "tooling/checks/test-vad.sh")
     if APPLE and not portable:
         for probe in [
+            "preview-fixtures",
             "agenda-projection",
             "agenda-cache",
             "archive",

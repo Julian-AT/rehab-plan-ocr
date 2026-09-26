@@ -306,7 +306,9 @@ import XCTest
     capture("04-terminformular")
   }
   func testFinishedDayAndAutomaticCompletion() {
-    launch("complete")
+    let justAfterMidnight = Calendar.current.startOfDay(for: .now).addingTimeInterval(600)
+    launch(
+      "complete", extra: ["--preview-now", ISO8601DateFormatter().string(from: justAfterMidnight)])
     XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].waitForExistence(timeout: 8))
     XCTAssertTrue(app.staticTexts["Für heute stehen keine weiteren Termine an."].exists)
     capture("05-zeit-zum-erholen")
@@ -316,7 +318,9 @@ import XCTest
     capture("06-tagesverlauf")
     app.terminate()
     launch("finishing")
-    XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].waitForExistence(timeout: 25))
+    XCTAssertTrue(row("Erholung nach Physiotherapie").waitForExistence(timeout: 8))
+    XCTAssertFalse(row("Erholung nach Physiotherapie").label.contains("Vorbei"))
+    XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].waitForExistence(timeout: 45))
     capture("07-automatischer-tagesabschluss")
   }
   func testShortEventsHaveSeparateHitAreas() {
@@ -506,7 +510,6 @@ import XCTest
     XCTAssertTrue(app.buttons["voice-next"].waitForExistence(timeout: 5))
     capture("21-gespraechsdetails")
     back("Gesprächsdetails")
-    app.buttons["speak"].tap()
     let monitor = addUIInterruptionMonitor(withDescription: "Mikrofon und Spracherkennung erlauben")
     { alert in
       let allow = alert.buttons.matching(
@@ -516,12 +519,26 @@ import XCTest
       allow.tap()
       return true
     }
-    // Interruption monitors run when an interaction is blocked, not on queries.
-    voiceState.tap()
-    removeUIInterruptionMonitor(monitor)
-    expectation(
-      for: NSPredicate(format: "value IN %@", ["recording", "error"]), evaluatedWith: voiceState)
-    waitForExpectations(timeout: 15)
+    defer { removeUIInterruptionMonitor(monitor) }
+    app.buttons["speak"].tap()
+    // A fresh simulator's speech permission can appear after the first tap has
+    // returned. Keep handling the actual system prompt until preparation ends.
+    let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+    let deadline = Date().addingTimeInterval(20)
+    while Date() < deadline {
+      if ["recording", "error"].contains(voiceState.value as? String ?? "") { break }
+      let allow = system.alerts.buttons.matching(
+        NSPredicate(format: "label IN %@", ["Erlauben", "Allow", "OK"])
+      ).firstMatch
+      if allow.exists && allow.isHittable {
+        allow.tap()
+      } else {
+        Thread.sleep(forTimeInterval: 0.25)
+      }
+    }
+    XCTAssertTrue(
+      ["recording", "error"].contains(voiceState.value as? String ?? ""),
+      "Unexpected speech state: \(voiceState.value ?? "missing")")
     capture("22-spracherkennung-nativer-hinweis")
     if app.alerts.buttons["OK"].exists { app.alerts.buttons["OK"].tap() }
     if voiceState.value as? String == "recording" {

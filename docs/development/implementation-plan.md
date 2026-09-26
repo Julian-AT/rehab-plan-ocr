@@ -109,6 +109,24 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Hosted UI findings and focused regressions — 2026-09-26
+
+The fourth hosted attempt passes portable checks and all Apple stages before UI,
+then reaches the job's 90-minute deadline. Logs retain 59 passed, three failed and
+one skipped UI case out of 66 declared; one is interrupted and two have not started.
+No artifact survives the job timeout. Three formerly affected audio cases and the
+new rejected-creation regression pass on the hosted environment. Full UI acceptance
+remains open.
+
+The midnight fixture now stays on its civil day through whole-second timestamps;
+63 date/timezone/DST cases and the fixed 00:10 UI regression pass. Automatic completion
+is observed after a not-yet-ended appointment. Speech permission handling remains
+active for late system prompts; the fresh local prompt flow passes. Photo cancellation
+waits for actionable controls and restored navigation; both appearances pass locally.
+The simulator build and repository lint pass. See the [hosted report](../releases/history/2026-09-26-s18-hosted-ui.md)
+for exact results, retained failures and evidence identities. Candidate hosted
+verification is still required.
+
 ### Current device package and model-card evidence — 2026-09-26
 
 The current normal Release iPhone build passes without installation. Shared

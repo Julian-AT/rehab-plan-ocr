@@ -71,6 +71,12 @@ this inventory do not authorize an update or establish current candidate behavio
   and verify these resources. The reproduced extension-name collision is fixed;
   all 157 tool tests, lint and the local simulator build/bundle check pass.
   Full Apple hosted and signed-release evidence remain pending.
+  The fourth run now passes every Apple stage before UI. It records 59 UI passes,
+  three failures and one skip before the 90-minute job deadline; three of 66 cases
+  remain incomplete. The three failures have focused local corrections/tests for
+  midnight fixtures, late speech permissions and picker dismissal. Whole-suite
+  hosted acceptance remains pending; [the report](../releases/history/2026-09-26-s18-hosted-ui.md)
+  preserves the unsuccessful run and its exact counts.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture

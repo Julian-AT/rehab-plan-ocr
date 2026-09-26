@@ -176,9 +176,10 @@ import Foundation
         }
       }
       if mode == "complete" || mode == "finishing" {
+        let completed = PreviewFixtureTiming.completed(now: now, calendar: .current)
         try add(
-          "Erholung nach Physiotherapie", start: now.addingTimeInterval(-3600),
-          end: now.addingTimeInterval(mode == "finishing" ? 5 : -1800))
+          "Erholung nach Physiotherapie", start: completed.start,
+          end: mode == "finishing" ? now.addingTimeInterval(20) : completed.end)
       }
       if mode == "timeline" {
         try add(
