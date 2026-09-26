@@ -1,0 +1,5 @@
+# Kept in sync with config/toolchains/versions.json; doctor verifies the match.
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

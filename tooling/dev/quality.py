@@ -22,9 +22,7 @@ VERSIONS = LOCK["versions"]
 BIN = ROOT / ".tools/bin"
 ENV = dict(os.environ)
 ENV["PATH"] = os.pathsep.join([str(BIN), str(Path.home() / ".cargo/bin"), ENV.get("PATH", "")])
-ENV.update(
-    CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0", RUSTUP_TOOLCHAIN=VERSIONS["rust"]
-)
+ENV.update(CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0", RUSTUP_TOOLCHAIN=VERSIONS["rust"])
 APPLE = sys.platform == "darwin"
 XCODEGEN_PRESETS = {
     "base.yml",
@@ -124,8 +122,10 @@ def run(*command, capture=False, env=None):
 
 
 def installed(tool, *, local=False):
-    binary = str(BIN / tool) if local and (BIN / tool).is_file() else (
-        None if local else shutil.which(tool, path=ENV["PATH"])
+    binary = (
+        str(BIN / tool)
+        if local and (BIN / tool).is_file()
+        else (None if local else shutil.which(tool, path=ENV["PATH"]))
     )
     if binary is None:
         return False

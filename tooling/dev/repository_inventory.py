@@ -18,6 +18,7 @@ GROUPS = [
             "README.md",
             "Cargo.toml",
             "Cargo.lock",
+            "rust-toolchain.toml",
             "pyproject.toml",
             "uv.lock",
             ".gitattributes",
