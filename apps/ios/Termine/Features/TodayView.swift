@@ -51,6 +51,45 @@ private struct CalendarPager<Content: View>: View {
   }
 }
 
+private struct CalendarStatusBanner: View {
+  let openStatus: () -> Void
+
+  var body: some View {
+    ViewThatFits(in: .horizontal) {
+      HStack(alignment: .firstTextBaseline, spacing: 12) {
+        message.fixedSize()
+        Spacer(minLength: 0)
+        statusButton.fixedSize()
+      }
+      VStack(alignment: .leading, spacing: 0) {
+        message.fixedSize(horizontal: false, vertical: true)
+        statusButton
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .font(.subheadline)
+    .foregroundStyle(.white)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 4)
+    // White text retains sufficient contrast in both appearances.
+    .background(Color(red: 0.72, green: 0.12, blue: 0.12))
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("calendar-status-banner")
+  }
+
+  private var message: some View {
+    Text("Kalenderdaten unvollständig")
+  }
+
+  private var statusButton: some View {
+    Button(action: openStatus) {
+      Text("Status prüfen").underline().controlHeight()
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("calendar-status-open")
+  }
+}
+
 struct TodayView: View {
   let core: NativeApplication
   let scanner: ScanModel
@@ -88,15 +127,7 @@ struct TodayView: View {
       WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
       Divider()
       if !model.unavailableCalendars.isEmpty {
-        HStack {
-          Text("Kalenderdaten unvollständig").font(.footnote)
-          Spacer()
-          Button {
-            calendarStatus = true
-          } label: {
-            Text("Status prüfen").controlHeight()
-          }
-        }.padding(.horizontal).foregroundStyle(AppPalette.text)
+        CalendarStatusBanner { calendarStatus = true }
       }
       if model.error != nil && model.events(on: selectedDate) != nil {
         HStack {
