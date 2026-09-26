@@ -1,0 +1,155 @@
+{
+  "date": "2026-09-26",
+  "build": "2026092616",
+  "codeCommits": [
+    "9e1af36",
+    "20cf6c9"
+  ],
+  "environment": {
+    "device": "iPhone 17",
+    "platform": "iOS Simulator",
+    "iOS": "26.4",
+    "iOSBuild": "23E244",
+    "appearance": [
+      "light",
+      "dark"
+    ],
+    "dynamicType": [
+      "default",
+      "accessibility XXXL"
+    ],
+    "data": "Public synthetic fixtures only"
+  },
+  "result": "All nine selected UI cases passed in their latest applicable execution; layout and formatting checks passed.",
+  "uiTests": [
+    {
+      "test": "AgendaPreviewTests/testCalendarDensityAndListPersistAfterRestart()",
+      "result": "Passed",
+      "seconds": 30.613,
+      "sourceResultBundle": "reha-green-release-check.xcresult"
+    },
+    {
+      "test": "AgendaPreviewTests/testDayTimeAxisPagesWithContentAcrossEmptyDay()",
+      "result": "Passed",
+      "seconds": 24.97,
+      "sourceResultBundle": "reha-green-acceptance.xcresult",
+      "source": "completed xcodebuild log; screenshots and original summary exported before bundle cleanup"
+    },
+    {
+      "test": "AgendaPreviewTests/testShortEventsHaveSeparateHitAreas()",
+      "result": "Passed",
+      "seconds": 16.531,
+      "sourceResultBundle": "reha-green-acceptance.xcresult",
+      "source": "completed xcodebuild log; screenshots and original summary exported before bundle cleanup"
+    },
+    {
+      "test": "ContinuousCalendarTests/testColoursDarkAndLegend()",
+      "result": "Passed",
+      "seconds": 13.913,
+      "sourceResultBundle": "reha-green-acceptance.xcresult",
+      "source": "completed xcodebuild log; screenshots and original summary exported before bundle cleanup"
+    },
+    {
+      "test": "NativeFlowTests/testTextSizeAndDarkAppearance()",
+      "result": "Passed",
+      "seconds": 26.178,
+      "sourceResultBundle": "reha-green-archive-check.xcresult"
+    },
+    {
+      "test": "UniformCalendarTests/testGreenControlsInBothAppearances()",
+      "result": "Passed",
+      "seconds": 52.96,
+      "sourceResultBundle": "reha-green-touch-check.xcresult"
+    },
+    {
+      "test": "UniformCalendarTests/testLargeTypeListAndSettings()",
+      "result": "Passed",
+      "seconds": 40.76,
+      "sourceResultBundle": "reha-green-touch-check.xcresult"
+    },
+    {
+      "test": "UniformCalendarTests/testLongTitleDetailsAndVisualCollisionFallback()",
+      "result": "Passed",
+      "seconds": 18.923,
+      "sourceResultBundle": "reha-green-final-controls.xcresult"
+    },
+    {
+      "test": "UniformCalendarTests/testScaleChangesKeepVisibleTimeAndAllCategoriesPersist()",
+      "result": "Passed",
+      "seconds": 90.286,
+      "sourceResultBundle": "reha-green-release-check.xcresult"
+    }
+  ],
+  "checks": [
+    {
+      "command": "sh scripts/test-agenda-projection.sh",
+      "result": "Passed",
+      "coverage": "72/112/160-point scales, hour spacing, inverses, visual collisions, minimum 44-point height, long titles, density raw keys, empty days, day boundaries, DST, day paging axis lock"
+    },
+    {
+      "command": "xcrun swift-format lint --strict --configuration .swift-format <changed Swift files>",
+      "result": "Passed"
+    },
+    {
+      "command": "git diff --check; git diff --cached --check",
+      "result": "Passed"
+    },
+    {
+      "command": "sh scripts/test-native-ui.sh --built <selected UI cases>",
+      "buildForTesting": "Passed"
+    },
+    {
+      "check": "Primary action text on #009640",
+      "contrastRatio": 5.034,
+      "foregroundRGB": [
+        0.02,
+        0.06,
+        0.03
+      ]
+    },
+    {
+      "check": "Slider edge drag in both appearances",
+      "result": "Passed",
+      "controlHeightPoints": 44,
+      "gestureStartPointsAboveCenter": 21
+    }
+  ],
+  "iterationNotes": [
+    "Earlier color runs identified an undersized native SwiftUI slider hit frame. A 44-point UISlider representable now passes the edge drag check in light and dark appearances.",
+    "Picker tests were updated for native navigation-link selection values and automatic return after choosing a different value.",
+    "The archive test lacked its expected public plan in the reused test simulator. Its fresh-simulator rerun with the standard synthetic seed passed.",
+    "Per-case results above are consolidated from successive runs; earlier mixed-result bundles are not claimed to have passed as a whole. Calendar checks preceded the final slider-only change; control and large-type checks cover the final implementation."
+  ],
+  "accessibility": {
+    "automated": [
+      "element detection",
+      "sufficient element descriptions",
+      "traits",
+      "visible-control text contrast",
+      "44-point targets on inspected controls"
+    ],
+    "contrastExclusions": "Only contrast findings for nonexistent/nonhittable stale elements, text above the navigation content boundary, or the native 44-point tab-bar scroll-edge fade are excluded. Other audit findings remain failures.",
+    "manualVoiceOverAudioAndFocusNavigation": "Not performed; full appointment labels and detail hints verified through the accessibility tree."
+  },
+  "artifacts": {
+    "screenshots": {
+      "count": 29,
+      "provenance": "screenshot-sources.json",
+      "processing": "Original XCTest PNG attachments copied without visual editing"
+    },
+    "video": {
+      "file": "tageswechsel.mp4",
+      "sha256": "d105a776f852d5b42359da40319db7fb2a905217dac404972339ff05d07418bd",
+      "sourceResultBundle": "reha-green-acceptance.xcresult",
+      "sourceTest": "AgendaPreviewTests/testDayTimeAxisPagesWithContentAcrossEmptyDay()",
+      "trimStartSeconds": 5.9,
+      "durationSeconds": 13.270742,
+      "width": 720,
+      "height": 1566,
+      "processing": "Trimmed 13.3 seconds; scaled to 720 pixels wide; H.264 encoding, no audio. Gestures and calendar motion are unaltered."
+    }
+  },
+  "deviceInstallation": "None; simulator only",
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}
