@@ -37,6 +37,11 @@ struct ShareArgs: Decodable {
 /// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
 public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
+  public func calendarStatus(
+    completion: @escaping @Sendable (Result<NativeCalendarPlatformStatus, Error>) -> Void
+  ) {
+    calendarQueue.async { completion(.success(self.agendaService.calendarStatus())) }
+  }
   public func eventCalendars(
     completion: @escaping @Sendable (Result<[NativeEventCalendarDestination], Error>) -> Void
   ) {
@@ -168,7 +173,7 @@ public final class NativeServices: @unchecked Sendable {
         "resolveOwnedEvent", "inspectCalendarLinks":
         EventEditingService.shared.perform(command, request)
       case "calendarStatus":
-        calendarQueue.async { request.resolve(self.agendaService.calendarStatus()) }
+        calendarQueue.async { request.resolve(self.agendaService.calendarStatus().legacyValue) }
       case "calendars": try calendars(request)
       case "snapshot": try snapshot(request)
       case "overlaps": try overlaps(request)

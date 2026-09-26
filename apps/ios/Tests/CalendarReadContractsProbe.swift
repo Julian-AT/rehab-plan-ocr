@@ -36,6 +36,26 @@ import Foundation
       precondition(
         (legacy["unavailable_events"] as? [[String: String]])?.first?["id"] == "owned-missing")
     }
+    for access: NativeCalendarAccessStatus in [.fullAccess, .denied, .restricted, .notDetermined] {
+      let observed = NativeCalendarPlatformStatus(
+        access: access, lastReadAt: access == .fullAccess ? "2026-09-18T08:00:00Z" : nil,
+        calendars: access == .fullAccess
+          ? [NativeCalendarStatusItem(id: "visible", title: "Therapie", writable: false)] : [],
+        unavailableCalendarIDs: access == .fullAccess ? ["unavailable"] : [])
+      let legacy = observed.legacyValue
+      precondition(legacy["access"] as? String == access.rawValue)
+      let calendars = legacy["calendars"] as! [[String: Any]]
+      if access == .fullAccess {
+        precondition(calendars.count == 1 && calendars[0]["id"] as? String == "visible")
+        precondition(calendars[0]["writable"] as? Bool == false)
+        precondition(legacy["last_read_at"] as? String == "2026-09-18T08:00:00Z")
+        precondition(legacy["unavailable_calendar_ids"] as? [String] == ["unavailable"])
+      } else {
+        precondition(calendars.isEmpty && legacy["last_read_at"] is NSNull)
+        precondition(legacy["unavailable_calendar_ids"] as? [String] == [])
+      }
+      precondition(JSONSerialization.isValidJSONObject(legacy))
+    }
     var incomplete = original
     incomplete.removeValue(forKey: "fingerprint")
     do {
@@ -72,7 +92,7 @@ import Foundation
     }
     precondition(done.wait(timeout: .now() + 5) == .success)
     print(
-      "Calendar reads: metadata/identity roundtrip, absent import identity, scope revision, typed nil and timeout passed"
+      "Calendar reads: metadata/identity roundtrip, absent import identity, scope revision, platform status compatibility, typed nil and timeout passed"
     )
   }
 }

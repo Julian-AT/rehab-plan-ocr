@@ -812,14 +812,14 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         protected: state.journal.values.filter { $0.phase == "protected" }.count,
         error: lastError, migrationVersion: state.migrationVersion))
   }
-  func calendarStatus() -> [String: Any] {
+  func calendarStatus() -> NativeCalendarPlatformStatus {
     let access = EKEventStore.authorizationStatus(for: .event)
     let allowed = access == .fullAccess
     let calendars =
       allowed
       ? store.calendars(for: .event).map {
-        ["id": $0.calendarIdentifier, "title": $0.title, "writable": $0.allowsContentModifications]
-          as [String: Any]
+        NativeCalendarStatusItem(
+          id: $0.calendarIdentifier, title: $0.title, writable: $0.allowsContentModifications)
       } : []
     if allowed { lastCalendarRead = Date() }
     let unavailable =
@@ -830,14 +830,12 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
           return nil
         }
       ).sorted() : []
-    return [
-      "access": allowed
-        ? "fullAccess"
-        : access == .denied ? "denied" : access == .restricted ? "restricted" : "notDetermined",
-      "last_read_at": lastCalendarRead.map { iso.string(from: $0) } as Any? ?? NSNull(),
-      "calendars": calendars,
-      "unavailable_calendar_ids": unavailable,
-    ]
+    return NativeCalendarPlatformStatus(
+      access: allowed
+        ? .fullAccess
+        : access == .denied ? .denied : access == .restricted ? .restricted : .notDetermined,
+      lastReadAt: lastCalendarRead.map { iso.string(from: $0) },
+      calendars: calendars, unavailableCalendarIDs: unavailable)
   }
   func presentation() throws -> [String: Any] {
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot.presentation(at: Date())))
