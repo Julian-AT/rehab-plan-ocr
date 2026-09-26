@@ -68,4 +68,4 @@ if __name__ == "__main__":
         "--destination", type=Path, default=ROOT / "models/private/experiments/checkpoints"
     )
     a = p.parse_args()
-    fetch(json.loads((ROOT / "models/vlm-experiments.lock.json").read_text()), a.destination)
+    fetch(json.loads((ROOT / "ml/registry/runtime/vlm-experiments.lock.json").read_text()), a.destination)

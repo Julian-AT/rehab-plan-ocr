@@ -16,7 +16,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LOCK = json.loads((ROOT / "tool-versions.json").read_text())
+LOCK = json.loads((ROOT / "config/toolchains/versions.json").read_text())
 VERSIONS = LOCK["versions"]
 BIN = ROOT / ".tools/bin"
 ENV = dict(os.environ)
@@ -140,7 +140,7 @@ def doctor(portable=False):
             raise RuntimeError("swift-format hat eine ungeprüfte Version.")
         version = run("xcodebuild", "-version", capture=True)
         if not any(f"Build version {build}" in version for build in VERSIONS["xcode-builds"]):
-            raise RuntimeError("Xcode-Build stimmt nicht mit tool-versions.json überein.")
+            raise RuntimeError("Xcode-Build stimmt nicht mit config/toolchains/versions.json überein.")
         print(version)
     print("Werkzeugversionen geprüft.")
 

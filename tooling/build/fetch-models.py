@@ -32,7 +32,7 @@ def main():
     args = parser.parse_args()
     destination = ROOT / "models/private" / args.tier
     destination.mkdir(parents=True, exist_ok=True)
-    manifest_path = ROOT / "models" / f"{args.tier}.lock.json"
+    manifest_path = ROOT / "ml/registry/runtime" / f"{args.tier}.lock.json"
     if not manifest_path.exists() and not args.update_lock:
         raise SystemExit("Model lock missing; use --update-lock explicitly to select a model.")
     manifest = (

@@ -92,8 +92,8 @@ clinical advice.
 
 ## Development comparison
 
-`models/vlm-experiments.lock.json` pins llama.cpp/libmtmd, GLM-OCR Q8_0 and the
-original PaddleOCR-VL-1.6 checkpoint. `experiments/vlm/` contains a narrow static C ABI
+`ml/registry/runtime/vlm-experiments.lock.json` pins llama.cpp/libmtmd, GLM-OCR Q8_0 and the
+original PaddleOCR-VL-1.6 checkpoint. `ml/experiments/vlm/` contains a narrow static C ABI
 adapter with load/read/cancel/close operations and no application, approval or
 calendar access. The desktop runner records hashes, exact runtime/converter
 revisions, preprocessing, fixed prompts, output limits, latency and memory. It

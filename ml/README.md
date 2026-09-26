@@ -18,7 +18,7 @@ directories have not yet been migrated. Never put patient records in hosted CI.
 The assistant export environment is separate because the pinned llama.cpp
 converter requires Transformers 4.57.6 while MLX-LM 0.31.3 requires Transformers
 5 or later. It does not replace or change the training environment. The converter
-revision remains pinned by `models/vlm-experiments.lock.json`; full conversion
+revision remains pinned by `ml/registry/runtime/vlm-experiments.lock.json`; full conversion
 and target-runtime checks are required before choosing the deployment route.
 
 The OCR environment targets the official

@@ -17,7 +17,7 @@ import certifi
 
 ROOT = Path(__file__).resolve().parents[2]
 URL = "https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.22.0.zip"
-lock_path = ROOT / "models/ios-runtime.lock.json"
+lock_path = ROOT / "ml/registry/runtime/ios-runtime.lock.json"
 lock = json.loads(lock_path.read_text())
 if not lock.get("sha256") or not lock.get("bytes"):
     raise SystemExit("iOS runtime needs a committed checksum and size before restoration")

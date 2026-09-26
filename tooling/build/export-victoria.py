@@ -65,7 +65,7 @@ for name, (remote, digest) in ASSETS.items():
         temporary.replace(destination)
 
 config = json.loads((SOURCE / "config.json").read_text())
-assert config["vocab"] == json.loads((ROOT / "models/kokoro-vocab.json").read_text())
+assert config["vocab"] == json.loads((ROOT / "ml/registry/runtime/kokoro-vocab.json").read_text())
 torch.set_num_threads(4)
 torch.manual_seed(0)
 model = KModel(

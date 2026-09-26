@@ -35,7 +35,8 @@ class RestorationTests(unittest.TestCase):
             ],
             "dictionary_sha256": hashlib.sha256(self.dictionary).hexdigest(),
         }
-        self.lock = self.root / "models/small.lock.json"
+        self.lock = self.root / "ml/registry/runtime/small.lock.json"
+        self.lock.parent.mkdir(parents=True, exist_ok=True)
         self.lock.write_text(json.dumps(self.manifest, separators=(",", ":")))
         self.original = self.lock.read_bytes()
         self.modified = self.lock.stat().st_mtime_ns

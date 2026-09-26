@@ -38,7 +38,7 @@ targets:
       - path: ../../models/private/kokoro-german
         type: folder
         buildPhase: resources
-      - path: ../../licenses
+      - path: ../../docs/third-party/licenses
         type: folder
         buildPhase: resources
     dependencies:

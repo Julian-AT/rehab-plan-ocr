@@ -51,7 +51,7 @@ Shell-Formatprüfung bestanden. Auch die isolierte Typprüfung der geänderten
 Produktionsdatei gegen das iPhoneOS-26.4-SDK mit Ziel iOS 26.0 und Swift 6 bestand.
 Ein vollständiger neuer App-Build steht noch aus.
 
-Reproduzierbarer Benchmark: `experiments/voice-rules/RulesBenchmark.swift`.
+Reproduzierbarer Benchmark: `ml/experiments/voice-rules/RulesBenchmark.swift`.
 Die private Vorher-Version stammt aus `00d7b9b`; Binär-, Benchmark- und Quellhashes
 sowie alle Einzelmessungen stehen in
 `artifacts/private/plan-voice-20260926-s16/rules-comparison.json` und den zugehörigen
@@ -60,7 +60,7 @@ sowie alle Einzelmessungen stehen in
 ```sh
 swiftc -swift-version 6 -strict-concurrency=complete -O \
   apps/ios/Features/Conversation/VoiceRules.swift \
-  experiments/voice-rules/RulesBenchmark.swift \
+  ml/experiments/voice-rules/RulesBenchmark.swift \
   -o /tmp/reha-voice-rules-benchmark
 /tmp/reha-voice-rules-benchmark > /tmp/reha-voice-rules-result.json
 sh tooling/checks/test-voice-rules.sh

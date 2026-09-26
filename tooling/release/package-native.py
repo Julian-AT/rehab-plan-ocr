@@ -97,19 +97,19 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
     assert len(profiles) == 4
     assert common_devices, "App and extensions must authorize at least one common device"
     manifest = json.loads((app / "small/manifest.json").read_text())
-    assert manifest == json.loads((ROOT / "models/small.lock.json").read_text())
+    assert manifest == json.loads((ROOT / "ml/registry/runtime/small.lock.json").read_text())
     for entry in manifest["files"]:
         assert (
             hashlib.sha256((app / "small" / entry["path"]).read_bytes()).hexdigest()
             == entry["sha256"]
         )
-    speech_manifest = json.loads((ROOT / "models/kokoro.lock.json").read_text())
+    speech_manifest = json.loads((ROOT / "ml/registry/runtime/kokoro.lock.json").read_text())
     for entry in speech_manifest["files"]:
         assert (
             hashlib.sha256((app / "kokoro-german" / entry["path"]).read_bytes()).hexdigest()
             == entry["sha256"]
         )
-    for name, digest in json.loads((ROOT / "licenses/manifest.json").read_text()).items():
+    for name, digest in json.loads((ROOT / "docs/third-party/licenses/manifest.json").read_text()).items():
         assert hashlib.sha256((app / "licenses" / name).read_bytes()).hexdigest() == digest
     output = ROOT / "apps/ios/build/Laßnitzhöhe.ipa"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(payload), str(output))

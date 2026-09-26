@@ -1,3 +1,5 @@
+> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
+
 # App icon artwork
 
 The icon uses the green emblem from the [user-provided clinic logo](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ0e_5ksykd5I2mfkQNJVh4VAT2wekWE8Rv8kKDIHB_MR0EE3NplweXsb5b&s=10).

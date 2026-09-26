@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-manifest = json.loads((ROOT / "models/kokoro.lock.json").read_text())
+manifest = json.loads((ROOT / "ml/registry/runtime/kokoro.lock.json").read_text())
 target = ROOT / "models/private" / manifest["bundle_directory"]
 target.mkdir(parents=True, exist_ok=True)
 entries = {entry["path"]: entry for entry in manifest["files"]}
@@ -57,16 +57,16 @@ for name, entry in entries.items():
         raise RuntimeError(f"Checksum mismatch: {name}")
     temporary.replace(destination)
 # The model's tokenizer must match the renderer's phoneme-to-token mapping.
-expected_vocab = json.loads((ROOT / "models/kokoro-vocab.json").read_text())
+expected_vocab = json.loads((ROOT / "ml/registry/runtime/kokoro-vocab.json").read_text())
 model_vocab = json.loads((target / "config.json").read_text())["vocab"]
 assert model_vocab == expected_vocab
 raw = (target / "voice.f32").read_bytes()
 assert len(raw) == 510 * 256 * 4, "Unexpected Victoria voice shape"
 assert all(abs(v[0]) < float("inf") for v in struct.iter_unpack("<f", raw)), "Invalid voice values"
 for source, name in [
-    ("models/kokoro-vocab.json", "vocab.json"),
-    ("licenses/kokoro-apache-2.0.txt", "LICENSE"),
-    ("licenses/kokoro-source.txt", "NOTICE"),
+    ("ml/registry/runtime/kokoro-vocab.json", "vocab.json"),
+    ("docs/third-party/licenses/kokoro-apache-2.0.txt", "LICENSE"),
+    ("docs/third-party/licenses/kokoro-source.txt", "NOTICE"),
 ]:
     shutil.copyfile(ROOT / source, target / name)
 data = ROOT / "models/private/espeak/host/espeak-ng-data"
@@ -80,5 +80,5 @@ for name in entries:
 for name in entries:
     if not valid(target / name, name):
         raise RuntimeError(f"Bundled speech asset checksum mismatch: {name}")
-shutil.copyfile(ROOT / "models/kokoro.lock.json", target / "manifest.json")
+shutil.copyfile(ROOT / "ml/registry/runtime/kokoro.lock.json", target / "manifest.json")
 print(f"Verified {len(entries)} bundled Kokoro/Victoria speech and pronunciation assets (24 kHz)")

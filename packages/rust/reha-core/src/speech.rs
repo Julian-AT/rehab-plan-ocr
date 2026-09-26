@@ -108,8 +108,9 @@ pub struct SpeechEngine {
 }
 impl SpeechEngine {
     pub fn load(root: &Path) -> Result<Self> {
-        let manifest: serde_json::Value =
-            serde_json::from_slice(include_bytes!("../../../../models/kokoro.lock.json"))?;
+        let manifest: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../../ml/registry/runtime/kokoro.lock.json"
+        ))?;
         for item in manifest["files"]
             .as_array()
             .ok_or_else(|| err("Modellverzeichnis fehlt"))?

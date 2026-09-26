@@ -12,7 +12,7 @@ Quelle ist das vom Nutzer ausgewählte [Kikiri German Victoria](https://huggingf
 
 `tooling/build/export-victoria.py` lädt ausschließlich per SHA-256 geprüfte Tensoren mit `weights_only=True` und exportiert mit Kokoro 0.9.4, PyTorch 2.8.0 und ONNX 1.18.0. Die Ausgabe wurde zweimal erzeugt und war bytegleich. Die Konvertierung entfernt den `module.`-Namenspräfix, überträgt die Namen der Gewichtsnormierung und bildet nicht-affine Normalisierung mit expliziten Identitätskonstanten ab. Jeder gelernte Parameter wird anschließend gegen das Original geprüft; unbekannte oder fehlende Gewichte führen zum Abbruch.
 
-Die tatsächliche Stimmdatei enthält 510 × 1 × 256 Werte. Konfiguration und Anwendung verwenden dieselbe Phonemzuordnung. Das ONNX-Modell erhält `input_ids`, `style` und `speed`; ausgegeben werden 24-kHz-Mono-Audio und Dauern. Modell-, Stimm-, Aussprache- und Lizenzdateien sind in `models/kokoro.lock.json` gesichert. Die bisherige Auswahl Martin beziehungsweise ältere Kennungen werden auf Victoria abgebildet. Das gespeicherte Sprechtempo bleibt erhalten.
+Die tatsächliche Stimmdatei enthält 510 × 1 × 256 Werte. Konfiguration und Anwendung verwenden dieselbe Phonemzuordnung. Das ONNX-Modell erhält `input_ids`, `style` und `speed`; ausgegeben werden 24-kHz-Mono-Audio und Dauern. Modell-, Stimm-, Aussprache- und Lizenzdateien sind in `ml/registry/runtime/kokoro.lock.json` gesichert. Die bisherige Auswahl Martin beziehungsweise ältere Kennungen werden auf Victoria abgebildet. Das gespeicherte Sprechtempo bleibt erhalten.
 
 ## Prüfung
 

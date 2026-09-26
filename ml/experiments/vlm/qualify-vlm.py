@@ -22,7 +22,7 @@ def sha(path):
 
 
 def qualify(args):
-    lock_path = ROOT / "models/vlm-experiments.lock.json"
+    lock_path = ROOT / "ml/registry/runtime/vlm-experiments.lock.json"
     lock = json.loads(lock_path.read_text())
     revision = subprocess.check_output(
         ["git", "-C", str(args.runtime), "rev-parse", "HEAD"], text=True

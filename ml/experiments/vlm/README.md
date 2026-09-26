@@ -1,3 +1,5 @@
+> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
+
 # Local difficult-region experiment
 
 The static `reha-vlm` adapter embeds llama.cpp/libmtmd. It has model loading,
@@ -5,7 +7,7 @@ image reading, cancellation and destruction functions; it has no application
 state, approval, calendar, network or subprocess interface. The small CLI links
 that library for repeatable desktop measurements.
 
-The lock in `models/vlm-experiments.lock.json` pins the runtime revision, source
+The lock in `ml/registry/runtime/vlm-experiments.lock.json` pins the runtime revision, source
 checkpoints, known upstream hashes, prompts, preprocessing and output limits.
 Check every model file before invoking the library. `mtmd_init_from_file` checks
 projector/text embedding compatibility; an image smoke test is also required.
@@ -14,7 +16,7 @@ Model-family support alone does not establish checkpoint compatibility.
 Build from a clean checkout at the lock's revision:
 
 ```sh
-cmake -S experiments/vlm -B models/private/experiments/build \
+cmake -S ml/experiments/vlm -B models/private/experiments/build \
   -DLLAMA_SOURCE="$PWD/models/private/llama.cpp" -DCMAKE_BUILD_TYPE=Release
 cmake --build models/private/experiments/build --parallel 4
 python3 ml/experiments/vlm/fetch-vlm.py

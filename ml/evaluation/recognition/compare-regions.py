@@ -30,7 +30,7 @@ def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None
     manifest = json.loads(manifest_path.read_text())
     if sha(manifest["binary"]) != manifest["binary_sha256"]:
         raise ValueError("Adapter binary changed; repeat compatibility checks.")
-    if manifest["lock_sha256"] != sha(ROOT / "models/vlm-experiments.lock.json"):
+    if manifest["lock_sha256"] != sha(ROOT / "ml/registry/runtime/vlm-experiments.lock.json"):
         raise ValueError("Experiment lock changed; repeat compatibility checks.")
     result = {
         "manifest_sha256": sha(manifest_path),
