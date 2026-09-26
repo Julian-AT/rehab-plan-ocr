@@ -37,9 +37,21 @@ jobs:
       - run: python3 tooling/dev/quality.py build check-bindings
       - run: python3 tooling/dev/quality.py build device
       - name: Verify unsigned device bundle contents
-        run: make verify-bundle TARGET=device APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Release-iphoneos/Laßnitzhöhe.app"
+        run: make --silent verify-bundle TARGET=device APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Release-iphoneos/Laßnitzhöhe.app" > apps/ios/build/device-bundle-verification.json
       - run: python3 tooling/dev/quality.py build simulator
       - name: Verify simulator bundle contents
-        run: make verify-bundle TARGET=simulator APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+        run: make --silent verify-bundle TARGET=simulator APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app" > apps/ios/build/simulator-bundle-verification.json
       - run: make test-calendar-events
-      - run: make test-native-ui TEST_ARGS=--built
+      - run: make test-native-ui TEST_ARGS="--built -resultBundlePath apps/ios/build/ci-ui.xcresult"
+      - name: Retain synthetic native test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-checks-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            apps/ios/build/*-bundle-verification.json
+            apps/ios/build/ci-ui.xcresult
+            apps/ios/build/EventTests/Logs/Test/*.xcresult
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: false

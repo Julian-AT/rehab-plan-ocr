@@ -133,6 +133,12 @@ while the other job runs, after verifying their run identity. Full Apple hosted
 qualification remains pending. Raw evidence is retained in
 `.local/runs/hosted-ci-20260926-s18-001`.
 
+The Apple workflow now retains explicit synthetic XCTest result paths and valid
+JSON bundle reports for 14 days, named by commit and run attempt. The upload action
+is pinned to its verified v7.0.1 commit. No app binaries, model assets or private
+working storage are selected. Local checks parse the workflow and actual emitted
+bundle JSON; successful hosted artifact capture remains to be observed.
+
 ### One civil clock through interpretation and confirmation — 2026-09-26
 
 Each voice/text turn now captures its civil calendar and instant before awaiting
