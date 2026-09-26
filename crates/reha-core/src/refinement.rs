@@ -45,46 +45,6 @@ fn contained_field_text(
     (!text.trim().is_empty()).then_some(text)
 }
 
-#[cfg(test)]
-mod field_crop_tests {
-    use super::*;
-
-    #[test]
-    fn clipped_neighbor_or_missing_geometry_never_becomes_a_field_value() {
-        let observation = Observation {
-            id: "read".into(),
-            text: "B 12".into(),
-            region_ids: vec!["box".into()],
-            engine: "synthetic".into(),
-            score: Some(1.0),
-            alternatives: vec![],
-        };
-        let mut region = Region {
-            id: "box".into(),
-            polygon: geometry::rect(8.0, 4.0, 30.0, 12.0),
-            frame: "crop".into(),
-            kind: "text".into(),
-            parent: None,
-            children: vec![],
-        };
-        assert_eq!(
-            contained_field_text(&[observation.clone()], &[region.clone()], 100, 30).as_deref(),
-            Some("B 12")
-        );
-        for polygon in [
-            geometry::rect(0.0, 4.0, 30.0, 12.0),
-            geometry::rect(80.0, 4.0, 20.0, 12.0),
-            vec![],
-        ] {
-            region.polygon = polygon;
-            assert!(
-                contained_field_text(&[observation.clone()], &[region.clone()], 100, 30).is_none()
-            );
-        }
-        assert!(contained_field_text(&[observation], &[], 100, 30).is_none());
-    }
-}
-
 /// Refresh the version-5/6 column checks from retained OCR when row identities
 /// stay unambiguous. Structural changes still require a full explicit reprocess.
 pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
@@ -905,4 +865,54 @@ pub fn experiment_crop(
         serde_json::to_vec_pretty(&result)?,
     )?;
     Ok(result)
+}
+
+#[cfg(test)]
+mod field_crop_tests {
+    use super::*;
+
+    #[test]
+    fn clipped_neighbor_or_missing_geometry_never_becomes_a_field_value() {
+        let observation = Observation {
+            id: "read".into(),
+            text: "B 12".into(),
+            region_ids: vec!["box".into()],
+            engine: "synthetic".into(),
+            score: Some(1.0),
+            alternatives: vec![],
+        };
+        let mut region = Region {
+            id: "box".into(),
+            polygon: geometry::rect(8.0, 4.0, 30.0, 12.0),
+            frame: "crop".into(),
+            kind: "text".into(),
+            parent: None,
+            children: vec![],
+        };
+        assert_eq!(
+            contained_field_text(
+                std::slice::from_ref(&observation),
+                std::slice::from_ref(&region),
+                100,
+                30
+            )
+            .as_deref(),
+            Some("B 12")
+        );
+        for polygon in [
+            geometry::rect(0.0, 4.0, 30.0, 12.0),
+            geometry::rect(80.0, 4.0, 20.0, 12.0),
+            vec![],
+        ] {
+            region.polygon = polygon;
+            assert!(contained_field_text(
+                std::slice::from_ref(&observation),
+                std::slice::from_ref(&region),
+                100,
+                30
+            )
+            .is_none());
+        }
+        assert!(contained_field_text(&[observation], &[], 100, 30).is_none());
+    }
 }
