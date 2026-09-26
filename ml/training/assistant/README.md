@@ -20,6 +20,12 @@ verification. Runtime compilation runs with `UV_OFFLINE=1`. Training, fusion,
 conversion and evaluation use offline Hugging Face settings. Each run and evaluation
 requires a new output directory; previous successes and failures remain intact.
 
+Converter source restore clones into exclusive private staging, verifies the
+pinned clean revision and then publishes the directory atomically. A local lock
+serializes publication. An interruption preserves staging for inspection; retry
+uses a fresh directory. Existing or unexpected checkouts are preserved and never
+automatically reset or deleted.
+
 The smoke runner first exports and executes the untuned model, then trains eight
 LoRA steps on eight invented German examples, fuses the adapter, preserves the
 original tokenizer after semantic identity checks, exports F16 GGUF and executes

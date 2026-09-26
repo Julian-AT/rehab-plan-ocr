@@ -1,9 +1,12 @@
 """Restore a pinned converter, then build its desktop runtime offline."""
 
 import argparse
+import fcntl
 import json
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
 from restore import REGISTRY, ROOT, sha
 
@@ -31,13 +34,46 @@ def run(command, *, capture=False, offline=False):
     return result.stdout.strip() if capture else None
 
 
-def verify_source(registry):
-    revision = run(["git", "-C", str(SOURCE), "rev-parse", "HEAD"], capture=True)
-    dirty = run(["git", "-C", str(SOURCE), "status", "--porcelain"], capture=True)
+def verify_source(registry, source=None):
+    source = SOURCE if source is None else source
+    revision = run(["git", "-C", str(source), "rev-parse", "HEAD"], capture=True)
+    dirty = run(["git", "-C", str(source), "status", "--porcelain"], capture=True)
     if revision != registry["converter_revision"] or dirty:
         raise ValueError(
             "Converter revision differs or has local changes; preserve it and use the pinned source"
         )
+
+
+def restore_source(registry):
+    if SOURCE.exists() or SOURCE.is_symlink():
+        verify_source(registry)
+        return
+    SOURCE.parent.mkdir(parents=True, exist_ok=True)
+    with (SOURCE.parent / f".{SOURCE.name}.restore.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if SOURCE.exists() or SOURCE.is_symlink():
+            verify_source(registry)
+            return
+        staging = Path(tempfile.mkdtemp(prefix=f".{SOURCE.name}-restore-", dir=SOURCE.parent))
+        try:
+            run(
+                [
+                    "git",
+                    "clone",
+                    "--filter=blob:none",
+                    "--no-checkout",
+                    registry["converter_repository"],
+                    str(staging),
+                ]
+            )
+            run(["git", "-C", str(staging), "checkout", "--detach", registry["converter_revision"]])
+            verify_source(registry, staging)
+            if SOURCE.exists() or SOURCE.is_symlink():
+                raise FileExistsError(f"Source appeared during restore; preserved: {SOURCE}")
+            staging.rename(SOURCE)
+        except BaseException as error:
+            error.add_note(f"Unpublished restore checkout preserved at {staging}")
+            raise
 
 
 def main():
@@ -46,20 +82,7 @@ def main():
     args = parser.parse_args()
     registry = json.loads(REGISTRY.read_text())
     if args.action == "restore":
-        if not SOURCE.exists():
-            SOURCE.parent.mkdir(parents=True, exist_ok=True)
-            run(
-                [
-                    "git",
-                    "clone",
-                    "--filter=blob:none",
-                    "--no-checkout",
-                    registry["converter_repository"],
-                    str(SOURCE),
-                ]
-            )
-            run(["git", "-C", str(SOURCE), "checkout", "--detach", registry["converter_revision"]])
-        verify_source(registry)
+        restore_source(registry)
         run([*CMAKE, "--version"])
         return
     verify_source(registry)
