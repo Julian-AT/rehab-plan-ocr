@@ -2,6 +2,27 @@
 
 # Lokale Artefakte und Arbeitsreserve
 
+## Aktuelle geprüfte Entfernungskandidaten
+
+Die reine Bestandsprüfung vom 26.09.2026 findet 22 aufbewahrte Kopien von
+`products/build-products/Debug-iphonesimulator/libRehaCoreFFI.a` in UI-Läufen.
+Alle sind reguläre statische Archive; ihre Inhalte ergeben neun SHA-256-Gruppen.
+Von insgesamt 8.628.069.560 logischen Bytes sind 5.098.996.000 Bytes identische
+zusätzliche Inhalte. Die Prüfung hat **keine Datei verändert oder gelöscht**;
+APFS-Extentteilung, Snapshots und ein tatsächlich freigebbarer Betrag sind daraus
+nicht bestimmbar. Der Beleg ist
+`.local/maintenance/static-library-copies-hashes-20260926-s19-001.json`.
+
+Vor einer Zusammenführung fehlen noch die vollständige Verbraucher-/Belegprüfung
+und ein getesteter, modus- und inhaltserhaltender Wiederanlauf. Die jetzige
+Bereinigungsregel erlaubt diese Archive ausdrücklich nicht. Historische
+Prüfberichte, zugehörige ausführbare Apps, Tests und notwendige Symbole bleiben
+geschützt. Neue private Produktkopien der aktuellen EventKit-/Offline-Abnahmen
+verwenden bereits APFS-Kopien mit eigenen Inodes und geprüftem Inhaltsinventar;
+ein Speichergewinn wird dafür nicht behauptet.
+
+## Bestehender Bereinigungsvertrag
+
 `make inventory-artifacts CLEANUP_MANIFEST=.local/maintenance/<neuer-name>.json`
 erstellt eine Vorschau. `make clean-artifacts CLEANUP_MANIFEST=<derselbe-pfad>`
 führt genau diese Vorschau aus. Es gibt keine altersbasierte Löschung unbekannter
