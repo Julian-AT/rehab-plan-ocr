@@ -75,7 +75,7 @@ struct AppSlider: UIViewRepresentable {
   func sizeThatFits(_ proposal: ProposedViewSize, uiView: UISlider, context: Context) -> CGSize? {
     CGSize(width: proposal.width ?? 320, height: 44)
   }
-  final class Coordinator: NSObject {
+  @MainActor final class Coordinator: NSObject {
     var parent: AppSlider
     init(_ parent: AppSlider) { self.parent = parent }
     @objc func changed(_ slider: UISlider) {
@@ -107,16 +107,114 @@ enum AppSpacing {
 /// appearances. Padding belongs to the label so its complete area is tappable.
 struct AppPrimaryButtonStyle: ButtonStyle {
   var capsule = false
+  var foreground = AppPalette.onAction
   @Environment(\.isEnabled) private var enabled
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 44)
-      .foregroundStyle(AppPalette.onAction)
+      .foregroundStyle(foreground)
       .background(
         configuration.role == .destructive ? AppPalette.destructive : AppPalette.action,
         in: .rect(cornerRadius: capsule ? 100 : 14)
       )
       .contentShape(.rect)
       .opacity(enabled ? (configuration.isPressed ? 0.72 : 1) : 0.4)
+  }
+}
+
+/// A native Form/List action with one consistent row height and a full-width label.
+struct AppFormAction: View {
+  let title: String
+  var systemImage: String? = nil
+  var role: ButtonRole? = nil
+  var busy = false
+  let action: () -> Void
+  var body: some View {
+    Button(role: role, action: action) {
+      HStack(spacing: 10) {
+        if busy {
+          ProgressView()
+        } else if let systemImage {
+          Image(systemName: systemImage).foregroundStyle(
+            role == .destructive ? AppPalette.destructive : AppPalette.tint)
+        }
+        Text(title).fixedSize(horizontal: false, vertical: true)
+      }
+      .font(.body)
+      .foregroundStyle(role == .destructive ? AppPalette.destructive : AppPalette.text)
+      .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+      .contentShape(.rect)
+    }
+    .buttonStyle(.plain).controlSize(.regular)
+    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+    .disabled(busy)
+  }
+}
+
+struct AppInfoButton: View {
+  let title: String
+  let text: String
+  @State private var presented = false
+  @Environment(\.dynamicTypeSize) private var typeSize
+  var body: some View {
+    Button {
+      presented = true
+    } label: {
+      Image(systemName: "info.circle").font(.body)
+        .foregroundStyle(AppPalette.tint)
+        .frame(width: 44, height: 44).contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("Information zu \(title)")
+    .accessibilityIdentifier("info-\(title)")
+    .popover(isPresented: $presented) {
+      Group {
+        if typeSize.isAccessibilitySize {
+          VStack(spacing: 0) {
+            explanationHeading.padding(16)
+            Divider()
+            ScrollView {
+              Text(text).font(.body).fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled).padding(16)
+            }
+          }.foregroundStyle(AppPalette.text).textCase(nil)
+        } else {
+          explanation
+        }
+      }
+      .presentationCompactAdaptation(typeSize.isAccessibilitySize ? .sheet : .popover)
+    }
+  }
+  private var explanation: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      explanationHeading
+      Text(text).font(.body).fixedSize(horizontal: false, vertical: true)
+        .textSelection(.enabled)
+    }
+    .foregroundStyle(AppPalette.text).textCase(nil).padding(16)
+    .frame(idealWidth: 320, maxWidth: 360)
+  }
+  private var explanationHeading: some View {
+    HStack(alignment: .top) {
+      Text(title).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+      Button {
+        presented = false
+      } label: {
+        Image(systemName: "xmark").frame(width: 44, height: 44).contentShape(.rect)
+      }
+      .accessibilityLabel("Schließen")
+      .buttonStyle(.plain).accessibilityIdentifier("close-info")
+    }
+  }
+}
+
+struct AppSectionHeader: View {
+  let title: String
+  let help: String
+  var body: some View {
+    HStack(spacing: 4) {
+      Text(title).frame(maxWidth: .infinity, alignment: .leading)
+      AppInfoButton(title: title, text: help)
+    }.textCase(nil)
   }
 }

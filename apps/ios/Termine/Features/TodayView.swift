@@ -432,7 +432,7 @@ private struct WeekSelector: View {
                     .foregroundStyle(AppPalette.secondaryText)
                   Text(date.formatted(.dateTime.day())).font(.body)
                     .frame(width: 40, height: 40)
-                    .foregroundStyle(selected ? AppPalette.onAction : AppPalette.text)
+                    .foregroundStyle(selected ? .white : AppPalette.text)
                     .background(selected ? AppPalette.tint : .clear, in: .circle)
                 }.frame(maxWidth: .infinity).padding(.vertical, 4).contentShape(.rect)
               }.buttonStyle(.plain)

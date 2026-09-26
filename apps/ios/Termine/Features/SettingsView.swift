@@ -89,9 +89,10 @@ struct SettingsView: View {
               Text("Hell").tag("light")
               Text("Dunkel").tag("dark")
             }.accessibilityIdentifier("appearance-picker")
-          } footer: {
-            Text("Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
-              .foregroundStyle(AppPalette.secondaryText)
+          } header: {
+            AppSectionHeader(
+              title: "Erscheinungsbild",
+              help: "Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
           }
           Section {
             Picker("Kalendergröße", selection: $density) {
@@ -99,11 +100,11 @@ struct SettingsView: View {
             }.accessibilityIdentifier("agenda-density")
             Toggle("Tagesliste", isOn: $listView).accessibilityIdentifier("agenda-list-setting")
           } header: {
-            Text("Kalender")
-          } footer: {
-            Text(
-              "Standard zeigt etwa fünf bis sechs Stunden. Übersicht zeigt mehr vom Tag, Großzügig mehr Details. Jede Stunde bleibt gleich hoch. Antippen öffnet alle Terminangaben. Bei vielen Überschneidungen oder großer Bedienungshilfenschrift erscheint die Tagesliste."
-            ).foregroundStyle(AppPalette.secondaryText)
+            AppSectionHeader(
+              title: "Kalender",
+              help:
+                "Standard zeigt etwa fünf bis sechs Stunden. Übersicht zeigt mehr vom Tag, Großzügig mehr Details. Jede Stunde bleibt gleich hoch. Antippen öffnet alle Terminangaben. Bei vielen Überschneidungen oder großer Bedienungshilfenschrift erscheint die Tagesliste."
+            )
           }
           Section("Terminfarben") {
             ForEach(EventCategory.allCases, id: \.rawValue) { category in
@@ -119,9 +120,10 @@ struct SettingsView: View {
             Picker("Kalendererinnerung", selection: store.binding(\.reminder, fallback: nil)) {
               minuteOptions
             }
-          } footer: {
-            Text("Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
-              .foregroundStyle(AppPalette.secondaryText)
+          } header: {
+            AppSectionHeader(
+              title: "Kalendererinnerung",
+              help: "Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
           }
           Section {
             Toggle(
@@ -144,7 +146,10 @@ struct SettingsView: View {
             Toggle(
               "Termindetails in Vorschau", isOn: store.binding(\.reminderPreview, fallback: false)
             ).accessibilityIdentifier("reminder-preview")
-            Button {
+            AppFormAction(
+              title: testingReminder ? "Test wird geplant …" : "Testerinnerung senden",
+              systemImage: "bell", busy: testingReminder
+            ) {
               guard !testingReminder else { return }
               testingReminder = true
               testResult = nil
@@ -161,25 +166,22 @@ struct SettingsView: View {
                     : "Testauftrag angenommen. Die Zustellung wurde noch nicht beobachtet."
                 } catch { testError = userMessage(error) }
               }
-            } label: {
-              HStack {
-                if testingReminder { ProgressView() }
-                Text(testingReminder ? "Test wird geplant …" : "Testerinnerung senden")
-              }
-              .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(.rect)
-            }.disabled(testingReminder).accessibilityIdentifier("test-reminder")
+            }.accessibilityIdentifier("test-reminder")
             if let testResult {
               Text(testResult).font(.subheadline).foregroundStyle(AppPalette.secondaryText)
             }
             if let testError {
               Text(testError).font(.subheadline).foregroundStyle(AppPalette.destructive)
             }
-          } footer: {
-            Text(
-              reminderStatus.isEmpty
-                ? "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst."
-                : reminderStatus
-            ).foregroundStyle(AppPalette.secondaryText)
+            if !reminderStatus.isEmpty {
+              Text(reminderStatus).foregroundStyle(AppPalette.destructive)
+            }
+          } header: {
+            AppSectionHeader(
+              title: "App-Erinnerungen",
+              help:
+                "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst."
+            )
           }
         case .recognition:
           Section {
@@ -189,9 +191,10 @@ struct SettingsView: View {
             ) {
               ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
             }
-          } footer: {
-            Text("Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
-              .foregroundStyle(AppPalette.secondaryText)
+          } header: {
+            AppSectionHeader(
+              title: "Erkennung",
+              help: "Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
           }
           Section {
             ForEach(preferences.completionDefaults, id: \.id) { item in
@@ -204,10 +207,9 @@ struct SettingsView: View {
             Button("Vorgabe hinzufügen", systemImage: "plus") { addingDefault = true }.disabled(
               preferences.completionDefaults.count >= 100)
           } header: {
-            Text("Ergänzungsvorgaben")
-          } footer: {
-            Text("Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
-              .foregroundStyle(AppPalette.secondaryText)
+            AppSectionHeader(
+              title: "Ergänzungsvorgaben",
+              help: "Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
           }
         case .storage:
           Section {
@@ -216,9 +218,10 @@ struct SettingsView: View {
               Text("30 Tage").tag(UInt32(30) as UInt32?)
               Text("90 Tage").tag(UInt32(90) as UInt32?)
             }
-          } footer: {
-            Text("Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
-              .foregroundStyle(AppPalette.secondaryText)
+          } header: {
+            AppSectionHeader(
+              title: "Aufbewahrung",
+              help: "Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
           }
           Section {
             Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }
@@ -336,9 +339,11 @@ private struct CompletionDefaultForm: View {
         }
         TextField(field == "duration_minutes" ? "Minuten" : "Vorgabe", text: $value)
           .keyboardType(field == "duration_minutes" ? .numberPad : .default)
-      } footer: {
-        Text("Alle Angaben sind erforderlich. Eine Dauer muss zwischen 1 und 1440 Minuten liegen.")
-          .foregroundStyle(AppPalette.secondaryText)
+      } header: {
+        AppSectionHeader(
+          title: "Vorgabe",
+          help:
+            "Alle Angaben sind erforderlich. Eine Dauer muss zwischen 1 und 1440 Minuten liegen.")
       }
     }.pageTitle(original == nil ? "Neue Vorgabe" : "Vorgabe")
       .toolbar {

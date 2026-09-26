@@ -504,8 +504,11 @@ struct ReviewView: View {
         layout {
           Text("Speichern in: \(model.calendarName)").fixedSize(horizontal: false, vertical: true)
           if !model.targetLocked {
-            Button("Ändern") { setup = true }.controlHeight().disabled(
-              model.saving || model.loading)
+            Button {
+              setup = true
+            } label: {
+              Text("Ändern").frame(minWidth: 44, minHeight: 44).contentShape(.rect)
+            }.disabled(model.saving || model.loading)
           }
         }
         if model.saving {
@@ -521,7 +524,7 @@ struct ReviewView: View {
             }
           } label: {
             Text(model.saveLabel)
-              .frame(maxWidth: .infinity).controlHeight().fixedSize(
+              .frame(maxWidth: .infinity).fixedSize(
                 horizontal: false, vertical: true)
           }.buttonStyle(AppPrimaryButtonStyle()).controlSize(.large).accessibilityIdentifier(
             "save-plan"

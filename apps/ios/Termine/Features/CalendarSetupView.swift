@@ -44,9 +44,11 @@ struct CalendarSetupView: View {
         }
       }
       if planID != nil { Toggle("Für neue Pläne merken", isOn: $remember) }
-      Text(
-        "Ein neuer Standard verschiebt keine bestehenden Termine. Die Anzeigeauswahl wird getrennt eingestellt."
-      ).foregroundStyle(.secondary)
+      AppSectionHeader(
+        title: "Speicherziel",
+        help:
+          "Ein neuer Standard verschiebt keine bestehenden Termine. Die Anzeigeauswahl wird getrennt eingestellt."
+      )
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
       if EKEventStore.authorizationStatus(for: .event) == .denied {
         Link(
@@ -57,7 +59,7 @@ struct CalendarSetupView: View {
       Button {
         Task { await save() }
       } label: {
-        Text("Diesen Kalender verwenden").frame(maxWidth: .infinity).controlHeight()
+        Text("Diesen Kalender verwenden").frame(maxWidth: .infinity)
       }
       .buttonStyle(AppPrimaryButtonStyle()).disabled(
         busy || !destinations.contains { $0.id == calendarID && $0.writable })
@@ -122,22 +124,24 @@ struct CalendarChoiceRow: View {
   let calendar: CalendarDestinations.Destination
   let selected: Bool
   var body: some View {
-    HStack(spacing: AppSpacing.section) {
+    HStack(spacing: 10) {
       if let color = calendar.color_components, color.count == 3 {
         Circle().fill(Color(red: color[0], green: color[1], blue: color[2])).frame(
           width: 16, height: 16
         ).accessibilityHidden(true)
       }
-      VStack(alignment: .leading, spacing: AppSpacing.small) {
-        Text(calendar.title).font(.headline)
-        Text(calendar.source).foregroundStyle(.secondary)
-        if !calendar.writable { Text("Nur anzeigen und vorlesen").foregroundStyle(.secondary) }
+      VStack(alignment: .leading, spacing: 2) {
+        Text(calendar.title).font(.body)
+        Text(calendar.source + (calendar.writable ? "" : " · Nur lesbar"))
+          .font(.caption).foregroundStyle(AppPalette.secondaryText)
       }.fixedSize(horizontal: false, vertical: true)
       Spacer()
       if selected {
         Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint).accessibilityHidden(true)
       }
-    }.controlHeight().accessibilityElement(children: .combine).accessibilityAddTraits(
+    }.frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect).accessibilityElement(
+      children: .combine
+    ).accessibilityAddTraits(
       selected ? [.isSelected] : [])
   }
 }
@@ -157,13 +161,14 @@ struct CalendarPreferencesView: View {
           ) {
             CalendarChoiceRow(calendar: calendar, selected: false)
           }
+          .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
         }
         if destinations.isEmpty { Button("Kalenderzugriff erlauben") { Task { await load() } } }
       } header: {
-        Text("Anzeigen und vorlesen")
-      } footer: {
-        Text(
-          "Importierte Termine bleiben sichtbar. Weitere Kalender können hier ausgewählt werden.")
+        AppSectionHeader(
+          title: "Anzeigen und vorlesen",
+          help:
+            "Importierte Termine bleiben sichtbar. Weitere Kalender können hier ausgewählt werden.")
       }
       if let preferences = store.value {
         let missing = preferences.displayCalendarIds.filter { id in
@@ -190,13 +195,17 @@ struct CalendarPreferencesView: View {
           Button("Auch anzeigen") { select(id, true) }
         }
       } header: {
-        Text("Neue Termine")
-      } footer: {
-        Text("Ein neues Speicherziel verschiebt keine bestehenden Termine.")
+        AppSectionHeader(
+          title: "Neue Termine",
+          help: "Ein neues Speicherziel verschiebt keine bestehenden Termine.")
       }
       SettingsSaveStatus()
       if let error { Section { Text(error).foregroundStyle(AppPalette.destructive) } }
-      Section { Button("Kalender neu laden") { Task { await load() } } }
+      Section {
+        AppFormAction(title: "Kalender neu laden", systemImage: "arrow.clockwise") {
+          Task { await load() }
+        }
+      }
     }.pageTitle("Kalender").task {
       await store.load()
       await load()

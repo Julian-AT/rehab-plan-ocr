@@ -315,6 +315,18 @@ import XCTest
     capture("Voice explicit microphone and cancel")
   }
   func testVoiceCreationPreviewIsRevokedOnBackground() {
+    // This flow needs a writable destination. Own a synthetic calendar rather
+    // than depending on a previous test's persisted calendar selection.
+    app.terminate()
+    app.launchArguments += ["--agenda-fixture", "axis"]
+    app.launch()
+    XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
+    defer {
+      app.terminate()
+      app.launchArguments = ["--agenda-fixture", "cleanup"]
+      app.launch()
+      XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
+    }
     app.tabBars.buttons["Sprechen"].tap()
     app.buttons["voice-details"].tap()
     app.buttons["voice-create"].tap()

@@ -220,10 +220,10 @@ struct ProposalCard: View {
         )
       }
       Button(role: proposal.kind == "remove" ? .destructive : nil, action: confirm) {
-        Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(
+        Text(proposal.button).frame(maxWidth: .infinity).fixedSize(
           horizontal: false, vertical: true)
       }.buttonStyle(AppPrimaryButtonStyle()).disabled(busy).accessibilityIdentifier("confirm-event")
-      Button("Angaben korrigieren", action: cancel).controlHeight().disabled(busy)
+      Button("Angaben korrigieren", action: cancel).disabled(busy)
     }
   }
 }
@@ -268,18 +268,18 @@ struct EventEditorView: View {
             }, cancel: { model.interrupt() })
         } else if let result = model.result {
           Text(result)
-          Button("Verlauf und Rückgängig") { history = true }.controlHeight()
+          AppFormAction(title: "Verlauf und Rückgängig") { history = true }
         } else {
           if original?.system_only == true {
             Text(original?.spoken ?? "")
-            Button("Im Systemkalender bearbeiten") {
+            AppFormAction(title: "Im Systemkalender bearbeiten") {
               Task {
                 if let original {
                   await model.openSystem(original)
                   changed()
                 }
               }
-            }.controlHeight()
+            }
           } else {
             Section("Termin") {
               TextField("Bezeichnung", text: $title)
@@ -298,27 +298,27 @@ struct EventEditorView: View {
             }.disabled(original?.writable == false)
             Section("Speichern in") {
               Text(calendarName)
-              if original == nil { Button("Ändern") { setup = true }.controlHeight() }
+              if original == nil { AppFormAction(title: "Ändern") { setup = true } }
               if original?.recurring == true { Text("Änderungen gelten nur für dieses Vorkommen.") }
             }
-            Button("Änderung prüfen") { Task { await preview(delete: false) } }.controlHeight()
+            AppFormAction(title: "Änderung prüfen") { Task { await preview(delete: false) } }
               .disabled(
                 title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || end <= start
                   || calendar.isEmpty || original?.writable == false || model.busy)
             if original != nil {
-              Button("Kalendereintrag löschen", role: .destructive) {
+              AppFormAction(title: "Kalendereintrag löschen", role: .destructive) {
                 Task { await preview(delete: true) }
-              }.foregroundStyle(AppPalette.destructive).controlHeight().disabled(
+              }.foregroundStyle(AppPalette.destructive).disabled(
                 original?.writable == false || model.busy)
               if original?.recurring == true {
-                Button("Ganze Serie im Systemkalender bearbeiten") {
+                AppFormAction(title: "Ganze Serie im Systemkalender bearbeiten") {
                   Task {
                     if let original {
                       await model.openSystem(original)
                       changed()
                     }
                   }
-                }.controlHeight()
+                }
               }
             }
           }
@@ -374,6 +374,8 @@ struct EventEditorView: View {
   }
 }
 struct EventHistoryView: View {
+  @State private var reconciling = false
+  @State private var reconciled = false
   let core: NativeApplication
   let initialID: String?
   @Environment(\.scenePhase) private var scenePhase
@@ -398,14 +400,26 @@ struct EventHistoryView: View {
       }
       if let result = model.result { Text(result) }
       if let error = model.error { Text(error).foregroundStyle(AppPalette.destructive) }
-      Button("Schreibstatus abgleichen") {
+      AppFormAction(
+        title: "Schreibstatus abgleichen", systemImage: "arrow.clockwise", busy: reconciling
+      ) {
+        guard !reconciling else { return }
+        reconciling = true
+        reconciled = false
+        model.error = nil
         Task {
+          defer { reconciling = false }
           do {
             let _: [String: JSONValue] = try await core.eventRequest("reconcileEventMutations")
             await load()
+            reconciled = model.error == nil
           } catch { model.error = userMessage(error) }
         }
-      }.controlHeight()
+      }
+      if reconciled {
+        Text("Schreibstatus aktualisiert.").font(.caption).foregroundStyle(AppPalette.secondaryText)
+          .accessibilityIdentifier("reconcile-complete")
+      }
       ForEach(history) { item in
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
           Text(item.proposal.after?.title ?? item.proposal.before?.values.title ?? "Termin").font(
@@ -433,11 +447,11 @@ struct EventHistoryView: View {
                     await load()
                   } catch { model.error = userMessage(error) }
                 }
-              }.controlHeight()
+              }
             }
           }
           if item.status == "saved" && item.undone_by == nil {
-            Button("Rückgängig") { Task { await model.undo(item.id) } }.controlHeight().disabled(
+            AppFormAction(title: "Rückgängig") { Task { await model.undo(item.id) } }.disabled(
               model.busy)
           }
         }

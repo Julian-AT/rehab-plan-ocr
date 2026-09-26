@@ -10,11 +10,15 @@ struct DiagnosticTimelineView: View {
   var body: some View {
     List {
       Section {
-        Text(
-          "Lokales technisches Protokoll: höchstens 5.000 Einträge und 14 Tage. Keine Termininhalte, Audiodaten oder Gesprächstranskripte. Der Export entfernt Zeitstempel und ersetzt Vorgangskennungen."
+        AppSectionHeader(
+          title: "Technisches Protokoll",
+          help:
+            "Lokales technisches Protokoll: höchstens 5.000 Einträge und 14 Tage. Keine Termininhalte, Audiodaten oder Gesprächstranskripte. Der Export entfernt Zeitstempel und ersetzt Vorgangskennungen."
         )
         .font(.subheadline).foregroundStyle(.secondary)
-        Button("Bereinigten Diagnoseexport vorbereiten") {
+        AppFormAction(
+          title: "Bereinigten Diagnoseexport vorbereiten", systemImage: "square.and.arrow.up"
+        ) {
           guard !busy else { return }
           busy = true
           Task {

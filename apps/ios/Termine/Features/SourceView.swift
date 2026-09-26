@@ -73,7 +73,7 @@ struct SourceView: View {
     }
   }
 }
-private final class ZoomScroll: UIScrollView {
+final class ZoomScroll: UIScrollView {
   let picture = UIImageView()
   let overlay = CAShapeLayer()
   private var previousBounds = CGSize.zero
@@ -88,6 +88,10 @@ private final class ZoomScroll: UIScrollView {
     backgroundColor = .systemBackground
   }
   required init?(coder: NSCoder) { fatalError("init(coder:) unavailable") }
+  func resetImageLayout() {
+    previousBounds = .zero
+    setNeedsLayout()
+  }
   override func layoutSubviews() {
     super.layoutSubviews()
     if bounds.size != previousBounds, picture.bounds.width > 0 {
@@ -102,7 +106,7 @@ private final class ZoomScroll: UIScrollView {
       left: max(0, (bounds.width - contentSize.width) / 2), bottom: 0, right: 0)
   }
 }
-private struct ZoomImage: UIViewRepresentable {
+struct ZoomImage: UIViewRepresentable {
   let image: UIImage
   let polygons: [[Point]]
   let dimensions: CGSize
@@ -110,9 +114,17 @@ private struct ZoomImage: UIViewRepresentable {
   func makeUIView(context: Context) -> ZoomScroll {
     let view = ZoomScroll()
     view.delegate = context.coordinator
-    view.picture.image = image
-    view.picture.frame = CGRect(origin: .zero, size: image.size)
-    view.contentSize = image.size
+    updateUIView(view, context: context)
+    return view
+  }
+  func updateUIView(_ view: ZoomScroll, context: Context) {
+    if view.picture.image !== image {
+      view.setZoomScale(1, animated: false)
+      view.picture.image = image
+      view.picture.frame = CGRect(origin: .zero, size: image.size)
+      view.contentSize = image.size
+      view.resetImageLayout()
+    }
     let path = UIBezierPath()
     for polygon in polygons where !polygon.isEmpty {
       let points = polygon.map {
@@ -125,9 +137,7 @@ private struct ZoomImage: UIViewRepresentable {
       path.close()
     }
     view.overlay.path = path.cgPath
-    return view
   }
-  func updateUIView(_ view: ZoomScroll, context: Context) {}
   final class Coordinator: NSObject, UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
       (scrollView as? ZoomScroll)?.picture
@@ -212,10 +222,10 @@ struct CorrectionView: View {
             }
           }
         } header: {
-          Text("Seitenecken im Originalfoto")
-        } footer: {
-          Text(
-            "Die Korrektur startet eine neue Erkennung. Das bisherige Foto und die Prüfdaten bleiben erhalten."
+          AppSectionHeader(
+            title: "Seitenecken im Originalfoto",
+            help:
+              "Die Korrektur startet eine neue Erkennung. Das bisherige Foto und die Prüfdaten bleiben erhalten."
           )
         }
         if let error { Text(error).foregroundStyle(AppPalette.destructive) }
@@ -263,8 +273,10 @@ struct DiagnosticsView: View {
           "Gesprächsmodell",
           value: SystemLanguageModel.default.isAvailable
             ? "Apple Intelligence bereit" : "Apple Intelligence nicht verfügbar")
-        Text(
-          "Freie Gespräche verwenden das lokale Apple-Modell. Kalenderbefehle und manuelle Auswahl funktionieren auch ohne Apple Intelligence."
+        AppSectionHeader(
+          title: "Gesprächsmodell",
+          help:
+            "Freie Gespräche verwenden das lokale Apple-Modell. Kalenderbefehle und manuelle Auswahl funktionieren auch ohne Apple Intelligence."
         )
       }
       if let capabilities {

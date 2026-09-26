@@ -142,7 +142,9 @@ struct VoiceView: View {
       ) {
         Task { await model.toggleSession() }
       }
-      .buttonStyle(AppPrimaryButtonStyle(capsule: true)).buttonBorderShape(.capsule).controlSize(
+      .buttonStyle(AppPrimaryButtonStyle(capsule: true, foreground: .white)).buttonBorderShape(
+        .capsule
+      ).controlSize(
         .extraLarge
       )
       .accessibilityIdentifier("speak")
@@ -219,17 +221,24 @@ private struct VoiceDetailsView: View {
   var body: some View {
     Form {
       Section("Nachricht") {
-        TextField("Anliegen", text: $message, axis: .vertical).lineLimit(1...4)
-          .accessibilityIdentifier("voice-message")
-        Button("Senden", systemImage: "arrow.up") {
-          let text = message
-          message = ""
-          Task { await model.submitText(text) }
-        }.disabled(
-          message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy
-            || model.edits.busy || model.edits.proposal != nil
-        )
-        .accessibilityIdentifier("voice-send")
+        HStack(alignment: .bottom, spacing: 8) {
+          TextField("Anliegen", text: $message, axis: .vertical).lineLimit(1...4)
+            .accessibilityIdentifier("voice-message")
+          Button {
+            let text = message
+            message = ""
+            Task { await model.submitText(text) }
+          } label: {
+            Image(systemName: "arrow.up.circle.fill").font(.title2).foregroundStyle(AppPalette.tint)
+              .frame(width: 44, height: 44).contentShape(.rect)
+          }
+          .accessibilityLabel("Senden").buttonStyle(.plain)
+          .disabled(
+            message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy
+              || model.edits.busy || model.edits.proposal != nil
+          )
+          .accessibilityIdentifier("voice-send")
+        }.listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 12))
       }
       if !model.recorder.transcript.isEmpty {
         Section("Erkannter Text") {
@@ -239,13 +248,16 @@ private struct VoiceDetailsView: View {
       }
       if !model.response.isEmpty {
         Section("Antwort") {
-          Text(model.response).textSelection(.enabled)
-          Button("Wiederholen", systemImage: "arrow.counterclockwise") {
+          Text(model.response).textSelection(.enabled).accessibilityIdentifier(
+            "voice-response-details")
+          AppFormAction(title: "Wiederholen", systemImage: "arrow.counterclockwise") {
             output.speak(model.response)
           }
           .disabled(model.recorder.state != .idle || model.busy || model.edits.busy)
           .accessibilityIdentifier("repeat-speech")
-          if output.speaking { Button("Wiedergabe beenden", systemImage: "stop") { output.stop() } }
+          if output.speaking {
+            AppFormAction(title: "Wiedergabe beenden", systemImage: "stop") { output.stop() }
+          }
         }
       }
       if model.question == .event {
@@ -260,32 +272,35 @@ private struct VoiceDetailsView: View {
         }.disabled(model.busy || model.edits.busy)
       }
       Section("Manuell auswählen") {
-        Button("Nächster Termin") { Task { await model.submitAction(.next) } }
+        AppFormAction(title: "Nächster Termin") { Task { await model.submitAction(.next) } }
           .accessibilityIdentifier("voice-next")
-        Button("Heute") { Task { await model.submitAction(.list) } }.accessibilityIdentifier(
-          "voice-today")
-        Button("Termin hinzufügen") { Task { await model.submitAction(.create) } }
+        AppFormAction(title: "Heute") { Task { await model.submitAction(.list) } }
+          .accessibilityIdentifier(
+            "voice-today")
+        AppFormAction(title: "Termin hinzufügen") { Task { await model.submitAction(.create) } }
           .accessibilityIdentifier("voice-create")
-        Button("Termin ändern") { Task { await model.submitAction(.update) } }
-        Button("Kalendereintrag löschen") { Task { await model.submitAction(.remove) } }
+        AppFormAction(title: "Termin ändern") { Task { await model.submitAction(.update) } }
+        AppFormAction(title: "Kalendereintrag löschen") {
+          Task { await model.submitAction(.remove) }
+        }
       }.disabled(model.busy || model.edits.busy)
       Section {
         if model.question == .title {
           TextField("Bezeichnung", text: $model.title)
-          Button("Bezeichnung übernehmen") { Task { await model.editSlots() } }
+          AppFormAction(title: "Bezeichnung übernehmen") { Task { await model.editSlots() } }
         }
         if model.question == .date {
           DatePicker("Datum", selection: $model.date, displayedComponents: .date)
-          Button("Datum übernehmen") { Task { await model.editSlots() } }
+          AppFormAction(title: "Datum übernehmen") { Task { await model.editSlots() } }
         }
         if model.question == .time {
           DatePicker("Uhrzeit", selection: $model.time, displayedComponents: .hourAndMinute)
-          Button("Uhrzeit übernehmen") { Task { await model.editSlots() } }
+          AppFormAction(title: "Uhrzeit übernehmen") { Task { await model.editSlots() } }
         }
         if model.question == .duration {
           TextField("Dauer in Minuten", value: $model.duration, format: .number).keyboardType(
             .numberPad)
-          Button("Dauer übernehmen") { Task { await model.editSlots() } }
+          AppFormAction(title: "Dauer übernehmen") { Task { await model.editSlots() } }
         }
         if model.question != .event {
           ForEach(model.candidates) { event in
@@ -296,13 +311,15 @@ private struct VoiceDetailsView: View {
             }
           }
         }
-        Button("Angaben direkt bearbeiten") {
+        AppFormAction(title: "Angaben direkt bearbeiten") {
           editingEvent = model.selected
           model.cancelSession()
           editor = true
         }
         if let event = model.edits.systemEvent {
-          Button("Im Systemkalender öffnen") { Task { await model.edits.openSystem(event) } }
+          AppFormAction(title: "Im Systemkalender öffnen") {
+            Task { await model.edits.openSystem(event) }
+          }
         }
         NavigationLink("Verlauf und Rückgängig") { EventHistoryView(core: core) }
       }.disabled(model.busy || model.edits.busy)

@@ -205,10 +205,11 @@ struct CalendarStatusView: View {
           if status.unavailableCount > 0 {
             LabeledContent(
               "Kalender mit nicht lesbaren Daten", value: String(status.unavailableCount))
-            Text(
-              "Verfügbare Termine bleiben sichtbar. Lokale Zuordnungen werden erhalten, bis der Kalender wieder zugänglich ist oder eine Änderung bestätigt wird."
+            AppSectionHeader(
+              title: "Kalenderverfügbarkeit",
+              help:
+                "Verfügbare Termine bleiben sichtbar. Lokale Zuordnungen werden erhalten, bis der Kalender wieder zugänglich ist oder eine Änderung bestätigt wird."
             )
-            .font(.footnote).foregroundStyle(.secondary)
           }
         }
         Section {
@@ -216,9 +217,12 @@ struct CalendarStatusView: View {
             "Letzter erfolgreicher Lesevorgang",
             value: status.last_read_at.flatMap { ISO8601DateFormatter().date(from: $0) }?.formatted(
               date: .abbreviated, time: .standard) ?? "Noch nicht beobachtet")
-          Text(
-            "Dieser Status beschreibt den auf dem iPhone lesbaren Kalenderstand. Ein iCloud-Synchronisationsstand ist nicht verfügbar."
-          ).font(.footnote).foregroundStyle(.secondary)
+        } header: {
+          AppSectionHeader(
+            title: "Gelesener Kalenderstand",
+            help:
+              "Dieser Status beschreibt den auf dem iPhone lesbaren Kalenderstand. Ein iCloud-Synchronisationsstand ist nicht verfügbar."
+          )
         }
         Section("Ungeklärte Schreibvorgänge") {
           LabeledContent("Importe", value: String(status.pending_imports))
@@ -231,17 +235,17 @@ struct CalendarStatusView: View {
           }
         }
       }
-      Button {
-        Task { await load() }
-      } label: {
-        HStack {
-          if busy { ProgressView() }
-          Text("Aktualisieren")
-        }.frame(maxWidth: .infinity, minHeight: 44).contentShape(.rect)
-      }.disabled(busy)
-      Text(
-        "Aktualisieren liest den Zustand. Ungeklärte Änderungen werden nur im Prüfablauf bearbeitet."
-      ).font(.footnote).foregroundStyle(.secondary)
+      Section {
+        AppFormAction(title: "Aktualisieren", systemImage: "arrow.clockwise", busy: busy) {
+          Task { await load() }
+        }.accessibilityIdentifier("refresh-calendar-status")
+      } header: {
+        AppSectionHeader(
+          title: "Status",
+          help:
+            "Aktualisieren liest den Zustand. Ungeklärte Änderungen werden nur im Prüfablauf bearbeitet."
+        )
+      }
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
     }.pageTitle("Kalenderstatus").task { await load() }
   }
