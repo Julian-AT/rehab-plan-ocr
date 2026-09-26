@@ -149,9 +149,11 @@ import XCTest
           timeout: 10))
       capture("calm-list-\(mode)", anchor: event("Frühstück I"))
       app.swipeUp()
+      let last = event("Freier Termin")
+      position(last, topPixel: 1865)
       // These originals include the transient native scroll indicator. Observe
       // the frame across the actual capture, without waiting for it to fade.
-      capture("calm-list-lower-\(mode)", anchor: event("Freier Termin"), settle: false)
+      capture("calm-list-lower-\(mode)", anchor: last, topPixel: 1865, settle: false)
       app.terminate()
     }
   }
@@ -176,7 +178,9 @@ import XCTest
         if index == 0 {
           capture(dark ? "calm-large-dark" : "calm-large-light", anchor: row, topPixel: top)
         }
-        capture("calm-large-\(dark ? "dark" : "light")-\(index)", anchor: row, topPixel: top)
+        capture(
+          "calm-large-\(dark ? "dark" : "light")-\(index)", anchor: row, topPixel: top,
+          settle: index != 2 && index != 4)
       }
       app.terminate()
     }

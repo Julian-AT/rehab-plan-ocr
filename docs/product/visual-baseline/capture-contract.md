@@ -111,6 +111,14 @@ privaten Lauf und unter `visual-capture-control-20260926-s19-002`; die Diagnose 
 kein neuer Vergleichsvertrag. Die nächste Aufnahme muss auch die normalen
 Listenpositionen und den ursprünglichen Indikatorzustand reproduzieren.
 
+Vor der nächsten Aufnahme wird auch die letzte Zeile beider normalen Listen auf
+die aus den Originalen gemessene Kartenkante 1865 positioniert. Für große Bilder
+mit Index 2 und 4 entfällt die zweite Rahmenwartezeit innerhalb von `capture`;
+die drei identischen Messungen in `position` sowie die Rahmenprüfung vor/nach
+dem Screenshot bleiben erhalten. Damit wird der ursprüngliche noch sichtbare
+Scrollindikator zeitlich näher an der letzten Geste aufgenommen. Ein bestandener
+Bildvergleich ist daraus noch nicht abgeleitet.
+
 ## Diagnose der neun historischen Abweichungen
 
 Quelle ist unverändert `.local/runs/visual-baseline-20260926-s18-002`: drei bestandene
