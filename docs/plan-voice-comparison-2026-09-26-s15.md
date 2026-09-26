@@ -19,10 +19,15 @@ explizite Versuchsoptionen. Auch Sprachvokabular und Modellvorbereitung bleiben
 Versuche. Kalendergestaltung, Datenbankschema und öffentliche Swift/Rust-Bindings
 benötigen keine Änderung.
 
-**Keine Freigabe zur iPhone-Installation:** Der Geschwindigkeitsnachweis auf dem
+**Stand vom 26. September 2026, keine Freigabe zur iPhone-Installation:** Der Geschwindigkeitsnachweis auf dem
 physischen Gerät, echte Spracheingaben und die Zustimmung zu Simulatorvorschau und
 Hörproben fehlen. Der Mikrofonfehler gilt weiterhin als ungeprüft. Es gibt noch keine
 Aussage zur Übertragbarkeit auf mindestens zehn bisher unbenutzte reale Pläne.
+
+**Nachtrag vom 26. September 2026:** Die Freigabe der gezeigten Simulatorvorschau und
+Hörproben ist inzwischen eingegangen. Speicherplatz, frische Sicherung, neuer
+Gerätebuild und physische Tests stehen noch aus. Weitere Optimierung und die
+konkreten nächsten Schritte: [Folgebericht](optimization-followup-2026-09-26-s16.md).
 
 ## Referenzen und Messverfahren
 
