@@ -23,7 +23,7 @@ extension EventSession {
         confirm: { try await core.confirmEventProposal(request: $0) },
         undo: { try await core.previewEventUndo(request: $0) }),
       openSystem: { event in
-        _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)])
+        _ = try await NativeBridge.editSystemEvent(event)
       },
       confirmationStarted: { token in
         LocalDiagnostics.shared.record(.confirmation, .started, correlation: token)

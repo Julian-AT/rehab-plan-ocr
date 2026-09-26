@@ -1,5 +1,10 @@
 import Foundation
 
+/// The system editor owns visible confirmation and the calendar write.
+public enum NativeSystemEventEditAction: Sendable, Equatable {
+  case cancelled, saved, deleted
+}
+
 /// Immutable read values cross queues directly. Only metadata keeps its journal JSON.
 public struct NativeCalendarQuery: Sendable {
   public var calendarIDs: [String]

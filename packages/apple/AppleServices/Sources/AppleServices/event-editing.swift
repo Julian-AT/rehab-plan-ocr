@@ -15,13 +15,18 @@ final class EventEditingService: @unchecked Sendable {
   private var queue: DispatchQueue { agenda.queue }
   private let iso = ISO8601DateFormatter()
   private let isForeground: @Sendable () -> Bool
+  private let presentEditor: SystemEventPresentation
   init(
     isForeground: @escaping @Sendable () -> Bool = {
       DispatchQueue.main.sync { UIApplication.shared.applicationState == .active }
-    }, agenda: AgendaService = .shared
+    }, agenda: AgendaService = .shared,
+    presentEditor: @escaping SystemEventPresentation = { reference, completion in
+      SystemEventEditor.shared.open(reference, completion: completion)
+    }
   ) {
     self.agenda = agenda
     self.isForeground = isForeground
+    self.presentEditor = presentEditor
   }
   private func fail(_ message: String) -> Error { AgendaError.message(message) }
   func perform(_ command: String, _ request: ServiceRequest) {
@@ -60,14 +65,14 @@ final class EventEditingService: @unchecked Sendable {
         case "mutateEvent":
           request.resolve(try self.mutate(NativeEventMutationRequest(legacy: args)).journalValue)
         case "editSystemEvent":
-          guard let event = try self.find(args["event"] as? [String: Any] ?? [:]) else {
-            throw self.fail("Termin nicht verfügbar. Im Kalender nach Name und Datum suchen.")
+          try self.presentSystemEvent(
+            NativeCalendarReference(legacy: args["event"] as? [String: Any] ?? [:])
+          ) { result in
+            switch result {
+            case .success: request.resolve(["reload": true])
+            case .failure(let error): request.reject(error)
+            }
           }
-          let reference = SystemEventReference(
-            calendarID: event.calendar.calendarIdentifier,
-            externalID: event.eventIdentifier ?? event.calendarItemIdentifier,
-            occurrence: event.occurrenceDate ?? event.startDate, start: event.startDate)
-          DispatchQueue.main.async { SystemEventEditor.shared.open(reference, request: request) }
         default: throw self.fail("Unbekannte Kalenderfunktion.")
         }
       } catch { request.reject(error) }
@@ -183,6 +188,32 @@ final class EventEditingService: @unchecked Sendable {
         completion(.success(event))
       } catch { completion(.failure(error)) }
     }
+  }
+  func editSystemEvent(
+    _ reference: NativeCalendarReference,
+    completion: @escaping @Sendable (Result<NativeSystemEventEditAction, Error>) -> Void
+  ) {
+    queue.async {
+      do { try self.presentSystemEvent(reference, completion: completion) } catch {
+        completion(.failure(error))
+      }
+    }
+  }
+  private func presentSystemEvent(
+    _ reference: NativeCalendarReference,
+    completion: @escaping @Sendable (Result<NativeSystemEventEditAction, Error>) -> Void
+  ) throws {
+    try requireReadAccess()
+    guard let event = try find(reference) else {
+      throw NativeServiceError.invalidInput(
+        "Termin nicht verfügbar. Im Kalender nach Name und Datum suchen.")
+    }
+    let resolved = SystemEventReference(
+      calendarID: event.calendar.calendarIdentifier,
+      externalID: event.eventIdentifier ?? event.calendarItemIdentifier,
+      occurrence: event.occurrenceDate ?? event.startDate, start: event.startDate)
+    try requireReadAccess()
+    DispatchQueue.main.async { self.presentEditor(resolved, completion) }
   }
   private func requireReadAccess() throws {
     guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
@@ -550,19 +581,33 @@ final class EventEditingService: @unchecked Sendable {
   }
 }
 
-private struct SystemEventReference: Sendable {
+struct SystemEventReference: Sendable {
   let calendarID: String
   let externalID: String
   let occurrence: Date
   let start: Date
 }
 
+typealias SystemEventPresentation =
+  @MainActor @Sendable (
+    SystemEventReference,
+    @escaping @Sendable (Result<NativeSystemEventEditAction, Error>) -> Void
+  ) -> Void
+
 @MainActor private final class SystemEventEditor: NSObject, @MainActor EKEventEditViewDelegate {
   static let shared = SystemEventEditor()
-  private var editorRequest: ServiceRequest?
-  func open(_ reference: SystemEventReference, request: ServiceRequest) {
-    guard editorRequest == nil else {
-      request.reject("Kalenderbearbeitung bereits geöffnet.")
+  private var editorCompletion: (@Sendable (Result<NativeSystemEventEditAction, Error>) -> Void)?
+  private var activeEditor: EKEventEditViewController?
+  func open(
+    _ reference: SystemEventReference,
+    completion: @escaping @Sendable (Result<NativeSystemEventEditAction, Error>) -> Void
+  ) {
+    guard editorCompletion == nil else {
+      completion(.failure(NativeServiceError.invalidInput("Kalenderbearbeitung bereits geöffnet.")))
+      return
+    }
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+      completion(.failure(NativeServiceError.permissionDenied))
       return
     }
     var root = UIApplication.shared.connectedScenes.compactMap {
@@ -570,12 +615,15 @@ private struct SystemEventReference: Sendable {
     }.first
     while let shown = root?.presentedViewController { root = shown }
     guard let root else {
-      request.reject("Systemkalender nicht erreichbar. Terminname und Datum im Kalender suchen.")
+      completion(
+        .failure(
+          NativeServiceError.invalidInput(
+            "Systemkalender nicht erreichbar. Terminname und Datum im Kalender suchen.")))
       return
     }
     let store = EKEventStore()
     guard let calendar = store.calendar(withIdentifier: reference.calendarID) else {
-      request.reject("Kalender nicht verfügbar.")
+      completion(.failure(NativeServiceError.invalidInput("Kalender nicht verfügbar.")))
       return
     }
     let candidates = store.events(
@@ -589,21 +637,33 @@ private struct SystemEventReference: Sendable {
         && ($0.occurrenceDate ?? $0.startDate) == reference.occurrence
     }
     guard candidates.count == 1, let event = candidates.first else {
-      request.reject("Termin nicht eindeutig verfügbar. Kalenderansicht aktualisieren.")
+      completion(
+        .failure(
+          NativeServiceError.invalidInput(
+            "Termin nicht eindeutig verfügbar. Kalenderansicht aktualisieren.")))
       return
     }
-    editorRequest = request
+    editorCompletion = completion
     let editor = EKEventEditViewController()
     editor.eventStore = store
     editor.event = event
     editor.editViewDelegate = self
+    activeEditor = editor
     root.present(editor, animated: true)
   }
   func eventEditViewController(
     _ controller: EKEventEditViewController, didCompleteWith action: EKEventEditViewAction
   ) {
+    guard activeEditor === controller, let completion = editorCompletion else { return }
+    editorCompletion = nil
+    activeEditor = nil
     controller.dismiss(animated: true)
-    editorRequest?.resolve(["reload": true])
-    editorRequest = nil
+    switch action {
+    case .canceled: completion(.success(.cancelled))
+    case .saved: completion(.success(.saved))
+    case .deleted: completion(.success(.deleted))
+    @unknown default:
+      completion(.failure(NativeServiceError.uncertainWrite))
+    }
   }
 }

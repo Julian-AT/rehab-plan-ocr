@@ -87,6 +87,12 @@ public final class NativeServices: @unchecked Sendable {
       completion($0)
     }
   }
+  public func editSystemEvent(
+    _ reference: NativeCalendarReference,
+    completion: @escaping @Sendable (Result<NativeSystemEventEditAction, Error>) -> Void
+  ) {
+    calendarReads.editSystemEvent(reference, completion: completion)
+  }
   private func measured<Value: Sendable>(
     _ step: DiagnosticStep,
     start: (@escaping @Sendable (Result<Value, Error>) -> Void) -> Void,
