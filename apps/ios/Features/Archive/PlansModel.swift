@@ -32,7 +32,9 @@ import Observation
 
   func refresh(_ source: any ArchiveDataSource, revision: Int) async {
     guard !Task.isCancelled else { return }
-    if let refreshTask, refreshRevision == revision {
+    // A previous view task can be cancelled while its source is still draining.
+    // A new waiter needs fresh work even when the archive revision is unchanged.
+    if let refreshTask, refreshRevision == revision, !refreshTask.isCancelled {
       await withTaskCancellationHandler {
         await refreshTask.value
       } onCancel: {

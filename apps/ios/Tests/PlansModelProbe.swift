@@ -60,6 +60,7 @@ struct ArchivePage: Sendable {
     await pagingAndRefreshPreserveLoadedRange()
     await supersededPagesCannotReappear()
     await refreshCoalescesAndCancellationIsSilent()
+    await cancelledRefreshDoesNotAbsorbNewWaiter()
     print(
       "Archive state: pagination, retained content, errors, coalescing, stale results and cancellation passed"
     )
@@ -137,5 +138,26 @@ struct ArchivePage: Sendable {
     precondition(model.error == nil && model.plans.count == 20 && !model.isRefreshing)
     await model.refresh(source, revision: 3)
     precondition(model.plans.count == 20)
+  }
+
+  private static func cancelledRefreshDoesNotAbsorbNewWaiter() async {
+    let source = Source()
+    let model = PlansModel()
+    source.holdNext = true
+    let cancelled = Task { await model.refresh(source, revision: 1) }
+    await waitForQuery(source)
+    cancelled.cancel()
+    source.plans = [PlanSummary(id: "after-returning", importedAt: 200)]
+    let replacement = Task { await model.refresh(source, revision: 1) }
+    for _ in 0..<10_000 {
+      if source.queries == 2 { break }
+      await Task.yield()
+    }
+    precondition(source.queries == 2, "A new waiter must not join cancelled refresh work")
+    await replacement.value
+    precondition(model.loaded && model.plans == source.plans && !model.isRefreshing)
+    source.release()
+    await cancelled.value
+    precondition(model.plans == source.plans && model.error == nil && !model.isRefreshing)
   }
 }
