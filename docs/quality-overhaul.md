@@ -3,7 +3,8 @@
 # Qualitätsüberarbeitung der nativen iPhone-App
 
 Version **0.3.0**, Build **2026092613**. Lokale Umsetzung der nativen Überarbeitung;
-Geräteabnahme dieses neuen Stands steht aus. Der aktuelle Einstieg ist die
+Am 26. September 2026 nach ausdrücklicher Freigabe [auf dem iPhone installiert](quality-device-update.md).
+Die erweiterte Geräteabnahme steht aus. Der aktuelle Einstieg ist die
 [Architektur](architecture.md), die [Einrichtung](../README.md) und die
 [neue Vorschau mit Victoria-Hörproben](preview/2026-09-26-s12-quality/README.md).
 
@@ -69,7 +70,7 @@ Geräteabnahme dieses neuen Stands steht aus. Der aktuelle Einstieg ist die
 | Format und Lint | Vollständiger strikter Lauf bestanden; nach letzten Änderungen Swift, Ruff, ShellCheck und shfmt erneut bestanden; Rust seit dem vollständigen Lauf unverändert |
 | Native Rust-Archive | arm64-iOS und arm64-Simulator mit ONNX erfolgreich gebaut; aktuelle generierte FFI-Bindings geprüft |
 | Simulator und UI | Alle 39 aktuellen Testmethoden durch erfolgreiche Läufe abgedeckt: vollständiger Lauf 36 bestanden, eine Einstellung übersprungen; ergänzend reduzierte Bewegung, echte Systembestätigung der Testmitteilung und Teilen-Erweiterung bestanden |
-| iPhone-Releasebuild | Unsignierter Releasebuild mit allen drei Erweiterungen bestanden; Kennungen, Versionen und ausführbare Prüfsummen aller vier Komponenten sowie 19 Modell- und 28 Lizenzdateien geprüft; kein Geräteupdate erfolgt |
+| iPhone-Releasebuild | Unsignierter Releasebuild mit allen drei Erweiterungen bestanden; Kennungen, Versionen und ausführbare Prüfsummen aller vier Komponenten sowie 19 Modell- und 28 Lizenzdateien geprüft; anschließend signiert und nach Freigabe installiert, siehe [Gerätebericht](quality-device-update.md) |
 | Victoria | Vier echte lokale WAV-Proben, 24 kHz, Wortmarken, lange Antwort, frühere Stimmenkennungen und Abbruch während Inferenz geprüft; subjektive Hörabnahme steht aus |
 
 Die Rohprotokolle und xcresult-Bündel liegen lokal unter `apps/ios/build` beziehungsweise
@@ -121,14 +122,17 @@ keine fachlich bestätigte Erkennungsgenauigkeit.
 
 ## Abnahme und verbleibende Grenzen
 
-Die aktuelle Vorschau und Hörproben benötigen eine neue ausdrückliche Freigabe.
+Die aktuelle Vorschau und Hörproben wurden am 26. September 2026 durch die ausdrückliche
+Installationsaufforderung freigegeben. Frische Sicherung, Update ohne Deinstallation
+und der Datenvergleich unmittelbar nach Installation sind im [Gerätebericht](quality-device-update.md)
+dokumentiert. Der erste Start und die Migrationsprüfung benötigen noch das Entsperren.
 Nach [AGENTS.md](../AGENTS.md): „Geräteupdates erst nach ausdrücklicher Freigabe der
 Simulatorvorschau und Hörproben. Vor Installation frisch sichern, ohne Deinstallation
 aktualisieren und dauerhafte Daten vergleichen.“ Frühere Freigaben gelten nicht für Build
-2026092613. Private Originale, Modelle und Sicherungen wurden nicht bereinigt oder versioniert.
+2026092613; für diesen Build liegt inzwischen eine eigene Freigabe vor.
+Private Originale, Modelle und Sicherungen wurden nicht bereinigt oder versioniert.
 
-Nach Freigabe: frische Sicherung, Aktualisierung ohne Deinstallation, Datenvergleich und
-Geräteprüfung von echten Terminmitteilungen, Vorder-/Hintergrund, gesperrtem Gerät,
+Die erweiterte Geräteprüfung umfasst echte Terminmitteilungen, Vorder-/Hintergrund, gesperrtes Gerät,
 Neustart, Rechteverweigerung, Schlummern, Audio-Unterbrechungen, Kopfhörerwechsel,
 Spracherkennung, Hineinsprechen, Modellfolgefragen, Teilen-Erweiterung und VoiceOver.
 Simulatorzugriff auf App-Oberfläche und Systemdienste ersetzt diese Beobachtung nicht.

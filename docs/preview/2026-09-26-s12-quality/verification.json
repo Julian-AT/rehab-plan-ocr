@@ -2,9 +2,9 @@
   "schema_version": 1,
   "version": "0.3.0",
   "build": "2026092613",
-  "status": "local_verification_complete_pending_device_acceptance",
-  "physical_acceptance": "pending",
-  "physical_installation": false,
+  "status": "installed_and_data_retained_pending_first_launch_unlock",
+  "physical_acceptance": "pending_first_launch_and_extended_device_checks",
+  "physical_installation": true,
   "remote_ci": "not_run",
   "tools": {
     "rust": "1.98.1",
@@ -752,6 +752,36 @@
       "sha256": "c6d61394c4bc68f759bb8037a8b0586ffd1220f641a99d5067a74e0ce1026d4f"
     }
   ],
+  "device_update": {
+    "date": "2026-09-26",
+    "authorized": true,
+    "model": "iPhone 17",
+    "os_version": "26.6",
+    "previous_build": "2026092612",
+    "installed_build": "2026092613",
+    "in_place_update": true,
+    "backup_files": 92,
+    "backup_bytes": 604276876,
+    "backup_reverified": true,
+    "signed_package_sha256": "cd38d850dc068fd86df797225ea1b185a6a58e43ca6d80b8bfddc1dea8200d63",
+    "signature_checks_passed": true,
+    "signed_bundle_files_match_package": 72,
+    "after_install_data_comparison": "passed",
+    "unchanged_legacy_tables": 14,
+    "unchanged_user_preferences": true,
+    "original_files_retained": 17,
+    "durable_files_identical": 83,
+    "durable_json_files_semantically_identical": 1,
+    "first_launch": "blocked_by_device_lock",
+    "schema_before": 7,
+    "schema_after_install_before_launch": 7,
+    "report": "../../quality-device-update.md"
+  },
+  "preview_installation_approval": {
+    "date": "2026-09-26",
+    "result": "explicit_user_approval",
+    "separate_subjective_listening_assessment_recorded": false
+  },
   "record_kind": "historical-technical-record",
   "original_attestation": "external-private-archive"
 }

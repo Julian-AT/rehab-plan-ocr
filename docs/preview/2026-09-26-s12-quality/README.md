@@ -3,8 +3,9 @@
 # Neue Abnahmevorschau – native Qualitätsüberarbeitung
 
 Version **0.3.0**, Build **2026092613**, iPhone-17-Simulator mit iOS 26.4.
-Ausschließlich synthetische Termine und öffentliche Testbilder. Dieser Stand ist
-noch nicht auf dem iPhone installiert; frühere Gerätefreigaben gelten nicht für ihn.
+Ausschließlich synthetische Termine und öffentliche Testbilder. Dieser Stand wurde
+am 26. September 2026 ausdrücklich freigegeben und auf dem iPhone installiert:
+[Gerätebericht mit frischer Sicherung und Datenvergleich](../../quality-device-update.md).
 
 ## Victoria-Hörproben
 
@@ -64,8 +65,8 @@ im Prüfbericht dokumentiert; ihre Ursache ist noch nicht zugeordnet.
 
 ## Freigabegrenze
 
-Gemäß [AGENTS.md](../../../AGENTS.md) erfolgt das Geräteupdate erst nach ausdrücklicher
-Freigabe dieser neuen Simulatorvorschau und Hörproben, frischer Sicherung und ohne
-Deinstallation. Danach werden dauerhafte Daten verglichen und Mitteilungen sowie
-Audio zusätzlich auf dem iPhone geprüft. Der Gesamtabschluss bleibt bis zur
-Geräteabnahme offen.
+Die gemäß [AGENTS.md](../../../AGENTS.md) erforderliche ausdrückliche Freigabe liegt
+vor. Frische Sicherung, Update ohne Deinstallation und der Datenvergleich unmittelbar
+nach Installation sind bestanden. Der erste Start und die Migrationsprüfung benötigen
+das Entsperren des iPhones. Mitteilungen und Audio bleiben zusätzlich auf dem iPhone
+zu prüfen; der Gesamtabschluss bleibt bis zur erweiterten Geräteabnahme offen.
