@@ -87,6 +87,12 @@ private struct ProbeInput: Decodable {
       throw ProbeError.failed("Abandoned requests changed the later answer")
     }
     report["state_isolation_passed"] = true
+    report["stage"] = "reload"
+    try save()
+    await assistant.unload()
+    let reloaded = try await assistant.generate(prompt: prompt, deadline: .now + .seconds(120))
+    guard reloaded == repeated else { throw ProbeError.failed("Reload changed the answer") }
+    report["reload_passed"] = true
     report["stage"] = "passed"
     try save()
   } catch {

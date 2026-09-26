@@ -1,6 +1,7 @@
 """Reject stale or incomplete runtime notices without private data or a Cargo registry."""
 
 import json
+import plistlib
 import shutil
 import sys
 import tempfile
@@ -158,6 +159,12 @@ class InventoryTests(unittest.TestCase):
         bundle = self.bundle()
         (bundle / "runtime-inventory.json").write_text("{}")
         with self.assertRaisesRegex(ValueError, "Bundled runtime inventory differs"):
+            inventory.verify(self.root, bundle)
+
+    def test_experimental_model_bundle_cannot_pass_regular_packaging(self):
+        bundle = self.bundle()
+        (bundle / "Info.plist").write_bytes(plistlib.dumps({"REHAExperimentalAssistant": True}))
+        with self.assertRaisesRegex(ValueError, "Experimental assistant trials"):
             inventory.verify(self.root, bundle)
 
 

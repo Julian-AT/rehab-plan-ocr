@@ -9,6 +9,7 @@ import fcntl
 import importlib.util
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import tempfile
@@ -149,14 +150,45 @@ def main():
 
         def produce(destination):
             command = ["xcodebuild", "-create-xcframework"]
-            for path in libraries.values():
-                command += [
-                    "-library",
-                    str(path / "libRehaAssistantNative.a"),
-                    "-headers",
-                    str(path / "Headers"),
-                ]
+            # Framework modules have their own namespace. Two flat static-library
+            # XCFrameworks would both publish include/module.modulemap in Xcode.
+            for variant, path in libraries.items():
+                product = destination / variant / "RehaAssistantNative.framework"
+                headers = product / "Headers"
+                modules = product / "Modules"
+                headers.mkdir(parents=True)
+                modules.mkdir()
+                shutil.copyfile(path / "libRehaAssistantNative.a", product / "RehaAssistantNative")
+                shutil.copyfile(
+                    path / "Headers/RehaAssistantNative.h", headers / "RehaAssistantNative.h"
+                )
+                (modules / "module.modulemap").write_text(
+                    'framework module RehaAssistantNative {\n  umbrella header "RehaAssistantNative.h"\n  link "c++"\n  link framework "Accelerate"\n  export *\n}\n'
+                )
+                (product / "Info.plist").write_bytes(
+                    plistlib.dumps(
+                        {
+                            "CFBundleIdentifier": "at.rehakalender.runtime.assistant",
+                            "CFBundleExecutable": "RehaAssistantNative",
+                            "CFBundleName": "RehaAssistantNative",
+                            "CFBundlePackageType": "FMWK",
+                            "CFBundleVersion": "1",
+                            "CFBundleShortVersionString": "1.0",
+                            "MinimumOSVersion": "26.0",
+                            "CFBundleSupportedPlatforms": [
+                                {
+                                    "host": "MacOSX",
+                                    "simulator": "iPhoneSimulator",
+                                    "device": "iPhoneOS",
+                                }[variant]
+                            ],
+                        }
+                    )
+                )
+                command += ["-framework", str(product)]
             run(*command, "-output", str(destination / "RehaAssistantNative.xcframework"))
+            for variant in libraries:
+                shutil.rmtree(destination / variant)
 
         framework = assembly.cached_build(
             BASE / "frameworks", identity, {"RehaAssistantNative.xcframework/Info.plist"}, produce

@@ -1,0 +1,24 @@
+{
+  "app_context": {
+    "today": "2031-05-15",
+    "timezone": "Europe/Vienna",
+    "last_discussed_date": "",
+    "last_page": [
+      {
+        "reference": "r1",
+        "title": "Erfundenes Beispiel",
+        "date": "2031-05-15"
+      }
+    ]
+  },
+  "model_context": {
+    "today": "2031-05-15",
+    "timezone": "Europe/Vienna",
+    "selected": "r1",
+    "visible_references": [
+      "r1"
+    ]
+  },
+  "utterance": "Wo ist der Raum zu diesem Termin?",
+  "expected_prompt": "<|im_start|>system\nDu übersetzt eine deutsche Äußerung in genau ein JSON-Objekt.\nDu führst nichts aus. Du beantwortest keine Kalenderfragen mit erfundenen Fakten.\nGültige Formen (nur ausdrücklich benötigte Felder):\n{\"action\":\"calendar\",\"query\":{\"detail\":\"next|list|count|room|therapist|start|end|duration\",\"date\":\"YYYY-MM-DD\",\"reference\":\"ID\",\"after\":\"HH:mm\",\"before\":\"HH:mm\"}}\nBei calendar muss date oder reference vorhanden sein. IDs stammen ausschließlich\naus visible_references. selected bezeichnet den zuletzt gemeinten Termin.\n{\"action\":\"create\",\"change\":{\"title\":\"Titel\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:mm\",\"duration\":30}}\nBei create sind title, date und time erforderlich; duration ist optional.\n{\"action\":\"update\",\"query\":{\"reference\":\"ID\"},\"change\":{\"title\":\"Neuer Titel\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:mm\",\"duration\":20}}\nBei update enthält change NUR die ausdrücklich geänderten Felder, mindestens eines.\n{\"action\":\"remove\",\"query\":{\"reference\":\"ID\"}}\n{\"action\":\"cancel\"}\n{\"action\":\"help\",\"topic\":\"capture|calendars|archive|voice|privacy\"}\n{\"action\":\"clarify\",\"problem\":\"invalid_date|ambiguous|missing_date|missing_time|missing_title|missing_event|unsupported\"}\nDie durch | getrennten Wörter sind Alternativen, keine wörtlichen Werte.\nBeziehe heute/morgen/übermorgen auf today. Nutze YYYY-MM-DD und HH:mm.\nVormittags bedeutet vor 12:00, nachmittags ab 12:00 und vor 18:00.\nFür 'danach' verwende detail next und die reference des ausgewählten Termins.\nBei Korrekturen gilt die zuletzt bestätigte Angabe. Verneinte Änderungen oder\nAbbruch ergeben cancel ohne weitere Felder. Ungültige Kalenderdaten ergeben\nclarify invalid_date. Fehlende Angaben oder ein unklarer Zieltermin erfordern\nclarify. Keine vorhandenen Werte ergänzen, keine Fakten, keine Erklärung,\nkein Markdown und keine Bestätigung, dass etwas gespeichert wurde.<|im_end|>\n<|im_start|>user\n{\"selected\": \"r1\", \"timezone\": \"Europe/Vienna\", \"today\": \"2031-05-15\", \"visible_references\": [\"r1\"]}\nWo ist der Raum zu diesem Termin?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+}

@@ -35,7 +35,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
       }
       .modifier(AppAppearance())
-      .task { if core == nil { await open() } }
+      .task {
+        #if DEBUG && REHA_CUSTOM_ASSISTANT_TRIAL && targetEnvironment(simulator)
+          if await AssistantProviderScenario.runIfRequested() { return }
+        #endif
+        if core == nil { await open() }
+      }
     }
   }
   @MainActor private func open() async {

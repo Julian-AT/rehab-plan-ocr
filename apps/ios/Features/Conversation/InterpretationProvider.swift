@@ -91,13 +91,21 @@ enum InterpretationError: Error {
   case invalidRequest
   case unavailable(String)
   case deadlineExceeded
+  case contextTooLarge
 }
 
 @MainActor protocol InterpretationProvider: AnyObject {
   var identity: InterpretationIdentity { get }
   var capabilities: Set<InterpretationCapability> { get }
   var availability: InterpretationAvailability { get }
+  func prepare()
+  func discard()
   func interpret(_ request: InterpretationRequest) async throws -> ConversationInterpretation
+}
+
+extension InterpretationProvider {
+  func prepare() {}
+  func discard() {}
 }
 
 @MainActor final class CalendarRulesProvider: InterpretationProvider {

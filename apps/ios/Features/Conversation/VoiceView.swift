@@ -29,7 +29,7 @@ struct VoiceSnapshot {
   private var running = false
   private var turnTask: Task<Void, Never>?
   private let calendarConversation: CalendarConversation
-  private let understanding: CalendarUnderstandingSession
+  private let understanding: any InterpretationProvider
   private let interpretation: InterpretationRouter
   private var modelToken = UUID()
   typealias Question = ConversationState.Question
@@ -73,7 +73,7 @@ struct VoiceSnapshot {
   var duration = 0
   private var responseTask: Task<InterpretationResult, Error>?
   init(core: NativeApplication) {
-    let understanding = CalendarUnderstandingSession()
+    let understanding = AssistantProviderSelection.make()
     self.understanding = understanding
     interpretation = InterpretationRouter(generation: understanding)
     self.core = core

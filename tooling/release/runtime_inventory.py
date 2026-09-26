@@ -9,6 +9,7 @@ import argparse
 import ast
 import hashlib
 import json
+import plistlib
 import re
 import subprocess
 import tomllib
@@ -308,6 +309,9 @@ def verify(root=ROOT, bundle=None):
         "public_distribution_cleared": data["public_distribution_cleared"],
     }
     if bundle is not None:
+        info = bundle / "Info.plist"
+        if info.is_file() and plistlib.loads(info.read_bytes()).get("REHAExperimentalAssistant"):
+            raise ValueError("Experimental assistant trials cannot use regular release packaging")
         if (bundle / "runtime-inventory.json").read_bytes() != (root / INVENTORY).read_bytes():
             raise ValueError("Bundled runtime inventory differs from reviewed source")
         notices = json.loads((root / NOTICES / "manifest.json").read_text())

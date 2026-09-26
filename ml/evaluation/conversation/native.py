@@ -102,6 +102,7 @@ def completed(path, request):
                     "context_limit_passed",
                     "output_limit_passed",
                     "state_isolation_passed",
+                    "reload_passed",
                 ]
             )
         )

@@ -221,6 +221,7 @@ def tests(portable):
             "calendar-answers",
             "interpretation-provider",
             "assistant-request",
+            "custom-assistant-provider",
             "input-audio",
             "output-audio",
             "capture-preparation",

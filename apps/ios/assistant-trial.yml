@@ -1,0 +1,21 @@
+# Explicit local experiment. Normal project.yml never links or bundles this model.
+include: [project.yml]
+packages:
+  LocalAssistant:
+    path: ../../packages/apple/LocalAssistant
+targets:
+  Termine:
+    dependencies:
+      - package: LocalAssistant
+    sources:
+      - path: ../../.local/models/runtime/assistant-trial
+        type: folder
+        buildPhase: resources
+    settings:
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG REHA_CUSTOM_ASSISTANT_TRIAL"
+    info:
+      path: ../../.local/builds/assistant-app-trial/Info.plist
+      properties:
+        REHAExperimentalAssistant: true

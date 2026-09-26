@@ -28,6 +28,18 @@ public final class LocalAssistant: @unchecked Sendable {
 
   public init(asset: LocalAssistantAsset) { self.asset = asset }
 
+  /// Release cached weights after queued work has finished. An in-flight native
+  /// operation retains its model until cancellation/decoding has returned.
+  public func unload() async {
+    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+      queue.async { [self] in
+        if let model { reha_assistant_model_free(model) }
+        model = nil
+        continuation.resume()
+      }
+    }
+  }
+
   deinit {
     // Queued/running operations capture self, so the final owner can only disappear
     // after they finish. The C model is never freed during generation.

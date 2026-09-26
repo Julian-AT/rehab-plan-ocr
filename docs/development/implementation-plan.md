@@ -95,6 +95,23 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Runtime dependency inventory — 2026-09-26
 
+### Custom provider in the experimental app — 2026-09-26
+
+The separate Debug simulator build now selects the verified custom GGUF through
+the common provider/router and strict typed decoder. Its prompt matches the
+recorded training template. Whole-turn context trimming keeps the current request;
+missing assets preserve complete-rule questions. Session discard queues model
+unloading; real host/simulator reload checks pass. The normal generated project is
+restored after the trial build, and packaging rejects its experimental marker.
+
+The [app experiment](../../ml/experiments/2026-09-26-s18-assistant-app-provider.md) completes
+two existing invented development cases: 0/2 exact operations and one unsafe
+proposal, matching the earlier native results. No calendar database or audio
+session is opened; this is not complete voice/device qualification. The candidate
+remains unqualified. Normal and experimental simulator builds, 131 tool tests,
+common-provider/typed-boundary probes and actual regular-bundle privacy/notices
+checks pass. The actual trial bundle is rejected by regular packaging.
+
 ### Experimental native assistant execution
 
 `LocalAssistant` builds a verified pinned llama.cpp CPU boundary for host, simulator
@@ -102,7 +119,7 @@ and device architectures, with no training-code app dependency. Actual host and
 simulator inference, cancellation, deadlines, context/output limits and state
 isolation pass; two complete outputs match the previous desktop GGUF. Neither
 matches the expected operation and one proposes an unwanted mutation. No operation
-is executed and the candidate remains unqualified/unregistered in the app.
+is executed and the candidate remains unqualified for production.
 The [native experiment](../../ml/experiments/2026-09-26-s17-assistant-native.md) records
 identities, the fixed sub-millisecond timeout defect and remaining integration gates.
 

@@ -3,7 +3,8 @@
 # Local interpretation providers
 
 `InterpretationProvider` is the app's common contract for complete calendar rules
-and Apple Intelligence. The router selects one provider before generation. It
+and Apple Intelligence, plus an explicitly experimental custom GGUF provider.
+The router selects one provider before generation. It
 does not race providers or reinterpret a failed generation with another model.
 Calendar queries, event selection and mutation confirmation remain downstream.
 
@@ -53,9 +54,25 @@ provider's existing context recovery removes whole historical turns and retains
 the current request. Newer available token-count APIs remain capability-checked.
 Prewarming is still an explicit measurement trial, not a default optimization.
 
+`CustomAssistantProvider` renders the exact pinned Qwen no-thinking prompt and
+passes complete output through the typed Rust boundary. Context overflow removes
+whole oldest history turns, retaining the current request. Missing assets preserve
+complete-rule answers. Native model loading/generation and unloading run on the
+package's serial background queue; discard frees weights after queued work ends.
+
+Normal builds select Apple and do not link or bundle the custom model. The explicit
+`make build-assistant-trial` overlay adds `LocalAssistant` and the verified GGUF to
+a separate Debug simulator build. It requires `--assistant-model-trial` to select
+the provider. Its manifest pins the model, prompt, native assembly and notices;
+its build receipt hashes source files and the app binary. The builder restores the
+normal generated Xcode project. Regular release packaging rejects the trial marker.
+
 The provider probe verifies exact-rule fallback, single-provider selection, invalid
 output rejection, capability limits, deadline/cancellation with an uncooperative
-fake provider and isolation of later answers. Actual Apple generation, shipping
-custom GGUF inference through the app router and paired provider quality/resource comparisons remain
-separate acceptance gates. The trained Qwen candidates currently fail quality;
-they are not registered as production providers.
+fake provider and isolation of later answers. The [app trial](../../ml/experiments/2026-09-26-s18-assistant-app-provider.md)
+executes the actual provider selection/router in the app binary, with two synthetic
+development prompts. It reproduces both known wrong outputs without executing a
+calendar operation. It opens neither a calendar database nor an audio session;
+this is not a complete spoken interaction. Actual Apple generation, full voice
+workflow, paired provider quality/resources and physical-device qualification
+remain open. The trained Qwen candidate is not a production provider.

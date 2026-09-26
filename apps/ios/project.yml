@@ -28,6 +28,7 @@ targets:
     platform: iOS
     sources:
       - path: App
+        excludes: [Info.plist]
       - path: Features
       - path: Shared
       - path: Tests/Support

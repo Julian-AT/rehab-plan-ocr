@@ -72,7 +72,7 @@ prove the behavior on physical hardware.
 
 The common interpretation contract now validates capabilities, availability,
 bounded requests/output, cancellation and deadlines. Rules and Apple Intelligence
-share the contract; custom GGUF execution is not yet registered in the app.
+share the contract; a separate Debug trial selects the custom GGUF provider.
 The separate `LocalAssistant` package now executes the custom GGUF on macOS and
 the iOS simulator, with native cancellation/limits and isolation checks passing.
 Two complete answers match the desktop; both remain wrong and one is an unsafe
@@ -80,8 +80,13 @@ mutation proposal. This verifies runtime compatibility without qualifying the mo
 The custom-output adapter now decodes through Rust and typed UniFFI records;
 33 shared cases reject malformed fields/dates and unknown references. Cancellation
 and fixed app-help topics have explicit common-provider actions. Generated help
-text cannot replace the unchanged existing help passages. Actual custom-provider
-selection in the app remains pending.
+text cannot replace the unchanged existing help passages. The actual app-binary
+trial passes provider selection, complete-rule routing, prompt generation, native
+inference and typed decoding with two invented cases. It reproduces both known
+errors, including one unsafe proposal; no calendar operation runs. Model unload
+and reload also pass on host and simulator. Normal builds retain their provider
+and dependencies; trial bundles cannot use regular release packaging. See the
+[app experiment](../../ml/experiments/2026-09-26-s18-assistant-app-provider.md).
 All four privacy manifests pass built-bundle verification. Privacy/support drafts
 are prepared; publisher/contact information and public distribution review remain open.
 
