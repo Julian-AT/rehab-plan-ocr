@@ -1,0 +1,252 @@
+"""Compare every retained calendar reference with fresh XCTest attachments.
+
+Only the declared system-status pixels are excluded. Candidate images can never
+replace the committed baseline. A missing, duplicate or failed capture fails.
+"""
+
+import argparse
+import hashlib
+import html
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+BASELINE = ROOT / "docs/product/visual-baseline"
+spec = importlib.util.spec_from_file_location(
+    "comparison", Path(__file__).with_name("compare-screenshots.py")
+)
+comparison = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comparison)
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def compare_suite(baseline, attachments, output):
+    catalog = json.loads((baseline / "baseline.json").read_text())
+    manifest = json.loads((attachments / "manifest.json").read_text())
+    output.mkdir(exist_ok=False)
+    images = []
+    for entry in catalog["images"]:
+        name = entry["file"]
+        if Path(name).name != name or sha(baseline / name) != entry["sha256"]:
+            raise ValueError("Baseline identity differs from its preserved catalog")
+        pattern = re.compile(r"^calm-" + re.escape(Path(name).stem) + r"(?:_|\.png$)")
+        matches = [
+            attachment
+            for test in manifest
+            for attachment in test["attachments"]
+            if pattern.match(attachment["suggestedHumanReadableName"])
+        ]
+        result = {"baseline": name, "passed": False}
+        if len(matches) != 1:
+            result["error"] = f"Expected exactly one capture, found {len(matches)}"
+        elif matches[0]["isAssociatedWithFailure"]:
+            result["error"] = "Capture belongs to a failed test"
+        else:
+            attachment = matches[0]
+            filename = attachment["exportedFileName"]
+            if Path(filename).name != filename:
+                raise ValueError("Attachment filename escapes its export directory")
+            candidate = attachments / filename
+            if not candidate.resolve().is_relative_to(attachments.resolve()):
+                raise ValueError("Attachment escapes its export directory")
+            shutil.copyfile(candidate, output / name)
+            try:
+                result.update(comparison.compare(baseline / name, candidate, ignore_top=160))
+            except ValueError as error:
+                result["error"] = str(error)
+            result["attachment"] = attachment
+        images.append(result)
+    return {
+        "passed": bool(images) and all(image["passed"] for image in images),
+        "baseline_catalog_sha256": sha(baseline / "baseline.json"),
+        "attachments_manifest_sha256": sha(attachments / "manifest.json"),
+        "reference_count": len(images),
+        "matching_images": sum(image["passed"] for image in images),
+        "ignored_top_pixels": 160,
+        "full_app_regression_qualified": False,
+        "images": images,
+    }
+
+
+def write_review(report, baseline, output):
+    references = output / "references"
+    references.mkdir(exist_ok=False)
+    sections = []
+    for item in report["images"]:
+        name = item["baseline"]
+        shutil.copyfile(baseline / name, references / name)
+        escaped = html.escape(name, quote=True)
+        status = "Pixelgleich" if item["passed"] else "Abweichung – prüfen"
+        detail = html.escape(
+            str(item.get("error", f"{item.get('different_pixels', 0)} abweichende Pixel"))
+        )
+        sections.append(
+            f'<section><h2>{escaped}</h2><p><strong>{status}</strong> · {detail}</p><div class="pair">'
+            f'<figure><figcaption>Bestehende Referenz</figcaption><a href="references/{escaped}">'
+            f'<img loading="lazy" alt="Referenz {escaped}" src="references/{escaped}"></a></figure>'
+            f'<figure><figcaption>Aktuelle Simulatoraufnahme</figcaption><a href="previews/{escaped}">'
+            f'<img loading="lazy" alt="Aktuell {escaped}" src="previews/{escaped}"></a></figure>'
+            "</div></section>"
+        )
+    document = (
+        '<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+        "<title>Kalenderansichten vergleichen</title><style>"
+        "body{font:18px system-ui,sans-serif;color:#161616;background:#fafafa;max-width:1000px;margin:32px auto;padding:0 20px}"
+        "h1{font-size:2rem}h2{font-size:1.25rem}section{border-top:1px solid #bbb;margin-top:32px}"
+        ".pair{display:flex;gap:24px}figure{margin:0;width:50%}img{width:100%;height:auto}figcaption{padding:12px 0}"
+        "a{color:#0645ad}a:focus-visible{outline:3px solid #0645ad}</style>"
+        "<h1>Kalenderansichten vergleichen</h1>"
+        f"<p>{report['matching_images']} von {report['reference_count']} Aufnahmen sind unterhalb der Systemstatusleiste pixelgleich.</p>"
+        "<p>Die übrigen Ansichten benötigen Prüfung. Die Originalreferenzen bleiben erhalten. "
+        "Dieser Vergleich ist keine Freigabe der gesamten App oder eines Geräteupdates.</p>"
+        "<p>Bilder anklicken, um sie in voller Größe zu öffnen. Alle Bilder enthalten erfundene Termine.</p>"
+        + "".join(sections)
+        + "</html>"
+    )
+    (output / "review.html").write_text(document)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--xcresult", type=Path)
+    mode.add_argument("--capture", action="store_true")
+    parser.add_argument("--run", type=Path, required=True)
+    args = parser.parse_args()
+    output = args.run.resolve()
+    if not output.is_relative_to(ROOT / ".local/runs"):
+        raise ValueError("Use a new .local/runs directory")
+    output.mkdir(parents=True, exist_ok=False)
+    before = source_snapshot()
+    capture_status = None
+    result_bundle = args.xcresult
+    if args.capture:
+        result_bundle = output / "result.xcresult"
+        with (output / "capture.log").open("w") as log:
+            capture_status = subprocess.run(
+                [
+                    "sh",
+                    "tooling/checks/test-native-ui.sh",
+                    *[
+                        "-only-testing:TermineUITests/CalmCalendarTests/" + name
+                        for name in [
+                            "testMutedPaletteCardsListAndLegend",
+                            "testLargeCalendarText",
+                            "testVisualFinishedDay",
+                        ]
+                    ],
+                    "-resultBundlePath",
+                    str(result_bundle),
+                ],
+                cwd=ROOT,
+                env={**os.environ, "REHA_UI_MEDIA": "0"},
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            ).returncode
+        (output / "capture.json").write_text(
+            json.dumps(
+                {
+                    "exit_code": capture_status,
+                    "sources": before,
+                    "sources_unchanged": before == source_snapshot(),
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+    summary = json.loads(
+        subprocess.check_output(
+            [
+                "xcrun",
+                "xcresulttool",
+                "get",
+                "test-results",
+                "summary",
+                "--path",
+                str(result_bundle),
+            ]
+        )
+    )
+    (output / "test-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    subprocess.run(
+        [
+            "xcrun",
+            "xcresulttool",
+            "export",
+            "attachments",
+            "--path",
+            str(result_bundle),
+            "--output-path",
+            str(output / "attachments"),
+        ],
+        check=True,
+    )
+    report = compare_suite(BASELINE, output / "attachments", output / "previews")
+    report["tests_passed"] = (
+        summary.get("result") == "Passed"
+        and summary.get("totalTestCount") == 3
+        and summary.get("passedTests") == 3
+        and summary.get("failedTests") == 0
+        and summary.get("skippedTests") == 0
+    )
+    report["passed"] = report["passed"] and report["tests_passed"]
+    report["sources"] = before
+    if args.capture:
+        report["capture_exit_code"] = capture_status
+        report["sources_unchanged"] = before == source_snapshot()
+        report["passed"] = report["passed"] and capture_status == 0 and report["sources_unchanged"]
+    report["source_revision"] = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    report["comparator_sha256"] = sha(Path(__file__))
+    report["pixel_comparator_sha256"] = sha(Path(__file__).with_name("compare-screenshots.py"))
+    report["xcresult"] = str(result_bundle.resolve())
+    app = ROOT / "apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+    if args.capture and (app / "Termine.debug.dylib").is_file():
+        report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
+    (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    write_review(report, BASELINE, output)
+    print(json.dumps({k: v for k, v in report.items() if k not in {"images", "sources"}}, indent=2))
+    if not report["passed"]:
+        raise SystemExit(1)
+
+
+def source_snapshot():
+    names = (
+        subprocess.check_output(
+            [
+                "git",
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+                "--",
+                "apps/ios",
+                "packages/apple",
+                "tooling/checks/test-native-ui.sh",
+                "docs/third-party/runtime-inventory.json",
+                "config/toolchains/versions.json",
+            ],
+            cwd=ROOT,
+        )
+        .decode()
+        .split("\0")
+    )
+    # Documentation edits do not change the tested app. Runtime/test resources,
+    # source code, project configuration and dependency identities still do.
+    return {
+        name: sha(ROOT / name) for name in sorted(set(names)) if name and Path(name).suffix != ".md"
+    }
+
+
+if __name__ == "__main__":
+    main()

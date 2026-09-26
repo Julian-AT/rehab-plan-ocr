@@ -6,12 +6,18 @@ import XCTest
     continueAfterFailure = false
     app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
     app.launchArguments =
-      ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "colors"]
+      [
+        "-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "colors",
+        "--preview-now", "2026-09-14T13:56:00Z",
+      ]
       + (dark ? ["--preview-dark"] : [])
       + (large
         ? ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] : [])
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
+    expectation(
+      for: NSPredicate(format: "enabled == true"), evaluatedWith: app.tabBars.buttons["Termine"])
+    waitForExpectations(timeout: 20)
     app.scrollViews["agenda-days"].firstMatch.swipeLeft()
   }
   private func capture(_ name: String) {
@@ -77,6 +83,23 @@ import XCTest
       app.terminate()
     }
   }
+  func testVisualFinishedDay() {
+    for dark in [false, true] {
+      continueAfterFailure = false
+      app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
+      app.launchArguments =
+        [
+          "-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "complete",
+          "--preview-now", "2026-09-14T13:56:00Z",
+        ] + (dark ? ["--preview-dark"] : [])
+      app.launch()
+      XCTAssertTrue(app.buttons["past-events"].waitForExistence(timeout: 25))
+      XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].exists)
+      capture("calm-past-events-\(dark ? "dark" : "light")")
+      app.terminate()
+    }
+  }
+
   func testAddressPersistsAndChangesNextTemplate() {
     launch()
     app.tabBars.buttons["Sprechen"].tap()

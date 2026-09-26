@@ -99,11 +99,11 @@ struct TodayView: View {
   @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   @State private var model = TodayModel(describe: userMessage)
-  @State private var visibleWeek = AgendaWeek(containing: .now).start
+  @State private var visibleWeek = AgendaWeek(containing: AgendaPreviewClock.now(.now)).start
   @State private var scrollMinute: Double?
   @State private var scrollReset = 0
-  @State private var selectedDate = Calendar.current.startOfDay(for: .now)
-  @State private var observedToday = Calendar.current.startOfDay(for: .now)
+  @State private var selectedDate = Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now))
+  @State private var observedToday = Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now))
   @State private var setup = false
   @State private var calendarStatus = false
   @State private var editor: CalendarEvent?
@@ -148,7 +148,7 @@ struct TodayView: View {
       TimelineView(.periodic(from: .now, by: 15)) { context in
         sharedTimeline(now: AgendaPreviewClock.now(context.date))
       }.onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-        followToday(Calendar.current.startOfDay(for: .now))
+        followToday(Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now)))
       }
 
     }
@@ -202,7 +202,7 @@ struct TodayView: View {
     }
     .onChange(of: scenePhase) { _, phase in
       if phase == .active {
-        followToday(Calendar.current.startOfDay(for: .now))
+        followToday(Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now)))
         reload()
       }
     }
@@ -213,7 +213,7 @@ struct TodayView: View {
     .onReceive(
       NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
     ) { _ in
-      followToday(Calendar.current.startOfDay(for: .now))
+      followToday(Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now)))
       reload()
     }
     .navigationDestination(isPresented: $setup) { CalendarPreferencesView(core: core) }
@@ -226,7 +226,7 @@ struct TodayView: View {
     .sheet(isPresented: $create, onDismiss: reload) { EventEditorView(core: core, changed: reload) }
   }
   private func openToday() {
-    selectedDate = Calendar.current.startOfDay(for: .now)
+    selectedDate = Calendar.current.startOfDay(for: AgendaPreviewClock.now(.now))
     visibleWeek = week.start
     showPast = false
     scrollMinute = nil
@@ -251,7 +251,7 @@ struct TodayView: View {
           Label(
             !model.unavailableCalendars.isEmpty
               ? "Keine lesbaren Termine"
-              : Calendar.current.isDateInToday(agenda.date)
+              : Calendar.current.isDate(agenda.date, inSameDayAs: now)
                 ? "Heute keine Termine" : "Keine Termine",
             systemImage: "calendar")
         } description: {

@@ -95,6 +95,24 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Runtime dependency inventory — 2026-09-26
 
+### Fixed calendar screenshot capture — 2026-09-26
+
+`make test-visual-baseline` now builds/captures the 22 retained calendar views at
+their original civil date, with synthetic data on disposable simulators. Original
+references stay byte-identical. Missing, duplicate, failed or dimension-mismatched
+captures fail; only the declared system-status region is excluded. The output
+includes test/source identities, per-image differences and an offline comparison.
+
+Two serial runs pass all three UI tests, but exact image matches vary from 15/22
+to 13/22 with identical app code. Large-text scroll positions vary, and dark system
+chrome differs by at most four channel levels in the inspected completion view.
+No tolerance or image registration turns these into passes. A documentation-only
+edit also correctly invalidated the initially overbroad second source snapshot;
+future capture identities exclude Markdown while retaining all runtime/test inputs.
+The [visual experiment](../../ml/experiments/2026-09-26-s18-visual-baseline.md) records
+the remaining capture-stability gate. All 134 tool tests and repository lint pass;
+the full visual and voice/device gates remain open.
+
 ### Captured conversation timezone — 2026-09-26
 
 A new failing regression reproduced reuse of one calendar snapshot for two civil

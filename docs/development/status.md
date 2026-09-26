@@ -54,6 +54,10 @@ establish current device behavior or authorize an update.
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
   exactly below the system status bar. These are not a whole-app visual pass.
+- All 22 retained calendar views can now be captured at the reference date and
+  compared without changing the baseline. Two serial runs pass three UI tests each;
+  exact image matches vary from 15/22 to 13/22 because large-text scroll captures
+  and small system-chrome differences remain unstable. The full visual gate stays open.
 
 The broad simulator UI run completed 64 tests: 58 passed, five failed and one
 requires a separate reduced-motion simulator setting. All five failures correspond

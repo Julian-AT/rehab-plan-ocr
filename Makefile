@@ -6,6 +6,7 @@ help:
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
+	@echo 'Visual baseline: make test-visual-baseline TEST_ARGS="--run .local/runs/<new-run>" (serial disposable simulator)'
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
 	@echo 'Packaging: make verify-privacy APP_BUNDLE=<built-app>; make package'

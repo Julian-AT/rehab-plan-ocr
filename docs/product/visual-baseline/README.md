@@ -43,3 +43,14 @@ Die zusätzlichen `large-…-0` bis `-4`-Aufnahmen zeigen die einzelnen Kategori
 - Der grüne Link wurde zusätzlich im dunklen Simulator geöffnet und visuell kontrolliert; Kalenderkarten und Linkschrift sind in beiden Erscheinungsbildern geprüft.
 
 Build **2026092624** wurde am 26. September 2026 nach ausdrücklicher Freigabe und frischer Sicherung ohne Deinstallation auf dem iPhone installiert. Erster App-Start und Datenerhalt vor und nach diesem Start sind geprüft; der [Gerätebericht](../../releases/history/zitrus-device-update.md) dokumentiert die Nachweise.
+
+## Aktuelle Reproduktion
+
+Die [visuelle Prüfanleitung](../../../apps/ios/Tests/Visual/README.md) erfasst alle
+22 Ansichten mit festem Referenzdatum. Die Originalbilder und ihre Prüfsummen
+bleiben unverändert. Zwei aktuelle Läufe bestehen jeweils die drei UI-Tests,
+erreichen aber nur 15/22 beziehungsweise 13/22 exakte Bildtreffer. Unterschiede bei
+großer Schrift hängen von der Scrollposition ab; dunkle Systemflächen zeigen kleine
+Rasterunterschiede. Die vollständige visuelle Freigabe bleibt offen. Der
+[Prüfbericht](../../../ml/experiments/2026-09-26-s18-visual-baseline.md) trennt diese
+Aufnahmeschwankungen von den bereits pixelgleichen Ansichten.

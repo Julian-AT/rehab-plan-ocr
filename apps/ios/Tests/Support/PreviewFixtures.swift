@@ -82,7 +82,7 @@ import Foundation
       preferences.appearance = arguments.contains("--preview-dark") ? "dark" : "light"
       _ = try await core.savePreferences(value: preferences)
       let now = AgendaPreviewClock.now(Date())
-      let day = Calendar.current.startOfDay(for: .now)
+      let day = Calendar.current.startOfDay(for: now)
       func add(
         _ title: String, start: Date, end: Date, calendar: Int = 0, allDay: Bool = false,
         room: String = "Raum 2.14"
@@ -235,6 +235,13 @@ enum AgendaPreviewClock {
   static func now(_ actual: Date) -> Date {
     #if DEBUG && targetEnvironment(simulator)
       let arguments = ProcessInfo.processInfo.arguments
+      if arguments.contains("--agenda-fixture"),
+        let index = arguments.firstIndex(of: "--preview-now"),
+        arguments.indices.contains(index + 1),
+        let fixed = ISO8601DateFormatter().date(from: arguments[index + 1])
+      {
+        return fixed
+      }
       if let index = arguments.firstIndex(of: "--agenda-fixture"),
         arguments.indices.contains(index + 1),
         ["timeline", "short", "full", "crowded", "long-title"].contains(arguments[index + 1])
