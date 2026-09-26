@@ -1,8 +1,12 @@
-# Laßnitzhöhe · Termine für iPhone
+# rehab-plan-ocr · Laßnitzhöhe für iPhone
 
 Native SwiftUI-App zum lokalen Erfassen, Prüfen und Verwalten von Terminplänen.
 Bilderkennung, Kalenderzugriff und Sprachgespräch laufen auf dem Gerät. Kalenderänderungen
 benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiterung gehören zur App.
+
+Die [Repository-Migration und private Wiederherstellung](docs/development/repository-migration.md)
+beschreibt die neue Historie, die extern archivierten Originalnachweise und die
+unveränderte Kompatibilität zur installierten App.
 
 ## Aufbau
 
