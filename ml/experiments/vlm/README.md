@@ -16,9 +16,9 @@ Model-family support alone does not establish checkpoint compatibility.
 Build from a clean checkout at the lock's revision:
 
 ```sh
-cmake -S ml/experiments/vlm -B models/private/experiments/build \
-  -DLLAMA_SOURCE="$PWD/models/private/llama.cpp" -DCMAKE_BUILD_TYPE=Release
-cmake --build models/private/experiments/build --parallel 4
+cmake -S ml/experiments/vlm -B .local/builds/vlm \
+  -DLLAMA_SOURCE="$PWD/.local/upstream/llama.cpp" -DCMAKE_BUILD_TYPE=Release
+cmake --build .local/builds/vlm --parallel 4
 python3 ml/experiments/vlm/fetch-vlm.py
 ```
 
@@ -54,7 +54,7 @@ uv run --python 3.12 --with torch==2.11.0 --with numpy==2.2.6 \
   --with protobuf==4.25.8 --with pillow==12.1.1 \
   python ml/experiments/vlm/qualify-vlm.py
 python3 ml/evaluation/recognition/compare-regions.py /path/to/retained/run.json \
-  artifacts/private/my-comparison
+  .local/runs/my-comparison
 ```
 
 The converter imports `gguf-py` from its own pinned checkout. Leave
@@ -71,13 +71,19 @@ checkpoint directories.
 The comparison chooses one unresolved appointment (or the first appointment when
 complete) per photograph, retaining its original-resolution crop, transforms,
 portable draft summary and both source-linked readings. It does not replace the
-portable draft or turn model text into approved calendar values. Import the photo in
-**Dataset**, choose **Compare portable / GLM-OCR / PaddleOCR-VL-1.6**, and inspect
-the result alongside the source and provisional annotation. Inconclusive or limited
-output stays visible. Each reader has an independent 60-second limit.
+portable draft or turn model text into approved calendar values. The command-line
+comparison retains the source crop, provisional annotation and readings for local
+review. Each reader has an independent 60-second limit. The retired desktop Dataset
+screen is not part of the current iOS application.
 
-The 20-photo exploratory run is recorded in `docs/simple-app-delivery.md`. No
+The 20-photo exploratory run is retained in the [historical delivery report](../../../docs/releases/history/simple-app-delivery.md). No
 verified appointment-level accuracy scores or physical-device qualification are
 available, so neither additional model is shipped.
 
-For an offline side-by-side report, run `python3 ml/evaluation/recognition/report-regions.py artifacts/private/my-batch artifacts/private/refinement-v3-baseline`. The generated `review.html` escapes readings and uses only local images.
+For an offline side-by-side report, run `python3 ml/evaluation/recognition/report-regions.py .local/runs/my-batch .local/runs/refinement-v3-baseline`. The generated `review.html` escapes readings and uses only local images.
+
+Build output now defaults to `.local/builds/vlm`; conversion outputs and the
+`candidates.json` consumed by the comparison stay under
+`.local/models/runtime/experiments`. Use `--output` to isolate a new conversion.
+Existing verified models, run manifests and compatibility aliases are preserved;
+this path cleanup does not re-convert or re-qualify an existing checkpoint.

@@ -65,7 +65,10 @@ def fetch(lock, destination):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
-        "--destination", type=Path, default=ROOT / "models/private/experiments/checkpoints"
+        "--destination", type=Path, default=ROOT / ".local/models/runtime/experiments/checkpoints"
     )
     a = p.parse_args()
-    fetch(json.loads((ROOT / "ml/registry/runtime/vlm-experiments.lock.json").read_text()), a.destination)
+    fetch(
+        json.loads((ROOT / "ml/registry/runtime/vlm-experiments.lock.json").read_text()),
+        a.destination,
+    )

@@ -45,7 +45,7 @@ def qualify(args):
                 raise ValueError("Checkpoint integrity failed: " + item["path"])
             items.append({**item, "sha256": digest})
         source_hashes[candidate["id"]] = items
-    output = args.binary.parent.parent
+    output = args.output
     output.mkdir(parents=True, exist_ok=True)
     converter = args.runtime / "convert_hf_to_gguf.py"
     text = output / "paddle-f16.gguf"
@@ -174,17 +174,16 @@ def qualify(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--runtime", type=Path, default=ROOT / "models/private/llama.cpp")
+    p.add_argument("--runtime", type=Path, default=ROOT / ".local/upstream/llama.cpp")
+    p.add_argument("--binary", type=Path, default=ROOT / ".local/builds/vlm/reha-vlm-read")
     p.add_argument(
-        "--binary", type=Path, default=ROOT / "models/private/experiments/build/reha-vlm-read"
-    )
-    p.add_argument(
-        "--glm", type=Path, default=ROOT / "models/private/experiments/checkpoints/glm-ocr"
+        "--glm", type=Path, default=ROOT / ".local/models/runtime/experiments/checkpoints/glm-ocr"
     )
     p.add_argument(
         "--paddle",
         type=Path,
-        default=ROOT / "models/private/experiments/checkpoints/paddleocr-vl-1.6",
+        default=ROOT / ".local/models/runtime/experiments/checkpoints/paddleocr-vl-1.6",
     )
+    p.add_argument("--output", type=Path, default=ROOT / ".local/models/runtime/experiments")
     p.add_argument("--reconvert", action="store_true")
     qualify(p.parse_args())
