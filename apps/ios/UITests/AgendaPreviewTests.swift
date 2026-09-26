@@ -563,11 +563,13 @@ import XCTest
     confirm.tap()
     expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: confirm)
     waitForExpectations(timeout: 10)
-    let saved = app.staticTexts.matching(
-      NSPredicate(format: "label BEGINSWITH %@", "Gespeichert in")
-    ).firstMatch
+    // The conversation uses its short spoken receipt; the editor has a
+    // different "Gespeichert in …" receipt. Verify the visible conversation
+    // response and then the actual calendar entry below.
+    let saved = app.staticTexts["voice-response-details"]
     for _ in 0..<5 where !saved.isHittable { app.swipeDown() }
     XCTAssertTrue(saved.waitForExistence(timeout: 10))
+    XCTAssertTrue(saved.label.hasPrefix("Der Termin ist gespeichert."))
     capture("29-sprachvorschlag-gespeichert")
     app.tabBars.buttons["Termine"].tap()
     let outside = app.buttons.matching(

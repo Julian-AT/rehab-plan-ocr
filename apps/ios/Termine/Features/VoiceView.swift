@@ -51,7 +51,11 @@ struct VoiceSnapshot {
       if newValue == .action {
         candidates = []
         selected = nil
-        edits.interrupt()
+        // Completed receipts stay visible. Only an outstanding edit needs its
+        // async session invalidated when the conversation changes subject.
+        if edits.proposal != nil || edits.systemEvent != nil || edits.busy {
+          edits.interrupt()
+        }
       }
     }
   }
