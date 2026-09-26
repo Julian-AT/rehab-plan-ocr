@@ -75,3 +75,17 @@ Unterstützte Xcode-Buildbefehle übergeben `ARCHS=arm64` ausdrücklich auch an
 Paketabhängigkeiten. Der erste gemeinsame Build hatte trotz arm64-App-Einstellung
 zusätzliche x86_64-Paketkompilierungen begonnen. Die bereits unterstützten
 Apple-Silicon-Simulatoren, Gerätearchitektur und iOS-Mindestversion bleiben erhalten.
+
+## Release-Symbole
+
+Das Rust-Releaseprofil erzeugt optimierte Builds mit Zeileninformationen und
+entfernt diese nicht vor dem abschließenden Xcode-Linkschritt. `split-debuginfo`
+ist ausdrücklich auf `packed` gesetzt. Der isolierte Regressionstest baut ein
+kleines echtes Releaseprogramm mit genau diesem Profil, vergleicht die UUIDs von
+Programm und dSYM und prüft den enthaltenen Quelldateinamen. Das alte Profil mit
+`strip = true` fällt durch diese Prüfung; das korrigierte Profil besteht.
+
+Dies belegt die Symbolerzeugung der Toolchain, noch nicht die Vollständigkeit der
+Symbole eines ausgelieferten App-Archivs. Dessen dSYMs, UUIDs und Herkunft müssen
+bei der gesonderten Paketabnahme mit dem tatsächlich verteilten Build verglichen
+und aufbewahrt werden.

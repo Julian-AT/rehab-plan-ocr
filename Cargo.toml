@@ -49,4 +49,7 @@ opt-level = 3
 
 [profile.release]
 lto = "thin"
-strip = true
+# Preserve file/line information until Xcode has assembled the archive's dSYMs.
+debug = "line-tables-only"
+split-debuginfo = "packed"
+strip = "none"
