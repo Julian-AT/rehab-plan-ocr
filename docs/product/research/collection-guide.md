@@ -6,6 +6,8 @@ Dieser Leitfaden bereitet die lokale Erhebung vor. Die vorhandenen 20 Planfotos
 bleiben Entwicklungsdaten. Neue Daten werden erst nach Prüfung ihrer Herkunft,
 Nutzungsfreigabe, Datenschutzmasken und Referenzen für einen Versuch verwendet.
 Der Nutzer organisiert den Zugang zu Teilnehmenden und Einrichtungen.
+Für die zwei moderierten Produktprüfungen stehen ein eigener
+[Aufgabenablauf und ein Sitzungsprotokoll](usability-rounds.md) bereit.
 
 ## Vor dem ersten Termin
 
