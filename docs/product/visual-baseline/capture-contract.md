@@ -251,3 +251,31 @@ Kanalabweichung 4/1 und unverändertem Zentralinhalt. Referenzkatalog, Bilder un
 Vergleichsschwellen wurden nicht geändert. Der separate Nachprüfbeleg liegt unter
 `visual-final-suite-review-20260926-s20-001/comparison-verification.json`, SHA-256
 `b924c32b153139bd98262da02967eb81734319b72dd9acb4bace25ccdb28a410`.
+
+## Zweite vollständige Wiederholung am 26. September 2026
+
+`ui-complete-20260926-s20-002` an `2979801` führt alle 70 Methoden aus: 68 bestanden,
+zwei fehlgeschlagen, keine übersprungen. Die drei Aufnahmetests bestehen.
+`visual-baseline-20260926-s20-002` bleibt streng **fehlgeschlagen: 17/22**. Beide
+Index-2-Bilder weichen um je 3.745, beide unteren Normallisten um je 7.268 Pixel
+ab; sämtliche Unterschiede liegen in der rechten Indikatorspur x = 1188…1196.
+Alle anderen Apppixel dieser vier Bilder sind exakt. Der dunkle Tagesabschluss
+hat 1.559 abweichende Pixel mit maximaler Kanalabweichung 4, der zentrale Inhalt
+ist exakt. Der helle Tagesabschluss ist diesmal vollständig pixelgleich. Seine
+frühere Ein-Kanal-Abweichung ist somit zwischen Läufen nicht konstant.
+
+Der erhaltene Quellen-/Gesten-/Bildbeleg liegt unter
+`.local/runs/ui-failure-review-20260926-s20-002/verification.json`.
+Der fehlgeschlagene Großschriftfall tippte laut tatsächlichem Gestenarchiv auf
+(374,9; 53⅓) Punkte, oberhalb der Navigation; die teilweise verdeckte Listzeile
+war trotzdem `isHittable`. Die Testhilfe verlangt künftig den ausdrücklich
+gewählten Randpunkt innerhalb der sichtbaren Inhaltsfläche. Aufeinanderfolgende
+Dialoge warten zusätzlich auf das tatsächliche Schließen der Fotoauswahl.
+Der andere Fehler fällt mit dokumentiertem 138-Sekunden-Clamshell-Ruhezustand
+zusammen; das Video zeigt die erwartete Antwort bereits vor der Unterbrechung.
+Der neue gezielte Lauf mit zwölf Fällen besteht einschließlich beider Abläufe.
+Kein Produktlayout, Referenzbild oder Vergleichsschwellwert wurde dafür geändert.
+Eine abschließende Absicherung liest den Rahmen einer noch nicht vorhandenen
+Lazy-Listzeile erst nach ihrer Existenzprüfung. Der Großschriftablauf besteht
+auch mit dieser endgültigen Testhilfe erneut in `ui-visible-targets-20260926-s20-002`;
+Quellen, Produkte und Paketprüfung sind jeweils getrennt erhalten.

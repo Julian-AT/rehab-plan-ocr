@@ -29,8 +29,36 @@ import XCTest
     XCTAssertTrue(element.isHittable)
   }
   private func edgeTap(_ element: XCUIElement) {
-    show(element)
-    element.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
+    // isHittable only promises some reachable point. A partly clipped row can
+    // still put this deliberately chosen trailing point under the status bar.
+    for _ in 0..<20 {
+      let navigation = app.navigationBars.firstMatch
+      let tabs = app.tabBars.firstMatch
+      let keyboard = app.keyboards.firstMatch
+      let top = navigation.exists ? navigation.frame.maxY + 12 : app.frame.minY + 12
+      let bottom =
+        keyboard.exists
+        ? keyboard.frame.minY - 12
+        : tabs.exists ? tabs.frame.minY - 12 : app.frame.maxY - 44
+      let viewport = CGRect(x: 0, y: top, width: app.frame.width, height: bottom - top)
+      let frame = element.exists ? element.frame : .zero
+      let point = CGPoint(x: frame.minX + frame.width * 0.97, y: frame.midY)
+      if element.exists, element.isHittable, viewport.contains(point) {
+        let evidence = XCTAttachment(string: "frame=\(frame); point=\(point); viewport=\(viewport)")
+        evidence.name = "edge-tap-\(element.identifier)"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
+        return
+      }
+      let towardEarlier = element.exists && frame.midY < viewport.minY
+      let origin = app.coordinate(withNormalizedOffset: .zero).withOffset(
+        CGVector(dx: viewport.midX, dy: viewport.midY))
+      origin.press(
+        forDuration: 0.05,
+        thenDragTo: origin.withOffset(CGVector(dx: 0, dy: towardEarlier ? 100 : -100)))
+    }
+    XCTFail("Trailing activation point did not enter the visible content area")
   }
   private func showEditorField(_ element: XCUIElement, towardEarlier: Bool = false) {
     // A large swipe can put a field behind the navigation bar while XCTest
@@ -64,6 +92,16 @@ import XCTest
     // PUPickerUnavailableView briefly exposes another "Abbrechen" with an
     // infinite frame. Wait for the loaded Photos navigation bar's real control.
     app.navigationBars["Fotos"].buttons["Cancel"]
+  }
+  private func dismissTracePhotoPicker() {
+    expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: photoPickerCancel)
+    waitForExpectations(timeout: 15)
+    photoPickerCancel.tap()
+    expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: photoPickerCancel)
+    waitForExpectations(timeout: 15)
+    expectation(
+      for: NSPredicate(format: "hittable == true"), evaluatedWith: app.navigationBars["Tracing"])
+    waitForExpectations(timeout: 15)
   }
   private func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: app.screenshot())
@@ -210,7 +248,7 @@ import XCTest
     capture("simple-large-tracing")
     edgeTap(app.buttons["trace-photos"])
     XCTAssertTrue(photoPickerCancel.waitForExistence(timeout: 15))
-    photoPickerCancel.tap()
+    dismissTracePhotoPicker()
     edgeTap(app.buttons["trace-files"])
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
     app.buttons["Abbrechen"].tap()
@@ -350,7 +388,7 @@ import XCTest
     app.buttons["open-tracing"].tap()
     edgeTap(app.buttons["trace-photos"])
     XCTAssertTrue(photoPickerCancel.waitForExistence(timeout: 8))
-    photoPickerCancel.tap()
+    dismissTracePhotoPicker()
     edgeTap(app.buttons["trace-files"])
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
     let browse = app.buttons["Durchsuchen"]
