@@ -98,10 +98,13 @@ Referenzen, Modelle, Sicherungen und Buildprodukte bleiben aus Git ausgeschlosse
 ## Verbleibende Serialisierung
 
 UniFFI erzeugt die Swift-Bindings ausschließlich über `make bindings`; normale
-Builds vergleichen sie mit dem Generator. `NativeBridge` reicht noch einige
-Plattformaufträge als String mit JSON-Nutzlast an `NativeServices.perform` weiter.
-Kalenderoperationen und Schreibergebnisse sind auf der Rust/UniFFI-Seite typisiert,
-werden in dieser Brücke jedoch weiterhin in Dictionaries übersetzt. Diese
-Plattformgrenze ist noch umzubauen und darf nicht als vollständig typisiert gelten.
+Builds vergleichen sie mit dem Generator. Kalenderlesen, Mutationen,
+Import/Undo, Agenda-Abgleich und native Texterkennung verwenden typisierte
+Aufträge und Ergebnisse bis zu `NativeServices`. Die Vision-Grenze überträgt
+Bildbytes direkt; ihr gespeichertes Herkunftsmanifest behält das bestehende Format.
+Alte Core-Hostadapter, ausdrücklich kompatible Kalenderaufrufe und
+`NativeServices.perform` behalten ihre String-/JSON-Verträge. Weitere interne
+Serialisierungen und Domain-Fehlerprojektionen sind noch zu prüfen; Details stehen
+im [Grenzeninventar](../development/typed-boundaries.md).
 Gespeicherte Dokumente, Wiederherstellungsjournale, Diagnoseexporte und
 Modell-Evaluationsdateien behalten ihre eigenständigen Serialisierungsverträge.

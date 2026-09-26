@@ -3,6 +3,7 @@ use crate::{
     AgendaSyncResult, AppError, CalendarLinkInspection, CalendarPlatformStatus, CalendarReadEvent,
     CalendarReadQuery, CalendarReadReference, CalendarReadResult, EventCalendarDestination,
     EventMutationRequest, EventMutationResult, OwnedEventResolution, RecognitionJob,
+    TextRecognitionRequest, TextRecognitionResult,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -312,6 +313,7 @@ pub trait AppleHost: Send + Sync {
     fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar>;
     fn apply(&self, operation: CalendarOperation, recovery_only: bool) -> Result<CalendarResult>;
     fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>>;
+    fn recognize_text(&self, request: TextRecognitionRequest) -> Result<TextRecognitionResult>;
     fn sync_agenda(&self, request: AgendaSyncRequest) -> Result<AgendaSyncResult>;
     fn inspect_calendar_links(
         &self,
@@ -331,6 +333,16 @@ pub(crate) struct HostBridge {
     jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
+    fn recognize_text(
+        &self,
+        request: service::text_recognition::Request,
+    ) -> service::Response<service::text_recognition::Output> {
+        request.validate()?;
+        self.host
+            .recognize_text(request.into())
+            .map(Into::into)
+            .map_err(platform_failure)
+    }
     fn resolve_owned_event(
         &self,
         record: reha_core::store::OwnedEventRecord,
@@ -452,7 +464,7 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "editSystemEvent" | "recognize" => serde_json::from_str(
+                "editSystemEvent" => serde_json::from_str(
                     &self
                         .host
                         .calendar_event_call(command.into(), args.to_string())?,
@@ -1449,8 +1461,26 @@ mod host_routing_tests {
         failure: Option<service::ServiceError>,
         calls: Option<HostCalls>,
         response: Option<Value>,
+        recognition: Option<TextRecognitionResult>,
     }
     impl AppleHost for Host {
+        fn recognize_text(&self, request: TextRecognitionRequest) -> Result<TextRecognitionResult> {
+            if let Some(calls) = &self.calls {
+                calls.lock().unwrap().push((
+                    "typedRecognition".into(),
+                    json!({
+                        "image":request.image,"budget_ms":request.budget_ms
+                    }),
+                ));
+            }
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(self
+                .recognition
+                .clone()
+                .expect("Recognition fixture missing"))
+        }
         fn calendar_status(&self) -> Result<CalendarPlatformStatus> {
             if let Some(error) = &self.failure {
                 return Err(failure(error.clone()));
@@ -1703,20 +1733,106 @@ mod host_routing_tests {
         );
     }
     #[test]
-    fn vision_and_current_event_effects_reach_the_native_callback() {
+    fn typed_recognition_keeps_binary_input_and_complete_evidence_without_legacy_calls() {
+        let calls = Arc::new(Mutex::new(vec![]));
+        let regions = vec![Region {
+            id: "r1".into(),
+            polygon: vec![Point { x: 1.25, y: 7.5 }],
+            frame: "page".into(),
+            kind: "text".into(),
+            parent: Some("page".into()),
+            children: vec!["r2".into()],
+        }];
+        let observations = vec![OcrObservation {
+            id: "o1".into(),
+            text: "Raum 204".into(),
+            region_ids: vec!["r1".into()],
+            engine: "Apple Vision".into(),
+            score: Some(0.75),
+            alternatives: vec!["Raum 2O4".into()],
+        }];
+        let bridge = HostBridge {
+            host: Box::new(Host {
+                calls: Some(calls.clone()),
+                recognition: Some(TextRecognitionResult {
+                    regions: regions.clone(),
+                    observations: observations.clone(),
+                    duration_ms: 123,
+                    identity: crate::TextRecognitionIdentity {
+                        engine: "Apple Vision".into(),
+                        revision: 3,
+                        system_version: "fixture".into(),
+                        language_correction: false,
+                    },
+                }),
+                ..Host::default()
+            }),
+            progress: Mutex::new(HashMap::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
+        };
+        let input = service::text_recognition::Request {
+            image: vec![0, 255, 128, 1],
+            budget_ms: 1234,
+        };
+        let output = bridge.recognize_text(input.clone()).unwrap();
+        assert_eq!(
+            serde_json::to_value(output.regions).unwrap(),
+            json!(regions)
+        );
+        assert_eq!(
+            serde_json::to_value(output.observations).unwrap(),
+            json!(observations)
+        );
+        assert_eq!(output.duration_ms, 123);
+        assert_eq!(
+            output.manifest,
+            json!({"engine":"Apple Vision","revision":3,
+            "system_version":"fixture","language_correction":false})
+        );
+        assert_eq!(
+            calls.lock().unwrap().as_slice(),
+            [(
+                "typedRecognition".into(),
+                json!({"image":[0,255,128,1],"budget_ms":1234})
+            )]
+        );
+        for request in [
+            service::text_recognition::Request {
+                image: vec![],
+                ..input.clone()
+            },
+            service::text_recognition::Request {
+                budget_ms: 0,
+                ..input.clone()
+            },
+            service::text_recognition::Request {
+                budget_ms: 60_001,
+                ..input
+            },
+        ] {
+            assert!(bridge.recognize_text(request).is_err());
+        }
+        assert!(bridge.call("recognize", json!({})).is_err());
+        assert_eq!(
+            calls.lock().unwrap().len(),
+            1,
+            "Invalid/legacy input reached native host"
+        );
+    }
+    #[test]
+    fn current_event_effect_reaches_the_legacy_callback() {
         let bridge = HostBridge {
             host: Box::new(Host::default()),
             progress: Mutex::new(HashMap::new()),
             jobs: Arc::new(RecognitionJobs::default()),
         };
-        for command in ["recognize", "editSystemEvent"] {
-            let args = json!({"base64":"synthetic-crop", "budget_ms":1234});
-            let result = bridge.call(command, args.clone()).unwrap();
-            assert_eq!(result["received_command"], command);
-            assert_eq!(result["arguments"], args);
-        }
+        let args = json!({"external_id":"synthetic-event"});
+        let result = bridge.call("editSystemEvent", args.clone()).unwrap();
+        assert_eq!(result["received_command"], "editSystemEvent");
+        assert_eq!(result["arguments"], args);
         for command in [
             "unregistered-effect",
+            "recognize",
             "resolveOwnedEvent",
             "queryEvents",
             "getEvent",
@@ -1774,6 +1890,15 @@ mod host_routing_tests {
             );
             assert_eq!(bridge.event_calendars().unwrap_err(), expected);
             assert_eq!(bridge.calendar_status().unwrap_err(), expected);
+            assert_eq!(
+                bridge
+                    .recognize_text(service::text_recognition::Request {
+                        image: vec![1],
+                        budget_ms: 1234,
+                    })
+                    .unwrap_err(),
+                expected
+            );
             assert_eq!(platform_failure(failure(actual.clone())), expected);
             // Journal/maintenance projections keep their original string schema.
             assert_eq!(
@@ -1823,6 +1948,7 @@ mod host_routing_tests {
                     failure,
                     calls: Some(calls.clone()),
                     response: Some(response),
+                    recognition: None,
                 }),
             )
             .await

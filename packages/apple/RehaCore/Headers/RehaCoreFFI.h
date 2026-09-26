@@ -329,14 +329,21 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, RustBuffer, R
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
-typedef void (*UniffiCallbackInterfaceAppleHostMethod12)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod12)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD13
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD13
-typedef void (*UniffiCallbackInterfaceAppleHostMethod13)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod13)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD14
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD14
+typedef void (*UniffiCallbackInterfaceAppleHostMethod14)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -355,11 +362,12 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceAppleHostMethod6 _Nonnull snapshot;
     UniffiCallbackInterfaceAppleHostMethod7 _Nonnull apply;
     UniffiCallbackInterfaceAppleHostMethod8 _Nonnull decodePhoto;
-    UniffiCallbackInterfaceAppleHostMethod9 _Nonnull syncAgenda;
-    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull inspectCalendarLinks;
-    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull resolveOwnedEvent;
-    UniffiCallbackInterfaceAppleHostMethod12 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod13 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod9 _Nonnull recognizeText;
+    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull syncAgenda;
+    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull inspectCalendarLinks;
+    UniffiCallbackInterfaceAppleHostMethod12 _Nonnull resolveOwnedEvent;
+    UniffiCallbackInterfaceAppleHostMethod13 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod14 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -1567,6 +1575,12 @@ uint16_t uniffi_reha_ffi_checksum_method_applehost_apply(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_DECODE_PHOTO
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_DECODE_PHOTO
 uint16_t uniffi_reha_ffi_checksum_method_applehost_decode_photo(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RECOGNIZE_TEXT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RECOGNIZE_TEXT
+uint16_t uniffi_reha_ffi_checksum_method_applehost_recognize_text(void
     
 );
 #endif

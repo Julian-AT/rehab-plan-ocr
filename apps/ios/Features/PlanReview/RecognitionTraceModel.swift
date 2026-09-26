@@ -182,8 +182,10 @@ private final class RecognitionTraceHost: AppleHost, Sendable {
   private var forbidden: AppError { .Validation(message: "Tracing verändert keine Kalenderdaten.") }
   func decodePhoto(bytes: Data) throws -> Data { try bridge.decodePhoto(bytes: bytes) }
   func calendarEventCall(command: String, arguments: String) throws -> String {
-    guard command == "recognize" else { throw forbidden }
-    return try bridge.calendarEventCall(command: command, arguments: arguments)
+    throw forbidden
+  }
+  func recognizeText(request: TextRecognitionRequest) throws -> TextRecognitionResult {
+    try bridge.recognizeText(request: request)
   }
   func snapshot(records: [ImportRecord]) throws -> LiveCalendar { throw forbidden }
   func calendarStatus() throws -> CalendarPlatformStatus { throw forbidden }

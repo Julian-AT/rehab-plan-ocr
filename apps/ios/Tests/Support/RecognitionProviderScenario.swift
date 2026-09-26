@@ -21,11 +21,13 @@
       return AppError.Validation(message: "Calendar access is forbidden in the recognition probe")
     }
     func calendarEventCall(command: String, arguments: String) throws -> String {
-      guard command == "recognize" else { throw denied() }
+      throw denied()
+    }
+    func recognizeText(request: TextRecognitionRequest) throws -> TextRecognitionResult {
       lock.lock()
       rereads += 1
       lock.unlock()
-      return try native.calendarEventCall(command: command, arguments: arguments)
+      return try native.recognizeText(request: request)
     }
     func decodePhoto(bytes: Data) throws -> Data { try native.decodePhoto(bytes: bytes) }
     func snapshot(records: [ImportRecord]) throws -> LiveCalendar { throw denied() }

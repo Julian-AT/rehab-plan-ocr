@@ -501,8 +501,8 @@ und Notices. Dies ersetzt keinen vollständigen UI-Endlauf oder eine Geräteabna
 ## Weiterhin offen
 
 `Platform.call`, `AppleHost.calendar_event_call` und Teile von
-`NativeServices.perform` bleiben für Plattformkompatibilität und die native
-Vision-Erkennung als String-/JSON-Grenzen vorhanden. `calendar_request` hat
+`NativeServices.perform` bleiben als String-/JSON-Eingänge für bestehende
+Plattformadapter vorhanden. Die aktive Vision-Erkennung verwendet sie nicht mehr. `calendar_request` hat
 keinen aktiven Appansichtsverbraucher mehr; Integrationstests sichern seine
 bestehenden Ergebnisformen. Die kalenderbezogenen Produktpfade für Status,
 Verlauf, Änderungen, Wiederanlauf, Besitzmarker, Systemeditor und Link-Reparatur
@@ -511,8 +511,7 @@ verwenden die oben beschriebenen typisierten Grenzen.
 Die Core-Import-/Undo-Abläufe verwenden `Platform.import_snapshot`/`apply_import`;
 der aktive Agenda-Abgleich ebenfalls typisierte Aufträge und Ergebnisse.
 `calendar_event_call("agenda", ...)` bleibt für den ausdrücklichen Legacy-Refresh.
-Weitere interne Serialisierungen, Fehlerprojektionen und die native Erkennung
-sind noch zu prüfen. Bestehende Bereichs-, Revisions-, Bestätigungs- und
+Weitere interne Serialisierungen und Fehlerprojektionen sind noch zu prüfen. Bestehende Bereichs-, Revisions-, Bestätigungs- und
 Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
 `ServiceError::Legacy` hält die bisherige Verarbeitung von Domain-Fehlertexten
@@ -520,8 +519,41 @@ kompatibel. Native Callback-Fehler dürfen diesen Adapter nicht benutzen. Die
 noch vorhandene textbasierte Zuordnung von Domain-Fehlern ist gesondert zu
 migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
 
+## Binäre native Texterkennung
+
+`Platform.recognize_text`, `AppleHost.recognize_text` und
+`NativeBridge.recognizeText` übertragen aufbereitete Bildbytes und das verbleibende
+Zeitbudget direkt. Ergebniswerte enthalten Regionen, Polygone, Beobachtungen,
+Alternativtexte, Laufzeit und die Vision-Identität. Der aktive `HostBridge.call`
+weist den alten `recognize`-Stringeffekt ab; Trace- und Simulatorhosts erlauben
+nur den ausdrücklich typisierten Erkennungsaufruf.
+
+`NativeTextRecognition` besitzt Bild und Vision-Request je Auftrag. Die Grenze
+prüft maximal 256 MiB vorbereitete PNG-Daten, 50 Millionen Pixel vor der
+Pixeldekodierung und höchstens 60 Sekunden. Das Zeitbudget beginnt vor dem
+Einreihen auf die Workerqueue. Abgelaufene Arbeit liefert `timeout(recognize)`;
+Vision erhält zusätzlich einen abbrechbaren Timer, der den Request nur schwach
+hält. Ein bereits laufender Systemcodec wird dadurch nicht hart unterbrochen.
+
+Der Core-Standardadapter und `NativeServices.perform` bewahren den bisherigen
+JSON-Vertrag für ältere Hosts. Das gespeicherte Manifest behält `engine`,
+`revision`, `system_version` und `language_correction`; der Legacy-Core-Adapter
+bewahrt zusätzlich unbekannte Manifestfelder. Datenbank, Quellen und Journale
+werden nicht migriert.
+
+Die Host-Prüfung erkennt echten synthetischen Text und vergleicht Text,
+Geometrie, Alternativen und Herkunft mit der bisherigen Vision-Abbildung.
+Beschädigte/übergroße Eingaben und vor Arbeitsbeginn abgelaufene Aufträge werden
+geprüft. Rust prüft Routing, Byteerhalt, ungültige Aufträge und alle nativen
+Fehleridentitäten. Workspace-Tests, Clippy, iOS-ONNX-Compile, vollständige native
+Swift-6-Typprüfung und Bindings-Rundweg bestehen unter
+`.local/runs/typed-vision-native-20260926-s20-001`. Die tatsächliche gemeinsame
+App-Ausführung und Geräteabnahme bleiben separate Nachweise.
+
 ## Prüfungen
 
+- `make test-native-text-recognition`: tatsächliche Vision-Erkennung, Ergebnisparität,
+  Byte-/Pixelgrenzen und abgelaufene Arbeit.
 - `make test-native-photo`: acht Orientierungen, Pixelzuordnung, HEIF-Primärbild,
   erneute Normalisierung sowie ungültige und übergroße Eingaben.
 - `make test-service-request`: einmaliger Abschluss, Wiedereintritt,

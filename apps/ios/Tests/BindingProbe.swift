@@ -65,7 +65,7 @@ final class TestHost: AppleHost, Sendable {
     precondition(
       ![
         "queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus", "agenda",
-        "inspectCalendarLinks", "resolveOwnedEvent",
+        "inspectCalendarLinks", "resolveOwnedEvent", "recognize",
       ]
       .contains(
         command),
@@ -86,6 +86,11 @@ final class TestHost: AppleHost, Sendable {
       maintenanceWarnings: recoveryOnly ? ["Erfundener Wartungshinweis"] : [])
   }
   func decodePhoto(bytes: Data) throws -> Data { bytes }
+  func recognizeText(request: TextRecognitionRequest) throws -> TextRecognitionResult {
+    precondition(!Thread.isMainThread)
+    if let error = failure.withLock({ $0 }) { throw error }
+    throw AppError.Validation(message: "Binding host has no recognition provider")
+  }
   func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
     precondition(!Thread.isMainThread)
     linkRecords.withLock { $0.append(records) }

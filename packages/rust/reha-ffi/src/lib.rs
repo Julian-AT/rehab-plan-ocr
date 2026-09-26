@@ -22,6 +22,8 @@ mod calendar_repair;
 pub use calendar_repair::*;
 mod recognition_jobs;
 pub use recognition_jobs::RecognitionJob;
+mod text_recognition;
+pub use text_recognition::*;
 mod speech;
 pub use speech::*;
 mod application;

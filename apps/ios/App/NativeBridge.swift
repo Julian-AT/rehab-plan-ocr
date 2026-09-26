@@ -26,10 +26,7 @@ final class NativeBridge: AppleHost, Sendable {
         throw NativeServiceError.invalidInput("Unbekannte native Aktion.")
       }
       let data = try JSONSerialization.data(withJSONObject: arguments)
-      let timeout =
-        command == "recognize"
-        ? min(60, max(0.001, (arguments["budget_ms"] as? Double ?? 60000) / 1000)) : 60
-      let responseData = try NativeServiceCall.wait(for: operation, timeout: timeout) {
+      let responseData = try NativeServiceCall.wait(for: operation) {
         completion in
         NativeServices.shared.perform(command, arguments: data, completion: completion)
       }

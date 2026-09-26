@@ -7862,6 +7862,184 @@ public func FfiConverterTypeStage_lower(_ value: Stage) -> RustBuffer {
 }
 
 
+public struct TextRecognitionIdentity: Equatable, Hashable {
+    public var engine: String
+    public var revision: UInt64
+    public var systemVersion: String
+    public var languageCorrection: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(engine: String, revision: UInt64, systemVersion: String, languageCorrection: Bool) {
+        self.engine = engine
+        self.revision = revision
+        self.systemVersion = systemVersion
+        self.languageCorrection = languageCorrection
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TextRecognitionIdentity: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTextRecognitionIdentity: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TextRecognitionIdentity {
+        return
+            try TextRecognitionIdentity(
+                engine: FfiConverterString.read(from: &buf), 
+                revision: FfiConverterUInt64.read(from: &buf), 
+                systemVersion: FfiConverterString.read(from: &buf), 
+                languageCorrection: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TextRecognitionIdentity, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.engine, into: &buf)
+        FfiConverterUInt64.write(value.revision, into: &buf)
+        FfiConverterString.write(value.systemVersion, into: &buf)
+        FfiConverterBool.write(value.languageCorrection, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionIdentity_lift(_ buf: RustBuffer) throws -> TextRecognitionIdentity {
+    return try FfiConverterTypeTextRecognitionIdentity.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionIdentity_lower(_ value: TextRecognitionIdentity) -> RustBuffer {
+    return FfiConverterTypeTextRecognitionIdentity.lower(value)
+}
+
+
+public struct TextRecognitionRequest: Equatable, Hashable {
+    public var image: Data
+    public var budgetMs: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(image: Data, budgetMs: UInt64) {
+        self.image = image
+        self.budgetMs = budgetMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TextRecognitionRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTextRecognitionRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TextRecognitionRequest {
+        return
+            try TextRecognitionRequest(
+                image: FfiConverterData.read(from: &buf), 
+                budgetMs: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TextRecognitionRequest, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.image, into: &buf)
+        FfiConverterUInt64.write(value.budgetMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionRequest_lift(_ buf: RustBuffer) throws -> TextRecognitionRequest {
+    return try FfiConverterTypeTextRecognitionRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionRequest_lower(_ value: TextRecognitionRequest) -> RustBuffer {
+    return FfiConverterTypeTextRecognitionRequest.lower(value)
+}
+
+
+public struct TextRecognitionResult: Equatable, Hashable {
+    public var regions: [Region]
+    public var observations: [OcrObservation]
+    public var durationMs: UInt64
+    public var identity: TextRecognitionIdentity
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(regions: [Region], observations: [OcrObservation], durationMs: UInt64, identity: TextRecognitionIdentity) {
+        self.regions = regions
+        self.observations = observations
+        self.durationMs = durationMs
+        self.identity = identity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TextRecognitionResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTextRecognitionResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TextRecognitionResult {
+        return
+            try TextRecognitionResult(
+                regions: FfiConverterSequenceTypeRegion.read(from: &buf), 
+                observations: FfiConverterSequenceTypeOcrObservation.read(from: &buf), 
+                durationMs: FfiConverterUInt64.read(from: &buf), 
+                identity: FfiConverterTypeTextRecognitionIdentity.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TextRecognitionResult, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeRegion.write(value.regions, into: &buf)
+        FfiConverterSequenceTypeOcrObservation.write(value.observations, into: &buf)
+        FfiConverterUInt64.write(value.durationMs, into: &buf)
+        FfiConverterTypeTextRecognitionIdentity.write(value.identity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionResult_lift(_ buf: RustBuffer) throws -> TextRecognitionResult {
+    return try FfiConverterTypeTextRecognitionResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextRecognitionResult_lower(_ value: TextRecognitionResult) -> RustBuffer {
+    return FfiConverterTypeTextRecognitionResult.lower(value)
+}
+
+
 
 public enum ActivitySource: Equatable, Hashable {
     
@@ -9863,6 +10041,8 @@ public protocol AppleHost: AnyObject, Sendable {
     
     func decodePhoto(bytes: Data) throws  -> Data
     
+    func recognizeText(request: TextRecognitionRequest) throws  -> TextRecognitionResult
+    
     func syncAgenda(request: AgendaSyncRequest) throws  -> AgendaSyncResult
     
     func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws  -> CalendarLinkInspection
@@ -10116,6 +10296,31 @@ fileprivate struct UniffiCallbackInterfaceAppleHost {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterData.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeAppError_lower
+            )
+        },
+        recognizeText: { (
+            uniffiHandle: UInt64,
+            request: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> TextRecognitionResult in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceAppleHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.recognizeText(
+                     request: try FfiConverterTypeTextRecognitionRequest_lift(request)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeTextRecognitionResult_lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -11411,6 +11616,31 @@ fileprivate struct FfiConverterSequenceTypeIssue: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeOcrObservation: FfiConverterRustBuffer {
+    typealias SwiftType = [OcrObservation]
+
+    public static func write(_ value: [OcrObservation], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOcrObservation.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OcrObservation] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OcrObservation]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOcrObservation.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePendingWrite: FfiConverterRustBuffer {
     typealias SwiftType = [PendingWrite]
 
@@ -11528,6 +11758,31 @@ fileprivate struct FfiConverterSequenceTypeReadinessQuestion: FfiConverterRustBu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeReadinessQuestion.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRegion: FfiConverterRustBuffer {
+    typealias SwiftType = [Region]
+
+    public static func write(_ value: [Region], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRegion.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Region] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Region]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRegion.read(from: &buf))
         }
         return seq
     }
@@ -12131,19 +12386,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_applehost_decode_photo() != 9036) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 28434) {
+    if (uniffi_reha_ffi_checksum_method_applehost_recognize_text() != 36071) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links() != 41104) {
+    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 28106) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_resolve_owned_event() != 61319) {
+    if (uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links() != 18440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 60980) {
+    if (uniffi_reha_ffi_checksum_method_applehost_resolve_owned_event() != 50581) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 42251) {
+    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 21432) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 63512) {
         return InitializationResult.apiChecksumMismatch
     }
 
