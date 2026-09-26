@@ -12,6 +12,8 @@ import os
 import platform
 import re
 import shutil
+import stat
+import subprocess
 import uuid
 
 from artifacts import ROOT, guard, local_path, locked, sha, write_new
@@ -52,6 +54,61 @@ def identity(path):
     return {"sha256": digest, "bytes": before.st_size}
 
 
+METADATA_FIELDS = ("sha256", "bytes", "mode", "mtime_ns", "uid", "gid", "flags")
+
+
+def metadata(path):
+    """Only reviewed ordinary files; preserve empty xattrs/ACLs by refusing richer ones."""
+    if platform.system() != "Darwin":
+        raise ValueError("Export metadata preservation requires macOS/APFS")
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+        raise ValueError("Expected an independent regular export")
+    if stat.S_IMODE(before.st_mode) & ~0o777 or getattr(before, "st_flags", 0) & ~0x8040:
+        raise ValueError("Unreviewed export permissions or flags")
+    if subprocess.check_output(["/usr/bin/xattr", "-l", str(path)]):
+        raise ValueError("Export extended attributes require separate preservation")
+    if subprocess.check_output(["/bin/ls", "-lde", str(path)], text=True).splitlines()[1:]:
+        raise ValueError("Export ACLs require separate preservation")
+    value = identity(path) | {
+        "mode": stat.S_IMODE(before.st_mode),
+        "mtime_ns": before.st_mtime_ns,
+        "uid": before.st_uid,
+        "gid": before.st_gid,
+        "flags": before.st_flags,
+    }
+    after = path.lstat()
+    if any(
+        getattr(before, key) != getattr(after, key)
+        for key in (
+            "st_ino",
+            "st_dev",
+            "st_mode",
+            "st_nlink",
+            "st_size",
+            "st_mtime_ns",
+            "st_ctime_ns",
+            "st_uid",
+            "st_gid",
+            "st_flags",
+        )
+    ):
+        raise ValueError("Export changed during metadata verification")
+    return value
+
+
+def content(value):
+    return {key: value[key] for key in ("sha256", "bytes")}
+
+
+def sync_directory(path):
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def plan(root, destination):
     names = sorted(
         str(p.relative_to(root))
@@ -60,9 +117,11 @@ def plan(root, destination):
     )
     guard(root, names)
     groups = {}
+    originals = {}
     for name in names:
         path = local_path(root, name)
-        value = identity(path)
+        originals[name] = metadata(path)
+        value = content(originals[name])
         if value != pinned_identity(root):
             raise ValueError("Unknown baseline; only the reviewed registry identity is eligible")
         with path.open("rb") as stream:
@@ -71,7 +130,10 @@ def plan(root, destination):
         group = groups.setdefault(value["sha256"], value | {"paths": []})
         group["paths"].append(name)
     value = {
-        "schema_version": 1,
+        "schema_version": 2,
+        "original_metadata": {
+            n: originals[n] for g in groups.values() if len(g["paths"]) > 1 for n in g["paths"]
+        },
         "registry_sha256": sha(root / PIN),
         "root": str(root),
         "action": "coalesce-immutable-baselines",
@@ -85,38 +147,60 @@ def plan(root, destination):
 
 def verified_clone(source, destination, expected):
     temporary = destination.with_name(f".{destination.name}.clone-{uuid.uuid4().hex}")
-    previous = identity(destination) if destination.exists() else None
-    if destination.is_symlink() or (previous is not None and previous != expected):
-        raise ValueError("Destination no longer matches the reviewed identity")
+    source_before = metadata(source)
+    source_inode = (source.stat().st_dev, source.stat().st_ino)
+    previous = metadata(destination) if destination.exists() else None
+    destination_inode = (destination.stat().st_dev, destination.stat().st_ino) if previous else None
+    if (
+        destination.is_symlink()
+        or content(source_before) != content(expected)
+        or (
+            previous is not None
+            and (
+                content(previous) != content(expected)
+                or ("mode" in expected and previous != expected)
+            )
+        )
+    ):
+        raise ValueError("Destination/source no longer matches the reviewed identity")
+    desired = expected if "mode" in expected else previous or (source_before | {"mode": 0o444})
     try:
         clone(source, temporary)
-        if identity(temporary) != expected or temporary.stat().st_ino == source.stat().st_ino:
-            raise ValueError("Clone did not preserve bytes in a separate inode")
-        temporary.chmod(0o444)
+        temporary.chmod(desired["mode"])
+        os.utime(temporary, ns=(temporary.stat().st_atime_ns, desired["mtime_ns"]))
+        os.chflags(temporary, desired["flags"])
+        if metadata(temporary) != desired or temporary.stat().st_ino == source.stat().st_ino:
+            raise ValueError("Clone did not preserve metadata/content in a separate inode")
+        if (
+            metadata(source) != source_before
+            or (source.stat().st_dev, source.stat().st_ino) != source_inode
+        ):
+            raise ValueError("Source changed while preparing its clone")
         with temporary.open("rb") as stream:
             os.fsync(stream.fileno())
         if previous is None:
-            # Exclusive publication links only the temporary clone, never a source
-            # model. Its temporary name is removed below, leaving a separate inode.
+            # Publish only this separate clone, never a hardlink to a live export.
             os.link(temporary, destination)
         else:
             if (
                 destination.is_symlink()
                 or not destination.exists()
-                or identity(destination) != previous
+                or metadata(destination) != previous
+                or (destination.stat().st_dev, destination.stat().st_ino) != destination_inode
             ):
                 raise ValueError("Destination changed while preparing its clone")
-            # This final check does not replace the required quiet window/lock:
-            # uncooperative writers can still race the check and atomic rename.
             temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
+    sync_directory(destination.parent)
+    if metadata(destination) != desired:
+        raise ValueError("Published clone metadata/content changed")
 
 
 def apply(root, source):
     value = json.loads(source.read_text())
     if (
-        value["schema_version"] != 1
+        value["schema_version"] not in {1, 2}
         or value["registry_sha256"] != sha(root / PIN)
         or value["root"] != str(root)
         or value["action"] != "coalesce-immutable-baselines"
@@ -129,8 +213,17 @@ def apply(root, source):
         result = json.loads(receipt.read_text())
         if result["plan_sha256"] != digest:
             raise ValueError("Model-object plan changed")
+        if value["schema_version"] == 2:
+            for name, expected in value["original_metadata"].items():
+                if not eligible(name) or metadata(local_path(root, name)) != expected:
+                    raise ValueError("Completed baseline metadata/content changed")
         return result
+    if value["schema_version"] != 2:
+        raise ValueError("Unapplied legacy plans need a new metadata-preserving inventory")
     names = [n for g in value["groups"] for n in g["paths"]]
+    originals = value["original_metadata"]
+    if set(originals) != set(names):
+        raise ValueError("Incomplete original export metadata")
     if any(not eligible(n) for n in names) or len(names) != len(set(names)):
         raise ValueError("Only unique immutable baseline export paths are allowed")
     for group in value["groups"]:
@@ -139,7 +232,10 @@ def apply(root, source):
         if not re.fullmatch(r"[a-f0-9]{64}", group["sha256"]) or len(group["paths"]) < 2:
             raise ValueError("Invalid content-addressed model group")
         for name in group["paths"]:
-            if identity(local_path(root, name)) != {k: group[k] for k in ("sha256", "bytes")}:
+            if (
+                content(originals[name]) != content(group)
+                or metadata(local_path(root, name)) != originals[name]
+            ):
                 raise ValueError("A baseline changed after the preview; no model replaced")
     objects = local_path(root, ".local/objects/sha256")
     guard(root, names + [str(objects.relative_to(root))])
@@ -164,8 +260,8 @@ def apply(root, source):
             path = local_path(root, name)
             if identity(path) != expected:
                 raise ValueError("Baseline changed before replacement")
-            verified_clone(object_path, path, expected)
-        if any(identity(local_path(root, n)) != expected for n in group["paths"]):
+            verified_clone(object_path, path, originals[name])
+        if any(metadata(local_path(root, n)) != originals[n] for n in group["paths"]):
             raise ValueError("Baseline verification failed after coalescing")
     free = shutil.disk_usage(root).free
     result = {
@@ -179,6 +275,7 @@ def apply(root, source):
         "observed_volume_delta_bytes": free - started["free_before_bytes"],
         "limitation": "APFS sharing is not a reclaim estimate; volume delta includes system activity",
         "mutable_checkpoints_touched": False,
+        "paths_bytes_modes_mtimes_owners_flags_empty_xattrs_acl_preserved": True,
     }
     write_new(receipt, result)
     return result

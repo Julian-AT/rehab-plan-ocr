@@ -53,6 +53,14 @@ inventory-model-objects:
 coalesce-model-objects:
 	python3 tooling/dev/model_objects.py apply --manifest "$(MODEL_OBJECT_MANIFEST)"
 
+SMOKE_A_MANIFEST ?= .local/maintenance/assistant-smoke-a-objects.json
+.PHONY: inventory-smoke-a-objects coalesce-smoke-a-objects
+inventory-smoke-a-objects:
+	python3 tooling/dev/smoke_export_objects.py plan --review .local/maintenance/assistant-smoke-a-cow-review-20260926-s21-001.json --manifest "$(SMOKE_A_MANIFEST)"
+
+coalesce-smoke-a-objects:
+	python3 tooling/dev/smoke_export_objects.py apply --review .local/maintenance/assistant-smoke-a-cow-review-20260926-s21-001.json --manifest "$(SMOKE_A_MANIFEST)"
+
 ARCHIVE_OBJECT_MANIFEST ?= .local/maintenance/archive-objects.json
 .PHONY: inventory-archive-objects coalesce-archive-objects
 inventory-archive-objects:
@@ -137,6 +145,7 @@ help:
 	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Retained static archives: make inventory-archive-objects ARCHIVE_REVIEW=<review> ARCHIVE_OBJECT_MANIFEST=<new-plan>; make coalesce-archive-objects ARCHIVE_OBJECT_MANIFEST=<same-plan>'
+	@echo 'Reviewed smoke exports: make inventory-smoke-a-objects SMOKE_A_MANIFEST=<new-plan>; make coalesce-smoke-a-objects SMOKE_A_MANIFEST=<same-plan>; see docs/development/model-coalescence.md'
 	@echo 'Checkpoints: make inventory-checkpoints RUN=<training-run>; plan-checkpoints/clean-checkpoints CHECKPOINT_MANIFEST=<new-plan>'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'

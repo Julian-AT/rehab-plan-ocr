@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -15,6 +16,7 @@ objects = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(objects)
 
 
+@unittest.skipUnless(sys.platform == "darwin", "Requires macOS/APFS metadata APIs")
 class ModelObjectTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -54,6 +56,35 @@ class ModelObjectTests(unittest.TestCase):
         self.assertEqual(stored[0].read_bytes(), b"GGUF immutable model")
         self.assertEqual(self.paths[1].read_bytes(), b"GGUF immutable model")
         self.assertEqual(self.checkpoint.read_bytes(), b"mutable training state")
+
+    def test_distinct_original_modes_mtimes_flags_survive(self):
+        self.paths[0].chmod(0o644)
+        self.paths[1].chmod(0o440)
+        for index, path in enumerate(self.paths):
+            os.utime(path, ns=(1700000000123456789, 1700000000987654321 + index))
+            os.chflags(path, 0x8040)
+        expected = [objects.metadata(path) for path in self.paths]
+        objects.plan(self.root, self.manifest)
+        objects.apply(self.root, self.manifest)
+        self.assertEqual([objects.metadata(path) for path in self.paths], expected)
+
+    def test_metadata_change_after_plan_refuses_before_cloning(self):
+        objects.plan(self.root, self.manifest)
+        self.paths[-1].chmod(0o600)
+        with self.assertRaisesRegex(ValueError, "baseline changed"):
+            objects.apply(self.root, self.manifest)
+        self.assertFalse((self.root / ".local/objects").exists())
+
+    def test_old_completed_receipt_remains_readable_but_old_unapplied_plan_refuses(self):
+        value = objects.plan(self.root, self.manifest)
+        value["schema_version"] = 1
+        del value["original_metadata"]
+        self.manifest.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, "legacy plans"):
+            objects.apply(self.root, self.manifest)
+        receipt = {"plan_sha256": objects.sha(self.manifest), "status": "historical"}
+        self.manifest.with_suffix(".receipt.json").write_text(json.dumps(receipt))
+        self.assertEqual(objects.apply(self.root, self.manifest), receipt)
 
     def test_changed_model_and_protected_path_refuse_replacement(self):
         value = objects.plan(self.root, self.manifest)
