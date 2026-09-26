@@ -93,6 +93,18 @@ class TokenParityTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cli_token_ids(invalid)
 
+    def test_pinned_info_timestamps_do_not_hide_actual_token_ids(self):
+        recorded = (
+            "0.00.484.224 I llama_completion: number of tokens in prompt = 3\n"
+            "0.00.484.224 I 151668 -> '</think>'\n"
+            "0.00.484.225 I    271 -> '\n\n'\n"
+            "0.00.484.226 I      9 -> 'x'\n"
+        )
+        self.assertEqual(cli_token_ids(recorded), [151668, 271, 9])
+        self.assertEqual(cli_token_ids(recorded.replace("0.00.484.224 ", "")), [151668, 271, 9])
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            cli_token_ids(recorded.replace("271 ->", "lost ->"))
+
     def test_historical_counterfactual_cannot_mutate_the_corrected_command(self):
         original = ["cli", "--binary-file", "file", "--no-escape", "--temp", "0"]
         self.assertEqual(historical_file_command(original), ["cli", "-f", "file", "--temp", "0"])

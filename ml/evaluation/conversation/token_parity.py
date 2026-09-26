@@ -84,7 +84,12 @@ def cli_token_ids(stderr):
     if heading is None:
         raise ValueError("CLI did not report its actual prompt tokens")
     expected = int(heading.group(1))
-    tokens = [int(t) for t in re.findall(r"^\s*(\d+) -> '", stderr[heading.end() :], re.M)]
+    # The pinned common logger optionally prefixes INFO lines with
+    # minutes.seconds.milliseconds.microseconds and the level character.
+    prefix = r"(?:(?:\d+\.\d{2}\.\d{3}\.\d{3} )?I )?"
+    tokens = [
+        int(t) for t in re.findall(r"^" + prefix + r"\s*(\d+) -> '", stderr[heading.end() :], re.M)
+    ]
     if len(tokens) != expected:
         raise ValueError("Incomplete or ambiguous CLI prompt token evidence")
     return tokens
