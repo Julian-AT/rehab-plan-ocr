@@ -296,6 +296,11 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
     edited.title = "Meine geprüfte Bezeichnung".into();
     r.appointments[0] = review::edit(Some(&r.appointments[0]), edited).unwrap();
     let a = &mut r.appointments[0];
+    a.location = "Bestätigter Raum 214".into();
+    let confirmed_location = a.fields.entry("location".into()).or_default();
+    confirmed_location.confirmed_value = Some(serde_json::json!(a.location));
+    confirmed_location.confirmed_at = Some(100);
+    assert!(review::field_confirmed(a, "location"));
     a.calendar_event_id = Some("retained-calendar-id".into());
     a.ics_event_id = Some("retained-ics-id".into());
     a.calendar_saved_hash = Some("retained-calendar-hash".into());
@@ -310,6 +315,7 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
         .reasons
         .push("Text berührt den Bildrand; möglicherweise abgeschnitten.".into());
     let ids: Vec<_> = r.appointments.iter().map(|a| a.id.clone()).collect();
+    let confirmed_original = r.clone();
     let mut structural_change = r.clone();
     structural_change.appointments.pop();
     let unchanged = serde_json::to_value(&structural_change).unwrap();
@@ -326,6 +332,8 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
     );
     let a = &r.appointments[0];
     assert_eq!(a.title, "Meine geprüfte Bezeichnung");
+    assert_eq!(a.location, "Bestätigter Raum 214");
+    assert!(!review::field_confirmed(a, "location"));
     assert_eq!(a.calendar_event_id.as_deref(), Some("retained-calendar-id"));
     assert_eq!(a.ics_event_id.as_deref(), Some("retained-ics-id"));
     assert_eq!(
@@ -342,7 +350,16 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
     assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
     r.extraction_version = 7;
     assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
-    for version in [8, 9] {
+    for version in [8, 9, 10] {
+        let mut confirmed = confirmed_original.clone();
+        confirmed.extraction_version = version;
+        assert!(refinement::refresh_cached_mapping(&mut confirmed).unwrap());
+        assert_eq!(confirmed.appointments[0].location, "Bestätigter Raum 214");
+        // Retain the value while requiring review of the new image mapping.
+        assert!(!review::field_confirmed(
+            &confirmed.appointments[0],
+            "location"
+        ));
         r.extraction_version = version;
         assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
         assert_eq!(

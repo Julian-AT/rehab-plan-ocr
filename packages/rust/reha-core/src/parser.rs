@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 10;
+pub const EXTRACTION_VERSION: u32 = 11;
 
 /// Robust text baselines supply table skew even when no page edge is visible.
 /// Header anchors are a fallback for old axis-aligned observations.
@@ -650,6 +650,29 @@ fn assign(a: &mut Appointment, field: &str, observations: &[&Observation]) {
         .entry(field.into())
         .or_default()
         .extend(observations.iter().map(|o| o.id.clone()));
+    mark_possible_cancellation(a, &value);
+}
+
+fn mark_possible_cancellation(a: &mut Appointment, text: &str) {
+    let text = text.to_lowercase();
+    if [
+        "abgesagt",
+        "entfällt",
+        "gestrichen",
+        "cancel",
+        "handschrift",
+    ]
+    .iter()
+    .any(|s| text.contains(s))
+        && !a.issues.iter().any(|i| i.code == "possible_cancellation")
+    {
+        a.issues.push(Issue::new(
+            "possible_cancellation",
+            "Possible cancellation or handwritten change.",
+            None,
+            true,
+        ));
+    }
 }
 
 fn extract_section(
@@ -854,23 +877,7 @@ fn extract_section(
                 a.provenance.insert(field.into(), ids.clone());
             }
         }
-        if [
-            "abgesagt",
-            "entfällt",
-            "gestrichen",
-            "cancel",
-            "handschrift",
-        ]
-        .iter()
-        .any(|s| text.to_lowercase().contains(s))
-        {
-            a.issues.push(Issue::new(
-                "possible_cancellation",
-                "Possible cancellation or handwritten change.",
-                None,
-                true,
-            ));
-        }
+        mark_possible_cancellation(&mut a, &text);
         if times.len() > 2 {
             a.issues.push(Issue::new(
                 "extra_times",
@@ -2311,6 +2318,66 @@ mod tests {
             .issues
             .iter()
             .any(|i| i.code == "possible_cancellation"));
+    }
+
+    #[test]
+    fn assigned_continuation_cancellations_require_review() {
+        for x in [200., 400.] {
+            let (appointments, _, _) = positioned(&[
+                (0., 0., "Montag, der 21.09.2026"),
+                (0., 40., "Uhrzeit"),
+                (200., 40., "Therapie"),
+                (400., 40., "Hinweise"),
+                (0., 80., "08:00 - 08:30"),
+                (200., 80., "Gymnastik"),
+                (x, 104., "entfällt"),
+                (x, 128., "abgesagt"),
+            ]);
+            assert_eq!(appointments.len(), 1);
+            let a = &appointments[0];
+            assert_eq!(
+                a.issues
+                    .iter()
+                    .filter(|issue| issue.code == "possible_cancellation" && issue.blocking)
+                    .count(),
+                1
+            );
+            let field = if x == 200. { "title" } else { "notes" };
+            assert!(a.provenance[field].contains(&"o6".into()));
+            assert!(crate::readiness::appointment(a, "fixture", "Europe/Vienna")
+                .issues
+                .iter()
+                .any(|issue| issue.code == "possible_cancellation" && issue.blocking));
+        }
+        let (appointments, _, _) = positioned(&[
+            (0., 0., "Montag, der 21.09.2026"),
+            (0., 40., "08:00 - 08:30 Gymnastik"),
+            (200., 64., "entfällt"),
+        ]);
+        assert_eq!(appointments[0].notes, "entfällt");
+        assert!(appointments[0]
+            .issues
+            .iter()
+            .any(|issue| issue.code == "possible_cancellation" && issue.blocking));
+    }
+
+    #[test]
+    fn cancellation_text_outside_the_table_remains_unassigned() {
+        let (appointments, _, unassigned) = positioned(&[
+            (0., 0., "Montag, der 21.09.2026"),
+            (0., 40., "Uhrzeit"),
+            (200., 40., "Therapie"),
+            (0., 80., "08:00 - 08:30"),
+            (200., 80., "Gymnastik"),
+            (200., 300., "entfällt"),
+        ]);
+        assert_eq!(appointments.len(), 1);
+        assert_eq!(appointments[0].title, "Gymnastik");
+        assert!(unassigned.contains(&"o5".into()));
+        assert!(!appointments[0]
+            .issues
+            .iter()
+            .any(|issue| issue.code == "possible_cancellation"));
     }
 
     fn duration_column(clock: &str, duration: &str, title: &str) -> Appointment {

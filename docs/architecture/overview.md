@@ -75,8 +75,9 @@ unterschiedliche Zustände.
 
 Der Bytehash des Originals und die Abbildung zwischen Original, korrigierter Seite
 und Ausschnitt bleiben erhalten. Jeder Feldwert behält seine Quelle; fehlend,
-unlesbar und widersprüchlich sind getrennte Zustände. Extraktionsversion 10 verwirft
-veraltete Parser-Caches. Bestätigte und manuell bearbeitete Werte sind vor automatischer
+unlesbar und widersprüchlich sind getrennte Zustände. Extraktionsversion 11 verwirft
+veraltete Parser-Caches. Absagehinweise in zugeordneten Folgezeilen erfordern ebenfalls
+eine ausdrückliche Prüfung. Bestätigte und manuell bearbeitete Werte sind vor automatischer
 Nachprüfung geschützt; Konflikte werden nicht allein nach Konfidenz entschieden.
 
 Der erste Entwurf wird vor optionaler Nachprüfung gesichert. Unsichere Felder lösen
