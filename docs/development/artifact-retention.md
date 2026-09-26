@@ -14,8 +14,8 @@ nicht bestimmbar. Der Beleg ist
 `.local/maintenance/static-library-copies-hashes-20260926-s19-001.json`.
 
 Die allgemeine Löschregel erlaubt diese Archive ausdrücklich nicht. Der separate
-unten beschriebene Vertrag erhält ihre Pfade und Inhalte; die tatsächliche
-Ausführung am historischen Bestand ist noch offen. Historische Prüfberichte,
+unten beschriebene Vertrag erhält ihre Pfade und Inhalte; die Ausführung am
+26.09.2026 und ihre Nachprüfung sind unten separat belegt. Historische Prüfberichte,
 zugehörige ausführbare Apps, Tests und notwendige Symbole bleiben geschützt.
 Neue private Produktkopien der aktuellen EventKit-/Offline-Abnahmen
 verwenden bereits APFS-Kopien mit eigenen Inodes und geprüftem Inhaltsinventar;
@@ -63,7 +63,7 @@ Zieländerung. Ein echtes C-Archiv lässt sich nach Zusammenführung weiterhin
 gegen beide Pfade linken und ausführen. Die vorhandenen Bereinigungs- und
 Dokumentationsprüfungen bestehen ebenfalls. Quellen und Rohlogs liegen unter
 `.local/runs/archive-objects-development-20260926-s20-001`. Dies prüft das Werkzeug;
-die 17 historischen Archivpfade werden erst in einem ruhigen Fenster bearbeitet.
+die anschließende Ausführung am historischen Bestand ist separat belegt.
 Zusätzlich wurden alle 34 tatsächlichen XCTest-Aufrufdateien dieser Läufe
 unverändert gelesen: Sie verwenden das von diesem Projekt erzeugte Format 1.
 Der Prüfer unterstützt dessen direkte Testziele und die Konfigurationen von
@@ -250,3 +250,35 @@ Währenddessen lief der separate Root-Simulatortest. Die gemessene Volume-Differ
 beträgt +741.376 Bytes; wegen paralleler Systemaktivität und möglicher APFS-Teilung
 ist dies kein exklusiv diesem Worktree zugerechneter Speichergewinn. Fremde
 Simulatoren, Originale, Checkpoints und Gerätesicherungen waren nicht betroffen.
+
+## Statische Archive: ausgeführt und nachgeprüft am 26. September 2026
+
+Der geprüfte Plan `.local/maintenance/archive-objects-20260926-s20-001.json`
+(SHA-256 `620d570eae627836d1a7bb457dc17475cf7d6d605a81a8bd1f4f201a3c32c631`)
+wurde nach Ende des Simulatorlaufs in einem ruhigen Arbeitsfenster ausgeführt.
+Vier Inhaltsgruppen sind jetzt über schreibgeschützte kanonische Objekte und
+17 unabhängige APFS-Klone repräsentiert. Kein Pfad wurde gelöscht. Alle
+ursprünglichen Inhalte, Modi, Besitzer, Änderungszeiten und geprüften Flags
+sowie sämtliche 15.682 Dateien/Verweise der zugehörigen Läufe sind unverändert.
+Die fünf nicht ausgewählten Einzelarchive stimmen ebenfalls mit der Vorprüfung
+überein. Originaldaten, Modelle, Checkpoints und Sicherungen waren nicht im Umfang.
+
+Der tatsächliche Archivleser `/usr/bin/ar -t` liest alle 17 bisherigen Pfade und
+vier kanonischen Objekte: jeweils 739 Mitglieder mit identischer Namensliste.
+Die Inhaltsidentität wird unabhängig davon per SHA-256 geprüft; gleiche
+Mitgliedernamen allein begründen keine Zusammenführung. Alle 21 Pfade haben
+eigene Inodes, die vier Objekte Modus 0444. Ein abgeschlossener Make-Wiederaufruf
+gibt denselben Beleg zurück und ändert weder diesen noch die Datei-Inodes.
+
+Die gemessene Volume-Differenz beträgt **−35.332.096 Bytes**; frei danach
+79.820.869.632 Bytes (74,34 GiB). Damit ist kein Speichergewinn nachgewiesen.
+APFS-Teilung und Systemaktivität lassen sich aus logischen Größen nicht trennen.
+Die 20-GiB-Reserve ist erfüllt; die große Reserve stammt aus der externen
+Bereinigung des Nutzers. Weitere Gruppen bleiben getrennt zu prüfen.
+
+Abschluss- und Nachprüfbeleg liegen neben dem Plan als `.receipt.json` und
+`.verification.json`; ihre SHA-256-Werte sind
+`353069c96bab569001dbc006ae36526e6d6b9b70b7cd6d705723d194a95d0017`
+und `0438b8cb254c4397d21426158dcbb17827657d6daf5e16854a072cac45fce85b`.
+Der separate Vorprüfbeleg `.review.json` erhält die Identitäten der fünf
+Einzelarchive. Historische Laufberichte bleiben unverändert.
