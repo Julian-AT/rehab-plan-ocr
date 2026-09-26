@@ -27,8 +27,8 @@ leer; ihre Aufbewahrungsregeln erlauben weiterhin die kontrollierte Bereinigung
 älterer lokaler Bestände. Neue Probes verwenden temporäre Modulcaches. Der Workflow
 verwendet nur Leserechte, gepinnte Aktionen und 14 Tage Aufbewahrung für ausdrücklich
 ausgewählte synthetische Ergebnisse. Diese Inhaltsprüfung ist keine neue
-Sicherheitsdatenbank-Abfrage und keine bestandene gehostete CI-Ausführung. Die
-übrige vollständige Inhaltsprüfung bleibt offen.
+Sicherheitsdatenbank-Abfrage und keine bestandene gehostete CI-Ausführung. Die damalige Inhaltsprüfung war auf diese Konfigurationen begrenzt; der
+zusammengeführte Stand vom 26. September 2026 folgt unten.
 
 Die 13 Dateien im Repository-Hauptverzeichnis wurden anschließend ebenfalls
 inhaltlich beziehungsweise – bei den generierten Lockdateien – anhand von Herkunft
@@ -43,9 +43,9 @@ Belege: `.local/maintenance/root-workspace-content-review-20260926-s20-001.json`
 und der getrennte Prüfabschluss
 `.local/maintenance/root-workspace-content-verification-20260926-s20-001.json`.
 Alle geprüften Dateien blieben während `make lint` und `make test` an `4ea7fd2`
-unverändert; beide Befehle bestanden. Die Gesamtinhaltsprüfung bleibt offen.
+unverändert; beide Befehle bestanden. Der damalige Beleg betrifft ausschließlich diese 13 Dateien.
 
-Der jüngste Bestandsbeleg
+Der damalige Bestandsbeleg
 `.local/maintenance/repository-inventory-20260926-s20-005.json` erfasst 864 Dateien in
 17 Gruppen. Der gemeinsame Leser `photo_source.rs` wird von Import, Vormerken,
 Wiederaufnahme und Referenzanzeige sowie den Größenprüfungen der Speicherung und
@@ -91,7 +91,7 @@ unverändert. Diese Lektüre ersetzt weder gemeinsame Tests noch Geräteabnahme.
 
 | Inhaltsbereich | Beleg vom 26. September 2026 | Nachgewiesener Umfang |
 |---|---|---|
-| Rust-Domäne, Speicherung, Services, FFI | `core-domain`, `store`, `service`, `ffi`, `parser`, `ocr-runtime`, jeweils `-content-review-20260926-s21-001.json` | Produktlogik, Fehler-/Speichergrenzen, echte FFI-Verbraucher; ausdrücklich ausgeschlossene eingebettete Testbereiche werden gesondert ergänzt. |
+| Rust-Domäne, Speicherung, Services, FFI | `core-domain`, `store`, `service`, `ffi`, `parser`, `ocr-runtime`, jeweils `-content-review-20260926-s21-001.json` | Produktlogik, Fehler-/Speichergrenzen, echte FFI-Verbraucher; 16 zuvor ausgeschlossene eingebettete Testbereiche sind durch `rust-embedded-tests-content-review-20260926-s21-001.json` vollständig ergänzt (1.529 Zeilen, 65 Testfunktionen). |
 | Rust-Unterstützung | `rust-support-content-review-20260926-s21-001.json` | 33 Dateien einschließlich Integrationstests und manueller Beispiele; fachlich unterschiedliche Regressionen bleiben erhalten. |
 | Apple-Produktpfade | `apple-services`, `app-shell`, `intake`, `views`, `audio`, `conversation`, jeweils `-content-review-20260926-s21-001.json` | Darstellung, Aufnahme, native Effekte, Gesprächs- und Audiozuständigkeit. Die neue Umbenennungsregel hat den eigenen Ergänzungsbeleg `conversation-rename-rule-20260926-s21-001.json`. |
 | Apple-Testquellen | `apple-tests-content-review-20260926-s21-001.json`, `integration-tests-content-review-20260926-s21-001.json` | 69 Host-/UI-Dateien und sieben Integrationsdateien; 74 UI- und 22 Integrationstestmethoden. Neue gemeinsame Simulatorläufe bleiben getrennt erforderlich. |
@@ -104,8 +104,26 @@ unverändert. Diese Lektüre ersetzt weder gemeinsame Tests noch Geräteabnahme.
 | Releasewerkzeuge und Tests | `release-content-review-20260926-s21-001.json`, `release-tests-content-review-20260926-s21-001.json` | Neun Implementierungen und acht Testdateien; Paket-/Signatur-/Originalschutz. Alle acht synthetischen Testdateien bestanden, keine aktuelle physische Freigabe. |
 | Dokumentation und Fremdherkunft | `docs-content-review-20260926-s21-001.json`, `vad-vendored-content-review-20260926-s21-001.json` | 144 Dokumentations-/Nachweisdateien und 26 unveränderte Upstream-VAD-Dateien. Aktuelle Abschlussindizes bleiben bis zu ihrer abschließenden Aktualisierung getrennt. |
 
-Die vollständige Zusammenführung auf die endgültigen Dateihashes und der noch
-laufende Modell-/Experimentvergleich bleiben offen. Der automatische
+Die Zusammenführung an `413a70c` ist abgeschlossen: **900/900 versionierte Dateien**
+mit passenden aktuellen Hashes aus 42 Inhalts-/Herkunftsbelegen, ohne ungeklärte
+Dateizuordnung. `repository-inventory-20260926-s21-002.json` ordnet sie 17
+Verbrauchergruppen zu. `content-review-aggregate-20260926-s21-001.json` bindet jeden
+Eintrag an seinen konkreten Prüfbereich; bloße Verbraucher-/Kontextverweise zählen
+nicht als Inhaltsprüfung. Fremdcode und generierte Dateien behalten ihre ausdrücklich
+begrenzte Herkunfts-/Generatorprüfung. Die 65 Experiment-/Registerdateien sowie die
+25 Gesprächsauswertungsdateien sind zusätzlich in `experiments-registry-content-review-20260926-s21-001.json`
+und `conversation-evaluation-content-review-20260926-s21-001.json` erfasst.
+
+Am selben unveränderten Commit bestanden `make lint` und `make test`: 280 Rusttests,
+586 Pythonfälle aus 90 Gruppen einschließlich 21 ausdrücklicher Umgebungs-Skips,
+40 native Probes sowie C-VAD. Der Beleg `combined-verification-20260926-s21-002` ist
+keine vollständige Simulator-, Geräte- oder Modellabnahme. Der erste gemeinsame
+Lauf vom selben Tag scheiterte an fehlenden Lease-Hilfsdateien im künstlichen
+Testcheckout; der korrigierte Test verwendet die echten Hilfen und besteht.
+
+Diese Zusammenführung ist eine Momentaufnahme der versionierten Dateien. Spätere
+Änderungen erhalten Ergänzungsbelege; aktive Trainingsläufe und die feinere lokale
+Artefaktaufbewahrung bleiben getrennt zu prüfen. Der automatische
 Verbraucherklassifikator allein wird weiterhin nicht als Inhaltsfreigabe ausgegeben.
 
 | Kandidat | Verbraucher/Prüfung | Entscheidung |
