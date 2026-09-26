@@ -21,6 +21,8 @@ targets:
       - ../../../packages/apple/AppleServices/Sources/AppleServices/ServiceRequest.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NativeServiceCall.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NativePhoto.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/TextRecognitionContracts.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/NativeTextRecognition.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/CalendarReadContracts.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/CalendarLinkContracts.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/CalendarImportContracts.swift
