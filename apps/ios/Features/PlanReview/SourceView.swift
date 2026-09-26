@@ -5,7 +5,9 @@ import SwiftUI
 
 enum DisplayImage {
   static func load(_ url: URL, maximum: Int = 2048) async throws -> UIImage {
-    try await Task.detached(priority: .userInitiated) {
+    try Task.checkCancellation()
+    let worker = Task.detached(priority: .userInitiated) {
+      try Task.checkCancellation()
       guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
         let image = CGImageSourceCreateThumbnailAtIndex(
           source, 0,
@@ -16,8 +18,35 @@ enum DisplayImage {
             kCGImageSourceThumbnailMaxPixelSize: maximum,
           ] as CFDictionary)
       else { throw AppError.Validation(message: "Bild nicht verfügbar.") }
+      try Task.checkCancellation()
       return UIImage(cgImage: image)
-    }.value
+    }
+    let image = try await withTaskCancellationHandler {
+      try await worker.value
+    } onCancel: {
+      worker.cancel()
+    }
+    try Task.checkCancellation()
+    return image
+  }
+
+  static func isPDF(_ url: URL) async throws -> Bool {
+    try Task.checkCancellation()
+    let worker = Task.detached(priority: .userInitiated) {
+      try Task.checkCancellation()
+      let file = try FileHandle(forReadingFrom: url)
+      defer { try? file.close() }
+      let isPDF = try file.read(upToCount: 5) == Data("%PDF-".utf8)
+      try Task.checkCancellation()
+      return isPDF
+    }
+    let isPDF = try await withTaskCancellationHandler {
+      try await worker.value
+    } onCancel: {
+      worker.cancel()
+    }
+    try Task.checkCancellation()
+    return isPDF
   }
 }
 struct SourceView: View {
@@ -45,29 +74,39 @@ struct SourceView: View {
       }
       .pageTitle("Quellfoto")
       .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
-      .task {
+      .task(id: id) {
         do {
           if let review = try? await core.loadScan(id: id) {
-            dimensions = CGSize(width: Int(review.pageWidth), height: Int(review.pageHeight))
+            try Task.checkCancellation()
             let path = try await core.artifactPath(id: id, artifact: "page.png")
-            image = try await DisplayImage.load(URL(fileURLWithPath: path))
+            try Task.checkCancellation()
+            let loaded = try await DisplayImage.load(URL(fileURLWithPath: path))
+            try Task.checkCancellation()
+            dimensions = CGSize(width: Int(review.pageWidth), height: Int(review.pageHeight))
+            image = loaded
+            pdfURL = nil
           } else {
+            try Task.checkCancellation()
             let path = try await core.artifactPath(id: id, artifact: "source.bin")
+            try Task.checkCancellation()
             let url = URL(fileURLWithPath: path)
-            let isPDF = try await Task.detached {
-              let file = try FileHandle(forReadingFrom: url)
-              defer { try? file.close() }
-              return try file.read(upToCount: 5) == Data("%PDF-".utf8)
-            }.value
+            let isPDF = try await DisplayImage.isPDF(url)
+            try Task.checkCancellation()
             if isPDF {
               pdfURL = url
+              image = nil
             } else {
               let loaded = try await DisplayImage.load(url)
+              try Task.checkCancellation()
               dimensions = loaded.size
               image = loaded
+              pdfURL = nil
             }
           }
-        } catch { self.error = userMessage(error) }
+        } catch {
+          guard !Task.isCancelled else { return }
+          self.error = userMessage(error)
+        }
       }
     }
   }
@@ -151,7 +190,6 @@ struct CorrectionView: View {
   let height: UInt32
   @Environment(\.dismiss) private var dismiss
   @State private var image: UIImage?
-  @State private var pdfURL: URL?
   @State private var sourcePath: String?
   @State private var turns = 0
   @State private var mirrored = false
@@ -245,12 +283,20 @@ struct CorrectionView: View {
           }.disabled(sourcePath == nil || scanner.running)
         }
       }
-      .task {
+      .task(id: id) {
         do {
-          sourcePath = try await core.artifactPath(id: id, artifact: "source.bin")
+          let source = try await core.artifactPath(id: id, artifact: "source.bin")
+          try Task.checkCancellation()
           let path = try await core.artifactPath(id: id, artifact: "original.png")
-          image = try await DisplayImage.load(URL(fileURLWithPath: path))
-        } catch { self.error = userMessage(error) }
+          try Task.checkCancellation()
+          let loaded = try await DisplayImage.load(URL(fileURLWithPath: path))
+          try Task.checkCancellation()
+          sourcePath = source
+          image = loaded
+        } catch {
+          guard !Task.isCancelled else { return }
+          self.error = userMessage(error)
+        }
       }
     }
   }
