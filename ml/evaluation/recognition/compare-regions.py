@@ -22,6 +22,12 @@ def sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def save_report(output, result):
+    temporary = output / ".comparison.json.tmp"
+    temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    temporary.replace(output / "comparison.json")
+
+
 def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None):
     output.mkdir(parents=True, exist_ok=False)
     run = json.loads(run_path.read_text())
@@ -60,6 +66,7 @@ def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None
         "packaging_eligible": False,
         "reason": "Verified grouped references and physical-device qualification required.",
     }
+    save_report(output, result)
     for candidate in manifest["candidates"]:
         if candidate_id and candidate["id"] != candidate_id:
             continue
@@ -90,23 +97,32 @@ def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None
                 ]
             with (output / (candidate["id"] + ".log")).open("w") as log:
                 process = subprocess.Popen(command, stdout=log, stderr=log)
-                started = time.monotonic()
-                while process.poll() is None:
-                    if time.monotonic() - started >= 60 or (cancel_file and cancel_file.exists()):
+                try:
+                    started = time.monotonic()
+                    while process.poll() is None:
+                        if time.monotonic() - started >= 60 or (
+                            cancel_file and cancel_file.exists()
+                        ):
+                            raise ValueError(
+                                "Stopped at deadline or user cancellation; portable draft retained."
+                            )
+                        time.sleep(0.05)
+                    if process.returncode:
+                        raise ValueError("Local reader failed; see retained log.")
+                finally:
+                    if process.poll() is None:
                         process.kill()
-                        process.wait()
-                        raise ValueError(
-                            "Stopped at deadline or user cancellation; portable draft retained."
-                        )
-                    time.sleep(0.05)
-                if process.returncode:
-                    raise ValueError("Local reader failed; see retained log.")
+                        process.wait(timeout=30)
             item.update(json.loads(destination.read_text()))
             item["checkpoint"] = candidate
         except (OSError, ValueError, subprocess.SubprocessError) as error:
             item["reason"] = str(error)
-        result["readers"].append(item)
-    (output / "comparison.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        except BaseException as error:
+            item["reason"] = f"{type(error).__name__}; portable draft and prior results retained."
+            raise
+        finally:
+            result["readers"].append(item)
+            save_report(output, result)
     return result
 
 
