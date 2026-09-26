@@ -63,7 +63,8 @@ model's three-case advantage over the previous candidate remains unchanged under
 the same current rules. No new incorrect or unsafe post-router case appears.
 The rule resolves one previously discussed live reference, proposes only the
 explicit title, and still requires the visible confirmation button before writing.
-Focused conversation tests cover stale/ambiguous targets, extra model fields,+cancellation and pending field collection; these are developer regressions.
+Focused conversation tests cover stale/ambiguous targets, extra model fields,
+cancellation and pending field collection; these are developer regressions.
 
 The second replay's 115 pinned source inputs remained unchanged. Evidence is at
 `.local/runs/assistant-v2-router-replay-20260926-s21-002`; neither replay is a complete
