@@ -23,6 +23,87 @@ ENV = dict(os.environ)
 ENV["PATH"] = os.pathsep.join([str(BIN), str(Path.home() / ".cargo/bin"), ENV.get("PATH", "")])
 ENV.update(CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0")
 APPLE = sys.platform == "darwin"
+XCODEGEN_PRESETS = {
+    "base.yml",
+    "Configs/debug.yml",
+    "Configs/release.yml",
+    "Platforms/iOS.yml",
+    "Products/app-extension.yml",
+    "Products/bundle.ui-testing.yml",
+}
+
+
+def xcodegen_resources_ready(binary):
+    resources = Path(binary).resolve().parent.parent / "share/xcodegen"
+    if not all((resources / "SettingPresets" / name).is_file() for name in XCODEGEN_PRESETS):
+        return False
+    if Path(binary).absolute() == (BIN / "xcodegen").absolute():
+        try:
+            manifest = json.loads((resources / "installation.json").read_text())
+            expected = LOCK["downloads"]["xcodegen"]["darwin-arm64"]["sha256"]
+            return (
+                manifest["archive_sha256"] == expected
+                and all(
+                    (resources / name).is_file()
+                    and hashlib.sha256((resources / name).read_bytes()).hexdigest() == digest
+                    for name, digest in manifest["files"].items()
+                )
+                and XCODEGEN_PRESETS.issubset(
+                    name.removeprefix("SettingPresets/") for name in manifest["files"]
+                )
+            )
+        except (OSError, ValueError, KeyError):
+            return False
+    return True
+
+
+def install_xcodegen_resources(archive, archive_sha256, prefix):
+    """Keep the release's sibling share directory; the binary alone silently omits defaults."""
+    files = {"LICENSE": archive.read("xcodegen/LICENSE")}
+    marker = "xcodegen/share/xcodegen/"
+    for entry in archive.infolist():
+        if not entry.filename.startswith(marker) or entry.is_dir():
+            continue
+        name = entry.filename.removeprefix(marker)
+        path = Path(name)
+        if (
+            path.is_absolute()
+            or ".." in path.parts
+            or path.parts[0] != "SettingPresets"
+            or path.suffix != ".yml"
+            or name in files
+        ):
+            raise ValueError("Unexpected or duplicate XcodeGen preset path")
+        files[name] = archive.read(entry)
+    if not XCODEGEN_PRESETS.issubset(name.removeprefix("SettingPresets/") for name in files):
+        raise ValueError("XcodeGen release is missing required setting presets")
+    parent = prefix / "share"
+    parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="xcodegen-", dir=parent) as staging:
+        temporary = Path(staging) / "xcodegen"
+        temporary.mkdir()
+        for name, data in files.items():
+            path = temporary / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        (temporary / "installation.json").write_text(
+            json.dumps(
+                {
+                    "archive_sha256": archive_sha256,
+                    "files": {
+                        name: hashlib.sha256(data).hexdigest()
+                        for name, data in sorted(files.items())
+                    },
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+        target = parent / "xcodegen"
+        if target.exists():
+            # Only generated tool resources are replaced, after complete staging.
+            shutil.rmtree(target)
+        temporary.replace(target)
 
 
 def run(*command, capture=False, env=None):
@@ -40,10 +121,13 @@ def run(*command, capture=False, env=None):
 
 
 def installed(tool):
-    if shutil.which(tool, path=ENV["PATH"]) is None:
+    binary = shutil.which(tool, path=ENV["PATH"])
+    if binary is None:
         return False
     output = run(tool, "--version", capture=True)
-    return re.search(r"(?<![\d.])" + re.escape(VERSIONS[tool]) + r"(?![\d.])", output) is not None
+    return re.search(
+        r"(?<![\d.])" + re.escape(VERSIONS[tool]) + r"(?![\d.])", output
+    ) is not None and (tool != "xcodegen" or xcodegen_resources_ready(binary))
 
 
 def space(gib):
@@ -90,6 +174,8 @@ def bootstrap():
                     if len(names) != 1:
                         raise RuntimeError(f"Werkzeugarchiv {tool} ist nicht eindeutig.")
                     data = archive.read(names[0])
+                    if tool == "xcodegen":
+                        install_xcodegen_resources(archive, artifact["sha256"], BIN.parent)
             elif artifact["url"].endswith(".tar.gz"):
                 with tarfile.open(path) as archive:
                     members = [

@@ -60,6 +60,10 @@ establish current device behavior or authorize an update.
   The second hosted run confirms the restore fix and passes all tests up to an old
   VAD probe's private-recording/ffmpeg dependency. Its default now uses reproducible
   C signals on both platforms; local detector and native-binding probes pass.
+  The third hosted run passes all Apple tests and binding checks, then exposes
+  missing XcodeGen preset resources on a clean machine. Bootstrap/doctor now retain
+  and verify these resources. The reproduced extension-name collision is fixed;
+  all 157 tool tests, lint and the local simulator build/bundle check pass.
   Full Apple hosted and signed-release evidence remain pending.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one

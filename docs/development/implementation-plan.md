@@ -182,6 +182,25 @@ both platforms. Its 164/350 positive frames and the optional retained local audi
 The remaining native-binding integration and repository lint pass locally. The
 second run's logs and identities are retained in `.local/runs/hosted-ci-20260926-s18-002`.
 
+The third [hosted run](archive:github/run-35285868259)
+at `a17447a` passes Linux, the complete Apple test stage and generated-binding
+verification. The clean device build exposes another setup defect: extracting only
+the XcodeGen executable omits its sibling `share/xcodegen/SettingPresets` tree.
+The tool still returns a correct version and successful generation, but default
+product names are absent and all three extensions collide at `.appex`.
+
+A standalone copy of the pinned release reproduces missing defaults locally.
+Installing its verified preset tree restores distinct `First.appex`/`Second.appex`
+products in actual Xcode build settings. Bootstrap now retains all release presets
+and the tool license, records their hashes, and repairs incomplete/modified local
+installations. Doctor checks resources as well as the version. Four regressions,
+all 157 tool tests, lint, the normal simulator build and its bundle verification
+pass using the newly installed pinned binary. The build's disk reserve was restored
+by removing only the completed project's reproducible SDK module cache, with a
+local receipt; products, logs and private data remain intact. Third-run hosted
+evidence is retained in `.local/runs/hosted-ci-20260926-s18-003`. Full hosted Apple
+build/UI/package acceptance still needs the next run.
+
 ### One civil clock through interpretation and confirmation — 2026-09-26
 
 Each voice/text turn now captures its civil calendar and instant before awaiting
