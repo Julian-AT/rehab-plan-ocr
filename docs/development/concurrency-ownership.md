@@ -74,7 +74,7 @@ Lock entnommen und außerhalb ausgeführt, damit Wiedereintritt nicht blockiert.
 | `Features/Capture/ScanModel.swift`, 13 Tasks | Erasure-Gate lesen/beginnen/beenden; Foto-/Dateikopien, PDF-Erkennung, Seitenermittlung/-rendering, temporäre Sicherung und Share-Wiederaufnahme laufen außerhalb MainActor. Producer-Leases, Erasure-Tickets und Dokumentgenerationen besitzen diese Arbeit. Löschen wartet auf Producer, Jobs und `recognitionBusy`, bevor Arbeitsdateien entfernt werden. Dateiarbeit wird bewusst zu Ende geführt und anschließend verworfen, falls ihre Generation abgelaufen ist. |
 | `Features/Conversation/SystemSpeech.swift`, ein Task | Nur kopierte Samples und unveränderliche Metadaten gehen in die Konvertierung. Der Renderaufruf wartet auf das Ergebnis, reicht Cancel weiter und kontrolliert den Zustand vor Veröffentlichung; die Schleife prüft Abbruch. |
 | `Features/PlanReview/RecognitionTraceModel.swift`, ein Task | Quellenkopie in einen reservierten temporären Arbeitsbereich; danach Prüfung auf Abbruch/Schließen. `close` wartet auf den gehaltenen Trace-Task und das tatsächliche Ende des Rust-Workers, erst dann wird die Workspace-Lease freigegeben. |
-| `Features/PlanReview/SourceView.swift`, zwei Tasks | Bildthumbnail und PDF-Erkennung nehmen lokale Quellenwerte entgegen. Der Besitzer reicht Abbruch an beide Worker weiter; sie prüfen davor und danach. Die Ansichten prüfen nach dem Await vor Bild-/Pfadveröffentlichung und zeigen Abbruch nicht als Fehler. Laufende Systemcodecs können weiterhin zu Ende arbeiten. Parser-/Formatprüfung liegt vor; integrierter Appbuild folgt auf dem gemeinsamen Stand. |
+| `Features/PlanReview/SourceView.swift`, zwei Tasks | Bildthumbnail und PDF-Erkennung nehmen lokale Quellenwerte entgegen. Der Besitzer reicht Abbruch an beide Worker weiter; sie prüfen davor und danach. Die Ansichten prüfen nach dem Await vor Bild-/Pfadveröffentlichung und zeigen Abbruch nicht als Fehler. Laufende Systemcodecs können weiterhin zu Ende arbeiten. Der integrierte Appbuild ist im vollständigen UI-Nachweis an `c8c5211` enthalten; physische Codec-/Abbruchlatenzen bleiben separat zu messen. |
 | `Tests/IntakeErasureProbe.swift`, zwei Tasks | Kontrollierter Writer und Eraser, explizite Semaphorefreigabe testet tatsächliches Warten auf Writer. |
 | `Tests/IntakeReceiptProbe.swift`, zwei Tasks | Test wartet auf Recovery und Erasure; gemeinsame Datei-Gategeneration entscheidet den Gewinner. |
 | `Tests/SpeechInputChannelProbe.swift`, ein Task | Begrenzter Testproducer; Verbraucher und Producer werden beide abgewartet. |
@@ -156,6 +156,17 @@ Löschlatenz bei blockiertem Dateisystem.
   Kopie veröffentlicht. Markierte Reste bleiben als offener Nachweis erhalten.
   Laufende Systemdateioperationen sind weiterhin nicht hart unterbrechbar.
 
+Terminlinks besitzen mit `AgendaLinkRequests` einen MainActor-Auftrag und eine
+Generation. Ein neuer Link, „Heute“, Benutzernavigation, Hintergrund und Löschung
+widerrufen die vorherige Lieferung. Doppelte Öffnungen desselben laufenden Ziels
+teilen den Auftrag. Verzögerte Start-/Share-Wiederaufnahme verlangt ihre zuvor
+erfasste Generation; quittiert wird nur ein aktuell tatsächlich geliefertes Ziel.
+Ein bereits begonnener Quittierungsabschluss bleibt an seine eigene Identität
+gebunden und kann keine neuere Navigation mit einem späten Fehler überholen.
+Zehn gesteuerte native Abläufe und eine erwartungsgemäß scheiternde Gegenprobe
+prüfen dies in `agenda-link-ordering-20260926-s19-001`; drei tatsächliche UI-Fälle
+bestehen in `agenda-link-ordering-ui-20260926-s19-001`/`002`.
+
 ## Synchrone Übergänge und native Lebensdauer
 
 `NativeServiceCall.waitValue` darf nur vom synchronen Rust-Worker verwendet
@@ -164,7 +175,9 @@ Frist, standardmäßig 60 Sekunden. Ein Lock entscheidet einmalig zwischen
 Resultat und Ablauf; späte Antworten werden verworfen. Eine Frist beendet
 keinen möglicherweise bereits ausgeführten Kalenderwrite: die typisierte
 Rückgabe ist in diesem Fall `uncertainWrite`, nicht ein behaupteter Fehlschlag.
-SwiftUI benutzt `NativeBridge.request` mit Continuation statt dieser Wartebrücke.
+SwiftUI verwendet die typisierten asynchronen Methoden von `NativeBridge` und
+`NativeApplication`. Die unbenutzte generische Methode `NativeBridge.request`
+wurde entfernt; der synchrone `AppleHost`-Kompatibilitätseingang bleibt separat.
 
 Der einzige eigene synchrone Mainqueue-Hop im Produkt ist der Vordergrundtest
 von `EventEditingService`. Er läuft innerhalb der seriellen Kalenderqueue.
