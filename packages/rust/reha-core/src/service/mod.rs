@@ -50,6 +50,13 @@ pub struct Proposal {
 /// shared service commands and test hosts retain JSON payloads at this boundary.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
+    fn recognize_text(
+        &self,
+        request: text_recognition::Request,
+    ) -> Response<text_recognition::Output> {
+        let arguments = request.legacy_arguments()?;
+        text_recognition::Output::from_legacy(self.call("recognize", arguments)?)
+    }
     /// Compatibility defaults are confined to older hosts. Native effects override
     /// these methods and carry the existing domain values directly to UniFFI.
     fn import_snapshot(
@@ -201,6 +208,7 @@ pub mod calendar_repair;
 pub mod inference;
 pub mod scan;
 pub mod settings;
+pub mod text_recognition;
 pub mod undo;
 
 pub mod draft;

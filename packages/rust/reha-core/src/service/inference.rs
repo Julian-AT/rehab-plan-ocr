@@ -26,7 +26,6 @@ pub fn process(
     started: std::time::Instant,
 ) -> Response<Value> {
     use crate::service::failure;
-    use base64::{engine::general_purpose::STANDARD, Engine};
     use reha_core::{
         contracts::*,
         pipeline::{self, RecognitionOutput, ScanInput},
@@ -105,18 +104,15 @@ pub fn process(
                 &directory,
             )
             .map_err(failure)?;
-            let response = app.call(
-                "recognize",
-                json!({
-                    "base64": STANDARD.encode(std::fs::read(directory.join("page.png")).map_err(failure)?)
-                }),
-            )?;
+            let response = app.recognize_text(super::text_recognition::Request {
+                image: std::fs::read(directory.join("page.png")).map_err(failure)?,
+                budget_ms: super::text_recognition::MAXIMUM_BUDGET_MS,
+            })?;
             let output = RecognitionOutput {
                 engine: "Apple Vision".into(),
-                manifest: response["manifest"].clone(),
-                regions: serde_json::from_value(response["regions"].clone()).map_err(failure)?,
-                observations: serde_json::from_value(response["observations"].clone())
-                    .map_err(failure)?,
+                manifest: response.manifest,
+                regions: response.regions,
+                observations: response.observations,
                 stages: vec![
                     Stage {
                         name: "detection".into(),
@@ -128,7 +124,7 @@ pub fn process(
                     Stage {
                         name: "recognition".into(),
                         status: "complete".into(),
-                        duration_ms: response["duration_ms"].as_u64().unwrap_or(0),
+                        duration_ms: response.duration_ms,
                         detail: "Apple Vision accurate recognition; language correction disabled."
                             .into(),
                         artifacts: vec![],
@@ -286,7 +282,6 @@ pub(super) fn refine_vision(
     cancel: &AtomicBool,
     deadline: std::time::Instant,
 ) -> crate::Result<()> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
     let first_stage = run.stages.len();
     let result = crate::refinement::refine_with_reader(
         run,
@@ -305,15 +300,15 @@ pub(super) fn refine_vision(
             let mut png = std::io::Cursor::new(Vec::new());
             image::DynamicImage::ImageRgb8(crop.clone())
                 .write_to(&mut png, image::ImageFormat::Png)?;
-            let response = app.call("recognize", serde_json::json!({
-                "base64": STANDARD.encode(png.into_inner()),
-                "budget_ms": deadline.saturating_duration_since(std::time::Instant::now()).as_millis() as u64
-            })).map_err(|error| crate::Error::Invalid(error.to_string()))?;
-            Ok((
-                serde_json::from_value(response["regions"].clone())?,
-                serde_json::from_value(response["observations"].clone())?,
-                vec![],
-            ))
+            let response = app
+                .recognize_text(super::text_recognition::Request {
+                    image: png.into_inner(),
+                    budget_ms: deadline
+                        .saturating_duration_since(std::time::Instant::now())
+                        .as_millis() as u64,
+                })
+                .map_err(|error| crate::Error::Invalid(error.to_string()))?;
+            Ok((response.regions, response.observations, vec![]))
         },
     );
     for stage in &mut run.stages[first_stage..] {
