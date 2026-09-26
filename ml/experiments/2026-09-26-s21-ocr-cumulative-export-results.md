@@ -44,6 +44,42 @@ actual difference nor proof that this operation causes the final failing values.
 The next bounded proposal compares the original isolated operators and fixed
 integer geometry controls; no replacement kernel is selected.
 
+## Completed depthwise control and one fixed causal intervention
+
+The subsequent original-only depthwise experiment reproduces both historical
+native/ORT byte controls. All ten fixed observations meet the unchanged tolerance,
+all ten serialized reloads are byte-identical, and all four independent integer
+geometries pass in both runtimes. Its retained ON/OFF outputs have the same 18,950
+sub-tolerance bit differences; this alone does not explain a final export failure.
+
+A separately sealed intervention then fixes B, frozen053 width 640 and
+ORT_DISABLE_ALL, replacing only this operation's output with the stored Paddle
+tensor. All six forwards finish; original B, its reload and both saved-ORT sham
+controls reproduce the complete historical B output byte-for-byte, and treatment
+reload reproduces treatment. Across all 1,496,800 final values, 1,410,692 bit patterns
+change. The maximum error drops from 0.0005898177623748779 to 0.0005233585834503174,
+but the same coordinate [0,27,84] still fails: zero repaired or newly failing
+values. All final token comparisons remain equal. This establishes a contribution
+of this fixed intermediate replacement to this case's final values; it is
+insufficient to repair even this case and does not qualify an export or corpus.
+Per-value errors are mixed, so the lower maximum is not a uniform improvement.
+
+The immutable run is `.local/runs/ocr-depthwise-intervention-20260926-s21-001`,
+protocol SHA256 `81167517f6fba76ef2aaceeade6e60952b575971009c8f984e85e2564927fed5`,
+report SHA256 `d8eb05f0289f830bfaab424cd0150107c459412b7e0b8523159fff1943744c53`.
+All source/artifact and 18,441 runtime-file identities remain valid; worker and
+watchdog completed successfully. The private aggregation is
+`.local/maintenance/ocr-depthwise-intervention-result-20260926-s21-001/aggregation.json`,
+SHA256 `7da1d0b5db78c379d07f162de779fff8b7eeb662ca03ae03cea846132e439c0e`.
+
+Existing saved trace batches do not cover B's remaining 270 unmeasured mappings.
+Older 302-output summaries concern a different graph and retain no raw activations;
+final Softmax probabilities cannot reconstruct the preceding logits. The next
+bounded information step is a complete unchanged-B observation trace for this
+same case, with byte-exact final controls in every batch and no stop at the first
+bit difference. Unmapped outputs remain unknown. No next runner or model run has
+been prepared or authorized by this result review.
+
 ## Static preprocessing review before the native-input comparison
 
 All 18 validation note crops and the new critical therapist-error crop are
