@@ -1,4 +1,5 @@
 import Foundation
+
 @main struct Probe {
   static func main() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

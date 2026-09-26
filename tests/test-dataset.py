@@ -27,9 +27,7 @@ class DatasetTests(unittest.TestCase):
             dataset.inventory(source)
             dataset.relocate()
             dataset.relocate()
-            self.assertEqual(
-                (dataset.PRIVATE / "raw/original.JPG").read_bytes(), b"invented bytes"
-            )
+            self.assertEqual((dataset.PRIVATE / "raw/original.JPG").read_bytes(), b"invented bytes")
             self.assertFalse(photo.exists())
             self.assertTrue(other.exists())
 

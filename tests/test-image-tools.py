@@ -35,18 +35,14 @@ class ConversionTests(unittest.TestCase):
             exif = Image.Exif()
             exif[315] = "Invented private author"
             image.save(source / "photo.HEIC", format="HEIF", exif=exif)
-            (source / "photo-copy.HEIC").write_bytes(
-                (source / "photo.HEIC").read_bytes()
-            )
+            (source / "photo-copy.HEIC").write_bytes((source / "photo.HEIC").read_bytes())
             image.save(source / "photo.png")
             originals = {p.name: converter.digest(p) for p in source.iterdir()}
             output = root / "converted"
             result = converter.prepare(source, output)
             self.assertEqual((result["source_count"], result["unique_count"]), (2, 1))
             self.assertEqual(len(result["entries"][0]["sources"]), 2)
-            self.assertEqual(
-                originals, {p.name: converter.digest(p) for p in source.iterdir()}
-            )
+            self.assertEqual(originals, {p.name: converter.digest(p) for p in source.iterdir()})
             with Image.open(output / "photo.png") as converted:
                 self.assertEqual(converted.size, (32, 48))
                 self.assertFalse(converted.getexif())
@@ -98,9 +94,7 @@ class ReportTests(unittest.TestCase):
             destination = output / "document-01"
             destination.mkdir()
             run = json.loads((ROOT / "tests/fixtures/sample-run.json").read_text())
-            run["appointments"][0]["title"] = (
-                '<script src="https://example.invalid"></script>'
-            )
+            run["appointments"][0]["title"] = '<script src="https://example.invalid"></script>'
             checker.write_json(destination / "run.json", run)
             checker.review_html(
                 output,

@@ -53,10 +53,7 @@ def summarize(run):
             bool(
                 re.search(
                     r"\*\s*neu\b",
-                    " ".join(
-                        a.get(f, "")
-                        for f in ("title", "location", "therapist", "notes")
-                    ),
+                    " ".join(a.get(f, "") for f in ("title", "location", "therapist", "notes")),
                     re.IGNORECASE,
                 )
             )
@@ -66,13 +63,10 @@ def summarize(run):
         "issue_codes": dict(Counter(i["code"] for i in issues)),
         "unassigned_observations": len(unassigned),
         "unassigned_time_observations": sum(
-            o["id"] in unassigned
-            and bool(re.search(r"\b(?:[01]?\d|2[0-3]):[0-5]\d\b", o["text"]))
+            o["id"] in unassigned and bool(re.search(r"\b(?:[01]?\d|2[0-3]):[0-5]\d\b", o["text"]))
             for o in observations
         ),
-        "scores_below_0_8": sum(
-            o["score"] is not None and o["score"] < 0.8 for o in observations
-        ),
+        "scores_below_0_8": sum(o["score"] is not None and o["score"] < 0.8 for o in observations),
         "total_ms": run["total_ms"],
     }
 
@@ -80,13 +74,12 @@ def summarize(run):
 def review_html(output, results):
     def escape(value):
         return html.escape(str(value if value is not None else "—"))
+
     sections = []
     for result in results:
         identifier = result["id"]
         if result["status"] != "complete":
-            sections.append(
-                f"<h2>{escape(identifier)}: failed — see local error log</h2>"
-            )
+            sections.append(f"<h2>{escape(identifier)}: failed — see local error log</h2>")
             continue
         run = json.loads((output / identifier / "run.json").read_text())
         rows = "".join(
@@ -175,9 +168,7 @@ def main():
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip(),
         "source_dirty": bool(
-            subprocess.check_output(
-                ["git", "status", "--porcelain"], cwd=ROOT, text=True
-            )
+            subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True)
         ),
         "network_enforcement": "sandbox-exec deny network*"
         if platform.system() == "Darwin"
@@ -251,12 +242,8 @@ def main():
         "failed": len(results) - len(successful),
         "counts": totals,
         "documents_with_missing_dates": sum(r["missing_date"] > 0 for r in successful),
-        "documents_with_blocking_issues": sum(
-            r["blocking_issues"] > 0 for r in successful
-        ),
-        "documents_without_appointments": sum(
-            r["appointments"] == 0 for r in successful
-        ),
+        "documents_with_blocking_issues": sum(r["blocking_issues"] > 0 for r in successful),
+        "documents_without_appointments": sum(r["appointments"] == 0 for r in successful),
         "cold_pipeline_ms": {
             "median": statistics.median(latencies),
             "p95_nearest_rank": latencies[math.ceil(0.95 * len(latencies)) - 1],

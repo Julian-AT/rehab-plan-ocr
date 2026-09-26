@@ -30,9 +30,7 @@ with tempfile.TemporaryDirectory() as temporary:
     )
     # Explicit synthetic approval: exclude the deliberately incomplete water appointment.
     run["appointments"][5]["included"] = False
-    run["appointments"][0]["title"] = "Frühstück, Brot; Äpfel \\ " + (
-        "Überprüfung " * 15
-    )
+    run["appointments"][0]["title"] = "Frühstück, Brot; Äpfel \\ " + ("Überprüfung " * 15)
     run["appointments"][0]["notes"] = "Zeile eins\nZweite Zeile; Komma, Backslash \\"
     run["appointments"][0]["therapist"] = "Alex Beispiel MSc"
     # Explicit confirmations use the current contract. Legacy approval must no

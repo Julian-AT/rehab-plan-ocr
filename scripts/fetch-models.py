@@ -51,10 +51,7 @@ def main():
                 )
     for entry in manifest["files"]:
         path = destination / entry["path"]
-        if (
-            path.exists()
-            and entry.get("sha256") == hashlib.sha256(path.read_bytes()).hexdigest()
-        ):
+        if path.exists() and entry.get("sha256") == hashlib.sha256(path.read_bytes()).hexdigest():
             print(f"Verified {entry['path']}")
             continue
         content = fetch(entry["url"])
@@ -70,9 +67,7 @@ def main():
     characters = config["PostProcess"]["character_dict"]
     # Paddle CTC: blank token first, space appended by CTCLabelDecode.
     dictionary = [""] + characters + [" "]
-    (destination / "dictionary.json").write_text(
-        json.dumps(dictionary, ensure_ascii=False)
-    )
+    (destination / "dictionary.json").write_text(json.dumps(dictionary, ensure_ascii=False))
     manifest["dictionary_sha256"] = hashlib.sha256(
         (destination / "dictionary.json").read_bytes()
     ).hexdigest()

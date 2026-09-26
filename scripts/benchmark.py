@@ -8,8 +8,8 @@ import argparse
 import hashlib
 import json
 import platform
-import subprocess
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,8 +36,20 @@ def freeze_baseline(binary, models, config, root, destination):
     shutil.copy2(binary, destination / "reha")
     shutil.copy2(config, destination / "config.json")
     shutil.copy2(models / "manifest.json", destination / "model-manifest.json")
-    source_files = [ROOT / "crates/reha-core/src" / (name + ".rs") for name in
-                    ["parser", "pipeline", "ocr", "review", "refinement", "geometry", "photo", "photo_macos", "contracts"]]
+    source_files = [
+        ROOT / "crates/reha-core/src" / (name + ".rs")
+        for name in [
+            "parser",
+            "pipeline",
+            "ocr",
+            "review",
+            "refinement",
+            "geometry",
+            "photo",
+            "photo_macos",
+            "contracts",
+        ]
+    ]
     manifest = {
         "schema_version": 1,
         "kind": "unchanged_portable_baseline",
@@ -49,7 +61,13 @@ def freeze_baseline(binary, models, config, root, destination):
         "model_manifest_sha256": sha(destination / "model-manifest.json"),
         "portable_sources": {str(p.relative_to(ROOT)): sha(p) for p in source_files},
         "inventory_sha256": sha(root / "inventory.json"),
-        "acceptance_targets": {"critical_field_correctness": .99, "appointment_precision": .99, "appointment_recall": .99, "whole_plan_correctness": .90, "observed_critical_false_acceptance": 0},
+        "acceptance_targets": {
+            "critical_field_correctness": 0.99,
+            "appointment_precision": 0.99,
+            "appointment_recall": 0.99,
+            "whole_plan_correctness": 0.90,
+            "observed_critical_false_acceptance": 0,
+        },
     }
     write(destination / "baseline.json", manifest)
     return manifest
@@ -59,8 +77,12 @@ def record_baseline_runs(binary, models, root, destination):
     """Record unchanged outputs and latency, never accuracy on unapproved labels."""
     manifest = json.loads((destination / "baseline.json").read_text())
     binary = (destination / "reha").resolve()
-    for path, key in [(binary, "binary_sha256"), (destination / "config.json", "config_sha256"),
-                      (models / "manifest.json", "model_manifest_sha256"), (root / "inventory.json", "inventory_sha256")]:
+    for path, key in [
+        (binary, "binary_sha256"),
+        (destination / "config.json", "config_sha256"),
+        (models / "manifest.json", "model_manifest_sha256"),
+        (root / "inventory.json", "inventory_sha256"),
+    ]:
         if sha(path) != manifest[key]:
             raise ValueError(f"Frozen baseline identity changed: {key}")
     inventory = json.loads((root / "inventory.json").read_text())
@@ -78,40 +100,51 @@ def record_baseline_runs(binary, models, root, destination):
         output.mkdir(parents=True)
         with (output / "process.log").open("w") as log:
             try:
-                result = subprocess.run([str(binary), "scan", str(source.resolve()), str(output.resolve()), str(models.resolve()), str((destination / "config.json").resolve())], stdout=log, stderr=log, timeout=75)
+                result = subprocess.run(
+                    [
+                        str(binary),
+                        "scan",
+                        str(source.resolve()),
+                        str(output.resolve()),
+                        str(models.resolve()),
+                        str((destination / "config.json").resolve()),
+                    ],
+                    stdout=log,
+                    stderr=log,
+                    timeout=75,
+                )
                 status = "completed" if result.returncode == 0 else "failed"
             except subprocess.TimeoutExpired:
                 status = "timeout"
         run_path = output / "run.json"
         run = json.loads(run_path.read_text()) if run_path.exists() else {}
-        results.append({"source_hash": source_hash, "status": status, "total_ms": run.get("total_ms"), "run_sha256": sha(run_path) if run_path.exists() else None})
-        write(destination / "timings.json", {"verified_accuracy": False, "physical_iphone_measurement": False, "results": results})
+        results.append(
+            {
+                "source_hash": source_hash,
+                "status": status,
+                "total_ms": run.get("total_ms"),
+                "run_sha256": sha(run_path) if run_path.exists() else None,
+            }
+        )
+        write(
+            destination / "timings.json",
+            {"verified_accuracy": False, "physical_iphone_measurement": False, "results": results},
+        )
 
 
 def preflight(root, binary):
     split = json.loads((root / "split.json").read_text())
     if split.get("grouping_verified") is not True:
-        raise ValueError(
-            "Verify page/capture relationships before comparing grouped references."
-        )
-    if (
-        split.get("schema_version") != 3
-        or split.get("final_holdout_available") is not False
-    ):
+        raise ValueError("Verify page/capture relationships before comparing grouped references.")
+    if split.get("schema_version") != 3 or split.get("final_holdout_available") is not False:
         raise ValueError("Four frozen development folds (schema 3) required.")
     refs = {}
     for group in split["days"].values():
         for h in group["document_hashes"]:
             path = root / "labels/provisional" / f"{h}.json"
             ref = json.loads(path.read_text())
-            if (
-                not ref.get("verified")
-                or not ref.get("reviewed_at")
-                or ref["uncertainty_notes"]
-            ):
-                raise ValueError(
-                    "Every selected original reference must be explicitly approved."
-                )
+            if not ref.get("verified") or not ref.get("reviewed_at") or ref["uncertainty_notes"]:
+                raise ValueError("Every selected original reference must be explicitly approved.")
             result = subprocess.run(
                 [str(binary), "reference-check", str(path), "--approved"],
                 check=True,
@@ -169,20 +202,40 @@ def summarize(results):
         }
     return {
         "photos": len(results),
-        "plan_photos": sum(r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan" for r in results),
-        "negative_or_unusable_photos": sum(r.get("input_class", "rehabilitation_plan") != "rehabilitation_plan" for r in results),
-        "negative_inputs_with_invented_appointments": sum(r.get("input_class") == "non_plan" and r["metrics"]["invented_count"] > 0 for r in results),
+        "plan_photos": sum(
+            r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan" for r in results
+        ),
+        "negative_or_unusable_photos": sum(
+            r.get("input_class", "rehabilitation_plan") != "rehabilitation_plan" for r in results
+        ),
+        "negative_inputs_with_invented_appointments": sum(
+            r.get("input_class") == "non_plan" and r["metrics"]["invented_count"] > 0
+            for r in results
+        ),
         "counts": counts,
         "whole_plan_correctness": {
-            "numerator": sum(r["metrics"]["schedule_without_correction"] for r in results if r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan"),
-            "denominator": sum(r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan" for r in results),
+            "numerator": sum(
+                r["metrics"]["schedule_without_correction"]
+                for r in results
+                if r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan"
+            ),
+            "denominator": sum(
+                r.get("input_class", "rehabilitation_plan") == "rehabilitation_plan"
+                for r in results
+            ),
         },
-        "appointment_precision": counts["matched_count"] / counts["predicted_count"] if counts["predicted_count"] else None,
-        "appointment_recall": counts["matched_count"] / counts["reference_count"] if counts["reference_count"] else None,
-        "review_burden": {"unresolved_appointments": counts["unresolved_count"], "predicted_appointments": counts["predicted_count"], "field_corrections_needed": counts["field_corrections_needed"]},
-        "fully_correct_photos": sum(
-            r["metrics"]["schedule_without_correction"] for r in results
-        ),
+        "appointment_precision": counts["matched_count"] / counts["predicted_count"]
+        if counts["predicted_count"]
+        else None,
+        "appointment_recall": counts["matched_count"] / counts["reference_count"]
+        if counts["reference_count"]
+        else None,
+        "review_burden": {
+            "unresolved_appointments": counts["unresolved_count"],
+            "predicted_appointments": counts["predicted_count"],
+            "field_corrections_needed": counts["field_corrections_needed"],
+        },
+        "fully_correct_photos": sum(r["metrics"]["schedule_without_correction"] for r in results),
         "maximum_ms": max((r["total_ms"] for r in results), default=0),
     }
 
@@ -192,11 +245,19 @@ def main():
     parser.add_argument("--models", required=True, type=Path)
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--binary", type=Path, default=ROOT / "target/release/reha")
-    parser.add_argument("--evaluator", type=Path, help="Separate evaluator for newer annotation contracts; extraction binary remains frozen")
+    parser.add_argument(
+        "--evaluator",
+        type=Path,
+        help="Separate evaluator for newer annotation contracts; extraction binary remains frozen",
+    )
     parser.add_argument("--root", type=Path)
     parser.add_argument("--fold", type=int, choices=range(4))
     parser.add_argument("--final", action="store_true")
-    parser.add_argument("--freeze-baseline", type=Path, help="New private directory; freeze binaries/config before accuracy work, without approving labels")
+    parser.add_argument(
+        "--freeze-baseline",
+        type=Path,
+        help="New private directory; freeze binaries/config before accuracy work, without approving labels",
+    )
     parser.add_argument("--record-baseline-runs", action="store_true")
     args = parser.parse_args()
     root = args.root or PRIVATE
@@ -205,7 +266,9 @@ def main():
             raise ValueError("Freezing a baseline is not final acceptance.")
         freeze_baseline(args.binary.resolve(), args.models, args.config, root, args.freeze_baseline)
         if args.record_baseline_runs:
-            record_baseline_runs((args.freeze_baseline / "reha").resolve(), args.models, root, args.freeze_baseline)
+            record_baseline_runs(
+                (args.freeze_baseline / "reha").resolve(), args.models, root, args.freeze_baseline
+            )
         print(args.freeze_baseline)
         return
     if args.final:
@@ -215,8 +278,7 @@ def main():
     evaluator = (args.evaluator or args.binary).resolve()
     split, refs = preflight(root, evaluator)
     inventory = {
-        e["sha256"]: e
-        for e in json.loads((root / "inventory.json").read_text())["entries"]
+        e["sha256"]: e for e in json.loads((root / "inventory.json").read_text())["entries"]
     }
     output = (
         ROOT
@@ -246,8 +308,7 @@ def main():
         for h in group["document_hashes"]:
             if (
                 sha(args.config) != manifest["config_sha256"]
-                or sha(args.models / "manifest.json")
-                != manifest["model_manifest_sha256"]
+                or sha(args.models / "manifest.json") != manifest["model_manifest_sha256"]
                 or json.loads(refs[h].read_text()).get("approval_hash")
                 != manifest["reference_hashes"][h]
             ):
@@ -286,7 +347,9 @@ def main():
                     "group": group_id,
                     "fold": group["fold"],
                     "source_hash": h,
-                    "input_class": json.loads(refs[h].read_text()).get("input_class", "rehabilitation_plan"),
+                    "input_class": json.loads(refs[h].read_text()).get(
+                        "input_class", "rehabilitation_plan"
+                    ),
                     "run_sha256": sha(destination / "run.json"),
                     "total_ms": run["total_ms"],
                     "metrics": json.loads((destination / "metrics.json").read_text()),
@@ -297,9 +360,7 @@ def main():
     report = {
         "scope": "Previously explored development originals; correlated captures remain grouped.",
         "overall": summarize(results),
-        "folds": {
-            str(f): summarize([r for r in results if r["fold"] == f]) for f in range(4)
-        },
+        "folds": {str(f): summarize([r for r in results if r["fold"] == f]) for f in range(4)},
         "groups": {
             g: summarize([r for r in results if r["group"] == g])
             for g in {r["group"] for r in results}

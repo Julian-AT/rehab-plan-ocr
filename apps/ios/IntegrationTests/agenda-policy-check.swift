@@ -77,10 +77,18 @@ struct AgendaPolicyChecks {
     check(event.isRunning(at: now), "Exact start is running")
     check(!event.isRunning(at: event.endDate), "Exact end is finished")
     check(snapshot.upcoming(at: event.endDate).isEmpty, "Finished event removed")
-    check(snapshot.allToday(at: event.endDate, calendar: calendar).count == 1, "Native Today retains completed appointments")
-    check(snapshot.allToday(at: nextDay, calendar: calendar).isEmpty, "Native Today respects the next DST day")
-    check(snapshot.presentation(at: event.endDate, calendar: calendar).today.count == 1, "Both shells retain completed events today")
-    check(snapshot.presentation(at: now.addingTimeInterval(-86400), calendar: calendar).next?.id == event.id, "Next appointment can belong to a later day")
+    check(
+      snapshot.allToday(at: event.endDate, calendar: calendar).count == 1,
+      "Native Today retains completed appointments")
+    check(
+      snapshot.allToday(at: nextDay, calendar: calendar).isEmpty,
+      "Native Today respects the next DST day")
+    check(
+      snapshot.presentation(at: event.endDate, calendar: calendar).today.count == 1,
+      "Both shells retain completed events today")
+    check(
+      snapshot.presentation(at: now.addingTimeInterval(-86400), calendar: calendar).next?.id
+        == event.id, "Next appointment can belong to a later day")
     check(
       snapshot.boundaries(after: now, calendar: calendar).contains(nextDay),
       "Calendar midnight boundary")

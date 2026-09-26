@@ -36,11 +36,7 @@ def inventory(source):
         raise ValueError("Dataset source must be a directory.")
     entries = []
     for path in sorted(source.rglob("*")):
-        if (
-            path.is_symlink()
-            or not path.is_file()
-            or path.suffix.lower() not in EXTENSIONS
-        ):
+        if path.is_symlink() or not path.is_file() or path.suffix.lower() not in EXTENSIONS:
             continue
         entries.append(
             {
@@ -130,9 +126,7 @@ def normalize_groups(groups, hashes):
                 or identifier in {".", ".."}
                 or identifier in capture_ids
             ):
-                raise ValueError(
-                    "Capture IDs must be unique safe filenames within a day."
-                )
+                raise ValueError("Capture IDs must be unique safe filenames within a day.")
             capture_ids.add(identifier)
             if not pages or (page_keys is not None and set(pages) != page_keys):
                 raise ValueError(
@@ -143,21 +137,14 @@ def normalize_groups(groups, hashes):
                 raise ValueError("One photo cannot represent two pages.")
             for page, source_hash in pages.items():
                 owner = (day, page)
-                if (
-                    source_hash not in hashes
-                    or ownership.get(source_hash, owner) != owner
-                ):
-                    raise ValueError(
-                        "Each source hash must belong to exactly one day and page."
-                    )
+                if source_hash not in hashes or ownership.get(source_hash, owner) != owner:
+                    raise ValueError("Each source hash must belong to exactly one day and page.")
                 ownership[source_hash] = owner
                 assigned.add(source_hash)
                 day_hashes.add(source_hash)
         normalized[day] = {"document_hashes": sorted(day_hashes), "captures": captures}
     if assigned != hashes:
-        raise ValueError(
-            "Every inventoried source hash must be assigned before freezing."
-        )
+        raise ValueError("Every inventoried source hash must be assigned before freezing.")
     return normalized
 
 
@@ -175,9 +162,7 @@ def main():
     sub.add_parser("inventory").add_argument(
         "source", help="Exact user-provided dataset directory; no movement"
     )
-    sub.add_parser(
-        "relocate", help="Move only inventoried image files after checking all hashes"
-    )
+    sub.add_parser("relocate", help="Move only inventoried image files after checking all hashes")
     sub.add_parser("freeze").add_argument(
         "grouping",
         help="JSON mapping of 20 day IDs to captures: [{id, pages: {page_id: source_sha256}}]",

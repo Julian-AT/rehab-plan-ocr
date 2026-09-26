@@ -19,17 +19,12 @@ ROOT = Path(__file__).resolve().parents[1]
 URL = "https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.22.0.zip"
 lock_path = ROOT / "models/ios-runtime.lock.json"
 lock = (
-    json.loads(lock_path.read_text())
-    if lock_path.exists()
-    else {"version": "1.22.0", "url": URL}
+    json.loads(lock_path.read_text()) if lock_path.exists() else {"version": "1.22.0", "url": URL}
 )
 root = ROOT / "models/private/runtime"
 root.mkdir(parents=True, exist_ok=True)
 cache = root / "onnxruntime-1.22.0.zip"
-if (
-    cache.exists()
-    and lock.get("sha256") == hashlib.sha256(cache.read_bytes()).hexdigest()
-):
+if cache.exists() and lock.get("sha256") == hashlib.sha256(cache.read_bytes()).hexdigest():
     data = cache.read_bytes()
 else:
     with urllib.request.urlopen(
@@ -50,9 +45,7 @@ with zipfile.ZipFile(io.BytesIO(data)) as archive:
     ]:
         output = root / target
         output.mkdir(parents=True, exist_ok=True)
-        binary = archive.read(
-            f"onnxruntime.xcframework/{folder}/onnxruntime.framework/onnxruntime"
-        )
+        binary = archive.read(f"onnxruntime.xcframework/{folder}/onnxruntime.framework/onnxruntime")
         universal = output / "universal.a"
         universal.write_bytes(binary)
         subprocess.run(
@@ -68,8 +61,6 @@ with zipfile.ZipFile(io.BytesIO(data)) as archive:
             check=True,
         )
         universal.unlink()
-        print(
-            f"Installed static ORT {lock['version']} for {target}: {len(binary)} bytes"
-        )
+        print(f"Installed static ORT {lock['version']} for {target}: {len(binary)} bytes")
     (root / "LICENSE").write_bytes(archive.read("LICENSE"))
 lock_path.write_text(json.dumps(lock, indent=2) + "\n")

@@ -579,7 +579,10 @@ where
     // Detailed readings are retained even without large debug rasters and expire with the scan.
     std::fs::write(dir.join("refinement-readings.json"), artifact)?;
     let attempts = &run.refinement_attempts[initial_attempts..];
-    let failures = attempts.iter().filter(|attempt| attempt.status == "failed").count();
+    let failures = attempts
+        .iter()
+        .filter(|attempt| attempt.status == "failed")
+        .count();
     run.stages.push(Stage {
         name: "selective_reread".into(),
         status: if cancel.load(Ordering::Relaxed) {
@@ -711,7 +714,10 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
             {
                 a.approval = old.approval.clone();
             }
-        } else if old.fields.keys().any(|field| review::field_confirmed(old, field))
+        } else if old
+            .fields
+            .keys()
+            .any(|field| review::field_confirmed(old, field))
             || old.approval.is_some()
             || old.calendar_event_id.is_some()
             || old.ics_event_id.is_some()

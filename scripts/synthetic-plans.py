@@ -73,10 +73,7 @@ def render(index, font_path):
         words = value.split()
         wrapped = []
         for word in words:
-            if (
-                not wrapped
-                or draw.textlength(wrapped[-1] + " " + word, font=font) > max_width
-            ):
+            if not wrapped or draw.textlength(wrapped[-1] + " " + word, font=font) > max_width:
                 wrapped.append(word)
             else:
                 wrapped[-1] += " " + word
@@ -96,9 +93,7 @@ def render(index, font_path):
             )
         return len(wrapped) * 31
 
-    draw.text(
-        (60, 40), "ERFUNDENER TESTPLAN · keine Patientendaten", font=font, fill="black"
-    )
+    draw.text((60, 40), "ERFUNDENER TESTPLAN · keine Patientendaten", font=font, fill="black")
     for label, x in [
         ("Uhrzeit", 60),
         ("Therapie", 350),
@@ -129,12 +124,7 @@ def render(index, font_path):
         if n == 3 and index % 4 == 0:
             row["therapist"] += " / Hr. M. Belvara, MSc"
         if n == 4 and index % 5 == 0:
-            row.update(
-                {
-                    k: rows[-1][k]
-                    for k in ["start", "end", "title", "location", "therapist"]
-                }
-            )
+            row.update({k: rows[-1][k] for k in ["start", "end", "title", "location", "therapist"]})
         if n == 5 and index % 3 == 0:
             row["start"] = rows[-1]["start"]
         if n == 1:
@@ -187,9 +177,7 @@ def generate(output, font_path, count=200):
         image, labels = render(index, font_path)
         name = f"plan-{index:03}"
         image.save(output / f"{name}.jpg", quality=90)
-        labels["image_sha256"] = hashlib.sha256(
-            (output / f"{name}.jpg").read_bytes()
-        ).hexdigest()
+        labels["image_sha256"] = hashlib.sha256((output / f"{name}.jpg").read_bytes()).hexdigest()
         (output / f"{name}.json").write_text(
             json.dumps(labels, ensure_ascii=False, indent=2) + "\n"
         )
@@ -198,9 +186,7 @@ def generate(output, font_path, count=200):
                 "id": name,
                 "seed": SEED + index,
                 "image_sha256": labels["image_sha256"],
-                "labels_sha256": hashlib.sha256(
-                    (output / f"{name}.json").read_bytes()
-                ).hexdigest(),
+                "labels_sha256": hashlib.sha256((output / f"{name}.json").read_bytes()).hexdigest(),
             }
         )
     manifest = {
@@ -230,8 +216,4 @@ if __name__ == "__main__":
         ]
         if p.exists()
     )
-    print(
-        json.dumps(
-            {"generated": generate(args.output, font_path)["count"], "synthetic": True}
-        )
-    )
+    print(json.dumps({"generated": generate(args.output, font_path)["count"], "synthetic": True}))

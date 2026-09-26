@@ -3,7 +3,8 @@ import UIKit
 import UserNotifications
 import UserNotificationsUI
 
-final class NotificationViewController: UIViewController, @MainActor UNNotificationContentExtension {
+final class NotificationViewController: UIViewController, @MainActor UNNotificationContentExtension
+{
   private var host: UIHostingController<NotificationCard>?
   override func viewDidLoad() {
     super.viewDidLoad()

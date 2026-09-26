@@ -20,13 +20,13 @@ printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)
 cleanup() {
   if [ "${REHA_KEEP_SIMULATOR:-0}" != 1 ] && [ -z "${REHA_TEST_SIMULATOR:-}" ]; then
-    xcrun simctl shutdown "$simulator" >/dev/null 2>&1 || true
-    xcrun simctl delete "$simulator" >/dev/null 2>&1 || true
+    xcrun simctl shutdown "$simulator" > /dev/null 2>&1 || true
+    xcrun simctl delete "$simulator" > /dev/null 2>&1 || true
   fi
   rm -rf "$staging"
 }
 trap cleanup EXIT INT TERM
-xcrun simctl boot "$simulator" 2>/dev/null || true
+xcrun simctl boot "$simulator" 2> /dev/null || true
 xcrun simctl bootstatus "$simulator" -b
 app="$staging/Laßnitzhöhe.app"
 # File-provider metadata can reappear immediately under Documents. Sign a
@@ -50,8 +50,8 @@ else
 fi
 xcrun simctl privacy "$simulator" grant calendar at.rehakalender.personal
 xcrun simctl privacy "$simulator" grant microphone at.rehakalender.personal
-xcrun simctl launch "$simulator" com.apple.DocumentsApp >/dev/null
-python3 - "$simulator" <<'PY'
+xcrun simctl launch "$simulator" com.apple.DocumentsApp > /dev/null
+python3 - "$simulator" << 'PY'
 import plistlib, shutil, sys
 from pathlib import Path
 groups = Path.home() / "Library/Developer/CoreSimulator/Devices" / sys.argv[1] / "data/Containers/Shared/AppGroup"
@@ -66,12 +66,12 @@ else:
 PY
 if [ "${REHA_UI_NEW_PHOTO:-0}" = 1 ]; then
   # Different source bytes exercise new recognition instead of duplicate reuse.
-  sips -s format jpeg tests/fixtures/synthetic-day.png --out "$staging/new-photo.jpg" >/dev/null
+  sips -s format jpeg tests/fixtures/synthetic-day.png --out "$staging/new-photo.jpg" > /dev/null
   xcrun simctl addmedia "$simulator" "$staging/new-photo.jpg"
 else
   xcrun simctl addmedia "$simulator" tests/fixtures/synthetic-day.png
 fi
-python3 - "$staging" <<'PYRUN'
+python3 - "$staging" << 'PYRUN'
 import plistlib, sys
 from pathlib import Path
 staging = Path(sys.argv[1])

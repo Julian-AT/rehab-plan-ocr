@@ -1,14 +1,19 @@
 import Foundation
-import UIKit
 import PhotosUI
+import UIKit
 
-@MainActor final class NativePresentation: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate, PHPickerViewControllerDelegate {
+@MainActor
+final class NativePresentation: NSObject, UIImagePickerControllerDelegate,
+  UINavigationControllerDelegate, PHPickerViewControllerDelegate
+{
   static let shared = NativePresentation()
   private var captureServiceRequest: ServiceRequest?
   private var backgroundObserver: NSObjectProtocol?
   func start() {
     guard backgroundObserver == nil else { return }
-    backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+    backgroundObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+    ) { [weak self] _ in
       Task { @MainActor in
         self?.captureServiceRequest?.reject("Aufnahme durch Hintergrundwechsel unterbrochen.")
         self?.captureServiceRequest = nil
@@ -126,4 +131,5 @@ import PhotosUI
       "model": UIDevice.current.model, "system": UIDevice.current.systemVersion,
       "physical_validation": false,
     ])
-  }}
+  }
+}

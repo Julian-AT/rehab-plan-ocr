@@ -35,9 +35,7 @@ def clip(subject, boundary):
         b = boundary[(i + 1) % len(boundary)]
 
         def cross(p, a=a, b=b):
-            return (b["x"] - a["x"]) * (p["y"] - a["y"]) - (b["y"] - a["y"]) * (
-                p["x"] - a["x"]
-            )
+            return (b["x"] - a["x"]) * (p["y"] - a["y"]) - (b["y"] - a["y"]) * (p["x"] - a["x"])
 
         result = []
         if not subject:
@@ -63,9 +61,7 @@ def clip(subject, boundary):
 def build(transcriptions, root, baseline):
     specs = json.loads(transcriptions.read_text())
     inventory = json.loads((root / "inventory.json").read_text())
-    runs = [
-        json.loads(p.read_text()) for p in sorted(baseline.glob("document-*/run.json"))
-    ]
+    runs = [json.loads(p.read_text()) for p in sorted(baseline.glob("document-*/run.json"))]
     reports = []
     for entry in inventory["entries"]:
         spec = specs[Path(entry["filename"]).stem]
@@ -85,9 +81,7 @@ def build(transcriptions, root, baseline):
         old_path = root / "labels/provisional" / f"{source_hash}.json"
         old = json.loads(old_path.read_text())
         if old.get("schema_version") == 2:
-            raise ValueError(
-                "Existing version-2 review preserved; use a new destination."
-            )
+            raise ValueError("Existing version-2 review preserved; use a new destination.")
         observations = []
         for o in run["observations"]:
             pts = [
@@ -120,9 +114,7 @@ def build(transcriptions, root, baseline):
         for index, row in enumerate(spec["rows"]):
             date, top, bottom, start, end, title, location, therapist, notes = row
             top, bottom = float(top), float(bottom)
-            identifier = str(
-                uuid.uuid5(uuid.NAMESPACE_OID, f"{source_hash}:visual:{index}")
-            )
+            identifier = str(uuid.uuid5(uuid.NAMESPACE_OID, f"{source_hash}:visual:{index}"))
             a = {
                 "id": identifier,
                 "section_id": f"visual-{date}",
@@ -183,14 +175,8 @@ def build(transcriptions, root, baseline):
                     if field == "date"
                     else top + spec.get("slant", 0) * (x1 - time_x)
                 )
-                y2 = (
-                    y1 + 0.02
-                    if field == "date"
-                    else bottom + spec.get("slant", 0) * (x1 - time_x)
-                )
-                polygon = clip(
-                    rect(x1 * w, y1 * h, min(x2, r) * w, min(y2, b) * h), table
-                )
+                y2 = y1 + 0.02 if field == "date" else bottom + spec.get("slant", 0) * (x1 - time_x)
+                polygon = clip(rect(x1 * w, y1 * h, min(x2, r) * w, min(y2, b) * h), table)
                 if len(polygon) < 4:
                     polygon = clip(
                         rect(
@@ -246,15 +232,9 @@ def build(transcriptions, root, baseline):
                         if candidate
                         else 0
                     )
-                    poly = (
-                        clip(candidate[1], polygon)
-                        if candidate and similarity > 0.60
-                        else []
-                    )
+                    poly = clip(candidate[1], polygon) if candidate and similarity > 0.60 else []
                     if len(poly) < 4:
-                        poly = clip(
-                            rect(x1 * w, ly * h, x2 * w, (ly + height) * h), table
-                        )
+                        poly = clip(rect(x1 * w, ly * h, x2 * w, (ly + height) * h), table)
                     if len(poly) < 4:
                         poly = polygon
                     causes = []
@@ -270,10 +250,7 @@ def build(transcriptions, root, baseline):
                             for v in run["appointments"]
                             if v.get("start") == start and v.get("date") == date
                         ]
-                        if (
-                            len(previous) == 1
-                            and previous[0].get(field, "") != a[field]
-                        ):
+                        if len(previous) == 1 and previous[0].get(field, "") != a[field]:
                             causes.append(
                                 "column_assignment"
                                 if any(

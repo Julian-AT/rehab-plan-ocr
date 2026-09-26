@@ -38,9 +38,7 @@ def convert(source, destination):
     with Image.open(source) as image:
         primary_frame = image.tell()
         source_size = list(image.size)
-        orientation = image.info.get("original_orientation") or image.getexif().get(
-            274, 1
-        )
+        orientation = image.info.get("original_orientation") or image.getexif().get(274, 1)
         bit_depth = image.info.get("bit_depth", 8)
         profile = image.info.get("icc_profile")
         upright = ImageOps.exif_transpose(image).convert("RGB")
@@ -75,9 +73,7 @@ def prepare(source, output):
     paths = [
         path
         for path in source.rglob("*")
-        if path.is_file()
-        and not path.is_symlink()
-        and path.suffix.lower() in {".heic", ".heif"}
+        if path.is_file() and not path.is_symlink() and path.suffix.lower() in {".heic", ".heif"}
     ]
     if not paths:
         raise ValueError("No HEIC/HEIF originals found.")
@@ -93,9 +89,7 @@ def prepare(source, output):
         "source_directory": str(source),
         "source_count": len(paths),
         "unique_count": len(groups),
-        "versions": {
-            name: importlib.metadata.version(name) for name in ("pillow", "pillow-heif")
-        },
+        "versions": {name: importlib.metadata.version(name) for name in ("pillow", "pillow-heif")},
         "libheif": libheif_info(),
         "conversion": "Primary image, upright, full resolution, 8-bit RGB, lossless PNG; no EXIF/XMP.",
         "entries": [],

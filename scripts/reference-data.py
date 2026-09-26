@@ -9,10 +9,10 @@ versioned; derived pixels live in a size-bounded cache. No network or training.
 """
 
 import argparse
-import sqlite3
 import hashlib
 import json
 import math
+import sqlite3
 import struct
 from pathlib import Path
 
@@ -49,9 +49,7 @@ RECIPES = [
 
 
 def canonical(value):
-    return json.dumps(
-        value, sort_keys=True, ensure_ascii=False, separators=(",", ":")
-    ).encode()
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
 
 
 def digest(value):
@@ -109,7 +107,9 @@ def approved(ref):
         or ref.get("approval_hash") != reference_hash(ref)
     ):
         raise ValueError("Reference is unapproved or changed after approval.")
-    if len(ref.get("sources", [])) != 1 or (not ref.get("appointments") and kind == "rehabilitation_plan"):
+    if len(ref.get("sources", [])) != 1 or (
+        not ref.get("appointments") and kind == "rehabilitation_plan"
+    ):
         raise ValueError("Exactly one original and a complete row inventory required.")
     for a in ref["appointments"]:
         for field in [
@@ -150,9 +150,7 @@ def grouping(references):
         or not s["capture_series"]
         for s in sources
     ):
-        raise ValueError(
-            "Confirm every page, capture series and treatment day before splitting."
-        )
+        raise ValueError("Confirm every page, capture series and treatment day before splitting.")
     parents = list(range(len(sources)))
 
     def root(i):
@@ -214,18 +212,10 @@ def grouping(references):
 
 
 def freeze(root):
-    refs = [
-        json.loads(p.read_text())
-        for p in sorted((root / "labels/provisional").glob("*.json"))
-    ]
-    hashes = {
-        e["sha256"]
-        for e in json.loads((root / "inventory.json").read_text())["entries"]
-    }
+    refs = [json.loads(p.read_text()) for p in sorted((root / "labels/provisional").glob("*.json"))]
+    hashes = {e["sha256"] for e in json.loads((root / "inventory.json").read_text())["entries"]}
     if {h for r in refs for h in r["document_hashes"]} != hashes:
-        raise ValueError(
-            "Every original must have exactly one reference before splitting."
-        )
+        raise ValueError("Every original must have exactly one reference before splitting.")
     result = grouping(refs)
     path = root / "split.json"
     if path.exists():
@@ -242,9 +232,7 @@ def freeze(root):
             for k, g in result["days"].items()
             if ref["document_hashes"][0] in g["document_hashes"]
         )
-        ref.update(
-            verified=False, reviewed_at=None, approval_hash=None, content_hash=None
-        )
+        ref.update(verified=False, reviewed_at=None, approval_hash=None, content_hash=None)
         write(root / "labels/provisional" / f"{ref['document_hashes'][0]}.json", ref)
     write(path, result)
     return result
@@ -305,10 +293,8 @@ def inverse(m):
 def transform(m, polygon):
     return [
         {
-            "x": (m[0] * p["x"] + m[1] * p["y"] + m[2])
-            / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
-            "y": (m[3] * p["x"] + m[4] * p["y"] + m[5])
-            / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
+            "x": (m[0] * p["x"] + m[1] * p["y"] + m[2]) / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
+            "y": (m[3] * p["x"] + m[4] * p["y"] + m[5]) / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
         }
         for p in polygon
     ]
@@ -438,9 +424,7 @@ def recipes(root):
                         "name": name,
                         "recipe": recipe,
                         "recognition_eligible": "mirror" not in recipe,
-                        "purpose": "orientation_only"
-                        if "mirror" in recipe
-                        else "robustness",
+                        "purpose": "orientation_only" if "mirror" in recipe else "robustness",
                     }
                 )
     write(root / "variants/recipes.json", manifest)
@@ -450,12 +434,10 @@ def recipes(root):
 def export(root, output, fold, cache_mb):
     manifest = recipes(root)
     inventory = {
-        e["sha256"]: e
-        for e in json.loads((root / "inventory.json").read_text())["entries"]
+        e["sha256"]: e for e in json.loads((root / "inventory.json").read_text())["entries"]
     }
     refs = {
-        h: json.loads((root / "labels/provisional" / f"{h}.json").read_text())
-        for h in inventory
+        h: json.loads((root / "labels/provisional" / f"{h}.json").read_text()) for h in inventory
     }
     for ref in refs.values():
         approved(ref)
@@ -494,9 +476,7 @@ def export(root, output, fold, cache_mb):
         # Shared date headings link to several rows but appear once on the page.
         unique_lines = {}
         for line in lines:
-            key = digest(
-                [normalized_numbers(line["polygon"]), line["state"], line["text"]]
-            )
+            key = digest([normalized_numbers(line["polygon"]), line["state"], line["text"]])
             unique_lines.setdefault(key, line)
         detection.append(
             {
@@ -504,9 +484,7 @@ def export(root, output, fold, cache_mb):
                 "labels": [
                     {
                         "points": [[p["x"], p["y"]] for p in line["polygon"]],
-                        "transcription": line["text"]
-                        if line["state"] == "legible"
-                        else "###",
+                        "transcription": line["text"] if line["state"] == "legible" else "###",
                         "line_id": line["id"],
                         "state": line["state"],
                     }
@@ -537,9 +515,7 @@ def export(root, output, fold, cache_mb):
                 state = assessment["state"]
                 if any(line["state"] != "legible" for line in field_lines):
                     state = next(
-                        line["state"]
-                        for line in field_lines
-                        if line["state"] != "legible"
+                        line["state"] for line in field_lines if line["state"] != "legible"
                     )
                 fields[f] = {
                     "state": state,
@@ -594,9 +570,7 @@ def export(root, output, fold, cache_mb):
 def materialize(root, identifier, cache_mb):
     manifest = json.loads((root / "variants/recipes.json").read_text())
     entry = next(r for r in manifest["recipes"] if r["id"] == identifier)
-    ref = json.loads(
-        (root / "labels/provisional" / f"{entry['source_hash']}.json").read_text()
-    )
+    ref = json.loads((root / "labels/provisional" / f"{entry['source_hash']}.json").read_text())
     approved(ref)
     split = json.loads((root / "split.json").read_text())
     if digest(split) != manifest["split_hash"] or not split.get("grouping_verified"):
@@ -669,12 +643,8 @@ def line_crop(image, polygon):
     def distance(a, b):
         return math.hypot(a["x"] - b["x"], a["y"] - b["y"])
 
-    w = math.ceil(
-        max(distance(polygon[0], polygon[1]), distance(polygon[3], polygon[2]))
-    )
-    h = math.ceil(
-        max(distance(polygon[0], polygon[3]), distance(polygon[1], polygon[2]))
-    )
+    w = math.ceil(max(distance(polygon[0], polygon[1]), distance(polygon[3], polygon[2])))
+    h = math.ceil(max(distance(polygon[0], polygon[3]), distance(polygon[1], polygon[2])))
     if w < 2 or h < 2 or w * h > 50_000_000:
         raise ValueError("Invalid crop dimensions.")
     to = [
@@ -701,14 +671,10 @@ def materialize_line(root, identifier, line_id, cache_mb):
         raise ValueError("Mirrored samples are orientation-only.")
     line = next(line for line in metadata["lines"] if line["id"] == line_id)
     if line["state"] != "legible" or not line["text"]:
-        raise ValueError(
-            "Unreadable and cropped text cannot receive a full recognition label."
-        )
+        raise ValueError("Unreadable and cropped text cannot receive a full recognition label.")
     with Image.open(page) as image:
         crop, to_variant = line_crop(image, line["polygon"])
-    key = digest(
-        [VERSION, identifier, metadata["reference_hash"], line_id, "recognition"]
-    )
+    key = digest([VERSION, identifier, metadata["reference_hash"], line_id, "recognition"])
     target = page.parent / f"{key}.jpg"
     crop.save(target, quality=95)
     write(
@@ -745,12 +711,17 @@ def readiness(root):
             approved_count += 1
         except ValueError:
             pass
-    return {"original_photos": len(originals), "approved_references": approved_count,
-            "draft_input_classes": kinds, "target_real_plan_photos": 40, "target_negative_or_unusable": 10,
-            "missing_plan_photos": max(0, 40-kinds["rehabilitation_plan"]),
-            "missing_negative_or_unusable": max(0, 10-kinds["non_plan"]-kinds["unusable"]),
-            "independent_final_acceptance": False,
-            "accuracy_changes_enabled": False}
+    return {
+        "original_photos": len(originals),
+        "approved_references": approved_count,
+        "draft_input_classes": kinds,
+        "target_real_plan_photos": 40,
+        "target_negative_or_unusable": 10,
+        "missing_plan_photos": max(0, 40 - kinds["rehabilitation_plan"]),
+        "missing_negative_or_unusable": max(0, 10 - kinds["non_plan"] - kinds["unusable"]),
+        "independent_final_acceptance": False,
+        "accuracy_changes_enabled": False,
+    }
 
 
 def main():

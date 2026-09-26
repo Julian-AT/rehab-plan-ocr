@@ -48,9 +48,7 @@ for index, (start, end, title, room) in enumerate(rows):
     draw.text((405, y), title, font=font, fill="black")
     draw.text((1120, y), room, font=small, fill="black")
     if index == 1:
-        draw.text(
-            (405, y + 42), "Bitte feste Schuhe mitbringen", font=small, fill="black"
-        )
+        draw.text((405, y + 42), "Bitte feste Schuhe mitbringen", font=small, fill="black")
     draw.line((95, y + 95, 1305, y + 95), fill="#bbbbbb", width=1)
 draw.text(
     (95, 1590),

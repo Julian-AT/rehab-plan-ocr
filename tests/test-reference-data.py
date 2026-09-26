@@ -165,9 +165,7 @@ class ReferenceDataTests(unittest.TestCase):
                     if r["document_hashes"][0] in g["document_hashes"]
                 )
                 r["approval_hash"] = refs.reference_hash(r)
-                refs.write(
-                    root / "labels/provisional" / f"{r['document_hashes'][0]}.json", r
-                )
+                refs.write(root / "labels/provisional" / f"{r['document_hashes'][0]}.json", r)
             refs.write(
                 root / "inventory.json",
                 {"entries": [{"sha256": r["document_hashes"][0]} for r in data]},
@@ -180,15 +178,12 @@ class ReferenceDataTests(unittest.TestCase):
                 by_source.setdefault(row["source_hash"], set()).add(row["partition"])
             self.assertTrue(all(len(parts) == 1 for parts in by_source.values()))
             rec = [
-                json.loads(v)
-                for v in (root / "export/recognition.jsonl").read_text().splitlines()
+                json.loads(v) for v in (root / "export/recognition.jsonl").read_text().splitlines()
             ]
             self.assertTrue(all("mirror" not in r["recipe"] for r in rec))
             table = next(
                 json.loads(v)
-                for v in (root / "export/table-assignment.jsonl")
-                .read_text()
-                .splitlines()
+                for v in (root / "export/table-assignment.jsonl").read_text().splitlines()
                 if json.loads(v)["name"] == "quarter-90"
             )
             self.assertNotEqual(
@@ -200,9 +195,7 @@ class ReferenceDataTests(unittest.TestCase):
             for n in range(3):
                 (cache / f"{n}.jpg").write_bytes(b"a" * 100)
             refs.bound_cache(cache, 150)
-            self.assertLessEqual(
-                sum(p.stat().st_size for p in cache.glob("*.jpg")), 150
-            )
+            self.assertLessEqual(sum(p.stat().st_size for p in cache.glob("*.jpg")), 150)
             data[0]["sources"][0]["logical_page"] = "changed"
             data[0]["approval_hash"] = refs.reference_hash(data[0])
             refs.write(

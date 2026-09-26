@@ -19,7 +19,9 @@ final class DedicatedCalendar {
     let saved = defaults.dictionary(forKey: key) as? [String: String]
     if let id = saved?["id"], let calendar = store.calendar(withIdentifier: id) {
       guard calendar.allowsContentModifications else {
-        throw Failure.message("Der gespeicherte Kalender ist schreibgeschützt. Bitte einen beschreibbaren Kalender auswählen.")
+        throw Failure.message(
+          "Der gespeicherte Kalender ist schreibgeschützt. Bitte einen beschreibbaren Kalender auswählen."
+        )
       }
       try renameOwnedDefault(calendar, saved: saved, in: store)
       remember(calendar)
@@ -66,10 +68,13 @@ final class DedicatedCalendar {
     return calendar
   }
 
-  private func renameOwnedDefault(_ calendar: EKCalendar, saved: [String: String]?, in store: EKEventStore) throws {
+  private func renameOwnedDefault(
+    _ calendar: EKCalendar, saved: [String: String]?, in store: EKEventStore
+  ) throws {
     // A persisted destination is evidence of app setup. Preserve any user rename.
     guard saved?["id"] == calendar.calendarIdentifier,
-          saved?["title"] == "Reha Calendar", calendar.title == "Reha Calendar" else { return }
+      saved?["title"] == "Reha Calendar", calendar.title == "Reha Calendar"
+    else { return }
     calendar.title = Self.title
     try store.saveCalendar(calendar, commit: true)
   }

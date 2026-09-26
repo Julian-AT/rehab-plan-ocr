@@ -7,7 +7,9 @@
 Regenerate with: uv run tests/fixtures/heic/generate.py
 EXIF must be encoded bytes so libheif also writes the HEIF irot/imir properties.
 """
+
 from pathlib import Path
+
 from PIL import Image
 from pillow_heif import register_heif_opener
 
@@ -24,8 +26,18 @@ for box, color in [
 for orientation in range(1, 9):
     exif = Image.Exif()
     exif[274] = orientation
-    image.save(root / f"orientation-{orientation}.heic", format="HEIF",
-               quality=100, exif=exif.tobytes(), thumbnails=[16])
-image.save(root / "multiple-images.heic", format="HEIF", quality=100,
-           save_all=True, append_images=[Image.new("RGB", (32, 48), (20, 20, 240))],
-           primary_index=1)
+    image.save(
+        root / f"orientation-{orientation}.heic",
+        format="HEIF",
+        quality=100,
+        exif=exif.tobytes(),
+        thumbnails=[16],
+    )
+image.save(
+    root / "multiple-images.heic",
+    format="HEIF",
+    quality=100,
+    save_all=True,
+    append_images=[Image.new("RGB", (32, 48), (20, 20, 240))],
+    primary_index=1,
+)

@@ -37,7 +37,7 @@ framework() {
     IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --release -p reha-ffi --lib --features onnx --target "$triple"
     xcrun libtool -static -o "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" \
       "target/$triple/release/libreha_ffi.a" "models/private/runtime/$triple/libonnxruntime.a"
-    xcrun nm -g "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" 2>/dev/null | rg -q ' T _OrtGetApiBase$'
+    xcrun nm -g "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" 2> /dev/null | rg -q ' T _OrtGetApiBase$'
     if [ "${REHA_LOW_DISK:-0}" = 1 ]; then rm -r "target/$triple/release"; fi
   done
   assembled=$(mktemp -d)
@@ -50,20 +50,27 @@ framework() {
   rmdir "$assembled"
 }
 case "$mode" in
-  bindings|check-bindings) bindings ;;
+  bindings | check-bindings) bindings ;;
   integration) sh scripts/test-native-bindings.sh ;;
   framework) framework ;;
-  simulator|device|archive|test)
+  simulator | device | archive | test)
     framework
     xcodegen generate --spec apps/ios/project.yml --project apps/ios
     case "$mode" in
       simulator) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build ;;
       device) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build ;;
-      archive) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath apps/ios/build/Laßnitzhöhe.xcarchive -allowProvisioningUpdates archive
-        python3 scripts/package-native.py ;;
+      archive)
+        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath apps/ios/build/Laßnitzhöhe.xcarchive -allowProvisioningUpdates archive
+        python3 scripts/package-native.py
+        ;;
       test)
         xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build
-        sh scripts/test-native-ui.sh --built ;;
-    esac ;;
-  *) echo 'Usage: scripts/build-native.sh bindings|check-bindings|integration|framework|simulator|device|archive|test' >&2; exit 2 ;;
+        sh scripts/test-native-ui.sh --built
+        ;;
+    esac
+    ;;
+  *)
+    echo 'Usage: scripts/build-native.sh bindings|check-bindings|integration|framework|simulator|device|archive|test' >&2
+    exit 2
+    ;;
 esac

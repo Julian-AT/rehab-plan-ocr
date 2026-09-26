@@ -196,8 +196,13 @@ pub fn process(
         progress("Ersten Entwurf sichern", Some(&run));
         #[cfg(target_os = "ios")]
         if !cancel.load(std::sync::atomic::Ordering::Relaxed) && started.elapsed().as_secs() < 55 {
-            let refinement = refine_vision(app.as_ref(), &mut run, &directory, &cancel,
-                started + std::time::Duration::from_secs(55));
+            let refinement = refine_vision(
+                app.as_ref(),
+                &mut run,
+                &directory,
+                &cancel,
+                started + std::time::Duration::from_secs(55),
+            );
             if refinement.is_err() {
                 run.stages.push(Stage {
                     name: "vision_refinement".into(),
@@ -292,22 +297,38 @@ pub(super) fn refine_vision(
 ) -> crate::Result<()> {
     use base64::{engine::general_purpose::STANDARD, Engine};
     let first_stage = run.stages.len();
-    let result = crate::refinement::refine_with_reader(run, directory, cancel, deadline, None,
+    let result = crate::refinement::refine_with_reader(
+        run,
+        directory,
+        cancel,
+        deadline,
+        None,
         &mut |crop, _, flag, _, _| {
-            if flag.load(std::sync::atomic::Ordering::Relaxed) || std::time::Instant::now() >= deadline {
-                return Err(crate::Error::Invalid("Nachprüfung abgebrochen oder Zeitbudget erschöpft.".into()));
+            if flag.load(std::sync::atomic::Ordering::Relaxed)
+                || std::time::Instant::now() >= deadline
+            {
+                return Err(crate::Error::Invalid(
+                    "Nachprüfung abgebrochen oder Zeitbudget erschöpft.".into(),
+                ));
             }
             let mut png = std::io::Cursor::new(Vec::new());
-            image::DynamicImage::ImageRgb8(crop.clone()).write_to(&mut png, image::ImageFormat::Png)?;
+            image::DynamicImage::ImageRgb8(crop.clone())
+                .write_to(&mut png, image::ImageFormat::Png)?;
             let response = app.call("recognize", serde_json::json!({
                 "base64": STANDARD.encode(png.into_inner()),
                 "budget_ms": deadline.saturating_duration_since(std::time::Instant::now()).as_millis() as u64
             })).map_err(crate::Error::Invalid)?;
-            Ok((serde_json::from_value(response["regions"].clone())?,
-                serde_json::from_value(response["observations"].clone())?, vec![]))
-        });
+            Ok((
+                serde_json::from_value(response["regions"].clone())?,
+                serde_json::from_value(response["observations"].clone())?,
+                vec![],
+            ))
+        },
+    );
     for stage in &mut run.stages[first_stage..] {
-        if stage.name == "selective_reread" { stage.name = "vision_refinement".into(); }
+        if stage.name == "selective_reread" {
+            stage.name = "vision_refinement".into();
+        }
     }
     result
 }

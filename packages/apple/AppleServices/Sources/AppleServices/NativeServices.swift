@@ -1,11 +1,14 @@
 import EventKit
 import PhotosUI
 import UIKit
-import Vision
 import UserNotifications
+import Vision
 
 struct SnapshotArgs: Decodable { let records: [OwnedRecord] }
-struct OverlapArgs: Decodable { let events: [String: Values]; let exclude: [String] }
+struct OverlapArgs: Decodable {
+  let events: [String: Values]
+  let exclude: [String]
+}
 struct CalendarArgs: Decodable { let dedicated: Bool? }
 struct Operation: Decodable {
   let kind: String
@@ -30,29 +33,39 @@ struct ShareArgs: Decodable {
 /// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
 public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
-  public func perform(_ command: String, arguments: Data, completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
+  public func perform(
+    _ command: String, arguments: Data,
+    completion: @escaping @Sendable (Result<Data, Error>) -> Void
+  ) {
     let correlation = UUID().uuidString
     let began = Date()
-    let step: DiagnosticStep? = switch command {
-    case "camera", "photos", "decodePhoto": .intake
-    case "recognize": .ocr
-    case "apply", "mutateEvent": .calendarWrite
-    case "snapshot", "queryEvents", "getEvent", "calendarStatus": .calendarRead
-    case "requestReminderPermission", "enableReminders": .reminderSettings
-    case "testReminder": .reminderPlan
-    default: nil
-    }
-    if let step { LocalDiagnostics.shared.record(step, .started, correlation: correlation) }
-    let request = ServiceRequest(arguments: arguments, completion: { result in
-      if let step {
-        let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
-        LocalDiagnostics.shared.record(step, outcome, correlation: correlation, durationMs: Int(Date().timeIntervalSince(began) * 1000))
+    let step: DiagnosticStep? =
+      switch command {
+      case "camera", "photos", "decodePhoto": .intake
+      case "recognize": .ocr
+      case "apply", "mutateEvent": .calendarWrite
+      case "snapshot", "queryEvents", "getEvent", "calendarStatus": .calendarRead
+      case "requestReminderPermission", "enableReminders": .reminderSettings
+      case "testReminder": .reminderPlan
+      default: nil
       }
-      completion(result)
-    })
+    if let step { LocalDiagnostics.shared.record(step, .started, correlation: correlation) }
+    let request = ServiceRequest(
+      arguments: arguments,
+      completion: { result in
+        if let step {
+          let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
+          LocalDiagnostics.shared.record(
+            step, outcome, correlation: correlation,
+            durationMs: Int(Date().timeIntervalSince(began) * 1000))
+        }
+        completion(result)
+      })
     do {
       switch command {
-      case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent", "resolveOwnedEvent": EventEditingService.shared.perform(command, request)
+      case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent",
+        "resolveOwnedEvent":
+        EventEditingService.shared.perform(command, request)
       case "calendarStatus":
         calendarQueue.async { request.resolve(AgendaService.shared.calendarStatus()) }
       case "calendars": try calendars(request)
@@ -63,8 +76,9 @@ public final class NativeServices: @unchecked Sendable {
       case "agenda": try agenda(request)
       case "agendaPresentation":
         calendarQueue.async {
-          do { request.resolve(try AgendaService.shared.presentation()) }
-          catch { request.reject(error.localizedDescription) }
+          do { request.resolve(try AgendaService.shared.presentation()) } catch {
+            request.reject(error.localizedDescription)
+          }
         }
       case "enableReminders": try enableReminders(request)
       case "requestReminderPermission": requestReminderPermission(request)
@@ -82,7 +96,12 @@ public final class NativeServices: @unchecked Sendable {
           do { try self.recognize(request) } catch { request.reject(error.localizedDescription) }
         }
       case "protectStorage": try protectStorage(request)
-      case "share": DispatchQueue.main.async { do { try NativePresentation.shared.share(request) } catch { request.reject(error.localizedDescription) } }
+      case "share":
+        DispatchQueue.main.async {
+          do { try NativePresentation.shared.share(request) } catch {
+            request.reject(error.localizedDescription)
+          }
+        }
       case "deviceInfo": DispatchQueue.main.async { NativePresentation.shared.deviceInfo(request) }
       default: request.reject("Unbekannte native Aktion.")
       }
@@ -92,7 +111,10 @@ public final class NativeServices: @unchecked Sendable {
   private let dedicatedCalendar = DedicatedCalendar()
   private let calendarQueue = AgendaService.shared.queue
   private let iso = ISO8601DateFormatter()
-  public func start() { AgendaService.shared.start(); Task { @MainActor in NativePresentation.shared.start() } }
+  public func start() {
+    AgendaService.shared.start()
+    Task { @MainActor in NativePresentation.shared.start() }
+  }
   private func dictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]
   }
@@ -102,7 +124,8 @@ public final class NativeServices: @unchecked Sendable {
       end_utc: iso.string(from: event.endDate),
       timezone: event.timeZone?.identifier ?? "Europe/Vienna", location: event.location ?? "",
       notes: event.notes ?? "",
-      reminder_minutes: AgendaService.shared.logicalReminder(for: event, actual: event.alarms?.first.map { Int(-$0.relativeOffset / 60) }))
+      reminder_minutes: AgendaService.shared.logicalReminder(
+        for: event, actual: event.alarms?.first.map { Int(-$0.relativeOffset / 60) }))
   }
   private func marker(_ id: String) -> String { "reha-calendar://event/\(id)" }
   private func owns(_ event: EKEvent, _ id: String) -> Bool {
@@ -169,21 +192,36 @@ public final class NativeServices: @unchecked Sendable {
     }
   }
   func overlaps(_ invoke: ServiceRequest) throws {
-    let args=try invoke.parseArgs(OverlapArgs.self)
+    let args = try invoke.parseArgs(OverlapArgs.self)
     guard checkAccess(invoke) else { return }
     calendarQueue.async {
-      var overlaps: [[String:String]]=[]
-      for (id,values) in args.events.sorted(by: { $0.key < $1.key }) {
-        guard let start=self.iso.date(from:values.start_utc),let end=self.iso.date(from:values.end_utc) else { continue }
-        let predicate=self.store.predicateForEvents(withStart:start,end:end,calendars:nil)
-        for event in self.store.events(matching:predicate) {
+      var overlaps: [[String: String]] = []
+      for (id, values) in args.events.sorted(by: { $0.key < $1.key }) {
+        guard let start = self.iso.date(from: values.start_utc),
+          let end = self.iso.date(from: values.end_utc)
+        else { continue }
+        let predicate = self.store.predicateForEvents(withStart: start, end: end, calendars: nil)
+        for event in self.store.events(matching: predicate) {
           guard event.startDate < end, event.endDate > start,
-                !args.exclude.contains(where:{ self.owns(event,$0) }) else { continue }
-          overlaps.append(["appointment_id":id,"external_id":event.eventIdentifier ?? "", "title":event.title ?? "Termin", "start_utc":self.iso.string(from:event.startDate),"end_utc":self.iso.string(from:event.endDate)])
+            !args.exclude.contains(where: { self.owns(event, $0) })
+          else { continue }
+          overlaps.append([
+            "appointment_id": id, "external_id": event.eventIdentifier ?? "",
+            "title": event.title ?? "Termin", "start_utc": self.iso.string(from: event.startDate),
+            "end_utc": self.iso.string(from: event.endDate),
+          ])
         }
       }
-      overlaps.sort { ($0["appointment_id"] ?? "",$0["external_id"] ?? "",$0["start_utc"] ?? "",$0["end_utc"] ?? "",$0["title"] ?? "") < ($1["appointment_id"] ?? "",$1["external_id"] ?? "",$1["start_utc"] ?? "",$1["end_utc"] ?? "",$1["title"] ?? "") }
-      invoke.resolve(["overlaps":overlaps])
+      overlaps.sort {
+        (
+          $0["appointment_id"] ?? "", $0["external_id"] ?? "", $0["start_utc"] ?? "",
+          $0["end_utc"] ?? "", $0["title"] ?? ""
+        ) < (
+          $1["appointment_id"] ?? "", $1["external_id"] ?? "", $1["start_utc"] ?? "",
+          $1["end_utc"] ?? "", $1["title"] ?? ""
+        )
+      }
+      invoke.resolve(["overlaps": overlaps])
     }
   }
   func forgetCalendar(_ invoke: ServiceRequest) {
@@ -289,8 +327,11 @@ public final class NativeServices: @unchecked Sendable {
           return
         }
         let event = existing ?? EKEvent(eventStore: self.store)
-        let alarmChanged = op.kind == "create" || op.before?.reminder_minutes != after.reminder_minutes
-        if alarmChanged, existing != nil, AgendaService.shared.alarmIsProtected(event, approvedMinutes: op.before?.reminder_minutes) {
+        let alarmChanged =
+          op.kind == "create" || op.before?.reminder_minutes != after.reminder_minutes
+        if alarmChanged, existing != nil,
+          AgendaService.shared.alarmIsProtected(event, approvedMinutes: op.before?.reminder_minutes)
+        {
           finish("conflict", event, "Manuell veränderte Kalenderalarme bleiben geschützt.")
           return
         }
@@ -306,7 +347,9 @@ public final class NativeServices: @unchecked Sendable {
           event.alarms = after.reminder_minutes.map { [EKAlarm(relativeOffset: -Double($0) * 60)] }
         }
         try self.store.save(event, span: .thisEvent, commit: true)
-        if alarmChanged { try AgendaService.shared.approvedAlarmChanged(id: op.id, minutes: after.reminder_minutes) }
+        if alarmChanged {
+          try AgendaService.shared.approvedAlarmChanged(id: op.id, minutes: after.reminder_minutes)
+        }
         finish("saved", event)
       } catch {
         finish("uncertain", existing, "EventKit konnte den Schreibstatus nicht sicher bestätigen.")
@@ -316,10 +359,14 @@ public final class NativeServices: @unchecked Sendable {
   func agenda(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(AgendaSyncArgs.self)
     calendarQueue.async {
-      do { try AgendaService.shared.sync(args) { result in
-        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
-      } }
-      catch { invoke.reject(error.localizedDescription) }
+      do {
+        try AgendaService.shared.sync(args) { result in
+          switch result {
+          case .success(let value): invoke.resolve(value)
+          case .failure(let error): invoke.reject(error.localizedDescription)
+          }
+        }
+      } catch { invoke.reject(error.localizedDescription) }
     }
   }
   func enableReminders(_ invoke: ServiceRequest) throws {
@@ -334,12 +381,16 @@ public final class NativeServices: @unchecked Sendable {
   // Permission is requested while editing, but scheduling changes only on Save.
   // Keep enableReminders' existing immediate-activation behavior for older callers.
   func requestReminderPermission(_ invoke: ServiceRequest) {
-    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, error in
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
+      _, error in
       self.calendarQueue.async {
         do {
           if let error { throw error }
           AgendaService.shared.readStatus { result in
-            switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+            switch result {
+            case .success(let value): invoke.resolve(value)
+            case .failure(let error): invoke.reject(error.localizedDescription)
+            }
           }
         } catch { invoke.reject(error.localizedDescription) }
       }
@@ -348,7 +399,10 @@ public final class NativeServices: @unchecked Sendable {
   func reminderStatus(_ invoke: ServiceRequest) {
     calendarQueue.async {
       AgendaService.shared.readStatus { result in
-        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+        switch result {
+        case .success(let value): invoke.resolve(value)
+        case .failure(let error): invoke.reject(error.localizedDescription)
+        }
       }
     }
   }
@@ -356,14 +410,18 @@ public final class NativeServices: @unchecked Sendable {
     struct Args: Decodable { var acknowledge: String? }
     let args = try invoke.parseArgs(Args.self)
     calendarQueue.async {
-      do { invoke.resolve(try AgendaService.shared.pendingOpen(acknowledge: args.acknowledge)) }
-      catch { invoke.reject(error.localizedDescription) }
+      do {
+        invoke.resolve(try AgendaService.shared.pendingOpen(acknowledge: args.acknowledge))
+      } catch { invoke.reject(error.localizedDescription) }
     }
   }
   func testReminder(_ invoke: ServiceRequest) {
     calendarQueue.async {
       AgendaService.shared.testNotification { result in
-        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+        switch result {
+        case .success(let value): invoke.resolve(value)
+        case .failure(let error): invoke.reject(error.localizedDescription)
+        }
       }
     }
   }
@@ -389,7 +447,10 @@ public final class NativeServices: @unchecked Sendable {
     invoke.resolve(["base64": png.base64EncodedString()])
   }
   func recognize(_ invoke: ServiceRequest) throws {
-    struct Args: Decodable { let base64: String; let budget_ms: Double? }
+    struct Args: Decodable {
+      let base64: String
+      let budget_ms: Double?
+    }
     let args = try invoke.parseArgs(Args.self)
     guard let data = Data(base64Encoded: args.base64), let image = UIImage(data: data)?.cgImage
     else {
@@ -403,7 +464,8 @@ public final class NativeServices: @unchecked Sendable {
       request.recognitionLanguages = ["de-DE", "en-US"]
       request.usesLanguageCorrection = false
       let timeout = DispatchWorkItem { request.cancel() }
-      DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + min(60, max(0.001, (args.budget_ms ?? 60000) / 1000)), execute: timeout)
+      DispatchQueue.global(qos: .userInitiated).asyncAfter(
+        deadline: .now() + min(60, max(0.001, (args.budget_ms ?? 60000) / 1000)), execute: timeout)
       defer { timeout.cancel() }
       do {
         try VNImageRequestHandler(cgImage: image).perform([request])
@@ -435,7 +497,8 @@ public final class NativeServices: @unchecked Sendable {
           "duration_ms": Int(Date().timeIntervalSince(started) * 1000),
           "manifest": [
             "engine": "Apple Vision", "revision": request.revision,
-            "system_version": ProcessInfo.processInfo.operatingSystemVersionString, "language_correction": false,
+            "system_version": ProcessInfo.processInfo.operatingSystemVersionString,
+            "language_correction": false,
           ],
         ])
       } catch { invoke.reject("Lokale Vision-Erkennung fehlgeschlagen.") }

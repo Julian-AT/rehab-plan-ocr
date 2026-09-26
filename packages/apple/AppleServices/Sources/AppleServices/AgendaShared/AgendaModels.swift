@@ -42,7 +42,9 @@ public struct AgendaSnapshot: Codable, Equatable, Sendable {
     }
   }
   public func presentation(at date: Date, calendar: Calendar = .current) -> AgendaPresentation {
-    AgendaPresentation(next: upcoming(at: date).first, today: allToday(at: date, calendar: calendar), stale: state(at: date) == "stale")
+    AgendaPresentation(
+      next: upcoming(at: date).first, today: allToday(at: date, calendar: calendar),
+      stale: state(at: date) == "stale")
   }
   public func allToday(at date: Date, calendar: Calendar = .current) -> [AgendaEvent] {
     let start = calendar.startOfDay(for: date)

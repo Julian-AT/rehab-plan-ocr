@@ -1,4 +1,5 @@
 """A replay must use frozen inputs, preserve originals and make no accuracy claim."""
+
 import hashlib
 import importlib.util
 import json
@@ -26,10 +27,16 @@ class BaselineReplayTests(unittest.TestCase):
         source = data / "raw/synthetic.png"
         source.write_bytes(b"invented-photo")
         digest = hashlib.sha256(source.read_bytes()).hexdigest()
-        (data / "inventory.json").write_text(json.dumps({"entries": [{"filename": source.name, "sha256": digest}]}))
+        (data / "inventory.json").write_text(
+            json.dumps({"entries": [{"filename": source.name, "sha256": digest}]})
+        )
         manifest = {"created_at": "2026-09-11T00:00:00Z"}
-        for path, key in [(frozen / "reha", "binary_sha256"), (frozen / "config.json", "config_sha256"),
-                          (models / "manifest.json", "model_manifest_sha256"), (data / "inventory.json", "inventory_sha256")]:
+        for path, key in [
+            (frozen / "reha", "binary_sha256"),
+            (frozen / "config.json", "config_sha256"),
+            (models / "manifest.json", "model_manifest_sha256"),
+            (data / "inventory.json", "inventory_sha256"),
+        ]:
             manifest[key] = replay.sha(path)
         (frozen / "baseline.json").write_text(json.dumps(manifest))
         return frozen, models, data
@@ -38,12 +45,19 @@ class BaselineReplayTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             frozen, models, data = self.fixture(root)
+
             def scan(command, **_):
                 self.assertEqual(Path(command[0]), (frozen / "reha").resolve())
                 self.assertEqual(Path(command[-1]), (frozen / "config.json").resolve())
-                (Path(command[3]) / "run.json").write_text(json.dumps({"total_ms": 123, "appointments": []}))
+                (Path(command[3]) / "run.json").write_text(
+                    json.dumps({"total_ms": 123, "appointments": []})
+                )
                 return type("Result", (), {"returncode": 0})()
-            with patch.object(replay.subprocess, "run", side_effect=scan), patch.object(replay.platform, "platform", return_value="test-host"):
+
+            with (
+                patch.object(replay.subprocess, "run", side_effect=scan),
+                patch.object(replay.platform, "platform", return_value="test-host"),
+            ):
                 report = replay.replay(frozen, models, data, root / "output")
             self.assertFalse(report["verified_accuracy"])
             self.assertFalse(report["physical_iphone_measurement"])
