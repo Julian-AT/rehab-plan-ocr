@@ -266,14 +266,13 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "eventCalendars" | "queryEvents" | "getEvent" | "mutateEvent" => {
-                    serde_json::from_str(
-                        &self
-                            .host
-                            .calendar_event_call(command.into(), args.to_string())?,
-                    )
-                    .map_err(storage)
-                }
+                "calendarStatus" | "eventCalendars" | "queryEvents" | "getEvent"
+                | "mutateEvent" => serde_json::from_str(
+                    &self
+                        .host
+                        .calendar_event_call(command.into(), args.to_string())?,
+                )
+                .map_err(storage),
                 "snapshot" => {
                     let live = self.host.snapshot(convert(args["records"].clone())?)?;
                     Ok(json!({"current":live.current, "protected_ids":live.protected_ids}))
@@ -289,19 +288,12 @@ impl Platform for HostBridge {
                         .map_err(storage)?;
                     Ok(json!({"base64":STANDARD.encode(self.host.decode_photo(bytes)?)}))
                 }
-                "agenda" => {
-                    let p = &args["preferences"];
-                    let preferences = Preferences {
-                        app_reminders_enabled: p["enabled"].as_bool().unwrap_or(false),
-                        app_reminder_minutes: p["minutes"].as_u64().map(|v| v as u32),
-                        reminder_sound: p["sound"].as_bool().unwrap_or(true),
-                        reminder_preview: p["preview"].as_bool().unwrap_or(true),
-                        ..Default::default()
-                    };
-                    self.host
-                        .sync_agenda(convert(args["records"].clone())?, preferences)?;
-                    Ok(Value::Null)
-                }
+                "agenda" => serde_json::from_str(
+                    &self
+                        .host
+                        .calendar_event_call("agenda".into(), args.to_string())?,
+                )
+                .map_err(storage),
                 "forgetCalendar" => {
                     self.host.forget_calendar()?;
                     Ok(Value::Null)
@@ -617,9 +609,16 @@ impl NativeApplication {
             service::settings::settings_value(&s, Some(existing)).map_err(failure)?;
             let records = {
                 let store = s.store.lock().map_err(storage)?;
-                convert(store.records(None).map_err(storage)?)?
+                store.owned_records().map_err(storage)?
             };
-            bridge.host.sync_agenda(records, value.clone())?;
+            bridge.host.calendar_event_call(
+                "agenda".into(),
+                json!({"records":records,"preferences":{
+                    "enabled":value.app_reminders_enabled,"minutes":value.app_reminder_minutes,
+                    "sound":value.reminder_sound,"preview":value.reminder_preview
+                }})
+                .to_string(),
+            )?;
             Ok(value)
         })
         .await

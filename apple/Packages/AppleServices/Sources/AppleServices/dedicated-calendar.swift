@@ -80,7 +80,7 @@ final class DedicatedCalendar {
         "id": calendar.calendarIdentifier,
         "title": calendar.title ?? Self.title,
         "source_id": calendar.source.sourceIdentifier,
-        "source_title": calendar.source.title ?? "",
+        "source_title": calendar.source.title,
         "source_type": String(calendar.source.sourceType.rawValue),
       ], forKey: key)
   }

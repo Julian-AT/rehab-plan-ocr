@@ -191,6 +191,15 @@ struct ReadableAgendaLayout {
         let fraction = (minute - knots[upper - 1]) / (knots[upper] - knots[upper - 1])
         return positions[upper - 1] + fraction * (positions[upper] - positions[upper - 1])
     }
+    /// All pages share the projection; overlap columns remain specific to each day.
+    init(segments: [DayAgenda.Segment], projection: ReadableAgendaLayout, pointsPerHour: Double) {
+        knots = projection.knots; positions = projection.positions
+        items = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0).map { item in
+            let top = projection.y(item.segment.start)
+            return Item(placement: item, top: top,
+                        height: max(44, projection.y(item.segment.start + item.segment.duration) - top - 4))
+        }
+    }
     init(_ segments: [DayAgenda.Segment], minutes: Double = 720, pointsPerHour: Double, heights: [String: Double] = [:]) {
         let placements = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0)
         let knots = Set([0, minutes] + segments.flatMap { [$0.start, $0.start + $0.duration] }).sorted()
@@ -207,4 +216,17 @@ struct ReadableAgendaLayout {
             return Item(placement: item, top: positions[start], height: positions[end] - positions[start] - 4)
         }
     }
+}
+
+/// A tie belongs to vertical scrolling; a decision is never changed mid-gesture.
+struct AgendaAxisLock {
+    enum Axis { case horizontal, vertical }
+    private(set) var axis: Axis?
+    mutating func update(x: Double, y: Double) -> Axis? {
+        if axis == nil, max(abs(x), abs(y)) >= 6 {
+            axis = abs(x) > abs(y) ? .horizontal : .vertical
+        }
+        return axis
+    }
+    mutating func reset() { axis = nil }
 }

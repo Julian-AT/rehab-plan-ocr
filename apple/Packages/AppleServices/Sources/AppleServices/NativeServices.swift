@@ -31,10 +31,30 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
 {
   public static let shared = NativeServices()
   public func perform(_ command: String, arguments: Data, completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
-    let request = ServiceRequest(arguments: arguments, completion: completion)
+    let correlation = UUID().uuidString
+    let began = Date()
+    let step: DiagnosticStep? = switch command {
+    case "camera", "photos", "decodePhoto": .intake
+    case "recognize": .ocr
+    case "apply", "mutateEvent": .calendarWrite
+    case "snapshot", "queryEvents", "getEvent", "calendarStatus": .calendarRead
+    case "requestReminderPermission", "enableReminders": .reminderSettings
+    case "testReminder": .reminderPlan
+    default: nil
+    }
+    if let step { LocalDiagnostics.shared.record(step, .started, correlation: correlation) }
+    let request = ServiceRequest(arguments: arguments, completion: { result in
+      if let step {
+        let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
+        LocalDiagnostics.shared.record(step, outcome, correlation: correlation, durationMs: Int(Date().timeIntervalSince(began) * 1000))
+      }
+      completion(result)
+    })
     do {
       switch command {
       case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent": EventEditingService.shared.perform(command, request)
+      case "calendarStatus":
+        calendarQueue.async { request.resolve(AgendaService.shared.calendarStatus()) }
       case "calendars": try calendars(request)
       case "snapshot": try snapshot(request)
       case "overlaps": try overlaps(request)
@@ -137,7 +157,7 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
           calendar in
           [
             "id": calendar.calendarIdentifier, "title": calendar.title,
-            "source": calendar.source.title ?? "",
+            "source": calendar.source.title,
             "writable": calendar.allowsContentModifications,
             "is_default": calendar.calendarIdentifier
               == self.store.defaultCalendarForNewEvents?.calendarIdentifier,
@@ -316,7 +336,9 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
   func agenda(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(AgendaSyncArgs.self)
     calendarQueue.async {
-      do { invoke.resolve(try AgendaService.shared.sync(args)) }
+      do { try AgendaService.shared.sync(args) { result in
+        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+      } }
       catch { invoke.reject(error.localizedDescription) }
     }
   }
@@ -336,15 +358,18 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
       self.calendarQueue.async {
         do {
           if let error { throw error }
-          invoke.resolve(try AgendaService.shared.response())
+          AgendaService.shared.readStatus { result in
+            switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+          }
         } catch { invoke.reject(error.localizedDescription) }
       }
     }
   }
   func reminderStatus(_ invoke: ServiceRequest) {
     calendarQueue.async {
-      do { invoke.resolve(try AgendaService.shared.response()) }
-      catch { invoke.reject(error.localizedDescription) }
+      AgendaService.shared.readStatus { result in
+        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+      }
     }
   }
   func pendingEventOpen(_ invoke: ServiceRequest) throws {
@@ -357,8 +382,9 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
   }
   func testReminder(_ invoke: ServiceRequest) {
     calendarQueue.async {
-      do { try AgendaService.shared.testNotification(); invoke.resolve() }
-      catch { invoke.reject(error.localizedDescription) }
+      AgendaService.shared.testNotification { result in
+        switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
+      }
     }
   }
   func camera(_ invoke: ServiceRequest) {

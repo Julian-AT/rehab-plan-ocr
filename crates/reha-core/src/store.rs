@@ -3,14 +3,18 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+mod activity;
 mod batches;
+pub use activity::{ActivityItem, ActivityPage};
 mod event_mutations;
 mod intake;
 mod migrations;
+mod owned_events;
 mod plans;
 pub use batches::{BatchOperation, ImportBatch};
 pub use intake::Intake;
 pub use migrations::STORE_VERSION;
+pub use owned_events::OwnedEventRecord;
 pub use plans::Plan;
 
 pub struct Store {
@@ -270,6 +274,7 @@ impl Store {
         if result.status == "saved" {
             if op.kind == "remove" {
                 tx.execute("DELETE FROM imports WHERE id=?1", [&op.id])?;
+                tx.execute("DELETE FROM owned_events WHERE id=?1", [&op.id])?;
             } else {
                 if result.external_id.is_none() {
                     return Err(Error::Invalid("Saved event lacks external ID".into()));
@@ -287,6 +292,7 @@ impl Store {
                     operation_id: operation_id.into(),
                 };
                 tx.execute("INSERT INTO imports(id,schedule_id,record) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET record=excluded.record",params![op.id,schedule,serde_json::to_string(&record)?])?;
+                owned_events::upsert(&tx, &record.into())?;
             }
         }
         tx.execute(
@@ -314,7 +320,7 @@ impl Store {
             std::fs::remove_dir_all(&scans)?;
         }
         std::fs::create_dir_all(scans)?;
-        self.connection.execute_batch("DELETE FROM event_mutations; DELETE FROM plan_acceptances; DELETE FROM processing_attempts; DELETE FROM plan_pages; DELETE FROM plans; DELETE FROM batch_operations; DELETE FROM import_batches; DELETE FROM intakes; DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
+        self.connection.execute_batch("DELETE FROM owned_events; DELETE FROM event_mutations; DELETE FROM plan_acceptances; DELETE FROM processing_attempts; DELETE FROM plan_pages; DELETE FROM plans; DELETE FROM batch_operations; DELETE FROM import_batches; DELETE FROM intakes; DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
         Ok(())
     }
 }

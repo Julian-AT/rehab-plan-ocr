@@ -65,6 +65,34 @@ pub fn set_page_group(state: &Arc<AppState>, id: String, page_ids: Vec<String>) 
         .retain(|_, p| !p.document_ids.iter().any(|v| ids.contains(v)));
     Ok(ids.len())
 }
+/// Append under the same admission/store lock; concurrent captures never replace siblings.
+pub fn append_pages(state: &AppState, id: String, pages: Vec<String>) -> Response<usize> {
+    let _admission = state
+        .lifecycle_lock
+        .try_lock()
+        .map_err(|_| "Eine Datenänderung läuft bereits.")?;
+    let mut store = state.store.lock().map_err(failure)?;
+    let parent = store
+        .plans()
+        .map_err(failure)?
+        .into_iter()
+        .find(|p| p.id == id || p.page_ids.contains(&id))
+        .map(|p| p.id)
+        .unwrap_or(id);
+    let mut ids = store.page_ids(&parent).map_err(failure)?;
+    for page in pages {
+        if !ids.contains(&page) {
+            ids.push(page);
+        }
+    }
+    store.group_pages(&parent, &ids).map_err(failure)?;
+    state
+        .proposals
+        .lock()
+        .map_err(failure)?
+        .retain(|_, p| !p.document_ids.iter().any(|v| ids.contains(v)));
+    Ok(ids.len())
+}
 pub fn page_group(state: &Arc<AppState>, id: String) -> Response<Vec<String>> {
     state
         .store

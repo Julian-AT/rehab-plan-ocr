@@ -104,9 +104,7 @@ final class AgendaNativeTests: XCTestCase {
         try await withCheckedThrowingContinuation { continuation in
           service.queue.async {
             do {
-              continuation.resume(
-                returning: try service.sync(
-                  AgendaSyncArgs(records: [record, rejected], preferences: preferences)))
+              try service.sync(AgendaSyncArgs(records: [record, rejected], preferences: preferences)) { continuation.resume(with: $0) }
             } catch { continuation.resume(throwing: error) }
           }
         }
@@ -138,8 +136,7 @@ final class AgendaNativeTests: XCTestCase {
         (continuation: CheckedContinuation<Void, Error>) in
         service.queue.async {
           do {
-            try service.snooze(id: id)
-            continuation.resume()
+            service.snooze(id: id) { result in continuation.resume(with: result.map { _ in () }) }
           } catch { continuation.resume(throwing: error) }
         }
       }

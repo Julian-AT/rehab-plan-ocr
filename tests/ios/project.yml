@@ -12,6 +12,8 @@ targets:
       - agenda-native-tests.swift
       - event-editing-tests.swift
       - ../../apple/Packages/AppleServices/Sources/AppleServices/event-editing.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/NotificationAdapter.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/LocalDiagnostics.swift
       - ../../apple/Packages/AppleServices/Sources/AppleServices/ServiceRequest.swift
       - ../../apple/Packages/AppleServices/Sources/AppleServices/calendar-contracts.swift
       - ../../apple/Packages/AppleServices/Sources/AppleServices/agenda-service.swift

@@ -196,7 +196,7 @@ struct DiagnosticsView: View {
     @State private var diagnostics: Diagnostics?
     @State private var capabilities: Capabilities?
     @State private var error: String?
-    @State private var history: History?
+    @State private var showSource = false
     var body: some View {
             Form {
                 if let error { Text(error) }
@@ -212,11 +212,11 @@ struct DiagnosticsView: View {
                         Text(capabilities.runtime).font(.subheadline)
                     }
                 }
-                if let history {
-                    Section("Gespeicherte Daten") {
-                        LabeledContent("Pläne", value: String(history.plans.count))
-                        LabeledContent("Offene Kalenderaktionen", value: String(history.pending.count))
-                    }
+                Section("Technische Vorgänge") {
+                    NavigationLink("Korrelierter Ablauf und bereinigter Export") { DiagnosticTimelineView() }
+                    LabeledContent("App-Build", value: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unbekannt")
+                    LabeledContent("iOS", value: UIDevice.current.systemVersion)
+                    if id != nil { Button("Original und Bildkoordinaten") { showSource = true } }
                 }
                 if let diagnostics {
                     Section("Erkennung") { Text(diagnostics.engine); Text("Dauer: \(diagnostics.totalMs) ms"); Text(diagnostics.sourceHash).font(.caption.monospaced()).textSelection(.enabled) }
@@ -228,7 +228,8 @@ struct DiagnosticsView: View {
                     Section("Modellidentität") { Text(diagnostics.manifestJson).font(.caption.monospaced()).textSelection(.enabled) }
                 }
             }.pageTitle("Diagnose")
-                .task { do { capabilities = try await core.capabilities(); if let id { diagnostics = try await core.diagnostics(id: id) } else { history = try await core.history() } } catch { self.error = userMessage(error) } }
+                .sheet(isPresented: $showSource) { if let id { SourceView(core: core, id: id, polygons: []) } }
+                .task { do { capabilities = try await core.capabilities(); if let id { diagnostics = try await core.diagnostics(id: id) } } catch { self.error = userMessage(error) } }
     }
 }
 

@@ -173,20 +173,20 @@ private struct MoreView: View {
     let changed: () -> Void
     var body: some View {
         Form {
-            Section {
+            Section("Einstellungen") {
                 NavigationLink { CalendarPreferencesView(core: core) } label: { Label("Kalender", systemImage: "calendar") }
                 NavigationLink { SettingsView(core: core, page: .appearance) } label: { Label("Darstellung", systemImage: "textformat.size") }
                 NavigationLink { SettingsView(core: core, page: .reminders) } label: { Label("Erinnerungen", systemImage: "bell") }
-            }
-            Section {
                 NavigationLink { VoiceSettingsView() } label: { Label("Sprache", systemImage: "waveform") }
-                NavigationLink { SettingsView(core: core, page: .recognition) } label: { Label("Erkennung", systemImage: "text.viewfinder") }
-                NavigationLink { SettingsView(core: core, page: .storage) } label: { Label("Aufbewahrung", systemImage: "internaldrive") }
+                NavigationLink { SettingsView(core: core, page: .recognition) } label: { Label("Erfassung", systemImage: "text.viewfinder") }
+                NavigationLink { SettingsView(core: core, page: .storage) } label: { Label("Speicher", systemImage: "internaldrive") }
             }
-            Section {
+            Section("Information") {
                 NavigationLink { HelpView() } label: { Label("Hilfe", systemImage: "questionmark.circle") }
-                NavigationLink { EventHistoryView(core: core) } label: { Label("Verlauf", systemImage: "clock.arrow.circlepath") }
-                NavigationLink { RecoveryView(core: core, changed: changed) } label: { Label("Kalenderabgleich", systemImage: "arrow.triangle.2.circlepath") }
+                NavigationLink { ActivityView(core: core) } label: { Label("Verlauf", systemImage: "clock.arrow.circlepath") }
+                NavigationLink { CalendarStatusView(core: core, changed: changed) } label: { Label("Kalenderstatus", systemImage: "arrow.triangle.2.circlepath") }
+            }
+            Section("Entwicklung") {
                 NavigationLink { DiagnosticsView(core: core) } label: { Label("Diagnose", systemImage: "info.circle") }
             }
             Section {} footer: {
@@ -199,10 +199,14 @@ private struct MoreView: View {
 private struct HelpView: View {
     var body: some View {
         Form {
-            Section("Plan speichern") { Text("Fotografiere deinen Plan. Prüfe offene Angaben und tippe auf Termine speichern. Du kannst den Import danach rückgängig machen.") }
-            Section("Fotos und Kalender") { Text("Originale bleiben im Archiv. Das Löschen eines Originals entfernt keine Kalendertermine. Rückgängig findest du beim Plan im Importverlauf.") }
-            Section("Sprechen") { Text("Tippe auf das Mikrofon und sprich in Ruhe. Mit Fertig beendest du die Aufnahme. Kalenderänderungen werden erst nach deiner Bestätigung gespeichert. Abbrechen beendet das Gespräch.") }
-            Section("Termine") { Text("Die Wochenleiste wählt den Tag. Tippe auf einen Termin, um alle Angaben zu sehen. Vorbei beschreibt nur die Uhrzeit und bestätigt keine Teilnahme.") }
+            Section("Erfassen") { Text("Mit Plus einen Plan fotografieren oder Fotos beziehungsweise PDF-Dateien importieren. Mehrseitige Pläne können gemeinsam geprüft werden. Die Erkennung erfolgt lokal auf dem iPhone.") }
+            Section("Prüfen und speichern") { Text("Offene und widersprüchliche Angaben am Original prüfen. Datum, Uhrzeit, Bezeichnung, Raum und Therapeut behalten ihre Quellen. Vollständige Termine werden erst mit der Schaltfläche zum Speichern in den gewählten Kalender übernommen.") }
+            Section("Korrigieren und rückgängig machen") { Text("Ein Termin öffnet seine Details und die Bearbeitung. Änderungen benötigen eine Bildschirmbestätigung. Rücknahmen stehen im Verlauf oder beim Plan im Importverlauf, soweit spätere Kalenderänderungen dies erlauben.") }
+            Section("Kalender bedienen") { Text("Die Wochenleiste wählt den Tag. Horizontal wischen blättert zwischen Tagen, vertikal wischen verschiebt die Uhrzeit. Heute springt zum aktuellen Tag. Ganztägige Termine und Zeiten außerhalb von 06:00–18:00 sind gesondert zugänglich. Vorbei bestätigt keine Teilnahme.") }
+            Section("Erinnerungen") { Text("Erinnerungen betreffen mit der App gespeicherte Termine. Kalenderalarm und App-Mitteilung werden gegen Doppelalarme abgesichert. Kalenderalarme fremder Termine bleiben geschützt. Die Testerinnerung wird nach fünf Sekunden angefordert. Eine bestätigte Planung beweist keine sichtbare oder hörbare Zustellung.") }
+            Section("Sprachgespräch") { Text("Gespräch starten beginnt die lokale Spracherkennung. Sprechpausen beenden eine Äußerung; während der Antwort kann hineingesprochen werden. Gespräch beenden, Tabwechsel und Audio-Unterbrechungen stoppen die Sitzung. Kalenderänderungen erfordern weiterhin eine Bestätigung am Bildschirm.") }
+            Section("Daten verwalten") { Text("Originale bleiben im Archiv bis zur gewählten Aufbewahrungsfrist oder zum Löschen. Originale löschen entfernt keine Kalendertermine. Kalenderstatus zeigt Zugriffsrechte, Auswahl und ungeklärte Schreibvorgänge. Technische Diagnose bleibt lokal und enthält standardmäßig keine Termininhalte oder Gespräche.") }
+
         }.pageTitle("Hilfe")
     }
 }

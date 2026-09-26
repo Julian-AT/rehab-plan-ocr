@@ -42,6 +42,9 @@ struct SettingsView: View {
     var page: Page = .appearance
     @Environment(PreferencesStore.self) private var store
     @State private var reminderStatus = ""
+    @State private var testingReminder = false
+    @State private var testResult: String?
+    @State private var testError: String?
     @State private var error: String?
     @State private var erase = false
     @State private var erasing = false
@@ -86,8 +89,25 @@ struct SettingsView: View {
                         Picker("Vorlauf", selection: store.binding(\.appReminderMinutes, fallback: nil)) { minuteOptions }
                         Toggle("Ton", isOn: store.binding(\.reminderSound, fallback: false)).accessibilityIdentifier("reminder-sound")
                         Toggle("Termindetails in Vorschau", isOn: store.binding(\.reminderPreview, fallback: false)).accessibilityIdentifier("reminder-preview")
-                        Button("Testerinnerung senden") { Task { do { _ = try await NativeBridge.request("testReminder") } catch { self.error = userMessage(error) } } }
-                    } footer: { Text(reminderStatus.isEmpty ? "Die App erinnert dich zusätzlich an angezeigte Termine." : reminderStatus) }
+                        Button {
+                            guard !testingReminder else { return }
+                            testingReminder = true; testResult = nil; testError = nil
+                            Task {
+                                defer { testingReminder = false }
+                                do {
+                                    let result = try JSONSerialization.jsonObject(with: await NativeBridge.request("testReminder")) as? [String: Any]
+                                    testResult = result?["confirmed_pending"] as? Bool == true
+                                      ? "Testauftrag angenommen und vom System vorgemerkt. Anzeige nach fünf Sekunden angefordert."
+                                      : "Testauftrag angenommen. Die Zustellung wurde noch nicht beobachtet."
+                                } catch { testError = userMessage(error) }
+                            }
+                        } label: {
+                            HStack { if testingReminder { ProgressView() }; Text(testingReminder ? "Test wird geplant …" : "Testerinnerung senden") }
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(.rect)
+                        }.disabled(testingReminder).accessibilityIdentifier("test-reminder")
+                        if let testResult { Text(testResult).font(.subheadline).foregroundStyle(.secondary) }
+                        if let testError { Text(testError).font(.subheadline).foregroundStyle(AppPalette.destructive) }
+                    } footer: { Text(reminderStatus.isEmpty ? "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst." : reminderStatus) }
                 case .recognition:
                     Section {
                         Picker("Zeitzone", selection: store.binding(\.timezone, fallback: TimeZone.current.identifier)) {

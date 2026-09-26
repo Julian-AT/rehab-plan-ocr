@@ -10,6 +10,7 @@ struct StagedPhoto: Transferable, Sendable {
         FileRepresentation(importedContentType: .image) { received in
             let folder = try AppStorage.prepare().appendingPathComponent("inbox", isDirectory: true)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try IntakeStaging.validateSize(received.file)
             let destination = folder.appendingPathComponent(UUID().uuidString).appendingPathExtension(received.file.pathExtension)
             try FileManager.default.copyItem(at: received.file, to: destination)
             return StagedPhoto(url: destination)
@@ -47,6 +48,8 @@ struct StagedPhoto: Transferable, Sendable {
     private var parents: [String: String] = [:]
     private var pendingIntakes=0
     private var documentJobs=0
+    private var documentGeneration = UUID()
+    private var recoveringShares = false
     private var awaitingBytes=Set<String>()
     private var suspended=false
     func suspend() { suspended=true; cancel() }
@@ -57,6 +60,7 @@ struct StagedPhoto: Transferable, Sendable {
     @discardableResult func beginCapture(parent: String? = nil) -> String {
         if parent == nil { cancel() }
         let id = UUID().uuidString
+        LocalDiagnostics.shared.record(.intake, .started, correlation: id)
         if let parent { parents[id] = parent }
         awaitingBytes.insert(id)
         currentID = id; presentedID = parent.map { "plan:\($0)" } ?? id; running = true; sourceStored = false
@@ -95,8 +99,7 @@ struct StagedPhoto: Transferable, Sendable {
                 _ = try await core.stagePhoto(id: id, path: url.path)
                 if removeStaged { try? FileManager.default.removeItem(at: url) }
                 if let parent = parents[id] {
-                    let pages = try await core.pageGroup(id: parent)
-                    _ = try await core.setPageGroup(id: parent, pageIds: pages + [id])
+                    _ = try await core.appendPages(id: parent, pages: [id])
                 }
                 guard !cancelled.contains(id), !suspended else { return }
                 if currentID == id { sourceStored = true }
@@ -124,6 +127,14 @@ struct StagedPhoto: Transferable, Sendable {
                             try await core.importPhoto(request: PhotoRequest(id: id, path: retained, timezone: preferences.timezone, quarterTurns: turns, mirrored: mirrored, pageCorners: corners, force: force))
                         } onCancel: { [core] in try? core.cancelJob(id: id) }
                         if result.duplicate && currentID == id { presentedID = result.scan.document.id }
+                        LocalDiagnostics.shared.record(.interpretation, .completed, correlation: id, count: result.scan.appointments.count)
+                        if let diagnostics = try? await core.diagnostics(id: result.scan.document.id) {
+                            for stage in diagnostics.stages {
+                                let step: DiagnosticStep = stage.name.contains("refin") ? .refinement : stage.name.contains("ocr") ? .ocr : stage.name.contains("pars") ? .interpretation : stage.name.contains("column") ? .mapping : .preparation
+                                LocalDiagnostics.shared.record(step, stage.status == "failed" ? .failed : .completed, correlation: id, durationMs: Int(stage.durationMs))
+                            }
+                        }
+                        guard !Task.isCancelled, !cancelled.contains(id) else { return }
                         finishedID = result.scan.document.id
                     } catch {
                         guard currentID == id else { return }
@@ -164,11 +175,13 @@ struct StagedPhoto: Transferable, Sendable {
         Task { await ingestFile(url,id:id,navigate:navigate) }
     }
     private func ingestFile(_ url: URL, id: String, navigate: Bool) async {
+        let generation = documentGeneration
         documentJobs += 1; updateRunning()
         defer { documentJobs -= 1; updateRunning() }
         do {
             let staged = try await Task.detached {
                 let scoped=url.startAccessingSecurityScopedResource(); defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                try IntakeStaging.validateSize(url)
                 let root=try AppStorage.prepare().appendingPathComponent("inbox")
                 try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
                 let destination=root.appendingPathComponent(id).appendingPathExtension(url.pathExtension)
@@ -183,6 +196,7 @@ struct StagedPhoto: Transferable, Sendable {
                 let file=try FileHandle(forReadingFrom:original); defer { try? file.close() }
                 return try file.read(upToCount:5) == Data("%PDF-".utf8)
             }.value
+            guard generation == documentGeneration, !suspended, !Task.isCancelled else { return }
             if navigate { sourceStored=true }
             if !pdf {
                 if (try? await core.loadScan(id:id)) == nil { start(original,removeStaged:false,captureID:id) }
@@ -192,16 +206,17 @@ struct StagedPhoto: Transferable, Sendable {
             let count=try await Task.detached { try PDFIntake.pageCount(original) }.value
             let pages=try await core.pdfPages(id:id,count:UInt32(count))
             if let parent = parents[id] {
-                let existing = try await core.pageGroup(id: parent)
-                _ = try await core.setPageGroup(id: parent, pageIds: existing + pages)
+                _ = try await core.appendPages(id: parent, pages: pages)
             }
             for (index,page) in pages.enumerated() {
+                guard generation == documentGeneration, !suspended, !Task.isCancelled else { return }
                 if (try? await core.loadScan(id:page)) != nil { continue }
                 if let existing=try? await core.artifactPath(id:page,artifact:"source.bin") {
                     start(URL(fileURLWithPath:existing),force:true,removeStaged:false,captureID:page)
                     continue
                 }
                 let rendered=try await Task.detached { try PDFIntake.render(original,index:index) }.value
+                guard generation == documentGeneration, !suspended, !Task.isCancelled else { return }
                 let temporary=try await Task.detached {
                     let folder=try AppStorage.prepare().appendingPathComponent("inbox")
                     let url=folder.appendingPathComponent(page).appendingPathExtension("png")
@@ -209,6 +224,7 @@ struct StagedPhoto: Transferable, Sendable {
                 }.value
                 _ = try await core.stagePhoto(id:page,path:temporary.path)
                 try await core.retainPdfEvidence(pageId:page,evidenceJson:rendered.evidence)
+                guard generation == documentGeneration, !suspended, !Task.isCancelled else { return }
                 start(temporary,force:true,captureID:page)
             }
             finishedID=id
@@ -216,6 +232,9 @@ struct StagedPhoto: Transferable, Sendable {
         } catch { self.error=userMessage(error); updateRunning() }
     }
     func recoverShares() async {
+        guard !recoveringShares else { return }
+        recoveringShares = true
+        defer { recoveringShares = false }
         do {
             let receipts = try await Task.detached { try IntakeStaging.pending() }.value
             for (receipt,url,folder) in receipts {
@@ -238,8 +257,10 @@ struct StagedPhoto: Transferable, Sendable {
                 guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else { continue }
                 let name = url.deletingPathExtension().lastPathComponent
                 let id = UUID(uuidString: name) == nil ? UUID().uuidString : name
-                _ = try await core.stagePhoto(id: id, path: url.path)
-                try? FileManager.default.removeItem(at: url)
+                do {
+                    _ = try await core.stagePhoto(id: id, path: url.path)
+                    try FileManager.default.removeItem(at: url)
+                } catch { self.error = userMessage(error) }
             }
             await recoverShares()
             let history = try await core.history()
@@ -253,6 +274,8 @@ struct StagedPhoto: Transferable, Sendable {
         } catch { self.error = userMessage(error) }
     }
     func cancel() {
+        documentGeneration = UUID()
+        if let currentID { LocalDiagnostics.shared.record(.intake, .cancelled, correlation: currentID) }
         if let currentID { cancelled.insert(currentID); try? core.cancelJob(id: currentID) }
         for (id, task) in tasks { cancelled.insert(id); try? core.cancelJob(id: id); task.cancel() }
         awaitingBytes.removeAll(); updateRunning()

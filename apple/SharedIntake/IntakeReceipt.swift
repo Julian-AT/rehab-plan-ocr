@@ -15,6 +15,12 @@ enum IntakeStaging {
         }
         return root.appendingPathComponent("receipts", isDirectory: true)
     }
+    static func validateSize(_ url: URL) throws {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? NSNumber,
+              size.uint64Value <= 40 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
+    }
     static func stage(_ url: URL) throws -> IntakeReceipt {
         let files = FileManager.default
         guard let size = (try files.attributesOfItem(atPath: url.path))[.size] as? NSNumber,
@@ -37,8 +43,9 @@ enum IntakeStaging {
         let root = try root()
         let folders = (try? FileManager.default.contentsOfDirectory(at:root,includingPropertiesForKeys:nil)) ?? []
         return folders.compactMap { folder in
-            guard let data = try? Data(contentsOf:folder.appendingPathComponent("receipt.json")),
-                  let receipt = try? JSONDecoder().decode(IntakeReceipt.self,from:data), UUID(uuidString:receipt.id) != nil,
+            guard UUID(uuidString: folder.lastPathComponent) != nil,
+                  let data = try? Data(contentsOf:folder.appendingPathComponent("receipt.json")),
+                  let receipt = try? JSONDecoder().decode(IntakeReceipt.self,from:data), UUID(uuidString:receipt.id) != nil, receipt.id == folder.lastPathComponent,
                   let bytes = try? Data(contentsOf:folder.appendingPathComponent("original")),
                   SHA256.hash(data:bytes).map({ String(format:"%02x",$0) }).joined() == receipt.sha256 else { return nil }
             return (receipt,folder.appendingPathComponent("original"),folder)

@@ -125,6 +125,11 @@ pub async fn import_image(
             } else {
                 "failed"
             };
+            if status == "completed" {
+                let _ = store
+                    .connection
+                    .execute("DELETE FROM failures WHERE id=?1", [&worker_id]);
+            }
             let _ = store.intake_status(
                 &worker_id,
                 status,

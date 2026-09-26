@@ -63,7 +63,7 @@ fn v2_upgrade_preserves_exact_serialized_records_and_hashes() {
         .connection
         .query_row("SELECT run FROM scans", [], |r| r.get(0))
         .unwrap();
-    store.connection.execute_batch("DROP TABLE event_mutations; DROP TABLE plan_acceptances; DROP TABLE processing_attempts; DROP TABLE plan_pages; DROP TABLE plans; DROP TABLE batch_operations; DROP TABLE import_batches; DROP TABLE intakes; PRAGMA user_version=2;").unwrap();
+    store.connection.execute_batch("DROP TABLE owned_events; DROP INDEX pending_operations; DROP TABLE event_mutations; DROP TABLE plan_acceptances; DROP TABLE processing_attempts; DROP TABLE plan_pages; DROP TABLE plans; DROP TABLE batch_operations; DROP TABLE import_batches; DROP TABLE intakes; PRAGMA user_version=2;").unwrap();
     drop(store);
     let store = Store::open(dir.path()).unwrap();
     let after: String = store

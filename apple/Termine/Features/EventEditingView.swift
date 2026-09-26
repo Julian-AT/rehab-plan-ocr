@@ -1,3 +1,4 @@
+import AppleServices
 import SwiftUI
 import RehaCore
 
@@ -40,6 +41,7 @@ extension NativeApplication {
 }
 @MainActor @Observable final class EventSession {
     let core: NativeApplication
+    let origin: String
     private(set) var session = UUID().uuidString
     private(set) var revision: UInt64 = 0
     var proposal: EventProposalView?
@@ -47,13 +49,13 @@ extension NativeApplication {
     var busy = false
     var error: String?
     var result: String?
-    init(core: NativeApplication) { self.core = core }
+    init(core: NativeApplication, origin: String = "manual") { self.core = core; self.origin = origin }
     func preview(kind: String, calendar: String, event: CalendarEvent?, patch: [String: JSONValue]) async {
         guard !busy else { return }; busy = true
         revision += 1; let revision = revision; let session = session; proposal = nil; result = nil
         defer { if self.session == session { busy = false } }
         do {
-            let response: EventResponse = try await core.eventRequest("previewEventMutation", ["kind": kind, "calendar_id": calendar, "event": try event.map(jsonObject) ?? NSNull(), "patch": try jsonObject(patch), "session": session, "revision": revision])
+            let response: EventResponse = try await core.eventRequest("previewEventMutation", ["origin": origin, "kind": kind, "calendar_id": calendar, "event": try event.map(jsonObject) ?? NSNull(), "patch": try jsonObject(patch), "session": session, "revision": revision])
             guard self.session == session, self.revision == revision else { return }
             proposal = response.proposal; systemEvent = response.system_editor; error = nil
         } catch { if self.session == session { self.error = userMessage(error) } }
@@ -61,6 +63,7 @@ extension NativeApplication {
     func confirm() async {
         guard let proposal, !busy else { return }; busy = true; self.proposal = nil
         let current = session
+        LocalDiagnostics.shared.record(.confirmation, .started, correlation: proposal.token)
         defer { if session == current { busy = false } }
         do {
             let response: EventResponse = try await core.eventRequest("confirmProposal", ["token": proposal.token, "session": session, "revision": revision, "confirmation": "button"])
@@ -211,10 +214,11 @@ struct EventEditorView: View {
 }
 struct EventHistoryView: View {
     let core: NativeApplication
+    let initialID: String?
     @Environment(\.scenePhase) private var scenePhase
     @State private var history: [EventHistoryItem] = []
     @State private var model: EventSession
-    init(core: NativeApplication) { self.core = core; _model = State(initialValue: EventSession(core: core)) }
+    init(core: NativeApplication, initialID: String? = nil) { self.core = core; self.initialID = initialID; _model = State(initialValue: EventSession(core: core)) }
     var body: some View {
         List {
             if let proposal = model.proposal { ProposalCard(proposal: proposal, busy: model.busy, confirm: { Task { await model.confirm(); await load() } }, cancel: { model.interrupt() }) }
@@ -245,6 +249,6 @@ struct EventHistoryView: View {
     }
     private func load() async {
         struct Response: Decodable { let history: [EventHistoryItem] }
-        do { history = try await core.eventRequest("eventHistory", as: Response.self).history } catch { model.error = userMessage(error) }
+        do { if let initialID { history = [try await core.eventRequest("activityDetail", ["id": "event:\(initialID)"], as: EventHistoryItem.self)] } else { history = try await core.eventRequest("eventHistory", as: Response.self).history } } catch { model.error = userMessage(error) }
     }
 }

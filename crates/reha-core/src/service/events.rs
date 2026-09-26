@@ -17,6 +17,13 @@ pub struct EventProposal {
     pub before: Option<Value>,
     pub patch: Value,
     pub undo_of: Option<String>,
+    #[serde(default)]
+    pub owned_id: Option<String>,
+    #[serde(default = "unknown_origin")]
+    pub origin: String,
+}
+fn unknown_origin() -> String {
+    "unknown".into()
 }
 fn required<'a>(v: &'a Value, key: &str) -> Response<&'a str> {
     v[key]
@@ -109,7 +116,7 @@ async fn check_calendar(
         .store
         .lock()
         .map_err(failure)?
-        .records(None)
+        .owned_records()
         .map_err(failure)?
         .iter()
         .any(|r| r.calendar_id == calendar && r.status == "saved");
@@ -117,7 +124,7 @@ async fn check_calendar(
         || !create && imported
         || create && p["calendar_id"].as_str() == Some(calendar))
     {
-        return Err("Kalender ist nicht ausgewählt.".into());
+        return Err("Kalenderauswahl enthält diesen Kalender nicht.".into());
     }
     let all = native(platform, "eventCalendars", json!({})).await?;
     let selected = all["calendars"]
@@ -146,7 +153,7 @@ pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -
         .store
         .lock()
         .map_err(failure)?
-        .records(None)
+        .owned_records()
         .map_err(failure)?
         .into_iter()
         .filter(|r| r.status == "saved" && r.external_id.is_some())
@@ -170,7 +177,7 @@ fn require_selected_event(state: &AppState, calendar: &str, event: &Value) -> Re
             .store
             .lock()
             .map_err(failure)?
-            .records(None)
+            .owned_records()
             .map_err(failure)?;
         if !records.iter().any(|r| {
             r.status == "saved"
@@ -217,7 +224,46 @@ async fn preview(
     };
     check_patch(&kind, &args["patch"], before.as_ref())?;
     let session = required(&args, "session")?.to_string();
+    let owned_id = if let Some(id) = &undo_of {
+        let old = state
+            .store
+            .lock()
+            .map_err(failure)?
+            .event_mutation(id)
+            .map_err(failure)?
+            .ok_or("Verlaufseintrag fehlt.")?;
+        serde_json::from_value::<EventProposal>(old["proposal"].clone())
+            .map_err(failure)?
+            .owned_id
+    } else if kind == "create" {
+        Some(uuid::Uuid::new_v4().to_string())
+    } else {
+        let event = before.as_ref().ok_or("Termin fehlt.")?;
+        state
+            .store
+            .lock()
+            .map_err(failure)?
+            .owned_records()
+            .map_err(failure)?
+            .into_iter()
+            .find(|r| {
+                r.external_id.as_deref() == event["external_id"].as_str()
+                    && event["metadata"]["url"].as_str()
+                        == Some(format!("reha-calendar://event/{}", r.id).as_str())
+            })
+            .map(|r| r.id)
+    };
+    let origin = if undo_of.is_some() {
+        "unknown"
+    } else if args["origin"] == "voice" {
+        "voice"
+    } else {
+        "manual"
+    }
+    .to_string();
     let proposal = EventProposal {
+        owned_id,
+        origin,
         token: uuid::Uuid::new_v4().to_string(),
         session: session.clone(),
         revision: args["revision"].as_u64().unwrap_or(0),
@@ -246,10 +292,8 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         .store
         .lock()
         .map_err(failure)?
-        .event_history()
+        .event_mutation(token)
         .map_err(failure)?
-        .into_iter()
-        .find(|h| h["id"] == token)
     {
         return Ok(item["result"]
             .as_object()
@@ -315,6 +359,8 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         .map_err(failure)?
         .finish_event_mutation(token, &result)
         .map_err(failure)?;
+    // Ownership and the durable journal are committed before reminder reconciliation.
+    super::agenda::sync(&platform, state).await?;
     Ok(result)
 }
 async fn undo(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> Response<Value> {
@@ -388,6 +434,82 @@ pub async fn dispatch(
     args: Value,
 ) -> Response<Value> {
     match command {
+        "activityPage" => serde_json::to_value(
+            state
+                .store
+                .lock()
+                .map_err(failure)?
+                .activity_page(
+                    args["limit"].as_u64().map(|n| n.min(100) as u32),
+                    args["cursor"].as_str(),
+                    args["source"].as_str(),
+                )
+                .map_err(failure)?,
+        )
+        .map_err(failure),
+        "activityDetail" => {
+            let id = required(&args, "id")?;
+            let (source, id) = id.split_once(':').ok_or("Ungültiger Verlaufseintrag.")?;
+            let store = state.store.lock().map_err(failure)?;
+            match source {
+                "import" => {
+                    serde_json::to_value(store.batch(id).map_err(failure)?).map_err(failure)
+                }
+                "event" => Ok(store
+                    .event_mutation(id)
+                    .map_err(failure)?
+                    .unwrap_or(Value::Null)),
+                "capture" => Ok(json!({"document_id":id})),
+                "recognition" => {
+                    let result: (String, String, Option<String>) = store
+                        .connection
+                        .query_row(
+                            "SELECT scan_id,status,error FROM processing_attempts WHERE id=?1",
+                            [id],
+                            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                        )
+                        .map_err(failure)?;
+                    Ok(json!({"document_id":result.0,"status":result.1,"error":result.2}))
+                }
+                _ => Err("Unbekannter Verlaufseintrag.".into()),
+            }
+        }
+        "ownedEventRecords" => Ok(
+            json!({"records":state.store.lock().map_err(failure)?.owned_records().map_err(failure)?}),
+        ),
+        "calendarStatus" => {
+            let mut status = native(&platform, "calendarStatus", json!({})).await?;
+            let store = state.store.lock().map_err(failure)?;
+            let prefs: Value = store
+                .setting("preferences")
+                .map_err(failure)?
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or(json!({}));
+            status["calendar_id"] = prefs["calendar_id"].clone();
+            status["display_calendar_ids"] = prefs["display_calendar_ids"].clone();
+            status["pending_imports"] = json!(store.pending().map_err(failure)?.len());
+            let pending: u32 = store
+                .connection
+                .query_row(
+                    "SELECT count(*) FROM event_mutations WHERE status IN ('pending','uncertain')",
+                    [],
+                    |r| r.get(0),
+                )
+                .map_err(failure)?;
+            status["pending_events"] = json!(pending);
+            Ok(status)
+        }
+        "refreshAgenda" => {
+            let _guard = state.calendar_lock.lock().await;
+            super::agenda::sync(&platform, state).await
+        }
+        "appendPlanPages" => {
+            let pages: Vec<String> =
+                serde_json::from_value(args["pages"].clone()).map_err(failure)?;
+            Ok(
+                json!({"count": super::calendar::append_pages(state, required(&args, "id")?.into(), pages)?}),
+            )
+        }
         "queryCalendarEvents" => query(platform, state, args).await,
         "previewEventMutation" => preview(platform, state, args, None).await,
         "confirmProposal" => confirm(platform, state, args).await,
@@ -452,6 +574,7 @@ pub async fn dispatch(
                     .finish_event_mutation(required(item, "id")?, &result)
                     .map_err(failure)?;
             }
+            super::agenda::sync(&platform, state).await?;
             Ok(json!({}))
         }
         _ => Err("Unbekannte Kalenderfunktion.".into()),

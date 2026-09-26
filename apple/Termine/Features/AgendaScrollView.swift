@@ -1,0 +1,147 @@
+import SwiftUI
+import UIKit
+
+/// Public gesture APIs arbitrate before either scroll view starts moving.
+/// Recognizing this gate vetoes its dependent scroll view for the whole touch.
+private final class AxisVeto: UIGestureRecognizer {
+    let rejectedAxis: AgendaAxisLock.Axis
+    private var origin: CGPoint?
+    private var lock = AgendaAxisLock()
+    init(rejecting axis: AgendaAxisLock.Axis) {
+        rejectedAxis = axis
+        super.init(target: nil, action: nil)
+        cancelsTouchesInView = false
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        origin = touches.first?.location(in: view)
+    }
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard state == .possible, let origin, let point = touches.first?.location(in: view),
+              let axis = lock.update(x: point.x - origin.x, y: point.y - origin.y) else { return }
+        state = axis == rejectedAxis ? .began : .failed
+    }
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        state = state == .possible ? .failed : .ended
+    }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { state = .cancelled }
+    override func reset() { super.reset(); origin = nil; lock.reset() }
+    override func canPrevent(_ other: UIGestureRecognizer) -> Bool { false }
+    override func canBePrevented(by other: UIGestureRecognizer) -> Bool { false }
+}
+
+/// One vertical offset and one fixed gutter for three finger-driven day pages.
+/// New data, text measurements and size changes are applied only at rest.
+struct AgendaScrollView: UIViewControllerRepresentable {
+    let date: Date
+    let projection: ReadableAgendaLayout
+    let pages: (Double, Double) -> [AnyView]
+    let gutter: AnyView
+    let showsTimeline: Bool
+    let initialMinute: Double
+    let reset: Int
+    @Binding var minute: Double?
+    let selectDate: (Date) -> Void
+
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+    func updateUIViewController(_ controller: Controller, context: Context) { controller.receive(self) }
+
+    final class Controller: UIViewController, UIScrollViewDelegate {
+        private let vertical = UIScrollView()
+        private let horizontal = UIScrollView()
+        private var hosts: [UIHostingController<AnyView>] = []
+        private let timeHost = UIHostingController(rootView: AnyView(EmptyView()))
+        private var current: AgendaScrollView?
+        private var pending: AgendaScrollView?
+        private var lastSize = CGSize.zero
+        private var applying = false
+        private var previousReset = -1
+        private var anchorMinute: Double?
+        private var busy: Bool {
+            vertical.isTracking || vertical.isDragging || vertical.isDecelerating ||
+            horizontal.isTracking || horizontal.isDragging || horizontal.isDecelerating
+        }
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            vertical.delegate = self; horizontal.delegate = self
+            vertical.contentInsetAdjustmentBehavior = .never
+            horizontal.contentInsetAdjustmentBehavior = .never
+            horizontal.isPagingEnabled = true
+            horizontal.showsHorizontalScrollIndicator = false
+            horizontal.alwaysBounceHorizontal = true
+            vertical.alwaysBounceVertical = false
+            vertical.accessibilityIdentifier = "day-timeline"
+            horizontal.accessibilityIdentifier = "agenda-days"
+            view.addSubview(vertical); vertical.addSubview(horizontal)
+            addChild(timeHost); vertical.addSubview(timeHost.view); timeHost.didMove(toParent: self)
+            timeHost.view.backgroundColor = .clear
+            for _ in 0..<3 {
+                let host = UIHostingController(rootView: AnyView(EmptyView()))
+                addChild(host); horizontal.addSubview(host.view); host.didMove(toParent: self)
+                host.view.backgroundColor = .clear; hosts.append(host)
+            }
+            let horizontalVeto = AxisVeto(rejecting: .vertical)
+            let verticalVeto = AxisVeto(rejecting: .horizontal)
+            view.addGestureRecognizer(horizontalVeto); view.addGestureRecognizer(verticalVeto)
+            horizontal.panGestureRecognizer.require(toFail: horizontalVeto)
+            vertical.panGestureRecognizer.require(toFail: verticalVeto)
+        }
+        func receive(_ value: AgendaScrollView) {
+            loadViewIfNeeded()
+            pending = value
+            if !busy { applyPending() }
+        }
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            if view.bounds.size != lastSize, !busy { applyPending() }
+        }
+        private func applyPending() {
+            guard !applying, let value = pending ?? current, view.bounds.width > 0 else { return }
+            applying = true
+            defer { applying = false }
+            // Store a civil-time anchor, never a page-specific pixel offset.
+            let anchor = value.reset != previousReset ? value.initialMinute :
+                (value.minute ?? anchorMinute ?? value.initialMinute)
+            anchorMinute = anchor
+            previousReset = value.reset; current = value; pending = nil
+            lastSize = view.bounds.size
+            vertical.frame = view.bounds
+            let height = max(view.bounds.height, value.projection.height + 52)
+            let gutterWidth: CGFloat = value.showsTimeline ? 56 : 0
+            // Empty pages use the full width; layout changes only after paging settles.
+            timeHost.rootView = value.gutter
+            timeHost.view.isHidden = !value.showsTimeline
+            timeHost.view.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: height)
+            horizontal.frame = CGRect(x: gutterWidth, y: 0, width: view.bounds.width - gutterWidth, height: height)
+            horizontal.contentSize = CGSize(width: horizontal.bounds.width * 3, height: height)
+            let y = min(max(0, value.projection.y(anchor)), max(0, height - view.bounds.height))
+            let pages = value.pages(view.bounds.height, y)
+            for (index, host) in hosts.enumerated() {
+                host.rootView = pages[index]
+                host.view.frame = CGRect(x: CGFloat(index) * horizontal.bounds.width, y: 0,
+                                         width: horizontal.bounds.width, height: height)
+            }
+            vertical.contentSize = CGSize(width: view.bounds.width, height: height)
+            horizontal.contentOffset = CGPoint(x: horizontal.bounds.width, y: 0)
+            vertical.contentOffset = CGPoint(x: 0, y: y)
+            vertical.isScrollEnabled = value.showsTimeline
+        }
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard !applying, scrollView === vertical, let current, current.showsTimeline else { return }
+            let anchor = current.projection.minute(at: max(0, vertical.contentOffset.y))
+            anchorMinute = anchor
+            current.minute = anchor
+        }
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate { settle() }
+        }
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { settle() }
+        private func settle() {
+            guard let current, horizontal.bounds.width > 0 else { return }
+            let page = min(2, max(0, Int((horizontal.contentOffset.x / horizontal.bounds.width).rounded())))
+            if page != 1 {
+                let date = Calendar.current.date(byAdding: .day, value: page - 1, to: current.date)!
+                current.selectDate(date)
+            } else { applyPending() }
+        }
+    }
+}

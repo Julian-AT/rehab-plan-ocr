@@ -136,3 +136,10 @@ extension WriteStatus {
         switch wireValue { case "saved": self = .saved; case "failed": self = .failed; case "conflict": self = .conflict; default: self = .uncertain }
     }
 }
+
+extension NativeApplication {
+    func appendPages(id: String, pages: [String]) async throws -> Int {
+        struct Response: Decodable { let count: Int }
+        return try await eventRequest("appendPlanPages", ["id": id, "pages": pages], as: Response.self).count
+    }
+}

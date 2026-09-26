@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use rusqlite::{Connection, TransactionBehavior};
 
-pub const STORE_VERSION: u32 = 7;
+pub const STORE_VERSION: u32 = 8;
 
 pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
     // Reject a newer store before changing any pragma or schema. A preserved old
@@ -70,6 +70,27 @@ pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
     }
     if version < 7 {
         tx.execute_batch("CREATE TABLE event_mutations(id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, proposal TEXT NOT NULL, status TEXT NOT NULL, result TEXT, undo_of TEXT REFERENCES event_mutations(id)); CREATE UNIQUE INDEX one_active_event_undo ON event_mutations(undo_of) WHERE undo_of IS NOT NULL AND status IN ('pending','uncertain','saved','acknowledged'); PRAGMA user_version=7;")?;
+    }
+    if version < 8 {
+        tx.execute_batch("CREATE TABLE owned_events(id TEXT PRIMARY KEY, calendar_id TEXT NOT NULL, external_id TEXT, record TEXT NOT NULL);
+            CREATE INDEX owned_external ON owned_events(calendar_id,external_id);
+            CREATE INDEX batch_order ON batch_operations(batch_id,ordinal);
+            CREATE INDEX batch_chronology ON import_batches(created_at DESC,id DESC);
+            CREATE INDEX intake_chronology ON intakes(imported_at DESC,id DESC);
+            CREATE INDEX processing_chronology ON processing_attempts(started_at DESC,id DESC);
+            CREATE INDEX mutation_chronology ON event_mutations(created_at DESC,id DESC);
+            CREATE INDEX pending_operations ON operations(status) WHERE status IN ('queued','pending','uncertain');
+            CREATE INDEX pending_mutations ON event_mutations(status) WHERE status IN ('pending','uncertain');
+            PRAGMA user_version=8;")?;
+        let records = {
+            let mut query = tx.prepare("SELECT record FROM imports")?;
+            let rows = query.query_map([], |r| r.get::<_, String>(0))?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for raw in records {
+            let record: crate::contracts::ImportRecord = serde_json::from_str(&raw)?;
+            super::owned_events::upsert(&tx, &record.into())?;
+        }
     }
     tx.commit()?;
     Ok(())

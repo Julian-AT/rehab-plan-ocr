@@ -125,6 +125,22 @@ import Foundation
             }
             precondition(readable.items.first { $0.id == "next" }!.top == readable.items.first { $0.id == "overlap" }!.top)
         }
+        var axis = AgendaAxisLock()
+        precondition(axis.update(x: 3, y: 3) == nil)
+        precondition(axis.update(x: 6, y: 6) == .vertical)
+        precondition(axis.update(x: 100, y: 7) == .vertical)
+        axis.reset()
+        precondition(axis.update(x: -7, y: 6) == .horizontal)
+        precondition(axis.update(x: 0, y: 100) == .horizontal)
+        let firstWindow = AgendaWindow(agenda: DayAgenda(events: [short, adjacent], date: now, now: now, calendar: calendar), now: now, calendar: calendar)
+        let secondWindow = AgendaWindow(agenda: day, now: now, calendar: calendar)
+        let common = ReadableAgendaLayout(firstWindow.timed + secondWindow.timed, pointsPerHour: 72, heights: ["short": 200])
+        let a = ReadableAgendaLayout(segments: firstWindow.timed, projection: common, pointsPerHour: 72)
+        let b = ReadableAgendaLayout(segments: secondWindow.timed, projection: common, pointsPerHour: 72)
+        for minute in stride(from: 0.0, through: 720.0, by: 5) {
+            precondition(a.y(minute) == b.y(minute))
+            precondition(abs(a.minute(at: b.y(minute)) - minute) < 0.001)
+        }
         var withNotes = next
         let json = try! JSONEncoder().encode(withNotes)
         var object = try! JSONSerialization.jsonObject(with: json) as! [String: Any]

@@ -16,6 +16,7 @@ impl Platform for Calendar {
     fn progress(&self, _: Value) {}
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         match command {
+            "agenda" => Ok(json!({})),
             "eventCalendars" => Ok(self.calendars.lock().unwrap().clone()),
             "queryEvents" => {
                 assert_eq!(args["calendar_ids"], json!(["selected"]));
@@ -55,6 +56,9 @@ impl Platform for Calendar {
                 } else {
                     if p["kind"] == "create" {
                         *event = fixture_event();
+                        if let Some(id) = p["owned_id"].as_str() {
+                            event["metadata"]["url"] = json!(format!("reha-calendar://event/{id}"));
+                        }
                     }
                     for (key, value) in p["patch"].as_object().unwrap() {
                         event["values"][key] = value.clone();
@@ -367,4 +371,94 @@ async fn deselection_revokes_external_edit_even_when_same_calendar_has_imports()
         .unwrap_err()
         .contains("Kalenderauswahl"));
     assert_eq!(*calendar.calls.lock().unwrap(), 0);
+}
+
+#[tokio::test]
+async fn owned_create_delete_undo_preserve_identity_without_import_baselines() {
+    let (root, state, calendar) = fixture();
+    let p = preview(
+        &state,
+        calendar.clone(),
+        "create",
+        fixture_event()["values"].clone(),
+    )
+    .await;
+    let id = p["owned_id"].as_str().unwrap().to_string();
+    assert_eq!(
+        confirm(&state, calendar.clone(), &p).await.unwrap()["status"],
+        "saved"
+    );
+    let records = state.store.lock().unwrap().owned_records().unwrap();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].id, id);
+    assert_eq!(records[0].origin, "manual");
+    assert!(state
+        .store
+        .lock()
+        .unwrap()
+        .records(None)
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        Store::open(root.path()).unwrap().owned_records().unwrap()[0].id,
+        id
+    );
+    let live = calendar.event.lock().unwrap().clone();
+    let remove = events::dispatch(calendar.clone(), &state, "previewEventMutation", json!({"kind":"remove","calendar_id":"selected","event":live,"patch":{},"session":"session","revision":1})).await.unwrap()["proposal"].clone();
+    assert_eq!(
+        confirm(&state, calendar.clone(), &remove).await.unwrap()["status"],
+        "saved"
+    );
+    assert!(state
+        .store
+        .lock()
+        .unwrap()
+        .owned_records()
+        .unwrap()
+        .is_empty());
+    let undo = events::dispatch(
+        calendar.clone(),
+        &state,
+        "previewEventUndo",
+        json!({"id":remove["token"],"session":"session","revision":1}),
+    )
+    .await
+    .unwrap()["proposal"]
+        .clone();
+    assert_eq!(undo["owned_id"], id);
+    assert_eq!(
+        confirm(&state, calendar, &undo).await.unwrap()["status"],
+        "saved"
+    );
+    assert_eq!(
+        state.store.lock().unwrap().owned_records().unwrap()[0].id,
+        id
+    );
+}
+
+#[tokio::test]
+async fn uncertain_manual_write_blocks_import_batch_admission() {
+    let (_root, state, calendar) = fixture();
+    *calendar.uncertain.lock().unwrap() = true;
+    let p = preview(
+        &state,
+        calendar.clone(),
+        "update",
+        json!({"location":"Raum 2"}),
+    )
+    .await;
+    confirm(&state, calendar, &p).await.unwrap();
+    assert!(state
+        .store
+        .lock()
+        .unwrap()
+        .begin_batch(&[], "schedule", &[], None)
+        .is_err());
+    assert!(state
+        .store
+        .lock()
+        .unwrap()
+        .owned_records()
+        .unwrap()
+        .is_empty());
 }

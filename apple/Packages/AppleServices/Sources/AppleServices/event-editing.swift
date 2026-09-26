@@ -45,7 +45,7 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
     store.calendars(for: .event).map { c in
       var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 1
       if let color = c.cgColor { UIColor(cgColor: color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) }
-      return ["id": c.calendarIdentifier, "title": c.title, "source": c.source.title ?? "", "writable": c.allowsContentModifications,
+      return ["id": c.calendarIdentifier, "title": c.title, "source": c.source.title, "writable": c.allowsContentModifications,
        "color_components": [Double(red), Double(green), Double(blue)]]
     }
   }
@@ -134,7 +134,7 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
     let fingerprint = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     let external = event.eventIdentifier ?? event.calendarItemIdentifier
     return ["id": "\(event.calendar.calendarIdentifier)|\(external)|\(iso.string(from: occurrence))", "external_id": external,
-      "calendar_id": event.calendar.calendarIdentifier, "calendar_title": event.calendar.title, "source": event.calendar.source.title ?? "",
+      "calendar_id": event.calendar.calendarIdentifier, "calendar_title": event.calendar.title, "source": event.calendar.source.title,
       "occurrence": iso.string(from: occurrence), "recurring": event.hasRecurrenceRules || event.isDetached,
       "system_only": event.hasAttendees || event.organizer != nil || event.birthdayContactIdentifier != nil,
       "writable": event.calendar.allowsContentModifications, "values": values, "metadata": metadata, "fingerprint": fingerprint]
@@ -186,7 +186,13 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
     }
     let event = existing ?? EKEvent(eventStore: store)
     let alarmState = try existing.flatMap { try AgendaService.shared.editingAlarmState($0) }
-    if kind == "create" { event.calendar = calendar }
+    if kind == "create" {
+      event.calendar = calendar
+      if let id = p["owned_id"] as? String {
+        guard UUID(uuidString: id) != nil else { throw fail("Ungültige Terminzuordnung.") }
+        event.url = URL(string: "reha-calendar://event/\(id)")
+      }
+    }
     if kind != "remove" {
       if let title = patch["title"] as? String { event.title = title }
       if let start = patch["start_utc"] as? String { guard let date = iso.date(from: start) else { throw fail("Beginn ungültig.") }; event.startDate = date }
@@ -221,7 +227,11 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
       if kind == "remove" { try store.remove(event, span: .thisEvent, commit: true) }
       else { try store.save(event, span: .thisEvent, commit: true) }
       if kind != "remove", patch["reminder_minutes"] != nil {
-        try AgendaService.shared.manuallyEditedAlarm(event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
+        if let id = p["owned_id"] as? String, event.url?.absoluteString == "reha-calendar://event/\(id)" {
+          try AgendaService.shared.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
+        } else {
+          try AgendaService.shared.manuallyEditedAlarm(event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
+        }
       }
       let result: [String: Any] = ["status": "saved", "event": kind == "remove" ? NSNull() : snapshot(event), "operation_id": token]
       try persist(["proposal": p, "result": result, "alarm_journal": alarmState ?? NSNull() as Any], id: token)

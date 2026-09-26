@@ -229,7 +229,7 @@ struct ReviewView: View {
                 Button("Export und Ersetzen", systemImage: "square.and.arrow.up") { export = true }.disabled(model.pages.isEmpty)
                 Button("Importverlauf", systemImage: "clock.arrow.circlepath") { history = true }
                 Button("Diagnose", systemImage: "info.circle") { diagnostics = true }
-                Button("Originale löschen", systemImage: "trash", role: .destructive) { delete = true }.disabled(scanner.running)
+                Button { delete = true } label: { Label { Text("Originale löschen").foregroundStyle(.primary) } icon: { Image(systemName: "trash").foregroundStyle(AppPalette.destructive) } }.disabled(scanner.running)
             } label: { Label("Planaktionen", systemImage: "ellipsis") }.accessibilityIdentifier("plan-actions")
         } }
         .safeAreaInset(edge: .bottom) { if !typeSize.isAccessibilitySize { saveControls } }

@@ -15,7 +15,7 @@ pub async fn sync(app: &Arc<dyn super::Platform>, state: &AppState) -> Response<
     let args = {
         let store = state.store.lock().map_err(failure)?;
         let records: Vec<_> = store
-            .records(None)
+            .owned_records()
             .map_err(failure)?
             .into_iter()
             .filter(|r| r.status == "saved" && r.external_id.is_some())

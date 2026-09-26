@@ -8,7 +8,7 @@ fn evidence(
     id: &str,
 ) -> Response<(ImportBatch, Vec<ImportRecord>, String, Option<ImportBatch>)> {
     let store = state.store.lock().map_err(failure)?;
-    if !store.pending().map_err(failure)?.is_empty() {
+    if store.has_unresolved_calendar_writes().map_err(failure)? {
         return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
     }
     let batch = store

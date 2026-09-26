@@ -58,7 +58,7 @@ impl Store {
                 "Dieser Plan bleibt im bisherigen Zielkalender.".into(),
             ));
         }
-        if !self.pending()?.is_empty() {
+        if self.has_unresolved_calendar_writes()? {
             return Err(Error::Invalid(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));

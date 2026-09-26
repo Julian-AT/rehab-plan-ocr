@@ -30,7 +30,7 @@ import EventKit
             guard !preferences.displayCalendarIds.isEmpty || !history.imports.isEmpty else {
                 cache = [:]; availability = .noSelection; return
             }
-            _ = try await NativeBridge.request("agenda", ["records": history.imports.map(NativeBridge.record), "preferences": NativeBridge.preferences(preferences)])
+            _ = try await core.calendarRequest(command: "refreshAgenda", arguments: "{}")
             let iso = ISO8601DateFormatter()
             // Selected week first; a cancelled prefetch never publishes stale data.
             for item in [week] + weeks where cache[item.start] == nil {
@@ -94,6 +94,7 @@ struct TodayView: View {
     @SwiftUI.AppStorage("agenda.list") private var listView = false
     @State private var model = TodayModel()
     @State private var visibleWeek = AgendaWeek(containing: .now).start
+    @State private var measuredHeights: [String: Double] = [:]
     @State private var scrollMinute: Double?
     @State private var scrollReset = 0
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
@@ -116,14 +117,19 @@ struct TodayView: View {
         VStack(spacing: 0) {
             WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
             Divider()
-            CalendarPager(selection: $selectedDate, step: 1) { date in
-                TimelineView(.periodic(from: .now, by: 15)) { context in
-                    let agenda = DayAgenda(events: model.events(on: date) ?? [], date: date, now: context.date)
-                    day(agenda, now: context.date)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .onChange(of: Calendar.current.startOfDay(for: context.date)) { _, today in followToday(today) }
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                let agenda = DayAgenda(events: model.events(on: selectedDate) ?? [], date: selectedDate, now: context.date)
+                if typeSize.isAccessibilitySize || listView || usesList(agenda) {
+                    CalendarPager(selection: $selectedDate, step: 1) { date in
+                        day(DayAgenda(events: model.events(on: date) ?? [], date: date, now: context.date), now: context.date)
+                    }.accessibilityIdentifier("agenda-days")
+                } else {
+                    sharedTimeline(now: context.date)
                 }
-            }.accessibilityIdentifier("agenda-days")
+            }.onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+                followToday(Calendar.current.startOfDay(for: .now))
+            }
+
         }
         .contentShape(.rect)
         .accessibilityAction(named: "Nächster Tag") { selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)! }
@@ -144,12 +150,13 @@ struct TodayView: View {
                     .accessibilityIdentifier("add-plan")
             }
         }
-        .refreshable { reload(); await load() }
+        .refreshable { reload() }
         .task(id: requestID) { await load() }
         .onChange(of: selectedDate) { showPast = false; visibleWeek = week.start }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { followToday(Calendar.current.startOfDay(for: .now)); reload() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged).debounce(for: .milliseconds(500), scheduler: RunLoop.main)) { _ in reload() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             followToday(Calendar.current.startOfDay(for: .now)); reload()
         }
@@ -185,6 +192,46 @@ struct TodayView: View {
                 }.accessibilityIdentifier("agenda-accessible-list")
             } else {
                 DayTimeline(agenda: agenda, now: now, density: AgendaDensity(rawValue: density) ?? .overview, selected: agenda.date == selectedDate, scrollMinute: $scrollMinute, reset: scrollReset) { editor = $0 }
+            }
+        }
+    }
+    private func sharedTimeline(now: Date) -> some View {
+        let dates = (-1...1).map { Calendar.current.date(byAdding: .day, value: $0, to: selectedDate)! }
+        let agendas = dates.map { DayAgenda(events: model.events(on: $0) ?? [], date: $0, now: now) }
+        let windows = agendas.map { AgendaWindow(agenda: $0, now: now) }
+        let density = AgendaDensity(rawValue: density) ?? .overview
+        let projection = ReadableAgendaLayout(windows.flatMap(\.timed), pointsPerHour: density.pointsPerHour, heights: measuredHeights)
+        let selected = agendas[1]
+        let visible = !selected.events.isEmpty && !(selected.isComplete && !showPast) && model.events(on: selectedDate) != nil
+        return VStack(spacing: 0) {
+            if !selected.allDay.isEmpty {
+                DisclosureGroup("Ganztägig · \(selected.allDay.count)") {
+                    ForEach(selected.allDay) { event in
+                        Button { editor = event } label: { CalendarAgendaRow(event: event, now: now) }.buttonStyle(.plain)
+                    }
+                }.padding(.horizontal)
+            }
+            AgendaScrollView(date: selectedDate, projection: projection, pages: { viewport, offset in
+                zip(agendas, windows).map { agenda, window in
+                    let layout = ReadableAgendaLayout(segments: window.timed, projection: projection, pointsPerHour: density.pointsPerHour)
+                    if agenda.events.isEmpty || (agenda.isComplete && !showPast) || model.events(on: agenda.date) == nil {
+                        return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
+                    }
+                    return AnyView(TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) { id, height in
+                        if abs((measuredHeights[id] ?? 0) - height) > 1 { measuredHeights[id] = height }
+                    })
+                }
+            }, gutter: AnyView(TimelineGutter(start: windows[1].start, layout: projection)),
+               showsTimeline: visible, initialMinute: windows[1].scrollMinute, reset: scrollReset,
+               minute: $scrollMinute, selectDate: { selectedDate = $0 })
+            if !windows[1].outside.isEmpty {
+                DisclosureGroup("Außerhalb von 06:00–18:00") {
+                    ScrollView {
+                        ForEach(windows[1].outside) { event in
+                            Button { editor = event } label: { CalendarAgendaRow(event: event, now: now) }.buttonStyle(.plain)
+                        }
+                    }.frame(maxHeight: 200)
+                }.padding().accessibilityIdentifier("agenda-outside-hours")
             }
         }
     }
@@ -231,13 +278,13 @@ private struct WeekSelector: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Button("Vorherige Woche", systemImage: "chevron.left") { move(-7) }
-                    .labelStyle(.iconOnly).controlHeight().accessibilityIdentifier("previous-week")
+                Button { move(-7) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44).contentShape(.rect) }
+                    .accessibilityLabel("Vorherige Woche").accessibilityIdentifier("previous-week")
                 Spacer()
                 Text(visibleWeek.formatted(.dateTime.month(.wide).year())).font(.headline)
                 Spacer()
-                Button("Nächste Woche", systemImage: "chevron.right") { move(7) }
-                    .labelStyle(.iconOnly).controlHeight().accessibilityIdentifier("next-week")
+                Button { move(7) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(.rect) }
+                    .accessibilityLabel("Nächste Woche").accessibilityIdentifier("next-week")
             }
             if typeSize.isAccessibilitySize {
                 DatePicker("Tag", selection: $selection, displayedComponents: .date)
@@ -344,29 +391,37 @@ private struct TimelineCanvas: View {
     let measured: (String, Double) -> Void
     var body: some View {
         GeometryReader { geometry in
-            let width = max(0, geometry.size.width - 64)
+            let width = max(0, geometry.size.width - 8)
             ZStack(alignment: .topLeading) {
                 ForEach(0...Int(window.minutes / 60), id: \.self) { hour in
-                    hourLine(hour).offset(y: layout.y(Double(hour) * 60))
+                    Rectangle().fill(AppPalette.separator).frame(height: 0.5).offset(y: layout.y(Double(hour) * 60) + 8)
                 }
                 ForEach(layout.items) { item in
                     let columnWidth = width / Double(item.placement.columns)
                     TimelineAppointment(event: item.placement.segment.event, now: now, width: columnWidth - 4, height: item.height,
                         select: select, measured: { measured(item.id, $0) })
-                        .offset(x: 56 + Double(item.placement.column) * columnWidth, y: item.top + 8)
+                        .offset(x: Double(item.placement.column) * columnWidth, y: item.top + 8)
                 }
             }
         }
     }
-    private func hourLine(_ hour: Int) -> some View {
-        HStack(spacing: 8) {
-            Text(eventTime(window.start.addingTimeInterval(Double(hour) * 3600)))
-                .font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                .frame(width: 48, alignment: .trailing).accessibilityIdentifier("timeline-hour-\(hour + 6)")
-            Rectangle().fill(Color(uiColor: .separator).opacity(0.4)).frame(height: 0.5)
-        }.frame(height: 16)
+}
+private struct TimelineGutter: View {
+    let start: Date
+    let layout: ReadableAgendaLayout
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ForEach(0...12, id: \.self) { hour in
+                Text(eventTime(start.addingTimeInterval(Double(hour) * 3600)))
+                    .font(.caption).monospacedDigit().foregroundStyle(AppPalette.secondaryText)
+                    .frame(width: 48, height: 16, alignment: .trailing)
+                    .offset(y: layout.y(Double(hour) * 60))
+                    .accessibilityIdentifier("timeline-hour-\(hour + 6)")
+            }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.trailing, 8)
     }
 }
+
 private struct TimelineAppointment: View {
     let event: CalendarEvent
     let now: Date

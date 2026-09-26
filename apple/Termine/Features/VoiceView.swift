@@ -1,3 +1,4 @@
+import AppleServices
 import SwiftUI
 import RehaCore
 import FoundationModels
@@ -38,7 +39,7 @@ struct VoiceSnapshot {
     var duration = 0
     private var responseTask: Task<String, Error>?
     init(core: NativeApplication) {
-        self.core = core; edits = EventSession(core: core); calendarConversation = CalendarConversation(core: core)
+        self.core = core; edits = EventSession(core: core, origin: "voice"); calendarConversation = CalendarConversation(core: core)
         recorder.onEndpoint = { [weak self] in self?.turnTask = Task { await self?.endTurn() } }
         recorder.onBargeIn = { [weak self] in self?.interruptAnswer() }
         recorder.onFailure = { [weak self] message in self?.pauseSession(); self?.failure = message }
@@ -54,6 +55,7 @@ struct VoiceSnapshot {
         rounds[rounds.count - 1].spoken = SpeechOutput.shared.spokenText
     }
     private func answerFinished() {
+        LocalDiagnostics.shared.record(.playback, .completed, correlation: session)
         rememberSpoken()
         guard running, edits.proposal == nil else { return }
         if UIAccessibility.isVoiceOverRunning { pauseSession(); return }
@@ -65,6 +67,7 @@ struct VoiceSnapshot {
         }
     }
     func pauseSession() {
+        LocalDiagnostics.shared.record(.interruption, .completed, correlation: session)
         let endedToken = modelToken
         running = false; sessionState = .paused
         turnTask?.cancel(); turnTask = nil; responseTask?.cancel(); responseTask = nil
@@ -74,6 +77,7 @@ struct VoiceSnapshot {
     }
     private func interruptAnswer() {
         guard running, edits.proposal == nil else { return }
+        LocalDiagnostics.shared.record(.interruption, .completed, correlation: session)
         let endedToken = modelToken
         responseTask?.cancel(); responseTask = nil; turnTask?.cancel()
         SpeechOutput.shared.stop(); rememberSpoken()
@@ -97,6 +101,7 @@ struct VoiceSnapshot {
         failure = nil
         guard !busy, edits.proposal == nil else { return }
         if SpeechOutput.shared.speaking { SpeechOutput.shared.stop(); rememberSpoken() }
+        LocalDiagnostics.shared.record(.speechRecognition, .started, correlation: session)
         running = true; sessionState = .listening
         turn += 1; sequence += 1; let current = session
         do { try await recorder.beginTurn(preRoll: preRoll) }
@@ -109,6 +114,7 @@ struct VoiceSnapshot {
         defer { if session == current { busy = false } }
         do {
             let text = try await recorder.endTurn()
+            LocalDiagnostics.shared.record(.speechRecognition, .completed, correlation: current)
             guard session == current, !Task.isCancelled else { return }
             guard !text.isEmpty else { busy = false; if running { await beginTurn() }; return }
             recorder.monitorForInterruption()
@@ -175,10 +181,14 @@ struct VoiceSnapshot {
             return
         }
         let current = session, token = UUID(); modelToken = token
+        LocalDiagnostics.shared.record(.tools, .started, correlation: current)
         await calendarConversation.begin(token)
+        guard session == current, modelToken == token, !Task.isCancelled else { return }
         do {
             let context = try await calendarConversation.context()
+            guard session == current, modelToken == token, !Task.isCancelled else { return }
             let compactContext = try await calendarConversation.context(compact: true)
+            guard session == current, modelToken == token, !Task.isCancelled else { return }
             let prior = rounds.dropLast().suffix(6).map { ["user": String($0.user.prefix(300)), "spoken_answer": String($0.spoken.prefix(600))] }
             let memory = String(decoding: try JSONEncoder().encode(prior), as: UTF8.self)
             let compactPrior = rounds.dropLast().suffix(6).map { ["user": String($0.user.prefix(100)), "spoken_answer": String($0.spoken.prefix(150))] }
@@ -193,6 +203,7 @@ struct VoiceSnapshot {
             Letzte sechs Runden (JSON-Daten): \(memory)
             """
             let output = SpeechOutput.shared
+            LocalDiagnostics.shared.record(.synthesis, .started, correlation: current)
             installOutputCallbacks(); output.beginResponse()
             if running { sessionState = .thinking; recorder.monitorForInterruption() }
             let task = Task { @MainActor [weak self] () throws -> String in
@@ -228,7 +239,7 @@ struct VoiceSnapshot {
             guard session == current, modelToken == token, !Task.isCancelled else { return }
             responseTask = nil; response = answer; question = .action
             if let draft = await calendarConversation.takeDraft(token) {
-                guard session == current else { return }
+                guard session == current, modelToken == token, !Task.isCancelled else { return }
                 output.stop(); rememberSpoken()
                 selected = draft.event; intent = VoiceIntent()
                 intent.action = draft.action == "create" ? .create : draft.action == "update" ? .update : .remove
@@ -356,6 +367,7 @@ struct VoiceSnapshot {
         say(edits.result ?? edits.error ?? "Bitte Kalender abgleichen.", question: .action)
     }
     func cancelSession(preserveResponse: Bool = false, reason: String = "action") {
+        LocalDiagnostics.shared.record(.speechSession, .cancelled, correlation: session)
         #if DEBUG && targetEnvironment(simulator)
         if ProcessInfo.processInfo.arguments.contains("--agenda-fixture") { print("Voice session ended: \(reason), phase \(sessionState), question \(question)") }
         #endif

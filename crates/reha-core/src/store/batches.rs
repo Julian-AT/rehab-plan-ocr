@@ -58,7 +58,7 @@ impl Store {
             &crate::readiness::PlanAcceptance,
         )>,
     ) -> Result<ImportBatch> {
-        if !self.pending()?.is_empty() {
+        if self.has_unresolved_calendar_writes()? {
             return Err(Error::Invalid(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));
@@ -113,14 +113,18 @@ impl Store {
             )?;
         }
         tx.commit()?;
-        self.batches()?
-            .into_iter()
-            .find(|b| b.id == id)
+        self.batch(&id)?
             .ok_or_else(|| Error::Invalid("Import fehlt.".into()))
     }
+    pub fn batch(&self, id: &str) -> Result<Option<ImportBatch>> {
+        Ok(self.load_batches(Some(id))?.into_iter().next())
+    }
     pub fn batches(&self) -> Result<Vec<ImportBatch>> {
-        let mut q = self.connection.prepare("SELECT id,document_ids,schedule_id,created_at,undo_of,(SELECT id FROM import_batches u WHERE u.undo_of=b.id) FROM import_batches b ORDER BY created_at DESC,id")?;
-        let rows = q.query_map([], |r| {
+        self.load_batches(None)
+    }
+    fn load_batches(&self, id: Option<&str>) -> Result<Vec<ImportBatch>> {
+        let mut q = self.connection.prepare("SELECT id,document_ids,schedule_id,created_at,undo_of,(SELECT id FROM import_batches u WHERE u.undo_of=b.id) FROM import_batches b WHERE (?1 IS NULL OR b.id=?1) ORDER BY created_at DESC,id")?;
+        let rows = q.query_map([id], |r| {
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, String>(1)?,
@@ -188,7 +192,7 @@ impl Store {
         id: &str,
         operations: &[CalendarOperation],
     ) -> Result<ImportBatch> {
-        if !self.pending()?.is_empty() {
+        if self.has_unresolved_calendar_writes()? {
             return Err(Error::Invalid(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));
