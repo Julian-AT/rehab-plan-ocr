@@ -45,3 +45,30 @@ synthetic arithmetic/broadcasting and transformation-rejection tests run first.
 Even if both candidate outputs are exact, full-graph optimizer effects and the
 complete intended corpus remain separate gates. No model promotion or automatic
 full-corpus run follows from this intermediate diagnostic.
+
+## Actual result
+
+Implementation/protocol commit before inference: `63da977`. Run
+`.local/runs/ocr-batchnorm-onnx-20260926-s19-001` passes both original-expression
+controls and all four serialized-graph reload controls byte-for-byte. All source
+hashes remain unchanged; three independent synthetic transformation/arithmetic
+tests passed before execution.
+
+The explicit division graph reproduces all **184,320 native Paddle values
+exactly at both optimization levels**, also matching the retained C hardware
+reference. With all optimizations enabled, constant folding leaves only `Mul`
+and `Add`; the folded coefficients preserve the exact corrected output. The
+original reciprocal graph retains its previous maximum Paddle difference of
+`9.5367431640625e-7` at both levels. The original tolerances remain unchanged.
+
+ONNX Runtime emits its expected warning that serialized optimized graphs may
+depend on host hardware. They remain diagnostic host artifacts. The retained
+source archive, checks and complete execution log are in
+`.local/runs/ocr-onnx-division-development-20260926-s19-001`. No complete model graph,
+corpus evaluation, app resource or deployment selection was changed.
+
+Protocol SHA-256:
+`108567481a832e704f907c9f043dbc679c74ef0abda44cbd93d94fb203562b42`.
+
+Report SHA-256:
+`0eab7dc07d992242db255bf3faeb1889d01135ef8efbc75f69400c7c41cdea25`.
