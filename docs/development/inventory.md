@@ -53,7 +53,7 @@ bei 237.420 Bytes. Die zentrale aktive Referenzsammlung bleibt
 |---|---|---|
 | `.local/datasets` | Originale, Einwilligungen, Annotationen und erzeugte Trainingsdaten; Datenwerkzeuge und Trainer | Geschützt; keine automatische Freigabe oder Löschung |
 | `.local/models` | Gepinnte Laufzeit-/Trainingsmodelle und bisherige Experimente; Build, Export, Training | Geschützt |
-| `.local/objects` | Hashadressierte unveränderliche Basis-GGUFs; identische APFS-Kopien an bisherigen Versuchspfaden | Geschützt; Checkpoints ausgeschlossen |
+| `.local/objects` | Hashadressierte unveränderliche Basis-GGUFs und geprüfte statische Testarchive; identische APFS-Kopien an bisherigen Versuchspfaden | Geschützt; Checkpoints ausgeschlossen |
 | `.local/runs` | Trainingszustände, Bewertungen, CI, Vorschauen und frühere Gerätesicherungen | Geschützt; keine pauschale Altersregel |
 | `.local/releases` | Pro Lauf reservierte Archive, Symbole, Pakete und Freigabenachweise | Geschützt; bestehende Läufe werden nicht überschrieben |
 | `.local/migrations` | Hashinventare und Wiederanlaufjournale der früheren Umzüge | Geschützt |

@@ -13,13 +13,57 @@ APFS-Extentteilung, Snapshots und ein tatsächlich freigebbarer Betrag sind dara
 nicht bestimmbar. Der Beleg ist
 `.local/maintenance/static-library-copies-hashes-20260926-s19-001.json`.
 
-Vor einer Zusammenführung fehlen noch die vollständige Verbraucher-/Belegprüfung
-und ein getesteter, modus- und inhaltserhaltender Wiederanlauf. Die jetzige
-Bereinigungsregel erlaubt diese Archive ausdrücklich nicht. Historische
-Prüfberichte, zugehörige ausführbare Apps, Tests und notwendige Symbole bleiben
-geschützt. Neue private Produktkopien der aktuellen EventKit-/Offline-Abnahmen
+Die allgemeine Löschregel erlaubt diese Archive ausdrücklich nicht. Der separate
+unten beschriebene Vertrag erhält ihre Pfade und Inhalte; die tatsächliche
+Ausführung am historischen Bestand ist noch offen. Historische Prüfberichte,
+zugehörige ausführbare Apps, Tests und notwendige Symbole bleiben geschützt.
+Neue private Produktkopien der aktuellen EventKit-/Offline-Abnahmen
 verwenden bereits APFS-Kopien mit eigenen Inodes und geprüftem Inhaltsinventar;
 ein Speichergewinn wird dafür nicht behauptet.
+
+## Aufbewahrte statische Testarchive
+
+`make inventory-archive-objects ARCHIVE_REVIEW=<prüfinventar>
+ARCHIVE_OBJECT_MANIFEST=.local/maintenance/<neuer-name>.json` erstellt eine
+Vorschau ausschließlich für explizit geprüfte identische
+`.local/runs/<lauf>/products/build-products/Debug-iphonesimulator/libRehaCoreFFI.a`.
+Das Eingabeinventar muss unter `.local/maintenance` liegen und je SHA-256-Gruppe
+Größe, Pfade und ursprüngliche Dateimodi enthalten. Einzelstücke sind ausgeschlossen.
+`make coalesce-archive-objects ARCHIVE_OBJECT_MANIFEST=<derselbe-pfad>` führt genau
+diesen Plan aus. Beide Befehle benötigen ein ruhiges Arbeitsfenster.
+
+Die Quellenidentität, tatsächliche XCTest-Aufrufdateien und **alle Dateien der
+zugehörigen Läufe** werden vor und nach der Ausführung geprüft: App-/Testpakete,
+Symbole, Logs, Quellarchive, Ergebnisbundles und historische Berichte. Symlinks
+werden als Verweise erfasst; ein symbolischer Archivpfad oder Aufruf ist unzulässig.
+Plan, Eingabeinventar und beteiligte Werkzeugquellen sind durch Hashes gebunden.
+Buildprozesse, offene Dateien, Worktrees, Referenzen und der gemeinsame
+Bereinigungslock werden wie bei den anderen Bereinigungswerkzeugen geprüft.
+
+Je identischem Inhalt entsteht ein schreibgeschütztes Objekt unter
+`.local/objects/sha256/<hash>.a`. Die bisherigen Archive werden durch atomar
+eingesetzte APFS-Klone ersetzt. Jeder Pfad behält einen eigenen Inode, dieselben
+Bytes, Berechtigungen, Besitzer, Gruppe, Änderungszeit und geprüften Dateiflags.
+Ungeprüfte Flags, ACLs oder erweiterte Attribute führen zum Abbruch. Es gibt
+keine Hardlinks, Symlinks oder vollständige Kopien als Clone-Ersatz.
+Auch eine während der Clone-Vorbereitung geänderte Zieldatei wird nicht ersetzt.
+
+Nach Unterbrechung lässt sich derselbe Plan wiederholen; bereits ersetzte Inhalte
+sind weiterhin identisch. Ein abgeschlossener Wiederaufruf gibt nur den damaligen
+Abschlussbeleg zurück und verändert später neu geschriebene Dateien nicht. Dieser
+Beleg ist eine historische Bestätigung, keine erneute Prüfung des aktuellen Inhalts.
+Originale, Modellgewichte, Checkpoints und Sicherungen sind nicht zulässig.
+Es werden keine Pfade gelöscht. Die beobachtete Volume-Differenz wird getrennt
+von logischen Größen ausgewiesen und ist kein garantierter APFS-Speichergewinn.
+
+Die 15 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
+APFS-Klone, unabhängig beschreibbarer Kopien, Abbruch/Wiederanlauf, verweigerter
+Clone-Unterstützung, ACL-/Attributschutz, veränderter Belege und konkurrierender
+Zieländerung. Ein echtes C-Archiv lässt sich nach Zusammenführung weiterhin
+gegen beide Pfade linken und ausführen. Die vorhandenen Bereinigungs- und
+Dokumentationsprüfungen bestehen ebenfalls. Quellen und Rohlogs liegen unter
+`.local/runs/archive-objects-development-20260926-s20-001`. Dies prüft das Werkzeug;
+die 17 historischen Archivpfade werden erst in einem ruhigen Fenster bearbeitet.
 
 ## Bestehender Bereinigungsvertrag
 

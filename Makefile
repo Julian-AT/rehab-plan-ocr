@@ -53,6 +53,15 @@ inventory-model-objects:
 coalesce-model-objects:
 	python3 tooling/dev/model_objects.py apply --manifest "$(MODEL_OBJECT_MANIFEST)"
 
+ARCHIVE_OBJECT_MANIFEST ?= .local/maintenance/archive-objects.json
+.PHONY: inventory-archive-objects coalesce-archive-objects
+inventory-archive-objects:
+	@test -n "$(ARCHIVE_REVIEW)" || { echo 'Set ARCHIVE_REVIEW to a reviewed private static-archive inventory'; exit 2; }
+	python3 tooling/dev/archive_objects.py plan --review "$(ARCHIVE_REVIEW)" --manifest "$(ARCHIVE_OBJECT_MANIFEST)"
+
+coalesce-archive-objects:
+	python3 tooling/dev/archive_objects.py apply --manifest "$(ARCHIVE_OBJECT_MANIFEST)"
+
 # Metadata inventory is read-only; plan/apply require a quiet model/build window.
 .PHONY: inventory-checkpoints plan-checkpoints clean-checkpoints test-checkpoints
 inventory-checkpoints:
@@ -127,6 +136,7 @@ help:
 	@echo 'Isolated VLM experiment: make restore-vlm-runtime; make build-vlm RUN=<new-local-run>; model download is separate: make restore-vlm-models'
 	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
+	@echo 'Retained static archives: make inventory-archive-objects ARCHIVE_REVIEW=<review> ARCHIVE_OBJECT_MANIFEST=<new-plan>; make coalesce-archive-objects ARCHIVE_OBJECT_MANIFEST=<same-plan>'
 	@echo 'Checkpoints: make inventory-checkpoints RUN=<training-run>; plan-checkpoints/clean-checkpoints CHECKPOINT_MANIFEST=<new-plan>'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
