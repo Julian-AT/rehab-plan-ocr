@@ -12,6 +12,7 @@ mod migrations;
 mod owned_events;
 mod plans;
 mod retention;
+mod summaries;
 pub use batches::{BatchOperation, ImportBatch};
 pub use intake::Intake;
 pub use migrations::STORE_VERSION;
@@ -71,7 +72,8 @@ impl Store {
         if run.schema_version > SCHEMA_VERSION {
             return Err(Error::Invalid("Unsupported run schema".into()));
         }
-        self.connection.execute("INSERT INTO scans(id,source_hash,imported_at,run,schedule_id) VALUES(?1,?2,?3,?4,(SELECT schedule_id FROM scans WHERE source_hash=?2 AND schedule_id IS NOT NULL ORDER BY imported_at DESC LIMIT 1)) ON CONFLICT(id) DO UPDATE SET run=excluded.run",params![run.document.id,run.document.source_hash,run.document.imported_at,serde_json::to_string(run)?])?;
+        let summary = serde_json::to_string(&summaries::ContentSummary::from_run(run))?;
+        self.connection.execute("INSERT INTO scans(id,source_hash,imported_at,run,schedule_id,run_summary) VALUES(?1,?2,?3,?4,(SELECT schedule_id FROM scans WHERE source_hash=?2 AND schedule_id IS NOT NULL ORDER BY imported_at DESC LIMIT 1),?5) ON CONFLICT(id) DO UPDATE SET run=excluded.run,run_summary=excluded.run_summary",params![run.document.id,run.document.source_hash,run.document.imported_at,serde_json::to_string(run)?,summary])?;
         self.ensure_page(&run.document.id, run.document.imported_at)?;
         Ok(())
     }
@@ -99,54 +101,53 @@ impl Store {
     }
     pub fn list_scans(&self) -> Result<Vec<ScanSummary>> {
         let mut q = self.connection.prepare(
-            "SELECT id,imported_at,run,schedule_id FROM scans ORDER BY imported_at DESC",
+            "SELECT id,imported_at,run IS NOT NULL,schedule_id,run_summary,
+             CASE WHEN run_summary IS NULL THEN run END
+             FROM scans ORDER BY imported_at DESC,id",
         )?;
         let rows = q.query_map([], |r| {
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, i64>(1)?,
-                r.get::<_, Option<String>>(2)?,
+                r.get::<_, bool>(2)?,
                 r.get::<_, Option<String>>(3)?,
+                r.get::<_, Option<String>>(4)?,
+                r.get::<_, Option<String>>(5)?,
             ))
         })?;
+        let rows = rows.collect::<std::result::Result<Vec<_>, _>>()?;
         let mut result = vec![];
-        for row in rows {
-            let (id, imported_at, json, schedule_id) = row?;
-            let item_count = json
+        for (id, imported_at, retained, schedule_id, cached, mut raw) in rows {
+            let summary = if let Some(summary) = cached
                 .as_ref()
-                .and_then(|s| serde_json::from_str::<PipelineRun>(s).ok())
-                .map(|r| r.appointments.len())
-                .unwrap_or(0);
-            let run = json
-                .as_ref()
-                .and_then(|s| serde_json::from_str::<PipelineRun>(s).ok());
-            let pending_count = run
-                .as_ref()
-                .map(|r| {
-                    r.appointments
-                        .iter()
-                        .filter(|a| a.included && !crate::review::approved(a))
-                        .count()
-                })
-                .unwrap_or(0);
-            let mut dates = run
-                .as_ref()
-                .map(|r| {
-                    r.appointments
-                        .iter()
-                        .filter_map(|a| a.date.clone())
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-            dates.sort();
-            dates.dedup();
+                .and_then(|value| serde_json::from_str::<summaries::ContentSummary>(value).ok())
+                .filter(|summary| summary.current())
+            {
+                summary
+            } else {
+                // Legacy/raw transaction writes invalidate this disposable cache.
+                // Recover a corrupt cache from the authoritative original as well.
+                if cached.is_some() {
+                    raw = self.connection.query_row(
+                        "SELECT run FROM scans WHERE id=?1",
+                        [&id],
+                        |r| r.get(0),
+                    )?;
+                }
+                let summary = summaries::ContentSummary::from_json(raw.as_deref());
+                self.connection.execute(
+                    "UPDATE scans SET run_summary=?2 WHERE id=?1 AND run IS ?3",
+                    params![id, serde_json::to_string(&summary)?, raw],
+                )?;
+                summary
+            };
             result.push(ScanSummary {
                 id,
                 imported_at,
-                retained: json.is_some(),
-                item_count,
-                pending_count,
-                dates,
+                retained,
+                item_count: summary.item_count,
+                pending_count: summary.pending_count,
+                dates: summary.dates,
                 schedule_id,
             });
         }
@@ -299,7 +300,7 @@ mod tests {
         store
             .connection
             .execute(
-                "INSERT INTO scans VALUES(?1,'hash',100,'{\"review_confirmed\":true}','schedule')",
+                "INSERT INTO scans(id,source_hash,imported_at,run,schedule_id) VALUES(?1,'hash',100,'{\"review_confirmed\":true}','schedule')",
                 [&id],
             )
             .unwrap();

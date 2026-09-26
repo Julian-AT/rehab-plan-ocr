@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use rusqlite::{Connection, TransactionBehavior};
 
-pub const STORE_VERSION: u32 = 9;
+pub const STORE_VERSION: u32 = 10;
 
 pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
     // Reject a newer store before changing any pragma or schema. A preserved old
@@ -96,6 +96,18 @@ pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
         tx.execute_batch(
             "CREATE TABLE source_deletions(id TEXT PRIMARY KEY); PRAGMA user_version=9;",
         )?;
+    }
+    if version < 10 {
+        tx.execute_batch(
+            "ALTER TABLE scans ADD COLUMN run_summary TEXT;
+            CREATE INDEX scans_chronology ON scans(imported_at DESC,id);
+            CREATE INDEX plans_chronology ON plans(imported_at DESC,id);
+            CREATE TRIGGER invalidate_scan_summary AFTER UPDATE OF run ON scans
+                WHEN NEW.run IS NOT OLD.run AND NEW.run_summary IS OLD.run_summary
+                BEGIN UPDATE scans SET run_summary=NULL WHERE id=NEW.id; END;",
+        )?;
+        super::summaries::backfill(&tx)?;
+        tx.pragma_update(None, "user_version", 10)?;
     }
     tx.commit()?;
     Ok(())
