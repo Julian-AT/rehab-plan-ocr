@@ -580,6 +580,16 @@ diagnose-ocr-batchnorm-trace: check-storage
 	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private diagnostic directory'; exit 2; }
 	.local/envs/ocr/bin/python ml/evaluation/recognition/batchnorm_trace.py execute --output "$(DIAGNOSTIC_RUN)"
 
+.PHONY: prepare-ocr-strided-convolution diagnose-ocr-strided-convolution
+prepare-ocr-strided-convolution:
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to a new private diagnostic directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/strided_convolution.py prepare --output "$(DIAGNOSTIC_RUN)"
+
+diagnose-ocr-strided-convolution: PEAK_GIB = 4
+diagnose-ocr-strided-convolution: check-storage
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private diagnostic directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/strided_convolution.py execute --output "$(DIAGNOSTIC_RUN)"
+
 .PHONY: prepare-assistant-router-replay assess-assistant-router-replay
 prepare-assistant-router-replay:
 	@test -n "$(RUN)" -a -n "$(APP_RUN)" -a -n "$(DEPLOYMENT_RUN)" -a -n "$(NATIVE_RUN)" || { echo 'Set RUN (new), APP_RUN, DEPLOYMENT_RUN and NATIVE_RUN'; exit 2; }
