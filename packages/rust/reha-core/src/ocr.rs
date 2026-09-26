@@ -174,13 +174,26 @@ impl OnnxEngine {
         }
         let mw = shape[3] as usize;
         let mh = shape[2] as usize;
-        let boxes = components(
+        let Some(boxes) = components(
             scores,
             mw,
             mh,
             config.detector_threshold,
             config.box_threshold,
-        );
+            || cancelled_or_expired(cancel, deadline),
+        ) else {
+            return Ok((
+                vec![],
+                vec![],
+                vec![Stage {
+                    name: "detection".into(),
+                    status: "interrupted".into(),
+                    duration_ms: start.elapsed().as_millis() as u64,
+                    detail: "Lokales Zeitbudget oder Abbruch erreicht.".into(),
+                    artifacts: vec![],
+                }],
+            ));
+        };
         let mut regions = vec![];
         for (index, (polygon, score)) in boxes.iter().enumerate() {
             regions.push(Region {
@@ -376,16 +389,31 @@ fn ctc(data: &[f32], classes: usize, dictionary: &[String]) -> (String, Option<f
     };
     (text, score)
 }
+// Bound our own traversal/scoring work between cancellation checks. A flood
+// step visits at most nine neighbors; a score step examines one rectangle pixel.
+const COMPONENT_CHECK_INTERVAL: usize = 1024;
+
+fn cancelled_or_expired(cancel: &AtomicBool, deadline: Option<Instant>) -> bool {
+    cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d)
+}
+
 fn components(
     scores: &[f32],
     w: usize,
     h: usize,
     threshold: f32,
     box_threshold: f32,
-) -> Vec<(Vec<Point>, f32)> {
+    mut interrupted: impl FnMut() -> bool,
+) -> Option<Vec<(Vec<Point>, f32)>> {
+    if interrupted() {
+        return None;
+    }
     let mut visited = vec![false; w * h];
     let mut result = vec![];
     for seed in 0..w * h {
+        if seed % COMPONENT_CHECK_INTERVAL == 0 && interrupted() {
+            return None;
+        }
         if visited[seed] || scores[seed] < threshold {
             continue;
         }
@@ -395,6 +423,9 @@ fn components(
         let mut points = vec![];
         let mut count = 0;
         while let Some(i) = q.pop_front() {
+            if count % COMPONENT_CHECK_INTERVAL == 0 && interrupted() {
+                return None;
+            }
             let x = i % w;
             let y = i / w;
             left = left.min(x);
@@ -414,10 +445,16 @@ fn components(
             }
         }
         if count >= 6 && right - left >= 3 && bottom - top >= 2 {
+            if interrupted() {
+                return None;
+            }
             let box_points = imageproc::geometry::min_area_rect(&points).map(|p| Point {
                 x: p.x as f64,
                 y: p.y as f64,
             });
+            if interrupted() {
+                return None;
+            }
             let width = geometry::distance(&box_points[0], &box_points[1]);
             let height = geometry::distance(&box_points[0], &box_points[3]);
             if width.min(height) < 3. {
@@ -425,9 +462,14 @@ fn components(
             }
             let mut total = 0.;
             let mut n = 0;
+            let mut scored = 0;
             let (l, t, r, b) = geometry::bounds(&box_points);
             for y in (t.floor().max(0.) as usize)..=(b.ceil() as usize).min(h - 1) {
                 for x in (l.floor().max(0.) as usize)..=(r.ceil() as usize).min(w - 1) {
+                    if scored % COMPONENT_CHECK_INTERVAL == 0 && interrupted() {
+                        return None;
+                    }
+                    scored += 1;
                     if geometry::inside(
                         &box_points,
                         &Point {
@@ -462,12 +504,119 @@ fn components(
             result.push((expanded, score));
         }
     }
+    if interrupted() {
+        return None;
+    }
     result.sort_by(|(a, _), (b, _)| a[0].y.total_cmp(&b[0].y).then(a[0].x.total_cmp(&b[0].x)));
-    result
+    (!interrupted()).then_some(result)
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn component_fixture(side: usize, rings: bool) -> Vec<f32> {
+        (0..side * side)
+            .map(|index| {
+                let (x, y) = (index % side, index / side);
+                if !rings || x.min(y).min(side - x - 1).min(side - y - 1) % 4 == 0 {
+                    1.
+                } else {
+                    0.25
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn uncancelled_components_preserve_dense_and_nested_ring_outputs() {
+        // Captured from the pre-checkpoint implementation: includes every
+        // polygon coordinate, score bit pattern and the final reading order.
+        for (rings, count, fingerprint) in [
+            (
+                false,
+                1,
+                "f338bcee153e0cacddeb168a3ac603f6425c5d9b01d97df9549539eee9b1582e",
+            ),
+            (
+                true,
+                8,
+                "33b160b5b03486627a051fe6ea269726321d2c02b5409d7447344276085ca839",
+            ),
+        ] {
+            let found =
+                components(&component_fixture(64, rings), 64, 64, 0.3, 0.05, || false).unwrap();
+            let bits: Vec<_> = found
+                .iter()
+                .map(|(polygon, score)| {
+                    (
+                        polygon
+                            .iter()
+                            .map(|p| (p.x.to_bits(), p.y.to_bits()))
+                            .collect::<Vec<_>>(),
+                        score.to_bits(),
+                    )
+                })
+                .collect();
+            assert_eq!(found.len(), count);
+            assert_eq!(
+                crate::hash(&serde_json::to_vec(&bits).unwrap()),
+                fingerprint,
+                "rings={rings}"
+            );
+        }
+    }
+
+    #[test]
+    fn component_work_observes_cancellation_and_deadlines_within_pixel_batches() {
+        // These checkpoints fall inside the empty seed scan, the dense flood,
+        // and the outer ring's rectangle scoring, respectively. No sleeps or
+        // host-speed assumptions are needed to change the live cancellation state.
+        for (name, scores, stop_at) in [
+            ("empty seed scan", vec![0.25; 64 * 64], 3),
+            ("dense flood", component_fixture(64, false), 4),
+            ("nested ring score", component_fixture(64, true), 7),
+        ] {
+            for expire in [false, true] {
+                let cancel = AtomicBool::new(false);
+                let mut deadline = None;
+                let mut checks = 0;
+                let found = components(&scores, 64, 64, 0.3, 0.05, || {
+                    checks += 1;
+                    if checks == stop_at {
+                        if expire {
+                            deadline = Some(Instant::now());
+                        } else {
+                            cancel.store(true, Ordering::Relaxed);
+                        }
+                    }
+                    cancelled_or_expired(&cancel, deadline)
+                });
+                assert!(found.is_none(), "{name}, deadline={expire}");
+                assert_eq!(checks, stop_at, "{name}, deadline={expire}");
+            }
+        }
+    }
+
+    #[test]
+    fn expired_or_cancelled_component_pass_never_reports_a_completed_empty_page() {
+        let scores = component_fixture(64, true);
+        let cancel = AtomicBool::new(true);
+        assert!(components(&scores, 64, 64, 0.3, 0.05, || {
+            cancelled_or_expired(&cancel, None)
+        })
+        .is_none());
+        cancel.store(false, Ordering::Relaxed);
+        let deadline = Instant::now();
+        assert!(components(&scores, 64, 64, 0.3, 0.05, || {
+            cancelled_or_expired(&cancel, Some(deadline))
+        })
+        .is_none());
+        assert!(components(&[0.; 64 * 64], 64, 64, 0.3, 0.05, || false)
+            .unwrap()
+            .is_empty());
+    }
+
     #[test]
     fn scheduled_width_matches_rotated_and_perspective_crops() {
         let page = image::RgbImage::new(600, 600);
