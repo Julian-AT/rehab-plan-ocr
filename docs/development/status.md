@@ -70,7 +70,10 @@ this inventory do not authorize an update or establish current candidate behavio
   missing XcodeGen preset resources on a clean machine. Bootstrap/doctor now retain
   and verify these resources. The reproduced extension-name collision is fixed;
   all 157 tool tests, lint and the local simulator build/bundle check pass.
-  Full Apple hosted and signed-release evidence remain pending.
+  Full Apple hosted acceptance remains pending. A signed private archive and IPA
+  now pass signature/profile, model, notice and privacy verification at `21ff054`;
+  the earliest profile expires September 26, 2026 at 11:56:33 UTC. The [package record](../releases/history/2026-09-26-s18-signed-package.md)
+  retains exact identities and limitations. This is not release or device approval.
   The fourth run now passes every Apple stage before UI. It records 59 UI passes,
   three failures and one skip before the 90-minute job deadline; three of 66 cases
   remain incomplete. The three failures have focused local corrections/tests for

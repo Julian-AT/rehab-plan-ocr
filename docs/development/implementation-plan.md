@@ -109,6 +109,20 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Signed private archive and documentation gate — 2026-09-26
+
+The signed archive and IPA at `21ff054` pass all four component/signature/profile
+checks, model/dictionary, privacy and notice verification. The 79 archive files
+and 340,933,354-byte IPA are preserved with source/copy hash equality. The earliest
+profile expires at 11:56:33 UTC on September 26, 2026; signing must be rechecked before
+any approved installation. See the [package record](../releases/history/2026-09-26-s18-signed-package.md).
+No physical update or release qualification follows from this technical check.
+
+Hosted attempt 35294496763 stops in both test jobs because the newly added hosted
+report omitted its required “Historical record” marker. The report is corrected;
+the failed logs remain in `.local/runs/hosted-ci-20260926-s18-005`. No native/UI test
+ran in that attempt. Full candidate CI remains required.
+
 ### Hosted UI findings and focused regressions — 2026-09-26
 
 The fourth hosted attempt passes portable checks and all Apple stages before UI,
