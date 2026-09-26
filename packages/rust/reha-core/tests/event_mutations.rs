@@ -85,7 +85,11 @@ impl Platform for Calendar {
                     }
                     event["fingerprint"] = json!(uuid::Uuid::new_v4().to_string());
                 }
-                Ok(json!({"status":"saved","event":event.clone()}))
+                let mut result = json!({"status":"saved","event":event.clone()});
+                if *self.maintenance_failure.lock().unwrap() {
+                    result["maintenance_warnings"] = json!(["Native alarm journal unavailable"]);
+                }
+                Ok(result)
             }
             _ => panic!("unexpected {command}"),
         }
@@ -128,8 +132,11 @@ async fn committed_mutation_survives_maintenance_failure_without_repeating_write
     let result = confirm(&state, calendar.clone(), &p).await.unwrap();
     assert_eq!(result["status"], "saved");
     assert_eq!(
-        result["maintenance_warnings"][0],
-        "Reminder service unavailable"
+        result["maintenance_warnings"],
+        json!([
+            "Native alarm journal unavailable",
+            "Reminder service unavailable"
+        ])
     );
     assert_eq!(
         state.store.lock().unwrap().event_history().unwrap()[0]["status"],

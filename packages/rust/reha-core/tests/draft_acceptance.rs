@@ -13,6 +13,7 @@ struct Calendar {
     current: Mutex<BTreeMap<String, EventValues>>,
     writes: Mutex<usize>,
     uncertain: bool,
+    maintenance_failure: Mutex<bool>,
     state: Arc<Application>,
 }
 impl Platform for Calendar {
@@ -32,7 +33,13 @@ impl Platform for Calendar {
                     .collect();
                 Ok(json!({"current": current, "protected_ids": []}))
             }
-            "agenda" => Ok(Value::Null),
+            "agenda" => {
+                if *self.maintenance_failure.lock().unwrap() {
+                    Err("Reminder service unavailable".into())
+                } else {
+                    Ok(Value::Null)
+                }
+            }
             "apply" => {
                 let op: CalendarOperation =
                     serde_json::from_value(args["operation"].clone()).unwrap();
@@ -106,6 +113,7 @@ fn fixture(
         current: Mutex::new(BTreeMap::new()),
         writes: Mutex::new(0),
         uncertain,
+        maintenance_failure: Mutex::new(false),
         state: state.clone(),
     });
     (dir, state, calendar, run)
@@ -126,6 +134,39 @@ async fn preview(
     .await
     .unwrap()
 }
+#[tokio::test]
+async fn plan_import_reports_maintenance_failure_without_losing_saved_state() {
+    let (_dir, state, calendar, run) = fixture(false);
+    let p = preview(&state, calendar.clone(), &run.document.id).await;
+    *calendar.maintenance_failure.lock().unwrap() = true;
+    let outcome = draft::accept_and_save(
+        calendar.clone(),
+        &state,
+        p.proposal.unwrap().token,
+        p.assessment.ready_ids,
+        false,
+    )
+    .await
+    .unwrap();
+    assert_eq!(outcome.results.len(), 3);
+    assert!(
+        outcome
+            .results
+            .iter()
+            .all(|r| r.status == "saved"
+                && r.maintenance_warnings == ["Reminder service unavailable"])
+    );
+    let store = state.store.lock().unwrap();
+    assert!(store.pending().unwrap().is_empty());
+    assert_eq!(*calendar.writes.lock().unwrap(), 3);
+    assert!(store
+        .load_run(&run.document.id)
+        .unwrap()
+        .appointments
+        .iter()
+        .all(|a| a.calendar_saved_hash.is_some()));
+}
+
 #[tokio::test]
 async fn one_action_accepts_a_clear_plan_without_fabricating_photo_verification() {
     let (_dir, state, calendar, run) = fixture(false);

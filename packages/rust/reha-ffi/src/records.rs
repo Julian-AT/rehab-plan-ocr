@@ -232,6 +232,8 @@ pub struct CalendarResult {
     pub status: WriteStatus,
     pub external_id: Option<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub maintenance_warnings: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, uniffi::Enum)]

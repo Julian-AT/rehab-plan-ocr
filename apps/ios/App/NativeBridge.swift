@@ -116,7 +116,8 @@ final class NativeBridge: AppleHost, @unchecked Sendable {
     return CalendarResult(
       id: response["id"] as? String ?? operation.id,
       status: WriteStatus(wireValue: response["status"] as? String ?? "uncertain"),
-      externalId: response["external_id"] as? String, error: response["error"] as? String)
+      externalId: response["external_id"] as? String, error: response["error"] as? String,
+      maintenanceWarnings: response["maintenance_warnings"] as? [String] ?? [])
   }
   func decodePhoto(bytes: Data) throws -> Data {
     let result = try blocking("decodePhoto", ["base64": bytes.base64EncodedString()])

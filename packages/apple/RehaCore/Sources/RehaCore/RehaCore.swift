@@ -2258,14 +2258,16 @@ public struct CalendarResult: Equatable, Hashable {
     public var status: WriteStatus
     public var externalId: String?
     public var error: String?
+    public var maintenanceWarnings: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, status: WriteStatus, externalId: String?, error: String?) {
+    public init(id: String, status: WriteStatus, externalId: String?, error: String?, maintenanceWarnings: [String]) {
         self.id = id
         self.status = status
         self.externalId = externalId
         self.error = error
+        self.maintenanceWarnings = maintenanceWarnings
     }
 
     
@@ -2287,7 +2289,8 @@ public struct FfiConverterTypeCalendarResult: FfiConverterRustBuffer {
                 id: FfiConverterString.read(from: &buf), 
                 status: FfiConverterTypeWriteStatus.read(from: &buf), 
                 externalId: FfiConverterOptionString.read(from: &buf), 
-                error: FfiConverterOptionString.read(from: &buf)
+                error: FfiConverterOptionString.read(from: &buf), 
+                maintenanceWarnings: FfiConverterSequenceString.read(from: &buf)
         )
     }
 
@@ -2296,6 +2299,7 @@ public struct FfiConverterTypeCalendarResult: FfiConverterRustBuffer {
         FfiConverterTypeWriteStatus.write(value.status, into: &buf)
         FfiConverterOptionString.write(value.externalId, into: &buf)
         FfiConverterOptionString.write(value.error, into: &buf)
+        FfiConverterSequenceString.write(value.maintenanceWarnings, into: &buf)
     }
 }
 

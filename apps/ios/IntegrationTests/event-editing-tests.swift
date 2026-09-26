@@ -11,6 +11,72 @@ final class EventEditingTests: XCTestCase {
     }
     return try JSONSerialization.jsonObject(with: response) as? [String: Any] ?? [:]
   }
+  func testCommittedWritesSurviveAlarmJournalFailure() async throws {
+    #if targetEnvironment(simulator)
+      guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        throw XCTSkip("Simulator calendar access required")
+      }
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let agenda = AgendaService(storageRoot: root, widgetRoot: root)
+      agenda.start(registerBackground: false)
+      // Deterministic disk failure after startup: the journal destination is a directory.
+      try FileManager.default.createDirectory(
+        at: root.appendingPathComponent("agenda-private-v1.json"),
+        withIntermediateDirectories: false)
+      editing = EventEditingService(isForeground: { true }, agenda: agenda)
+      let native = NativeServices(agenda: agenda)
+      let store = agenda.store
+      let calendar = EKCalendar(for: .event, eventStore: store)
+      calendar.title = "Erfundener Wartungsfehlertest"
+      calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+      try store.saveCalendar(calendar, commit: true)
+      defer { try? store.removeCalendar(calendar, commit: true) }
+      let start = Date(
+        timeIntervalSince1970: floor(Date().addingTimeInterval(7200).timeIntervalSince1970))
+      let iso = ISO8601DateFormatter()
+      let patch: [String: Any] = [
+        "title": "Erfundene Therapie", "start_utc": iso.string(from: start),
+        "end_utc": iso.string(from: start.addingTimeInterval(1800)), "timezone": "Europe/Vienna",
+        "location": "", "notes": "", "reminder_minutes": 10,
+      ]
+      let proposal: [String: Any] = [
+        "token": UUID().uuidString, "kind": "create", "owned_id": UUID().uuidString,
+        "calendar_id": calendar.calendarIdentifier, "patch": patch,
+      ]
+      let saved = try await call("mutateEvent", ["proposal": proposal])
+      XCTAssertEqual(saved["status"] as? String, "saved")
+      XCTAssertEqual(saved["maintenance_warnings"] as? [String], [CalendarMaintenance.alarmWarning])
+      XCTAssertNotNil(saved["event"] as? [String: Any])
+      // A fresh service reads the durable receipt; it must not execute the write again.
+      editing = EventEditingService(isForeground: { true }, agenda: agenda)
+      let replay = try await call("mutateEvent", ["proposal": proposal, "recovery_only": true])
+      XCTAssertTrue(NSDictionary(dictionary: replay).isEqual(to: saved))
+
+      let operation: [String: Any] = [
+        "kind": "create", "id": UUID().uuidString, "calendar_id": calendar.calendarIdentifier,
+        "requires_resolution": false, "after": patch,
+      ]
+      let data = try JSONSerialization.data(withJSONObject: [
+        "operation": operation, "recovery_only": false,
+      ])
+      let response: Data = try await withCheckedThrowingContinuation { continuation in
+        native.perform("apply", arguments: data) { continuation.resume(with: $0) }
+      }
+      let imported = try XCTUnwrap(JSONSerialization.jsonObject(with: response) as? [String: Any])
+      XCTAssertEqual(imported["status"] as? String, "saved")
+      XCTAssertEqual(
+        imported["maintenance_warnings"] as? [String], [CalendarMaintenance.alarmWarning])
+      XCTAssertNotNil(imported["external_id"] as? String)
+      let events = store.events(
+        matching: store.predicateForEvents(
+          withStart: start.addingTimeInterval(-60), end: start.addingTimeInterval(3600),
+          calendars: [calendar]))
+      XCTAssertEqual(events.count, 2, "Receipt replay duplicated an already committed event")
+      XCTAssertTrue(events.allSatisfy { $0.alarms?.first?.relativeOffset == -600 })
+    #endif
+  }
   func testRepairFindsExactMarkersAndPreservesCalendarEvents() async throws {
     #if targetEnvironment(simulator)
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {

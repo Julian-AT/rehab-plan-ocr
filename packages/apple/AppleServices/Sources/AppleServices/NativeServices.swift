@@ -72,7 +72,7 @@ public final class NativeServices: @unchecked Sendable {
         "resolveOwnedEvent", "inspectCalendarLinks":
         EventEditingService.shared.perform(command, request)
       case "calendarStatus":
-        calendarQueue.async { request.resolve(AgendaService.shared.calendarStatus()) }
+        calendarQueue.async { request.resolve(self.agendaService.calendarStatus()) }
       case "calendars": try calendars(request)
       case "snapshot": try snapshot(request)
       case "overlaps": try overlaps(request)
@@ -81,7 +81,7 @@ public final class NativeServices: @unchecked Sendable {
       case "agenda": try agenda(request)
       case "agendaPresentation":
         calendarQueue.async {
-          do { request.resolve(try AgendaService.shared.presentation()) } catch {
+          do { request.resolve(try self.agendaService.presentation()) } catch {
             request.reject(error.localizedDescription)
           }
         }
@@ -112,12 +112,14 @@ public final class NativeServices: @unchecked Sendable {
       }
     } catch { request.reject(error.localizedDescription) }
   }
-  private let store = AgendaService.shared.store
+  private let agendaService: AgendaService
+  private var store: EKEventStore { agendaService.store }
   private let dedicatedCalendar = DedicatedCalendar()
-  private let calendarQueue = AgendaService.shared.queue
+  private var calendarQueue: DispatchQueue { agendaService.queue }
   private let iso = ISO8601DateFormatter()
+  init(agenda: AgendaService = .shared) { agendaService = agenda }
   public func start() {
-    AgendaService.shared.start()
+    self.agendaService.start()
     Task { @MainActor in NativePresentation.shared.start() }
   }
   private func dictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
@@ -129,7 +131,7 @@ public final class NativeServices: @unchecked Sendable {
       end_utc: iso.string(from: event.endDate),
       timezone: event.timeZone?.identifier ?? "Europe/Vienna", location: event.location ?? "",
       notes: event.notes ?? "",
-      reminder_minutes: AgendaService.shared.logicalReminder(
+      reminder_minutes: self.agendaService.logicalReminder(
         for: event, actual: event.alarms?.first.map { Int(-$0.relativeOffset / 60) }))
   }
   private func marker(_ id: String) -> String { "reha-calendar://event/\(id)" }
@@ -191,7 +193,7 @@ public final class NativeServices: @unchecked Sendable {
         {
           current[record.id] = try? self.dictionary(self.values(event))
           if CalendarEventProtection.protectsImport(event)
-            || AgendaService.shared.alarmIsProtected(
+            || self.agendaService.alarmIsProtected(
               event, approvedMinutes: record.approved.reminder_minutes)
           {
             protected.append(record.id)
@@ -237,7 +239,7 @@ public final class NativeServices: @unchecked Sendable {
   func forgetCalendar(_ invoke: ServiceRequest) {
     calendarQueue.async {
       do {
-        try AgendaService.shared.forget()
+        try self.agendaService.forget()
         try EventEditingService.shared.forget()
         self.dedicatedCalendar.forget()
         invoke.resolve()
@@ -249,10 +251,14 @@ public final class NativeServices: @unchecked Sendable {
     guard checkAccess(invoke) else { return }
     calendarQueue.async {
       let op = args.operation
-      func finish(_ status: String, _ event: EKEvent? = nil, _ message: String? = nil) {
+      func finish(
+        _ status: String, _ event: EKEvent? = nil, _ message: String? = nil,
+        warnings: [String] = []
+      ) {
         var output: [String: Any] = ["id": op.id, "status": status]
         if let identifier = event?.eventIdentifier { output["external_id"] = identifier }
         if let message { output["error"] = message }
+        if !warnings.isEmpty { output["maintenance_warnings"] = warnings }
         invoke.resolve(output)
       }
       guard UUID(uuidString: op.id) != nil, !op.requires_resolution,
@@ -314,7 +320,7 @@ public final class NativeServices: @unchecked Sendable {
       if op.kind != "create" {
         if let event = existing,
           CalendarEventProtection.protectsImport(event)
-            || AgendaService.shared.alarmIsProtected(
+            || self.agendaService.alarmIsProtected(
               event, approvedMinutes: op.before?.reminder_minutes)
         {
           finish(
@@ -346,7 +352,7 @@ public final class NativeServices: @unchecked Sendable {
         let alarmChanged =
           op.kind == "create" || op.before?.reminder_minutes != after.reminder_minutes
         if alarmChanged, existing != nil,
-          AgendaService.shared.alarmIsProtected(event, approvedMinutes: op.before?.reminder_minutes)
+          self.agendaService.alarmIsProtected(event, approvedMinutes: op.before?.reminder_minutes)
         {
           finish("conflict", event, "Manuell veränderte Kalenderalarme bleiben geschützt.")
           return
@@ -363,10 +369,13 @@ public final class NativeServices: @unchecked Sendable {
           event.alarms = after.reminder_minutes.map { [EKAlarm(relativeOffset: -Double($0) * 60)] }
         }
         try self.store.save(event, span: .thisEvent, commit: true)
+        var warnings: [String] = []
         if alarmChanged {
-          try AgendaService.shared.approvedAlarmChanged(id: op.id, minutes: after.reminder_minutes)
+          do {
+            try self.agendaService.approvedAlarmChanged(id: op.id, minutes: after.reminder_minutes)
+          } catch { warnings.append(CalendarMaintenance.alarmWarning) }
         }
-        finish("saved", event)
+        finish("saved", event, warnings: warnings)
       } catch {
         finish("uncertain", existing, "EventKit konnte den Schreibstatus nicht sicher bestätigen.")
       }
@@ -376,7 +385,7 @@ public final class NativeServices: @unchecked Sendable {
     let args = try invoke.parseArgs(AgendaSyncArgs.self)
     calendarQueue.async {
       do {
-        try AgendaService.shared.sync(args) { result in
+        try self.agendaService.sync(args) { result in
           switch result {
           case .success(let value): invoke.resolve(value)
           case .failure(let error): invoke.reject(error.localizedDescription)
@@ -387,7 +396,7 @@ public final class NativeServices: @unchecked Sendable {
   }
   func enableReminders(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(ReminderPreferences.self)
-    AgendaService.shared.activate(args) { result in
+    self.agendaService.activate(args) { result in
       switch result {
       case .success(let value): invoke.resolve(value)
       case .failure(let error): invoke.reject(error.localizedDescription)
@@ -402,7 +411,7 @@ public final class NativeServices: @unchecked Sendable {
       self.calendarQueue.async {
         do {
           if let error { throw error }
-          AgendaService.shared.readStatus { result in
+          self.agendaService.readStatus { result in
             switch result {
             case .success(let value): invoke.resolve(value)
             case .failure(let error): invoke.reject(error.localizedDescription)
@@ -414,7 +423,7 @@ public final class NativeServices: @unchecked Sendable {
   }
   func reminderStatus(_ invoke: ServiceRequest) {
     calendarQueue.async {
-      AgendaService.shared.readStatus { result in
+      self.agendaService.readStatus { result in
         switch result {
         case .success(let value): invoke.resolve(value)
         case .failure(let error): invoke.reject(error.localizedDescription)
@@ -427,13 +436,13 @@ public final class NativeServices: @unchecked Sendable {
     let args = try invoke.parseArgs(Args.self)
     calendarQueue.async {
       do {
-        invoke.resolve(try AgendaService.shared.pendingOpen(acknowledge: args.acknowledge))
+        invoke.resolve(try self.agendaService.pendingOpen(acknowledge: args.acknowledge))
       } catch { invoke.reject(error.localizedDescription) }
     }
   }
   func testReminder(_ invoke: ServiceRequest) {
     calendarQueue.async {
-      AgendaService.shared.testNotification { result in
+      self.agendaService.testNotification { result in
         switch result {
         case .success(let value): invoke.resolve(value)
         case .failure(let error): invoke.reject(error.localizedDescription)

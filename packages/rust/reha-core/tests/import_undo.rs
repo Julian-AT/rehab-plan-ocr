@@ -13,6 +13,7 @@ struct Calendar {
     values: Mutex<BTreeMap<String, EventValues>>,
     writes: Mutex<usize>,
     uncertain: bool,
+    maintenance_failure: Mutex<bool>,
     fail_once: Mutex<Option<String>>,
     overlaps: Mutex<Option<Vec<CalendarOverlap>>>,
 }
@@ -28,7 +29,13 @@ impl Platform for Calendar {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         match command {
             "snapshot" => Ok(json!({"current":*self.values.lock().unwrap(),"protected_ids":[]})),
-            "agenda" => Ok(Value::Null),
+            "agenda" => {
+                if *self.maintenance_failure.lock().unwrap() {
+                    Err("Reminder service unavailable".into())
+                } else {
+                    Ok(Value::Null)
+                }
+            }
             "apply" => {
                 let op: CalendarOperation =
                     serde_json::from_value(args["operation"].clone()).unwrap();
@@ -111,6 +118,7 @@ fn setup(
             .finish_operation(
                 &entry.attempt_id,
                 &CalendarResult {
+                    maintenance_warnings: vec![],
                     id: entry.operation.id.clone(),
                     status: "saved".into(),
                     external_id: Some("external".into()),
@@ -127,6 +135,7 @@ fn setup(
         ),
         writes: Mutex::new(0),
         uncertain,
+        maintenance_failure: Mutex::new(false),
         fail_once: Mutex::new(None),
         overlaps: Mutex::new(None),
     });
@@ -136,6 +145,29 @@ fn setup(
         platform,
         batch.id,
     )
+}
+
+#[tokio::test]
+async fn undo_reports_maintenance_failure_without_leaving_a_pending_write() {
+    let op = operation("create", None, Some(values("Synthetic")));
+    let (_dir, app, calendar, batch) = setup(vec![op], false);
+    let preview = service::undo::prepare(calendar.clone(), &app, batch.clone())
+        .await
+        .unwrap();
+    *calendar.maintenance_failure.lock().unwrap() = true;
+    let results = service::calendar::approve_calendar(calendar.clone(), &app, preview.token, true)
+        .await
+        .unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].status, "saved");
+    assert_eq!(
+        results[0].maintenance_warnings,
+        ["Reminder service unavailable"]
+    );
+    assert!(app.store.lock().unwrap().pending().unwrap().is_empty());
+    assert!(calendar.values.lock().unwrap().is_empty());
+    assert_eq!(*calendar.writes.lock().unwrap(), 1);
+    assert!(service::undo::prepare(calendar, &app, batch).await.is_err());
 }
 
 #[tokio::test]

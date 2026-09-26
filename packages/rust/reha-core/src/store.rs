@@ -391,6 +391,7 @@ mod tests {
             .finish_operation(
                 &first,
                 &CalendarResult {
+                    maintenance_warnings: vec![],
                     id: op.id.clone(),
                     status: "saved".into(),
                     external_id: Some("external".into()),
@@ -407,6 +408,7 @@ mod tests {
             .finish_operation(
                 &second,
                 &CalendarResult {
+                    maintenance_warnings: vec![],
                     id: op.id.clone(),
                     status: "uncertain".into(),
                     external_id: None,
@@ -420,6 +422,7 @@ mod tests {
             .finish_operation(
                 &second,
                 &CalendarResult {
+                    maintenance_warnings: vec![],
                     id: op.id.clone(),
                     status: "saved".into(),
                     external_id: Some("external".into()),

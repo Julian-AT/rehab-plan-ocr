@@ -12,6 +12,8 @@ targets:
       - event-editing-tests.swift
       - notification-race-tests.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/event-editing.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/NativeServices.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/NativePresentation.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationAdapter.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationDeadline.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/LocalDiagnostics.swift
@@ -19,8 +21,8 @@ targets:
       - ../../../packages/apple/AppleServices/Sources/AppleServices/calendar-contracts.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/agenda-service.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
-      - ../Widgets
-      - ../NotificationContent
+      - ../Extensions/Widgets/AgendaWidget.swift
+      - ../Extensions/NotificationContent/NotificationViewController.swift
       - dedicated-calendar-tests.swift
       - app-storage-tests.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/dedicated-calendar.swift

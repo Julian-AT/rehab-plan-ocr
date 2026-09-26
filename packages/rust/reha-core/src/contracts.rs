@@ -349,4 +349,6 @@ pub struct CalendarResult {
     pub status: String,
     pub external_id: Option<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub maintenance_warnings: Vec<String>,
 }

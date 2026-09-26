@@ -52,6 +52,10 @@ struct ImportHistoryView: View {
             Text(
               "\(results.filter { $0.status == .saved }.count) Änderungen rückgängig gemacht · \(results.filter { $0.status != .saved }.count) offen oder fehlgeschlagen"
             )
+            if results.contains(where: { !$0.maintenanceWarnings.isEmpty }) {
+              Text("Erinnerungen und Widgets konnten noch nicht aktualisiert werden.")
+                .foregroundStyle(.secondary)
+            }
           }
         }
         if let history {

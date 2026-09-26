@@ -567,12 +567,14 @@ pub(super) async fn execute_batch(
             .map_err(failure)?;
         let outcome = match result {
             Ok(value) => serde_json::from_value(value).unwrap_or_else(|_| CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id.clone(),
                 status: "uncertain".into(),
                 external_id: None,
                 error: Some("Kalenderantwort unklar. Abgleich erforderlich.".into()),
             }),
             Err(_) => CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id.clone(),
                 status: "uncertain".into(),
                 external_id: None,
@@ -583,6 +585,7 @@ pub(super) async fn execute_batch(
             || (outcome.status == "saved" && op.kind != "remove" && outcome.external_id.is_none())
         {
             CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id.clone(),
                 status: "uncertain".into(),
                 external_id: None,
@@ -627,8 +630,12 @@ pub(super) async fn execute_batch(
         .lock()
         .map_err(failure)?
         .remove(&proposal.token);
-    // Calendar writes are already committed; a refresh error is surfaced by agenda status.
-    let _ = crate::service::agenda::sync(&app, state).await;
+    // Calendar writes are already committed; report maintenance independently.
+    if let Err(warning) = crate::service::agenda::sync(&app, state).await {
+        for result in &mut results {
+            result.maintenance_warnings.push(warning.clone());
+        }
+    }
     Ok(results)
 }
 pub async fn reconcile_calendar(
@@ -664,7 +671,11 @@ pub async fn reconcile_calendar(
             .map_err(failure)?;
         results.push(result);
     }
-    let _ = crate::service::agenda::sync(&app, state).await;
+    if let Err(warning) = crate::service::agenda::sync(&app, state).await {
+        for result in &mut results {
+            result.maintenance_warnings.push(warning.clone());
+        }
+    }
     Ok(results)
 }
 pub async fn resolve_pending_write(
@@ -689,6 +700,7 @@ pub async fn resolve_pending_write(
         .finish_operation(
             &operation_id,
             &CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id,
                 status: status.into(),
                 external_id: None,

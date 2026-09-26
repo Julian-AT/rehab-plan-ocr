@@ -1,6 +1,11 @@
 import EventKit
 import Foundation
 
+enum CalendarMaintenance {
+  static let alarmWarning =
+    "Der Termin ist gespeichert. Die Erinnerungen konnten noch nicht aktualisiert werden."
+}
+
 enum CalendarEventProtection {
   static func requiresSystemEditor(_ event: EKEvent) -> Bool {
     event.hasAttendees || event.organizer != nil || event.birthdayContactIdentifier != nil

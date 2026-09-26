@@ -446,15 +446,20 @@ final class EventEditingService: @unchecked Sendable {
       } else {
         try store.save(event, span: .thisEvent, commit: true)
       }
+      // EventKit has committed. Alarm bookkeeping is independent; preserve its
+      // logical snapshot normalization while keeping failures out of write status.
+      var warnings: [String] = []
       if kind != "remove", patch["reminder_minutes"] != nil {
-        if let id = p["owned_id"] as? String,
-          event.url?.absoluteString == "reha-calendar://event/\(id)"
-        {
-          try agenda.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
-        } else {
-          try agenda.manuallyEditedAlarm(
-            event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
-        }
+        do {
+          if let id = p["owned_id"] as? String,
+            event.url?.absoluteString == "reha-calendar://event/\(id)"
+          {
+            try agenda.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
+          } else {
+            try agenda.manuallyEditedAlarm(
+              event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
+          }
+        } catch { warnings.append(CalendarMaintenance.alarmWarning) }
       }
       var savedEvent: Any = NSNull()
       if kind != "remove" {
@@ -473,7 +478,8 @@ final class EventEditingService: @unchecked Sendable {
         }
         savedEvent = checked
       }
-      let result: [String: Any] = ["status": "saved", "event": savedEvent, "operation_id": token]
+      var result: [String: Any] = ["status": "saved", "event": savedEvent, "operation_id": token]
+      if !warnings.isEmpty { result["maintenance_warnings"] = warnings }
       try persist(
         ["proposal": p, "result": result, "alarm_journal": alarmState ?? NSNull() as Any], id: token
       )

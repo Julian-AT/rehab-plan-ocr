@@ -227,6 +227,10 @@ struct ReviewView: View {
             if !outcome.remainingIds.isEmpty {
               Text("\(outcome.remainingIds.count) Angaben noch offen").foregroundStyle(.secondary)
             }
+            if outcome.results.contains(where: { !$0.maintenanceWarnings.isEmpty }) {
+              Text("Erinnerungen und Widgets konnten noch nicht aktualisiert werden.")
+                .foregroundStyle(.secondary)
+            }
             if outcome.results.contains(where: { $0.status == .saved }) {
               Button("Rückgängig", systemImage: "arrow.uturn.backward") { history = true }
                 .accessibilityIdentifier("undo-save")

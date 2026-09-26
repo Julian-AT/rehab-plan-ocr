@@ -11,7 +11,8 @@ final class TestHost: AppleHost, @unchecked Sendable {
     precondition(!Thread.isMainThread)
     return CalendarResult(
       id: operation.id, status: recoveryOnly ? .saved : .uncertain,
-      externalId: recoveryOnly ? "synthetic-external" : nil, error: nil)
+      externalId: recoveryOnly ? "synthetic-external" : nil, error: nil,
+      maintenanceWarnings: recoveryOnly ? ["Erfundener Wartungshinweis"] : [])
   }
   func decodePhoto(bytes: Data) throws -> Data { bytes }
   func syncAgenda(records: [ImportRecord], preferences: Preferences) throws {
@@ -88,6 +89,7 @@ final class TestHost: AppleHost, @unchecked Sendable {
     } catch AppError.UncertainWrite {}
     let recovered = try await core.reconcileCalendar()
     precondition(recovered.first?.status == .saved)
+    precondition(recovered.first?.maintenanceWarnings == ["Erfundener Wartungshinweis"])
     let reopened = try await openApplication(
       root: root, models: "/unavailable-test-model", host: host)
     let retained = try await reopened.history()

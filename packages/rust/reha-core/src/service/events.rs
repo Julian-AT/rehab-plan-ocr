@@ -395,7 +395,12 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         .map_err(failure)?;
     // Ownership and the durable journal are committed before reminder reconciliation.
     if let Err(warning) = super::agenda::sync(&platform, state).await {
-        result["maintenance_warnings"] = json!([warning]);
+        let mut warnings = result["maintenance_warnings"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        warnings.push(json!(warning));
+        result["maintenance_warnings"] = json!(warnings);
     }
     Ok(result)
 }

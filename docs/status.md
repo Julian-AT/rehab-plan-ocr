@@ -21,6 +21,9 @@ a fresh backup and a persistent-data comparison without uninstalling.
 - Durable saves survive maintenance failures. Current ownership resolves repaired
   event identities while historical approved records remain intact. Changed
   calendar snapshots invalidate pending previews.
+  Native alarm-journal failures now preserve successful import and event-edit
+  receipts, with separate warnings carried through Rust and Swift. The actual
+  EventKit failure/replay regression passes without duplicating events.
 - New stores default to 30-day completed-source retention. Schema 9 adds durable
   aggregate deletion, including PDF originals, with interruption recovery.
 - Schema 10 caches compact scan summaries with transactional backfill and
@@ -30,8 +33,8 @@ a fresh backup and a persistent-data comparison without uninstalling.
 - Recognition preserves unreadable day boundaries and rejects clipped column
   rereads. German date corrections and explicit conversation states have targeted
   regressions; broader dialogue and patient testing are still required.
-- The Rust workspace passes 169 tests and Clippy. Native calendar tests pass
-  with one simulator-only skip. Current simulator builds pass. The full UI suite
+- The Rust workspace passes 172 tests and Clippy. Native calendar tests pass
+  (15 tests, one simulator-only skip). Current simulator builds pass. The full UI suite
   is still under verification; the ledger records failures and targeted reruns.
 - The archive/cold-launch UI regression and asynchronous pagination probe pass.
   Its fixed synthetic screenshot has zero changed app pixels against the capture

@@ -91,6 +91,10 @@ struct CalendarView: View {
             "\(outcome.results.filter { $0.status == .saved }.count) Änderungen gespeichert · \(outcome.results.filter { $0.status != .saved }.count) offen"
           )
           Button("Rückgängig") { history = true }
+          if outcome.results.contains(where: { !$0.maintenanceWarnings.isEmpty }) {
+            Text("Erinnerungen und Widgets konnten noch nicht aktualisiert werden.")
+              .foregroundStyle(.secondary)
+          }
         }
         if let error { Text(error).foregroundStyle(AppPalette.destructive) }
         if busy { ProcessingRow(text: "Wird vorbereitet …") }

@@ -17,6 +17,19 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, PipelineRun) {
     (dir, Arc::new(Application::new(store, "models".into())), run)
 }
 #[test]
+fn calendar_warnings_preserve_success_and_legacy_results() {
+    let legacy =
+        serde_json::json!({"id":"event", "status":"saved", "external_id":"native", "error":null});
+    let old: CalendarResult = serde_json::from_value(legacy.clone()).unwrap();
+    assert!(old.maintenance_warnings.is_empty());
+    let mut warned = legacy;
+    warned["maintenance_warnings"] = serde_json::json!(["Alarm journal unavailable"]);
+    let result: CalendarResult = serde_json::from_value(warned.clone()).unwrap();
+    assert_eq!(result.status, "saved");
+    assert_eq!(result.external_id.as_deref(), Some("native"));
+    assert_eq!(serde_json::to_value(result).unwrap(), warned);
+}
+#[test]
 fn revision_check_is_atomic_and_stale_approval_cannot_return() {
     let (_dir, app, run) = fixture();
     let revision = service::scan::revision(&run);
@@ -119,6 +132,7 @@ fn calendar_journal_and_identities_survive_service_reopen() {
         .finish_operation(
             &attempt,
             &CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id,
                 status: "uncertain".into(),
                 external_id: None,

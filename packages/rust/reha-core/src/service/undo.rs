@@ -225,6 +225,7 @@ pub(super) async fn approve_locked(
             .and_then(|v| serde_json::from_value::<CalendarResult>(v).ok())
             .filter(|r| r.id == op.id)
             .unwrap_or(CalendarResult {
+                maintenance_warnings: vec![],
                 id: op.id,
                 status: "uncertain".into(),
                 external_id: None,
@@ -259,6 +260,10 @@ pub(super) async fn approve_locked(
         .lock()
         .map_err(failure)?
         .remove(&proposal.token);
-    let _ = super::agenda::sync(&app, state).await;
+    if let Err(warning) = super::agenda::sync(&app, state).await {
+        for result in &mut results {
+            result.maintenance_warnings.push(warning.clone());
+        }
+    }
     Ok(results)
 }

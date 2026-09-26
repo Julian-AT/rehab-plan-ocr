@@ -211,3 +211,19 @@ test fails: a CoreAudio RPC timeout aborts the simulator app in
 regression or a full UI pass; output and physical pause/latency qualification remain
 open. The simulator fixture tests level publication; the separate channel probe
 tests the production delivery mechanism.
+
+Native import/manual/voice alarm-journal failures now return committed success with
+separate maintenance warnings. The typed Rust/UniFFI result carries these warnings
+through import, replacement, undo and reconciliation; old serialized results remain
+readable. Event mutations preserve native warnings when later agenda maintenance
+also fails. Existing success panels show a secondary maintenance notice.
+
+A native regression blocks the alarm-journal destination after startup, verifies
+both EventKit write paths, reopens the edit service and replays the durable receipt
+without creating another event. The native suite passes 15 tests with one expected
+simulator file-protection skip. Its relocated widget/notification sources are now
+included explicitly, without their conflicting extension Info.plists; a portable
+path check detects missing Xcode sources. A fresh simulator installation gets one
+bounded retry for unavailable installation services. Rust import/undo, legacy
+result, merged-warning and Swift/Rust binding regressions pass, as do Clippy and
+the offline simulator build. The full UI gate remains open.
