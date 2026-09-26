@@ -7,12 +7,19 @@ project and lockfile under `training/`.
 ```sh
 make restore-ocr-training
 make restore-assistant-training
+make restore-assistant-export
 ```
 
 The assistant environment requires an Apple Silicon Mac. Both commands install
 dependencies under ignored `.local/envs/`. Keep original documents, model weights,
 checkpoints, generated samples and run logs under `.local/`; existing private
 directories have not yet been migrated. Never put patient records in hosted CI.
+
+The assistant export environment is separate because the pinned llama.cpp
+converter requires Transformers 4.57.6 while MLX-LM 0.31.3 requires Transformers
+5 or later. It does not replace or change the training environment. The converter
+revision remains pinned by `models/vlm-experiments.lock.json`; full conversion
+and target-runtime checks are required before choosing the deployment route.
 
 The OCR environment targets the official
 [PP-OCRv6 Small training configuration](https://github.com/PaddlePaddle/PaddleOCR/blob/main/configs/rec/PP-OCRv6/PP-OCRv6_small_rec.yml).

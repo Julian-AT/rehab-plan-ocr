@@ -1,4 +1,4 @@
-.PHONY: bootstrap doctor format lint test test-ios build verify bindings check-bindings test-agenda restore restore-ocr-training restore-assistant-training
+.PHONY: bootstrap doctor format lint test test-ios build verify bindings check-bindings test-agenda restore restore-ocr-training restore-assistant-training restore-assistant-export
 export PATH := $(CURDIR)/.tools/bin:$(HOME)/.cargo/bin:$(PATH)
 bootstrap doctor format lint test:
 	python3 scripts/quality.py $@
@@ -27,3 +27,6 @@ restore-ocr-training:
 
 restore-assistant-training:
 	UV_PROJECT_ENVIRONMENT=$(CURDIR)/.local/envs/assistant uv sync --locked --project ml/training/assistant
+
+restore-assistant-export:
+	UV_PROJECT_ENVIRONMENT=$(CURDIR)/.local/envs/assistant-export uv sync --locked --project ml/training/assistant/export
