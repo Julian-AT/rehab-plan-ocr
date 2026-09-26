@@ -16,13 +16,13 @@ SOURCES = {
 }
 
 
-def verify_bundle(app):
+def verify_bundle(app, root=ROOT):
     checked = {}
     for component in [app, *sorted(app.glob("PlugIns/*.appex"))]:
         identifier = plistlib.loads((component / "Info.plist").read_bytes())["CFBundleIdentifier"]
         if identifier not in SOURCES or identifier in checked:
             raise ValueError("Unknown or duplicated privacy manifest component")
-        source = ROOT / "apps/ios" / SOURCES[identifier] / "PrivacyInfo.xcprivacy"
+        source = root / "apps/ios" / SOURCES[identifier] / "PrivacyInfo.xcprivacy"
         path = component / "PrivacyInfo.xcprivacy"
         data = path.read_bytes()
         expected = plistlib.loads(source.read_bytes())

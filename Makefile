@@ -9,7 +9,7 @@ help:
 	@echo 'Visual baseline: make test-visual-baseline TEST_ARGS="--run .local/runs/<new-run>" (serial disposable simulator)'
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
-	@echo 'Packaging: make verify-privacy APP_BUNDLE=<built-app>; make package'
+	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
@@ -69,6 +69,11 @@ verify-assets:
 
 package:
 	python3 tooling/release/package-native.py
+
+.PHONY: verify-bundle
+verify-bundle:
+	@test -n "$(APP_BUNDLE)" || { echo 'Set APP_BUNDLE to a built app directory'; exit 2; }
+	python3 tooling/release/bundle.py "$(APP_BUNDLE)" --target "$(TARGET)"
 
 .PHONY: inventory-runtime verify-runtime-inventory check-runtime-inventory
 inventory-runtime:

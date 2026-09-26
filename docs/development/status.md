@@ -50,6 +50,11 @@ establish current device behavior or authorize an update.
   notices. Normal builds check its committed inputs without regeneration; native
   packaging verifies the actual bundled inventory and license texts. Public
   distribution still needs the eSpeak-NG and publisher/rights decisions.
+- Shared package verification now checks the app, three extensions, exact model
+  bundles including the OCR dictionary, privacy declarations and notices. The
+  actual simulator and fresh unsigned device builds pass, as do 142 tool tests
+  and lint. CI includes these content checks; hosted and signed-release evidence
+  remain pending.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
@@ -142,7 +147,9 @@ local speech/voice comparison, natural-pause and patient comprehension tests;
 eSpeak-NG distribution resolution, privacy/support/release qualification and pilot.
 
 Physical hardware, reviewed references, consented unseen data, human listening and
-patient tests are external prerequisites. The intended Git remote remains unset.
+patient tests are external prerequisites. The intended Git remote now resolves to
+`https://github.com/Julian-AT/rehab-plan-ocr.git`; hosted verification of the latest
+local changes is still pending.
 These gates do not block independent implementation. Device updates require fresh
 preview/listening approval, a fresh backup, update without uninstalling and a
 persistent-data comparison. Historical approvals do not authorize a new update.

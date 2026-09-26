@@ -21,16 +21,32 @@ def pinned_file(path, entry):
         )
 
 
-def model_bundle(root, lock):
+def model_bundle(root, lock, *, strict=False):
+    expected = {"manifest.json"}
+    if root.is_symlink():
+        raise ValueError("Model bundle must be self-contained")
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("Model bundle must be self-contained")
     if json.loads((root / "manifest.json").read_text()) != lock:
         raise ValueError(f"Bundled manifest differs from committed pins: {root}")
     for entry in lock["files"]:
         name = Path(entry["path"])
-        if name.is_absolute() or ".." in name.parts:
+        if name.is_absolute() or ".." in name.parts or str(name) in expected:
             raise ValueError("Pinned bundle paths must be local")
+        expected.add(str(name))
         pinned_file(root / name, entry)
-    if "dictionary_sha256" in lock and sha(root / "dictionary.json") != lock["dictionary_sha256"]:
-        raise ValueError("Recognition dictionary differs from the deployment pin")
+    if "dictionary_sha256" in lock:
+        expected.add("dictionary.json")
+        if sha(root / "dictionary.json") != lock["dictionary_sha256"]:
+            raise ValueError("Recognition dictionary differs from the deployment pin")
+    if strict and {str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()} != expected:
+        raise ValueError("Bundled model files differ from committed pins")
+    return {
+        "manifest_sha256": sha(root / "manifest.json"),
+        "pinned_files": len(lock["files"]),
+        "dictionary_verified": "dictionary_sha256" in lock,
+    }
 
 
 def verify(root, targets):

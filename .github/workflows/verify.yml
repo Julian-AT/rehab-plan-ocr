@@ -34,5 +34,10 @@ jobs:
       - run: make restore convert TARGET=all
       - run: python3 tooling/dev/quality.py test
       - run: python3 tooling/dev/quality.py build check-bindings
-      - run: python3 tooling/dev/quality.py test-ios
       - run: python3 tooling/dev/quality.py build device
+      - name: Verify unsigned device bundle contents
+        run: make verify-bundle TARGET=device APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Release-iphoneos/Laßnitzhöhe.app"
+      - run: python3 tooling/dev/quality.py test-ios
+      - name: Verify simulator bundle contents
+        if: ${{ !cancelled() }}
+        run: make verify-bundle TARGET=simulator APP_BUNDLE="apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"

@@ -8,10 +8,8 @@ import pathlib
 import plistlib
 import subprocess
 import tempfile
-import tomllib
 
-from privacy import verify_bundle
-from runtime_inventory import verify as verify_runtime_inventory
+from bundle import require, verify
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ARCHIVE_ROOT = ROOT / "apps/ios/build/Laßnitzhöhe.xcarchive"
@@ -21,7 +19,6 @@ BUNDLE = "at.rehakalender.personal"
 TEAM = "ZP2PFF43D2"
 GROUP = "group.at.rehakalender.personal"
 INTAKE_GROUP = GROUP + ".intake"
-VERSION = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
 
 
 def run(*args):
@@ -40,11 +37,9 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
     # Clear extended attributes in a temporary copy without changing signed files.
     run("xattr", "-cr", str(app))
     run("codesign", "--verify", "--deep", "--strict", str(app))
-    privacy_manifests = verify_bundle(app)
-    runtime_inventory = verify_runtime_inventory(ROOT, bundle=app)
+    contents = verify(app, "device")
     profiles = []
     common_devices = None
-    build_version = None
     for component in [app, *sorted(app.glob("PlugIns/*.appex"))]:
         info = plistlib.loads((component / "Info.plist").read_bytes())
         profile = plistlib.loads(
@@ -52,28 +47,11 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         )
         entitlements = plistlib.loads(run("codesign", "-d", "--entitlements", ":-", str(component)))
         identifier = info["CFBundleIdentifier"]
-        assert info["CFBundleDisplayName"] == "Laßnitzhöhe"
-        if identifier == BUNDLE:
-            assert info["CFBundleExecutable"] == "Termine", (
-                "Keep the internal executable name stable for signing"
-            )
-        assert info["CFBundleShortVersionString"] == VERSION, (
-            "Generated app version must match the workspace"
+        require(
+            entitlements["application-identifier"] == TEAM + "." + identifier,
+            "Signed application identifier differs",
         )
-        if build_version is None:
-            build_version = info["CFBundleVersion"]
-        assert info["CFBundleVersion"] == build_version, (
-            "App and extension build numbers must match"
-        )
-        assert info["UIDeviceFamily"] == [1], "The first release targets iPhone"
-        assert identifier in [
-            BUNDLE,
-            BUNDLE + ".widgets",
-            BUNDLE + ".notification-content",
-            BUNDLE + ".share",
-        ]
-        assert entitlements["application-identifier"] == TEAM + "." + identifier
-        assert entitlements["com.apple.developer.team-identifier"] == TEAM
+        require(entitlements["com.apple.developer.team-identifier"] == TEAM, "Signed team differs")
         expected_groups = (
             [GROUP, INTAKE_GROUP]
             if identifier == BUNDLE
@@ -81,56 +59,50 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
             if identifier.endswith(".share")
             else [GROUP]
         )
-        assert sorted(entitlements["com.apple.security.application-groups"]) == sorted(
-            expected_groups
+        require(
+            sorted(entitlements["com.apple.security.application-groups"])
+            == sorted(expected_groups),
+            "Signed App Groups differ",
         )
         allowed = profile["Entitlements"]
-        assert profile["TeamIdentifier"] == [TEAM]
-        assert allowed["application-identifier"] == entitlements["application-identifier"]
-        assert allowed["com.apple.developer.team-identifier"] == TEAM
-        assert all(
-            group in allowed["com.apple.security.application-groups"] for group in expected_groups
+        require(profile["TeamIdentifier"] == [TEAM], "Profile team differs")
+        require(
+            allowed["application-identifier"] == entitlements["application-identifier"],
+            "Profile application identifier differs",
+        )
+        require(
+            allowed["com.apple.developer.team-identifier"] == TEAM,
+            "Profile entitlement team differs",
+        )
+        require(
+            all(
+                group in allowed["com.apple.security.application-groups"]
+                for group in expected_groups
+            ),
+            "Profile does not authorize the required App Groups",
         )
         devices = set(profile.get("ProvisionedDevices", []))
         common_devices = devices if common_devices is None else common_devices & devices
-        assert profile["ExpirationDate"] > datetime.datetime.now(datetime.timezone.utc).replace(
-            tzinfo=None
+        require(
+            profile["ExpirationDate"]
+            > datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
+            "Provisioning profile has expired",
         )
         profiles.append(
             {"bundle": identifier, "expires_utc": profile["ExpirationDate"].isoformat()}
         )
-    assert len(profiles) == 4
-    assert common_devices, "App and extensions must authorize at least one common device"
-    manifest = json.loads((app / "small/manifest.json").read_text())
-    assert manifest == json.loads((ROOT / "ml/registry/runtime/small.lock.json").read_text())
-    for entry in manifest["files"]:
-        assert (
-            hashlib.sha256((app / "small" / entry["path"]).read_bytes()).hexdigest()
-            == entry["sha256"]
-        )
-    speech_manifest = json.loads((ROOT / "ml/registry/runtime/kokoro.lock.json").read_text())
-    for entry in speech_manifest["files"]:
-        assert (
-            hashlib.sha256((app / "kokoro-german" / entry["path"]).read_bytes()).hexdigest()
-            == entry["sha256"]
-        )
-    for name, digest in json.loads(
-        (ROOT / "docs/third-party/licenses/manifest.json").read_text()
-    ).items():
-        assert hashlib.sha256((app / "licenses" / name).read_bytes()).hexdigest() == digest
+    require(len(profiles) == 4, "Missing signed app or extension")
+    require(common_devices, "App and extensions must authorize at least one common device")
     output = ROOT / "apps/ios/build/Laßnitzhöhe.ipa"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(payload), str(output))
     report = {
+        **contents,
         "profiles": profiles,
         "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "bytes": output.stat().st_size,
-        "version": VERSION,
-        "build": build_version,
-        "model_files_verified": len(manifest["files"]),
-        "speech_model_files_verified": len(speech_manifest["files"]),
+        "model_files_verified": contents["models"]["small"]["pinned_files"],
+        "speech_model_files_verified": contents["models"]["kokoro"]["pinned_files"],
         "signatures_verified": True,
-        "privacy_manifests_verified": privacy_manifests,
-        "runtime_inventory": runtime_inventory,
         "commonly_authorized_devices": len(common_devices),
         "physical_acceptance": "pending",
     }

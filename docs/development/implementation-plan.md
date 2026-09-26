@@ -83,7 +83,8 @@ require completion before collection. New local intake verifies consent scope,
 receipt hashes, retention and original copies without granting annotation approval.
 Unseen schedules, consented speech, patient comprehension/listening tests and
 physical devices are required for the corresponding acceptance gates. The intended
-Git remote is not configured. Do not activate hosted CI against an invented remote.
+Git remote now resolves to `https://github.com/Julian-AT/rehab-plan-ocr.git`; hosted
+verification of the latest local changes remains pending.
 Do not promote a model from synthetic-only quality scores or correlated derivatives.
 
 ## Verification record
@@ -93,7 +94,28 @@ older low-disk-space report. `make test` was started against the baseline; subse
 entries must distinguish portable/native tests, simulator builds, physical evidence
 and unperformed validation. No device update is authorized by this ledger.
 
-## Runtime dependency inventory — 2026-09-26
+## Recent verification
+
+### Shared unsigned and signed bundle verification — 2026-09-26
+
+`make verify-bundle` checks the built app and all three extensions against the
+stable identifiers, branding, executable names, common versions, iPhone platform
+and iOS 26.0 floor. It verifies the exact OCR/speech manifests and contents,
+including the formerly unchecked packaged OCR dictionary, all four privacy
+declarations and all 15 license texts. Missing/extra components, altered contents,
+symlinks and experimental assistant trials fail. Signed packaging calls the same
+contract and retains its additional signature/profile/App Group checks; explicit
+checks remain active under Python optimization.
+
+Eight synthetic bundle regressions, all 142 tool tests and repository lint pass.
+The existing normal simulator bundle and a fresh unsigned Release device build
+both pass the real-content check. Reports are retained locally in
+`.local/runs/bundle-verification-20260926-s18-001`: simulator SHA-256
+`e12028df474a1fcea948b488f2b4ad94d47c7be4ceb9ad8d210cbe24a498d63d`, device
+`1d6c02a789a3e8a9f06d0a2cbfa425ee1f9997ec7a29fd1d2117de3bd6ff43c2`.
+No signed archive was created and no physical device was updated. CI now includes
+both content checks; hosted execution remains pending. The configured `origin`
+was confirmed read-only as `Julian-AT/rehab-plan-ocr`.
 
 ### Fixed calendar screenshot capture — 2026-09-26
 

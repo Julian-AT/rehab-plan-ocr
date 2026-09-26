@@ -59,6 +59,11 @@ Build-Schritte prüfen vorab ihre Mindestreserve und entfernen keine privaten Da
 
 `make build` erzeugt eine Simulator-App; `make build TARGET=device` prüft den
 unsignierten Gerätebuild. Beide verwenden die zuvor geprüften lokalen Artefakte.
+`make verify-bundle APP_BUNDLE=<App-Pfad> TARGET=simulator` prüft die gebaute App,
+alle drei Erweiterungen, Modellgewichte und Wörterbuch, Datenschutzerklärungen und
+Lizenztexte. Für einen Gerätebuild gilt `TARGET=device`. Dieselbe Inhaltsprüfung
+läuft in CI und vor der signierten privaten Paketierung; sie ersetzt keine
+Signaturprüfung oder Geräteabnahme.
 `make test-ios` verwendet Wegwerfsimulatoren und erfundene Termine.
 Gezielte Kalender- und Sprachtests können die Vorbereitung der Foto- und Dateienauswahl
 mit `REHA_UI_MEDIA=0 make test-native-ui TEST_ARGS='--built -only-testing:TermineUITests/VoiceSurfaceTests/testSilentMicrophoneStaysFlat'`
