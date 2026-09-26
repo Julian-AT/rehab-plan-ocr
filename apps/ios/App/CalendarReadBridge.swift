@@ -8,7 +8,14 @@ extension NativeBridge {
       calendarIDs: request.calendarIds, startUTC: request.startUtc,
       endUTC: request.endUtc, timezone: request.timezone,
       selectionRevision: request.selectionRevision,
-      records: request.records.map(Self.nativeRecord))
+      records: request.records.map {
+        NativeCalendarRecord(
+          id: $0.id, calendarID: $0.calendarId, externalID: $0.externalId,
+          status: $0.status, title: $0.approved.title, startUTC: $0.approved.startUtc,
+          endUTC: $0.approved.endUtc, timezone: $0.approved.timezone,
+          location: $0.approved.location, notes: $0.approved.notes,
+          reminderMinutes: $0.approved.reminderMinutes.map(Int.init))
+      })
     do {
       let result = try NativeServiceCall.waitValue(for: .queryEvents) { completion in
         NativeServices.shared.queryCalendar(query, completion: completion)
