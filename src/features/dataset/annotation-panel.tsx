@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ReferenceReview } from "./reference-review";
 
 export function AnnotationPanel({ workbench: w }: { workbench: Workbench }) {
   const [reference, setReference] = useState<Annotation | null>(null);
@@ -45,6 +46,7 @@ export function AnnotationPanel({ workbench: w }: { workbench: Workbench }) {
   }
   return (
     <div className="flex min-w-0 flex-col gap-5">
+      <ReferenceReview w={w} />
       <FieldGroup className="sm:flex-row sm:items-end">
         <Field>
           <FieldLabel htmlFor="reference-file">Reference JSON</FieldLabel>

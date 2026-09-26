@@ -1,10 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>CFBundleDisplayName</key><string>Termine</string>
-<key>NSCameraUsageDescription</key><string>Terminpläne fotografieren und auf diesem Gerät erkennen.</string>
-<key>NSPhotoLibraryUsageDescription</key><string>Terminpläne aus Fotos importieren und auf diesem Gerät erkennen.</string>
-<key>NSCalendarsFullAccessUsageDescription</key><string>Bestätigte Termine speichern und Änderungen mit vorhandenen Kalendereinträgen abgleichen.</string>
-<key>UIFileSharingEnabled</key><false/>
-<key>LSSupportsOpeningDocumentsInPlace</key><false/>
-</dict></plist>
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>at.rehakalender.personal.agenda-refresh</string>
+	</array>
+	<key>CFBundleDisplayName</key>
+	<string>Laßnitzhöhe</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Bestätigte Termine speichern und Änderungen mit vorhandenen Kalendereinträgen abgleichen.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Terminpläne fotografieren und auf diesem Gerät erkennen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Terminpläne aus Fotos importieren und auf diesem Gerät erkennen.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<false/>
+</dict>
+</plist>

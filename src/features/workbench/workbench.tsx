@@ -52,7 +52,7 @@ export function Workbench({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <SquareTerminal className="size-5" aria-hidden="true" />
-          <h1 className="text-base font-semibold">Reha Calendar Lab</h1>
+          <h1 className="text-base font-semibold">Laßnitzhöhe · Diagnose</h1>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">
@@ -145,7 +145,7 @@ export function Workbench({
               <Input
                 id="image-import"
                 type="file"
-                accept="image/jpeg,image/png,image/heic,image/heif"
+                accept=".jpg,.jpeg,.png,.heic,.heif,image/jpeg,image/png,image/heic,image/heif"
                 multiple
                 disabled={!w.native || !!w.busy}
                 onChange={(event) => {

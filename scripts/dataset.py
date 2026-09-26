@@ -162,42 +162,10 @@ def normalize_groups(groups, hashes):
 
 
 def freeze(grouping):
-    output = PRIVATE / "split.json"
-    if output.exists():
-        raise ValueError(
-            "Split already frozen. Do not retune by reshuffling held-out days."
-        )
-    groups = json.loads(Path(grouping).read_text())
-    inventory_data = json.loads((PRIVATE / "inventory.json").read_text())
-    hashes = {e["sha256"] for e in inventory_data["entries"]}
-    if len(groups) != 20:
-        raise ValueError(
-            "The agreed split requires 20 distinct days (16 development, 4 holdout). Record a scope change before using fewer."
-        )
-    groups = normalize_groups(groups, hashes)
-    seed = "reha-calendar-split-v1"
-    ordered = sorted(
-        groups, key=lambda day: hashlib.sha256(f"{seed}:{day}".encode()).hexdigest()
-    )
-    days = {
-        day: {
-            "split": "holdout" if i < 4 else "development",
-            "fold": None if i < 4 else (i - 4) % 4,
-            **groups[day],
-        }
-        for i, day in enumerate(ordered)
-    }
-    result = {
-        "schema_version": 2,
-        "seed": seed,
-        "frozen_at": datetime.now(timezone.utc).isoformat(),
-        "days": days,
-        "grouping_sha256": digest(Path(grouping)),
-        "holdout_used": False,
-    }
-    write(output, result)
-    print(
-        "Frozen 16 development days in four grouped folds and four final holdout days."
+    raise ValueError(
+        "Legacy day-only grouping cannot prove overlap isolation. Confirm schema-2 "
+        "source relationships in the reference editor, then run reference-data.py freeze. "
+        "All previously inspected photos remain development data; no final holdout."
     )
 
 

@@ -1,12 +1,46 @@
 [workspace]
-members = ["crates/reha-core", "src-tauri", "plugins/calendar"]
+members = ["crates/reha-core", "crates/reha-ffi", "src-tauri", "plugins/calendar"]
 default-members = ["crates/reha-core"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
+
+# Keep the native UI debuggable while running the image/OCR hot path at full
+# speed. Unoptimized codecs alone take tens of seconds on a 24 MP photograph.
+# Debug symbols and assertions stay enabled; unrelated UI crates build normally.
+[profile.dev.package.reha-core]
+opt-level = 3
+
+[profile.dev.package.image]
+opt-level = 3
+
+[profile.dev.package.imageproc]
+opt-level = 3
+
+[profile.dev.package.png]
+opt-level = 3
+
+[profile.dev.package.fdeflate]
+opt-level = 3
+
+[profile.dev.package.flate2]
+opt-level = 3
+
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+
+[profile.dev.package.zune-jpeg]
+opt-level = 3
+
+[profile.dev.package.zune-core]
+opt-level = 3
+
+# Model and photo checksums must remain enabled, including during development.
+[profile.dev.package.sha2]
+opt-level = 3
 
 [profile.release]
 lto = "thin"

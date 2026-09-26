@@ -11,10 +11,24 @@ destination are preserved. No hosted recognition or production server is needed.
 
 ## Implemented
 
+- Clinic emblem app icons: rounded macOS ICNS/PNG with transparent margins and
+  an opaque iOS catalog, automatically restored into generated Xcode projects.
+  All 18 iOS sizes and desktop alpha margins were validated; Apple's asset compiler
+  and ESLint passed, and the macOS debug app was rebuilt and restarted. The current
+  version was also installed on the connected iPhone at the user's subsequent
+  request. See [artwork](../src-tauri/icon-artwork/README.md) and
+  [iPhone update verification](iphone-update-20260926-s11.md).
+- Local HEIC/HEIF import on macOS through ImageIO, alongside the existing iOS
+  decoder. File inputs accept extensions even without a MIME type. Full-resolution
+  primary-image decoding applies orientation once and retains original bytes/hash.
 - Portable PP-OCRv6 inference with multiple spatial date sections, wrapped fields,
   scoped metadata, field origins and original-resolution crop rereading. The automatic
-  pass stops scheduling work at 30 seconds; explicit retry has a 60-second budget.
-  In-flight CPU inference is cooperative and may finish after that deadline.
+  import and retry passes have a 60-second budget including native load/preparation,
+  progress, cancellation and last-draft retention. ONNX inference can be terminated.
+- Optimized native debug image processing and checksum verification, with lossless
+  PNG reuse and shared original pixels for rereading. A same-photo debug pipeline
+  comparison improved from 34.629 to 2.830 seconds including fresh model loading;
+  recognized values, geometry, warnings and alternatives matched exactly.
 - Protected manual corrections, visible conflicting evidence, and completion
   suggestions from approved matching clinic/treatment history or editable defaults.
   Suggestions require acceptance and never supply dates or start times.
@@ -32,16 +46,18 @@ destination are preserved. No hosted recognition or production server is needed.
 
 ## Data and verification boundaries
 
-All 20 distinct development photographs were processed locally with network access
-disabled. The exploratory portable run produced 199 proposals, including 25 missing
-dates, 14 missing end/duration values and 17 empty titles. These are diagnostic
-counts, not verified accuracy. The recorded baseline uses extraction version 3;
-version 4 also fixes repeated contradictory metadata and invalidates earlier caches.
+All 20 distinct original photographs now have visual transcription drafts: 188 row
+occurrences across individual photos, including correlated alternate captures and
+revisions. Reference schema 2 adds source hashes, field states and text polygons.
+None is user-approved yet. Four reproducible development folds require confirmed
+transitive day/page/capture grouping (split schema 3). No independent holdout exists.
 
-Twenty per-image provisional references and 16 conservative groups are available in
-the development tools. Their references and day/page relationships remain unverified.
-These previously explored images are development data, not an independent final
-holdout. Accuracy evaluation refuses unverified references and grouping.
+The implementation adds polygon crops, local baseline/clock alignment, conservative
+page-edge correction, native field approval gates and safe saved-import rechecks.
+Run schema 3 and extraction version 7 invalidate legacy recognition approvals/caches.
+See [the new delivery](recognition-review.md) for exact capabilities and boundaries.
+Two hundred independently composed synthetic plans and a 24-recipe variant/export
+pipeline are available; originals stay blocked from training until explicit approval.
 
 Both additional model families passed checkpoint compatibility checks and each read
 one difficult region from all 20 photographs. GLM finished 19 readings and reached
@@ -64,10 +80,16 @@ physical OCR accuracy, thermal/memory qualification or the 20-scan p95 target.
   memory/thermal and repeated-scan acceptance checks. Inspect device-level document
   traffic; local desktop inference already runs with network access denied.
 - Check exported ICS files in Apple Calendar and Google Calendar.
-- Automatic page-boundary detection remains separate from the implemented spatial
-  schedule-section detection. Other OCR tiers remain development experiments.
+- Confirm conservative page-edge correction and table fallback on more clinic formats.
+  Other OCR tiers remain development experiments.
 
-No training or final holdout evaluation has been performed. Original targets remain
+No training or final holdout evaluation has been performed. Historical acceptance targets were
 at least 99% critical date/time accuracy, 99% appointment precision/recall, 90%
 schedules without correction and physical iPhone p95 at most 30 seconds. Keep all
 content-bearing evidence in ignored private storage.
+
+The current user contract allows 60 seconds for the automatic check, including
+loading/preparation. Earlier 30-second delivery measurements and targets are
+historical and do not change this budget. Installation/signing was excluded from
+the original recognition plan; the user's subsequent September 26, 2026 request
+authorized the [current iPhone update](iphone-update-20260926-s11.md).

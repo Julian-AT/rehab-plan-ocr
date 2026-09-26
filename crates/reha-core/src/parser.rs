@@ -6,7 +6,179 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 4;
+pub const EXTRACTION_VERSION: u32 = 7;
+
+/// Robust text baselines supply table skew even when no page edge is visible.
+/// Header anchors are a fallback for old axis-aligned observations.
+fn table_transform(observations: &[Observation], regions: &[Region]) -> [f64; 9] {
+    let mut slopes = vec![];
+    for r in regions
+        .iter()
+        .filter(|r| r.polygon.len() == 4 && (r.kind == "text" || r.kind == "uncertain_text"))
+    {
+        let p = &r.polygon;
+        for (a, b) in [(p[0], p[1]), (p[3], p[2])] {
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            if dx.abs() > 50. && dy.abs() / dx.abs() < 0.25 {
+                slopes.push(dy / dx);
+            }
+        }
+    }
+    if slopes.iter().filter(|s| s.abs() > 0.0001).count() < 4 {
+        slopes.clear();
+        let headers: Vec<_> = observations
+            .iter()
+            .filter(|o| {
+                ["uhrzeit", "therapie", "raum", "therapeut"]
+                    .contains(&o.text.trim().to_lowercase().as_str())
+            })
+            .collect();
+        for (i, a) in headers.iter().enumerate() {
+            let (ax, ay, _, ab) = observation_bounds(a, regions);
+            for b in headers.iter().skip(i + 1) {
+                let (bx, by, _, bb) = observation_bounds(b, regions);
+                let dx = bx - ax;
+                let dy = (by + bb - ay - ab) / 2.;
+                if dx.abs() > 100. && dy.abs() / dx.abs() < 0.2 {
+                    slopes.push(dy / dx);
+                }
+            }
+        }
+    }
+    slopes.sort_by(f64::total_cmp);
+    let slope = slopes.get(slopes.len() / 2).copied().unwrap_or(0.);
+    [1., 0., 0., -slope, 1., 0., 0., 0., 1.]
+}
+fn transformed_regions(regions: &[Region], m: &[f64; 9]) -> Vec<Region> {
+    regions
+        .iter()
+        .cloned()
+        .map(|mut r| {
+            r.polygon = r
+                .polygon
+                .iter()
+                .map(|p| crate::geometry::map(m, p))
+                .collect();
+            r
+        })
+        .collect()
+}
+
+/// Residual baseline slope varies down a curved/perspective table. A local
+/// median only applies with enough independent text boxes; sparse pages retain
+/// the global/header fallback. Coordinates remain invertible to source pixels.
+struct TableAlignment {
+    base: [f64; 9],
+    samples: Vec<(f64, f64)>,
+}
+impl TableAlignment {
+    fn new(observations: &[Observation], regions: &[Region]) -> Self {
+        let base = table_transform(observations, regions);
+        let aligned = transformed_regions(regions, &base);
+        let samples: Vec<(f64, f64)> = aligned
+            .iter()
+            .filter(|r| r.polygon.len() == 4 && r.kind == "text")
+            .filter_map(|r| {
+                let p = &r.polygon;
+                let dx = p[1].x - p[0].x;
+                let slope = (p[1].y - p[0].y) / dx;
+                (dx > 70. && slope.abs() < 0.06).then_some(((p[0].y + p[2].y) / 2., slope))
+            })
+            .collect();
+        if samples.len() < 12 {
+            return Self {
+                base,
+                samples: vec![],
+            };
+        }
+        let width = aligned
+            .iter()
+            .flat_map(|r| r.polygon.iter())
+            .map(|p| p.x.abs())
+            .fold(1., f64::max);
+        let mut positions: Vec<_> = samples.iter().map(|s| s.0).collect();
+        positions.sort_by(f64::total_cmp);
+        let mut knots: Vec<(f64, f64)> = vec![];
+        for i in 0..5 {
+            let y = positions[i * (positions.len() - 1) / 4];
+            if knots.last().is_some_and(|k| (k.0 - y).abs() < 1.) {
+                continue;
+            }
+            let mut nearest = samples.clone();
+            nearest.sort_by(|a, b| (a.0 - y).abs().total_cmp(&(b.0 - y).abs()));
+            let mut values: Vec<_> = nearest.iter().take(12).map(|s| s.1).collect();
+            values.sort_by(f64::total_cmp);
+            let mut slope = if values[values.len() * 3 / 4] - values[values.len() / 4] > 0.025 {
+                0.
+            } else {
+                values[values.len() / 2]
+            };
+            if let Some((py, ps)) = knots.last() {
+                // Bound the derivative so the warp cannot fold rows at any x.
+                let change = (y - py) * 0.25 / width;
+                slope = slope.clamp(ps - change, ps + change);
+            }
+            knots.push((y, slope));
+        }
+        Self {
+            base,
+            samples: knots,
+        }
+    }
+    fn slope(&self, y: f64) -> f64 {
+        let Some(first) = self.samples.first() else {
+            return 0.;
+        };
+        if y <= first.0 {
+            return first.1;
+        }
+        for pair in self.samples.windows(2) {
+            let (a, b) = (pair[0], pair[1]);
+            if y <= b.0 {
+                return a.1 + (b.1 - a.1) * (y - a.0) / (b.0 - a.0);
+            }
+        }
+        self.samples.last().unwrap().1
+    }
+    fn forward(&self, p: &Point) -> Point {
+        let mut p = crate::geometry::map(&self.base, p);
+        p.y -= self.slope(p.y) * p.x;
+        p
+    }
+    fn backward(&self, p: &Point) -> Point {
+        let mut q = *p;
+        if let Some(first) = self.samples.first() {
+            q.y = p.y + self.samples.last().unwrap().1 * p.x;
+            if p.y <= first.0 - first.1 * p.x {
+                q.y = p.y + first.1 * p.x;
+            } else {
+                for pair in self.samples.windows(2) {
+                    let (a, b) = (pair[0], pair[1]);
+                    if p.y <= b.0 - b.1 * p.x {
+                        let k = (b.1 - a.1) / (b.0 - a.0);
+                        q.y = (p.y + p.x * (a.1 - k * a.0)) / (1. - k * p.x);
+                        break;
+                    }
+                }
+            }
+        }
+        crate::geometry::map(
+            &crate::geometry::inverse(&self.base).unwrap_or(crate::geometry::IDENTITY),
+            &q,
+        )
+    }
+    fn regions(&self, regions: &[Region]) -> Vec<Region> {
+        regions
+            .iter()
+            .cloned()
+            .map(|mut r| {
+                r.polygon = r.polygon.iter().map(|p| self.forward(p)).collect();
+                r
+            })
+            .collect()
+    }
+}
 
 static DATE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b|\b(\d{4})-(\d{2})-(\d{2})\b").unwrap()
@@ -38,6 +210,41 @@ fn row_text(row: &Row<'_>) -> String {
         .join(" ")
 }
 
+fn column_header(text: &str) -> bool {
+    [
+        "uhrzeit",
+        "zeit",
+        "beginn",
+        "von",
+        "ende",
+        "bis",
+        "dauer",
+        "therapie",
+        "termin",
+        "behandlung",
+        "raum",
+        "ort",
+        "zimmer",
+        "therapeut",
+        "therapeutin",
+        "therapeut/in",
+        "hinweis",
+        "hinweise",
+        "bemerkung",
+        "bemerkungen",
+        "vorbereitung",
+        "code",
+        "leistung",
+    ]
+    .contains(&text.trim().to_lowercase().trim_end_matches(':'))
+}
+fn footer(text: &str) -> bool {
+    static FOOTER: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)(?:frühstück|mittagessen|abendessen)\s+von\b|essenszeiten|seite\s*:")
+            .unwrap()
+    });
+    FOOTER.is_match(text)
+}
 fn metadata(text: &str) -> bool {
     static HEADER: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
@@ -81,6 +288,43 @@ fn rows<'a>(obs: &'a [Observation], regions: &[Region]) -> Vec<Row<'a>> {
             Some((o, x, y, b))
         })
         .collect();
+    // Clock cells anchor blocks. Perspective can leave a right-hand cell just
+    // above its clock even after baseline correction. Attach that first line to
+    // the nearby clock before processing continuations in reading order.
+    let title_left = positioned
+        .iter()
+        .filter(|(o, _, _, _)| {
+            ["therapie", "termin", "behandlung"].contains(&o.text.trim().to_lowercase().as_str())
+        })
+        .map(|(_, x, y, b)| *x - (b - y) * 1.5)
+        .min_by(f64::total_cmp);
+    if let Some(left) = title_left {
+        let anchors: Vec<_> = positioned
+            .iter()
+            .filter(|(o, x, _, _)| {
+                *x < left && TIME.is_match(&o.text) && !DATE.is_match(&o.text) && !metadata(&o.text)
+            })
+            .map(|(_, _, y, b)| (*y, *b))
+            .collect();
+        for (o, x, y, b) in &mut positioned {
+            if *x < left || DATE.is_match(&o.text) || metadata(&o.text) {
+                continue;
+            }
+            let height = *b - *y;
+            if let Some((ay, ab)) = anchors
+                .iter()
+                .filter(|(ay, ab)| {
+                    let tolerance = height.min(ab - ay);
+                    *y >= ay - tolerance * 1.1 && *y <= ay + tolerance * 0.5
+                })
+                .min_by(|a, b| (*y - a.0).abs().total_cmp(&(*y - b.0).abs()))
+            {
+                let _ = ab;
+                *y = *ay;
+                *b = *ay + height;
+            }
+        }
+    }
     positioned.sort_by(|a, b| a.2.total_cmp(&b.2).then(a.1.total_cmp(&b.1)));
     let mut result: Vec<Row> = vec![];
     for (o, _x, y, b) in positioned {
@@ -115,36 +359,134 @@ fn rows<'a>(obs: &'a [Observation], regions: &[Region]) -> Vec<Row<'a>> {
     result
 }
 
-/// Header anchors delimit columns; values never consume a neighboring column.
-struct Columns(Vec<(&'static str, f64)>);
+/// Assignment tolerates left drift; crop boundaries follow the actual whitespace.
+/// These are deliberately different from the padded detector rectangles.
+struct Columns(Vec<(&'static str, f64)>, bool, Vec<(&'static str, f64)>);
 impl Columns {
-    fn from_rows(rows: &[Row<'_>], x: &impl Fn(&Observation) -> f64) -> Self {
+    fn from_rows(
+        rows: &[Row<'_>],
+        position: &impl Fn(&Observation) -> (f64, f64, f64, f64),
+    ) -> Self {
+        let x = |o: &Observation| position(o).0;
+        let header_field =
+            |o: &Observation| match o.text.trim().to_lowercase().trim_end_matches(':') {
+                "zeit" | "uhrzeit" | "beginn" | "von" | "time" => Some("start"),
+                "ende" | "bis" => Some("end"),
+                "dauer" | "duration" => Some("duration_minutes"),
+                "termin" | "therapie" | "behandlung" | "appointment" => Some("title"),
+                "ort" | "raum" | "zimmer" | "location" | "room" => Some("location"),
+                "therapeut" | "therapeutin" | "therapeut/in" | "therapist" => Some("therapist"),
+                "hinweis" | "hinweise" | "bemerkung" | "bemerkungen" | "notes" => Some("notes"),
+                "vorbereitung" => Some("preparation"),
+                "code" | "leistung" => Some("treatment_code"),
+                _ => None,
+            };
+        // A patient-information "Zimmer" above the table is not a column header.
+        // Require a coherent header band, then only consume nearby header cells.
+        let header = rows
+            .iter()
+            .filter_map(|row| {
+                let fields: HashSet<_> = row
+                    .observations
+                    .iter()
+                    .filter_map(|o| header_field(o))
+                    .collect();
+                (fields.len() >= 2 || fields.contains("start") || fields.contains("title"))
+                    .then_some((row, fields.len()))
+            })
+            .max_by_key(|(_, count)| *count)
+            .map(|(row, _)| row);
         let mut columns = vec![];
+        let mut anchors = vec![];
         for row in rows {
-            let text = row_text(row);
-            if TIME.is_match(&text) && !DATE.is_match(&text) && !metadata(&text) {
-                break;
+            if header.is_none_or(|h| (row.y - h.y).abs() > row.height.max(h.height) * 0.8) {
+                continue;
             }
             for o in &row.observations {
-                let field = match o.text.trim().to_lowercase().trim_end_matches(':') {
-                    "zeit" | "uhrzeit" | "beginn" | "von" | "time" => "start",
-                    "ende" | "bis" => "end",
-                    "dauer" | "duration" => "duration_minutes",
-                    "termin" | "therapie" | "behandlung" | "appointment" => "title",
-                    "ort" | "raum" | "zimmer" | "location" | "room" => "location",
-                    "therapeut" | "therapeutin" | "therapeut/in" | "therapist" => "therapist",
-                    "hinweis" | "hinweise" | "bemerkung" | "bemerkungen" | "notes" => "notes",
-                    "vorbereitung" => "preparation",
-                    "code" | "leistung" => "treatment_code",
-                    _ => continue,
+                let Some(field) = header_field(o) else {
+                    continue;
                 };
                 if !columns.iter().any(|(f, _)| *f == field) {
-                    columns.push((field, x(o) - row.height * 0.3));
+                    columns.push((field, x(o) - row.height * 1.5));
+                    anchors.push((field, x(o)));
+                }
+            }
+        }
+        let mut inferred = false;
+        if !columns.iter().any(|(f, _)| *f == "title") {
+            if let Some((_, room_x)) = columns.iter().find(|(f, _)| *f == "location") {
+                let candidate = rows
+                    .iter()
+                    .filter(|row| {
+                        row.observations.iter().any(|o| {
+                            TIME.is_match(&o.text) && !DATE.is_match(&o.text) && !metadata(&o.text)
+                        })
+                    })
+                    .flat_map(|row| row.observations.iter().copied())
+                    .filter(|o| {
+                        !TIME.is_match(&o.text)
+                            && !DATE.is_match(&o.text)
+                            && !metadata(&o.text)
+                            && !column_header(&o.text)
+                            && x(o) < *room_x
+                    })
+                    .map(x)
+                    .min_by(f64::total_cmp);
+                if let Some(left) = candidate {
+                    columns.push(("title", left - 10.));
+                    inferred = true;
                 }
             }
         }
         columns.sort_by(|a, b| a.1.total_cmp(&b.1));
-        Self(columns)
+        let mut result = Self(columns.clone(), inferred, columns);
+        let body: Vec<_> = rows
+            .iter()
+            .filter(|row| header.is_none_or(|h| row.y > h.bottom))
+            .filter(|row| !metadata(&row_text(row)) && !footer(&row_text(row)))
+            .flat_map(|row| row.observations.iter().copied())
+            .filter(|o| !DATE.is_match(&o.text) && header_field(o).is_none())
+            .collect();
+        for i in 1..result.0.len() {
+            let (field, left) = result.0[i];
+            let previous = result.0[i - 1].0;
+            let anchor = anchors
+                .iter()
+                .find(|(f, _)| *f == field)
+                .map_or(left, |(_, x)| *x);
+            let height = header.map_or(20., |h| h.height);
+            let mut next_lefts: Vec<_> = body
+                .iter()
+                .filter(|o| result.field(x(o)) == Some(field) && x(o) < anchor + height * 2.)
+                .map(|o| x(o))
+                .collect();
+            next_lefts.sort_by(f64::total_cmp);
+            let next_left = next_lefts
+                .get(next_lefts.len() / 10)
+                .copied()
+                .unwrap_or(anchor);
+            let mut previous_rights: Vec<_> = body
+                .iter()
+                .filter(|o| {
+                    result.field(x(o)) == Some(previous)
+                        || (previous == "start"
+                            && result.field(x(o)).is_none()
+                            && TIME.is_match(&o.text))
+                })
+                .map(|o| position(o).2)
+                .filter(|right| *right < next_left)
+                .collect();
+            previous_rights.sort_by(f64::total_cmp);
+            if let Some(right) = previous_rights.last() {
+                result.2[i].1 = (right + next_left) / 2.;
+            } else {
+                // Sparse/merged cells: the next header's content start is a
+                // stronger boundary than its generous assignment tolerance.
+                result.2[i].1 = next_left - height * 0.35;
+            }
+            result.2[i].1 = result.2[i].1.max(result.2[i - 1].1 + 1.);
+        }
+        result
     }
     fn field(&self, x: f64) -> Option<&'static str> {
         self.0
@@ -222,6 +564,27 @@ fn treatment_date(rows: &[Row<'_>]) -> (Option<String>, Vec<String>) {
     (date, sources)
 }
 
+fn assign_cell(a: &mut Appointment, field: &str, observations: &[&Observation]) {
+    if field != "title" {
+        assign(a, field, observations);
+        return;
+    }
+    let (notes, title): (Vec<_>, Vec<_>) = observations.iter().copied().partition(|o| {
+        let text = o.text.trim().to_lowercase();
+        [
+            "bitte ",
+            "teilnahme ",
+            "nüchtern",
+            "armstudio",
+            "mitbringen",
+        ]
+        .iter()
+        .any(|p| text.starts_with(p))
+    });
+    assign(a, "title", &title);
+    assign(a, "notes", &notes);
+}
+
 fn assign(a: &mut Appointment, field: &str, observations: &[&Observation]) {
     if observations.is_empty() {
         return;
@@ -267,7 +630,7 @@ fn extract_section(
             .map(|r| bounds(&r.polygon).0)
             .unwrap_or(0.)
     };
-    let columns = Columns::from_rows(&rows, &x);
+    let columns = Columns::from_rows(&rows, &|o| observation_bounds(o, regions));
     let (date, date_sources) = treatment_date(&rows);
     let mut issues = vec![];
     let mut used = HashSet::new();
@@ -295,10 +658,25 @@ fn extract_section(
         } else {
             text.clone()
         };
-        if DATE.is_match(&time_text) || metadata(&text) {
+        if DATE.is_match(&time_text) || metadata(&text) || footer(&text) {
             continue;
         }
         let times: Vec<_> = TIME.captures_iter(&time_text).collect();
+        if !times.is_empty()
+            && previous_timed_row.is_some_and(|previous| {
+                row.y - rows[previous].bottom > row.height.max(rows[previous].height) * 10.
+            })
+        {
+            // Footer service ranges separated by a large blank area are not
+            // dated table appointments. Keep their observations available for review.
+            issues.push(Issue::new(
+                "outside_table_time",
+                "Uhrzeit außerhalb des Tabellenblocks: Dokumentübersicht prüfen.",
+                None,
+                false,
+            ));
+            continue;
+        }
         if times.is_empty() {
             let Some(previous) = previous_timed_row else {
                 continue;
@@ -325,7 +703,7 @@ fn extract_section(
                         .copied()
                         .filter(|o| columns.field(x(o)) == Some(field))
                         .collect();
-                    assign(a, field, &field_obs);
+                    assign_cell(a, field, &field_obs);
                     used.extend(field_obs.iter().map(|o| o.id.clone()));
                 }
             } else {
@@ -407,7 +785,7 @@ fn extract_section(
                     .copied()
                     .filter(|o| columns.field(x(o)) == Some(field))
                     .collect();
-                assign(&mut a, field, &field_obs);
+                assign_cell(&mut a, field, &field_obs);
             }
             if let Some(o) = row
                 .observations
@@ -470,6 +848,32 @@ fn extract_section(
         appointments.push(a);
     }
     for a in &mut appointments {
+        // Clock snapping changes grouping order, not printed reading order inside
+        // a narrow cell. In particular an honorific must precede the name below it.
+        if columns.has("title") {
+            for field in ["title", "location", "therapist", "notes"] {
+                if let Some(ids) = a.provenance.get(field) {
+                    let mut lines: Vec<_> = observations
+                        .iter()
+                        .filter(|o| ids.contains(&o.id))
+                        .collect();
+                    lines.sort_by(|a, b| {
+                        let ab = observation_bounds(a, regions);
+                        let bb = observation_bounds(b, regions);
+                        ab.1.total_cmp(&bb.1).then(ab.0.total_cmp(&bb.0))
+                    });
+                    if !lines.is_empty() {
+                        let text = lines
+                            .iter()
+                            .map(|o| clean(&o.text))
+                            .collect::<Vec<_>>()
+                            .join(if field == "notes" { "\n" } else { " " });
+                        let _ = crate::review::set_value(a, field, serde_json::json!(text));
+                    }
+                }
+            }
+        }
+        assess_fields(a, &columns, observations, regions);
         a.issues.extend(validate(a));
     }
     let unassigned: Vec<_> = observations
@@ -504,6 +908,184 @@ fn observation_bounds(o: &Observation, regions: &[Region]) -> (f64, f64, f64, f6
         .collect();
     bounds(&points)
 }
+
+fn assess_fields(a: &mut Appointment, columns: &Columns, obs: &[Observation], regions: &[Region]) {
+    let row_ids: HashSet<_> = a
+        .provenance
+        .iter()
+        .filter(|(f, _)| f.as_str() != "date")
+        .flat_map(|(_, ids)| ids)
+        .collect();
+    let row_points: Vec<_> = obs
+        .iter()
+        .filter(|o| row_ids.contains(&o.id))
+        .flat_map(|o| o.region_ids.iter())
+        .filter_map(|id| regions.iter().find(|r| &r.id == id))
+        .flat_map(|r| r.polygon.clone())
+        .collect();
+    if row_points.is_empty() {
+        return;
+    }
+    let (left, top, right, bottom) = bounds(&row_points);
+    a.row_polygon = crate::geometry::rect(left, top, right - left, bottom - top);
+    let mut cell_boundaries = columns.2.clone();
+    // A perspective table can drift horizontally down the page. A surviving
+    // name/degree line anchors the local name-column edge even when the line
+    // above was detected together with the room. Keep both crops on that edge.
+    if let Some(index) = cell_boundaries
+        .iter()
+        .position(|(field, _)| *field == "therapist")
+    {
+        let therapist_ids = a.provenance.get("therapist").cloned().unwrap_or_default();
+        if let Some(local_left) = obs
+            .iter()
+            .filter(|o| therapist_ids.contains(&o.id))
+            .map(|o| observation_bounds(o, regions).0)
+            .filter(|x| columns.field(*x) == Some("therapist"))
+            .min_by(f64::total_cmp)
+        {
+            cell_boundaries[index].1 = local_left;
+        }
+    }
+    for field in [
+        "date",
+        "start",
+        "end",
+        "title",
+        "location",
+        "therapist",
+        "notes",
+    ] {
+        let ids = a.provenance.get(field).cloned().unwrap_or_default();
+        let evidence: Vec<_> = obs.iter().filter(|o| ids.contains(&o.id)).collect();
+        let mut assessment = FieldAssessment {
+            state: PrintedState::Legible,
+            frame: "page".into(),
+            ..Default::default()
+        };
+        let cell_left = cell_boundaries
+            .iter()
+            .find(|(f, _)| *f == field)
+            .map(|(_, x)| *x);
+        let cell_right = cell_left.and_then(|x| {
+            cell_boundaries
+                .iter()
+                .find(|(_, p)| *p > x)
+                .map(|(_, p)| *p)
+        });
+        if let Some(x) = cell_left {
+            assessment.polygon = crate::geometry::rect(
+                x,
+                top,
+                cell_right.unwrap_or(right.max(x + 20.)) - x,
+                bottom - top,
+            );
+        } else {
+            assessment.polygon = if ["location", "therapist"].contains(&field) {
+                vec![]
+            } else {
+                a.row_polygon.clone()
+            };
+        }
+        if columns.1 && ["title", "location", "therapist"].contains(&field) {
+            assessment
+                .reasons
+                .push("Spaltenkopf unvollständig; Zuordnung aus Tabellenposition prüfen.".into());
+        }
+        if field == "date" {
+            assessment.polygon = evidence
+                .iter()
+                .flat_map(|o| o.region_ids.iter())
+                .filter_map(|id| regions.iter().find(|r| &r.id == id))
+                .flat_map(|r| r.polygon.clone())
+                .collect();
+            if !assessment.polygon.is_empty() {
+                let (x, y, r, b) = bounds(&assessment.polygon);
+                assessment.polygon = crate::geometry::rect(x, y, r - x, b - y);
+            }
+        }
+        if field == "therapist" && columns.has("location") && !columns.has("therapist") {
+            assessment.state = PrintedState::Cropped;
+            assessment
+                .reasons
+                .push("Therapeutenspalte nicht sicher erfasst: rechten Bildrand prüfen.".into());
+        }
+        if field == "location" {
+            static ROOMS: LazyLock<Regex> = LazyLock::new(|| {
+                Regex::new(r"(?i)(?:raum|therapie|psychologie|wartezone)\s*\d+").unwrap()
+            });
+            if ROOMS.find_iter(&a.location).count() > 1 {
+                assessment.state = PrintedState::Contradictory;
+                assessment
+                    .reasons
+                    .push("Mehrere Raumangaben: Zeilen- und Spaltenzuordnung prüfen.".into());
+            }
+        }
+        if evidence.iter().any(|o| o.score.is_some_and(|s| s < 0.85)) {
+            assessment.reasons.push("Unsichere Zeichenlesung.".into());
+        }
+        if let Some(boundary) = cell_right {
+            if evidence.iter().any(|o| {
+                let (x, y, right, bottom) = observation_bounds(o, regions);
+                // DB unclip adds whitespace on every side of a text line.
+                // A padded box grazing a separator does not prove mixed text.
+                let padding = (bottom - y).min(right - x) * 0.25;
+                let shared_time = field == "start"
+                    && a.provenance
+                        .get("end")
+                        .is_some_and(|ids| ids.contains(&o.id))
+                    && columns
+                        .2
+                        .iter()
+                        .find(|(_, p)| *p == boundary)
+                        .is_some_and(|(f, _)| *f == "end");
+                !shared_time && right - padding > boundary + 4.
+            }) {
+                assessment.state = PrintedState::Contradictory;
+                assessment.reasons.push(
+                    "Textbereich überquert eine Spaltengrenze; getrennte Lesung prüfen.".into(),
+                );
+            }
+        }
+        if ["location", "therapist"].contains(&field)
+            && crate::review::empty(&crate::review::value(a, field))
+        {
+            if assessment.state != PrintedState::Cropped {
+                assessment.state = PrintedState::Unreviewed;
+            }
+            assessment
+                .reasons
+                .push("Leer erkannt: am Foto bestätigen, ob nichts gedruckt ist.".into());
+        }
+        let text = crate::review::value(a, field)
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        if field == "location"
+            && ["BSc", "MSc", "Mag.", "Dr.", "Fr.", "Hr."]
+                .iter()
+                .any(|s| text.contains(s))
+        {
+            assessment.state = PrintedState::Contradictory;
+            assessment
+                .reasons
+                .push("Möglicher Namensrest in der Raumspalte.".into());
+        }
+        if field == "therapist"
+            && ["bsc", "msc", "ba", "ma", "dr.", "mag."]
+                .contains(&text.trim().to_lowercase().as_str())
+        {
+            assessment.state = PrintedState::Contradictory;
+            assessment
+                .reasons
+                .push("Isolierter Titel: Namensfortsetzung und Nachbarzeile prüfen.".into());
+        }
+        if !assessment.reasons.is_empty() || !crate::review::empty(&crate::review::value(a, field))
+        {
+            a.fields.insert(field.into(), assessment);
+        }
+    }
+}
 fn printed_metadata(observations: &[Observation]) -> (Metadata, HashSet<&'static str>) {
     let mut result = Metadata::default();
     let mut conflicts = HashSet::new();
@@ -536,6 +1118,14 @@ fn printed_metadata(observations: &[Observation]) -> (Metadata, HashSet<&'static
 /// Spatial sections prevent a second day's heading from changing the first day's rows.
 /// Adjacent headings without intervening appointments remain competing evidence.
 pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<ScheduleSection> {
+    let alignment = TableAlignment::new(observations, regions);
+    let mut result = sections_aligned(observations, &alignment.regions(regions));
+    for s in &mut result {
+        s.polygon = s.polygon.iter().map(|p| alignment.backward(p)).collect();
+    }
+    result
+}
+fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<ScheduleSection> {
     struct Heading {
         ids: Vec<String>,
         x: f64,
@@ -650,6 +1240,40 @@ pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<Schedul
             metadata: Metadata::default(),
         });
     }
+    let header_bottom = observations
+        .iter()
+        .filter(|o| column_header(&o.text))
+        .map(|o| observation_bounds(o, regions).3)
+        .max_by(f64::total_cmp);
+    if let Some(header_bottom) = header_bottom {
+        if observations.iter().any(|o| {
+            let (_, y, _, _) = observation_bounds(o, regions);
+            y > header_bottom
+                && y < first_y
+                && TIME.is_match(&o.text)
+                && !DATE.is_match(&o.text)
+                && !metadata(&o.text)
+                && !footer(&o.text)
+        }) {
+            result.insert(
+                0,
+                ScheduleSection {
+                    id: "section-unreadable-heading".into(),
+                    date: None,
+                    polygon: crate::geometry::rect(
+                        0.,
+                        header_bottom + 1.,
+                        page_right + 1.,
+                        first_y - header_bottom - 1.,
+                    ),
+                    heading_ids: vec![],
+                    observation_ids: vec![],
+                    columns: Default::default(),
+                    metadata: Metadata::default(),
+                },
+            );
+        }
+    }
     for i in 0..result.len() {
         let (left, top, right, _) = bounds(&result[i].polygon);
         let bottom = result
@@ -666,7 +1290,9 @@ pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<Schedul
             .iter()
             .filter(|o| {
                 let (x, y, _, _) = observation_bounds(o, regions);
-                x >= left && x < right && ((y >= top && y < bottom) || y < first_y)
+                x >= left
+                    && x < right
+                    && ((y >= top && y < bottom) || (y < first_y && column_header(&o.text)))
             })
             .cloned()
             .collect();
@@ -678,8 +1304,8 @@ pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<Schedul
         result[i].date = treatment_date(&rows(&heading_obs, regions)).0;
         result[i].observation_ids = obs.iter().map(|o| o.id.clone()).collect();
         result[i].columns =
-            Columns::from_rows(&rows(&obs, regions), &|o| observation_bounds(o, regions).0)
-                .0
+            Columns::from_rows(&rows(&obs, regions), &|o| observation_bounds(o, regions))
+                .2
                 .into_iter()
                 .map(|(k, v)| (k.into(), v))
                 .collect();
@@ -731,7 +1357,27 @@ pub fn extract(
     observations: &[Observation],
     regions: &[Region],
 ) -> (Vec<Appointment>, Vec<Issue>, Vec<String>) {
-    let sections = sections(observations, regions);
+    let alignment = TableAlignment::new(observations, regions);
+    let (mut appointments, issues, unassigned) =
+        extract_aligned(document_id, observations, &alignment.regions(regions));
+    for a in &mut appointments {
+        a.row_polygon = a
+            .row_polygon
+            .iter()
+            .map(|p| alignment.backward(p))
+            .collect();
+        for f in a.fields.values_mut() {
+            f.polygon = f.polygon.iter().map(|p| alignment.backward(p)).collect();
+        }
+    }
+    (appointments, issues, unassigned)
+}
+fn extract_aligned(
+    document_id: &str,
+    observations: &[Observation],
+    regions: &[Region],
+) -> (Vec<Appointment>, Vec<Issue>, Vec<String>) {
+    let sections = sections_aligned(observations, regions);
     let mut appointments = vec![];
     let mut issues = vec![];
     let mut used = HashSet::new();
@@ -918,6 +1564,234 @@ pub fn validate(a: &Appointment) -> Vec<Issue> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_headers_never_duplicate_preamble_times_or_copy_an_unreadable_days_date() {
+        let cells = [
+            (0., 0., "20:40"),
+            (250., 0., "Therapieplan"),
+            (0., 50., "Uhrzeit"),
+            (250., 50., "Therapie"),
+            (550., 50., "Raum"),
+            (800., 50., "Therapeut"),
+            (0., 100., "08:00 - 08:30"),
+            (250., 100., "Erster Tag ohne lesbare Überschrift"),
+            (0., 200., "Donnerstag, der 10.09.2026"),
+            (0., 250., "09:00 - 09:30"),
+            (250., 250., "Zweiter Tag"),
+            (0., 350., "Freitag, der 11.09.2026"),
+            (0., 400., "10:00 - 10:30"),
+            (250., 400., "Dritter Tag"),
+            (
+                0.,
+                900.,
+                "Frühstück von 06:30 bis 08:00, Mittagessen von 11:30 bis 13 Uhr",
+            ),
+        ];
+        let regions: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (x, y, _))| Region {
+                id: format!("r{i}"),
+                polygon: crate::geometry::rect(*x, *y, 180., 20.),
+                frame: "page".into(),
+                kind: "text".into(),
+                parent: None,
+                children: vec![],
+            })
+            .collect();
+        let obs: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (_, _, t))| Observation {
+                id: format!("o{i}"),
+                text: t.to_string(),
+                region_ids: vec![format!("r{i}")],
+                score: None,
+                engine: "fixture".into(),
+                alternatives: vec![],
+            })
+            .collect();
+        let a = extract("sections", &obs, &regions).0;
+        assert_eq!(a.len(), 3);
+        assert_eq!(a[0].date, None);
+        assert_eq!(a[0].start.as_deref(), Some("08:00"));
+        assert_eq!(a[1].date.as_deref(), Some("2026-09-10"));
+        assert_eq!(a[2].date.as_deref(), Some("2026-09-11"));
+        assert_eq!(a[1].title, "Zweiter Tag");
+    }
+    #[test]
+    fn skewed_columns_keep_names_and_degree_continuations_with_time_anchors() {
+        let cells = [
+            (10., 10., "Donnerstag, der 10.09.2026"),
+            (10., 50., "Uhrzeit"),
+            (240., 50., "Therapie"),
+            (600., 50., "Raum"),
+            (850., 50., "Therapeut"),
+            (10., 100., "08:00 - 08:30"),
+            (220., 100., "Bewegung"),
+            (600., 100., "Raum 107"),
+            (850., 100., "Fr. A. Elandora"),
+            (850., 125., "BSc"),
+            (240., 125., "bitte feste Schuhe mitbringen"),
+            (10., 180., "09:00 - 09:30"),
+            (240., 180., "Gespräch"),
+            (600., 180., "Raum 701"),
+            (850., 180., "Hr. B. Belvara"),
+        ];
+        let regions: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (x, y, text))| Region {
+                id: format!("r{i}"),
+                polygon: crate::geometry::rect(
+                    *x,
+                    *y,
+                    if text.starts_with("Donnerstag") {
+                        450.
+                    } else {
+                        180.
+                    },
+                    20.,
+                )
+                .iter()
+                .map(|p| Point {
+                    x: p.x,
+                    y: p.y + 0.09 * p.x,
+                })
+                .collect(),
+                frame: "page".into(),
+                kind: "text".into(),
+                parent: None,
+                children: vec![],
+            })
+            .collect();
+        let obs: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (_, _, t))| Observation {
+                id: format!("o{i}"),
+                text: t.to_string(),
+                region_ids: vec![format!("r{i}")],
+                score: Some(0.99),
+                engine: "fixture".into(),
+                alternatives: vec![],
+            })
+            .collect();
+        let a = extract("skew", &obs, &regions).0;
+        assert_eq!(a.len(), 2);
+        assert_eq!(a[0].location, "Raum 107");
+        assert_eq!(a[1].location, "Raum 701");
+        assert_eq!(a[0].therapist, "Fr. A. Elandora BSc");
+        assert_eq!(a[1].therapist, "Hr. B. Belvara");
+        assert_eq!(a[0].title, "Bewegung");
+        assert_eq!(a[0].notes, "bitte feste Schuhe mitbringen");
+        assert!(a[0].fields["location"].polygon[1].y > a[0].fields["location"].polygon[0].y);
+    }
+    #[test]
+    fn patient_room_is_not_a_table_header_and_padding_is_not_mixed_text() {
+        let cells = [
+            (218., 10., 35., "Zimmer"),
+            (278., 10., 30., "123"),
+            (65., 60., 33., "Uhrzeit"),
+            (130., 60., 38., "Therapie"),
+            (254., 60., 23., "Raum"),
+            (339., 60., 38., "Therapeut"),
+            (50., 80., 200., "Donnerstag, der 10.09.2026"),
+            (48., 110., 74., "*Neu 06:30 - 07:30"),
+            (135., 110., 60., "Frühstück"),
+            (48., 150., 74., "*Neu 08:00 - 08:30"),
+            (135., 150., 110., "Lange Behandlung"),
+            (256., 150., 155., "Raum 107 Hr. A. Beispiel"),
+            (346., 162., 13., "BA"),
+            (48., 200., 74., "*Neu 09:00 - 09:30"),
+            (135., 200., 115., "Weitere lange Behandlung"),
+            (256., 200., 78., "bitte im Zimmer bleiben"),
+            (344., 200., 65., "Fr. B. Beispiel BSc"),
+        ];
+        let regions: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (x, y, width, _))| Region {
+                id: format!("r{i}"),
+                polygon: crate::geometry::rect(*x, *y, *width, 10.),
+                frame: "page".into(),
+                kind: "text".into(),
+                parent: None,
+                children: vec![],
+            })
+            .collect();
+        let observations: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (_, _, _, text))| Observation {
+                id: format!("o{i}"),
+                text: text.to_string(),
+                region_ids: vec![format!("r{i}")],
+                score: Some(0.99),
+                engine: "fixture".into(),
+                alternatives: vec![],
+            })
+            .collect();
+        let a = extract("header-and-padding", &observations, &regions).0;
+        assert_eq!(a.len(), 3);
+        for row in &a {
+            assert!(
+                row.fields["start"].reasons.is_empty(),
+                "{:?}",
+                row.fields["start"]
+            );
+            assert!(
+                row.fields["title"].reasons.is_empty(),
+                "{:?}",
+                row.fields["title"]
+            );
+        }
+        assert_eq!(a[2].location, "bitte im Zimmer bleiben");
+        assert!(a[2].fields["location"].reasons.is_empty());
+        assert!(a[2].fields["therapist"].reasons.is_empty());
+        assert!(a[1].fields["location"]
+            .reasons
+            .iter()
+            .any(|r| r.contains("Spaltengrenze")));
+        assert!(a[1].fields["therapist"]
+            .reasons
+            .iter()
+            .any(|r| r.contains("Isolierter Titel")));
+        // The surviving degree locates this row's name-column edge; a global
+        // separator would cut the room suffix into the therapist rereading.
+        assert_eq!(a[1].fields["location"].polygon[1].x, 346.);
+        assert_eq!(a[1].fields["therapist"].polygon[0].x, 346.);
+        assert_eq!(a[0].fields["location"].state, PrintedState::Unreviewed);
+        assert_eq!(a[0].fields["therapist"].state, PrintedState::Unreviewed);
+    }
+    #[test]
+    fn a_single_time_range_may_span_start_and_end_columns() {
+        let (a, _, _) = positioned(&[
+            (0., 0., "Donnerstag, der 10.09.2026"),
+            (0., 40., "Von"),
+            (90., 40., "Bis"),
+            (250., 40., "Therapie"),
+            (0., 80., "08:00 - 08:30"),
+            (250., 80., "Beispiel"),
+        ]);
+        assert_eq!(a.len(), 1);
+        assert_eq!(a[0].end.as_deref(), Some("08:30"));
+        assert!(a[0].fields["start"].reasons.is_empty());
+    }
+    #[test]
+    fn varying_table_baselines_remain_invertible() {
+        let alignment = TableAlignment {
+            base: [1., 0., 0., -0.07, 1., 0., 0., 0., 1.],
+            samples: vec![(0., 0.01), (500., -0.02), (1000., 0.03)],
+        };
+        for y in [-100., 0., 150., 500., 750., 1100.] {
+            for x in [0., 100., 1200.] {
+                let p = Point { x, y };
+                let q = alignment.backward(&alignment.forward(&p));
+                assert!((q.y - y).abs() < 1e-7 && (q.x - x).abs() < 1e-7);
+            }
+        }
+    }
     fn positioned(cells: &[(f64, f64, &str)]) -> (Vec<Appointment>, Vec<Issue>, Vec<String>) {
         let regions: Vec<_> = cells
             .iter()

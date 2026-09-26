@@ -3,6 +3,16 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+mod batches;
+mod event_mutations;
+mod intake;
+mod migrations;
+mod plans;
+pub use batches::{BatchOperation, ImportBatch};
+pub use intake::Intake;
+pub use migrations::STORE_VERSION;
+pub use plans::Plan;
+
 pub struct Store {
     pub connection: Connection,
     root: PathBuf,
@@ -20,20 +30,14 @@ pub struct ScanSummary {
 impl Store {
     pub fn open(root: &Path) -> Result<Self> {
         std::fs::create_dir_all(root.join("scans"))?;
-        let connection = Connection::open(root.join("ledger.sqlite"))?;
-        connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=DELETE; PRAGMA secure_delete=ON;
-        CREATE TABLE IF NOT EXISTS scans(id TEXT PRIMARY KEY, source_hash TEXT NOT NULL, imported_at INTEGER NOT NULL, run TEXT, schedule_id TEXT);
-        CREATE INDEX IF NOT EXISTS scans_hash ON scans(source_hash);
-        CREATE TABLE IF NOT EXISTS imports(id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, record TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, operation TEXT NOT NULL, status TEXT NOT NULL, result TEXT);
-        CREATE TABLE IF NOT EXISTS schedules(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS failures(id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL, record TEXT NOT NULL);
-        PRAGMA user_version=2;")?;
-        Ok(Self {
+        let mut connection = Connection::open(root.join("ledger.sqlite"))?;
+        migrations::migrate(&mut connection)?;
+        let store = Self {
             connection,
             root: root.into(),
-        })
+        };
+        store.recover_intakes()?;
+        Ok(store)
     }
     pub fn scan_dir(&self, id: &str) -> Result<PathBuf> {
         uuid::Uuid::parse_str(id).map_err(|_| Error::Invalid("Invalid scan ID".into()))?;
@@ -58,6 +62,7 @@ impl Store {
             return Err(Error::Invalid("Unsupported run schema".into()));
         }
         self.connection.execute("INSERT INTO scans(id,source_hash,imported_at,run,schedule_id) VALUES(?1,?2,?3,?4,(SELECT schedule_id FROM scans WHERE source_hash=?2 AND schedule_id IS NOT NULL ORDER BY imported_at DESC LIMIT 1)) ON CONFLICT(id) DO UPDATE SET run=excluded.run",params![run.document.id,run.document.source_hash,run.document.imported_at,serde_json::to_string(run)?])?;
+        self.ensure_page(&run.document.id, run.document.imported_at)?;
         Ok(())
     }
     pub fn load_run(&self, id: &str) -> Result<PipelineRun> {
@@ -67,7 +72,7 @@ impl Store {
             .optional()?
             .flatten();
         let mut run: PipelineRun = serde_json::from_str(&json.ok_or_else(|| {
-            Error::Invalid("Scan wurde gelöscht oder nach 30 Tagen bereinigt.".into())
+            Error::Invalid("Scan wurde gelöscht oder ist noch nicht erkannt.".into())
         })?)?;
         crate::review::migrate(&mut run)?;
         Ok(run)
@@ -144,46 +149,45 @@ impl Store {
         }
         self.connection
             .execute("UPDATE scans SET run=NULL WHERE id=?1", [id])?;
+        self.connection.execute(
+            "UPDATE intakes SET status='deleted',error=NULL WHERE id=?1",
+            [id],
+        )?;
+        self.connection.execute(
+            "DELETE FROM settings WHERE key=?1",
+            [format!("pdf-evidence:{id}")],
+        )?;
+        self.connection
+            .execute("DELETE FROM failures WHERE id=?1", [id])?;
+        self.connection
+            .execute("DELETE FROM processing_attempts WHERE scan_id=?1", [id])?;
         Ok(())
     }
     pub fn cleanup(&self, now: i64) -> Result<usize> {
-        let cutoff = now - 30 * 86400;
-        self.connection
-            .execute("DELETE FROM failures WHERE occurred_at<=?1", [cutoff])?;
+        // Retention is opt-in. Never expire unfinished work or orphaned source files.
+        let preferences: serde_json::Value = self
+            .setting("preferences")?
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default();
+        let Some(days) = preferences["retention_days"]
+            .as_u64()
+            .filter(|d| (1..=3650).contains(d))
+        else {
+            return Ok(0);
+        };
+        let cutoff = now.saturating_sub(days as i64 * 86400);
         let mut q = self
             .connection
-            .prepare("SELECT id FROM scans WHERE imported_at<=?1 AND run IS NOT NULL")?;
+            .prepare("SELECT id FROM scans WHERE imported_at<=?1 AND run IS NOT NULL
+                AND json_valid(run) AND json_extract(run,'$.review_confirmed')=1
+                AND NOT EXISTS(SELECT 1 FROM intakes WHERE intakes.id=scans.id AND status!='completed')
+                AND NOT EXISTS(SELECT 1 FROM failures WHERE failures.id=scans.id)
+                AND NOT EXISTS(SELECT 1 FROM operations WHERE status IN ('queued','pending','uncertain'))")?;
         let ids = q
             .query_map([cutoff], |r| r.get::<_, String>(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         for id in &ids {
             self.delete_scan(id)?;
-        }
-        // Only calendar reconciliation identities may survive expiry.
-        self.connection.execute(
-            "DELETE FROM scans WHERE imported_at<=?1 AND schedule_id IS NULL",
-            [cutoff],
-        )?;
-        // Also purge orphan files left by interrupted decoding/inference.
-        for entry in std::fs::read_dir(self.root.join("scans"))? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let id = entry.file_name().to_string_lossy().into_owned();
-                let retained: bool = self.connection.query_row(
-                    "SELECT EXISTS(SELECT 1 FROM scans WHERE id=?1 AND run IS NOT NULL)",
-                    [&id],
-                    |r| r.get(0),
-                )?;
-                let modified = entry
-                    .metadata()?
-                    .modified()?
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs() as i64;
-                if !retained && modified <= cutoff {
-                    std::fs::remove_dir_all(entry.path())?;
-                }
-            }
         }
         Ok(ids.len())
     }
@@ -223,7 +227,7 @@ impl Store {
             ));
         }
         // Uncertain writes must be reconciled; never create a new attempt blindly.
-        let existing:Option<String>=self.connection.query_row("SELECT id FROM operations WHERE json_extract(operation,'$.id')=?1 AND status IN ('pending','uncertain')",[&op.id],|r|r.get(0)).optional()?;
+        let existing:Option<String>=self.connection.query_row("SELECT id FROM operations WHERE json_extract(operation,'$.id')=?1 AND status IN ('queued','pending','uncertain')",[&op.id],|r|r.get(0)).optional()?;
         if let Some(id) = existing {
             return Ok(id);
         }
@@ -236,7 +240,7 @@ impl Store {
     }
     pub fn pending(&self) -> Result<Vec<(String, CalendarOperation)>> {
         let mut q = self.connection.prepare(
-            "SELECT id,operation FROM operations WHERE status IN ('pending','uncertain')",
+            "SELECT id,operation FROM operations WHERE status IN ('queued','pending','uncertain')",
         )?;
         let rows = q.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
         let mut out = vec![];
@@ -310,7 +314,7 @@ impl Store {
             std::fs::remove_dir_all(&scans)?;
         }
         std::fs::create_dir_all(scans)?;
-        self.connection.execute_batch("DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
+        self.connection.execute_batch("DELETE FROM event_mutations; DELETE FROM plan_acceptances; DELETE FROM processing_attempts; DELETE FROM plan_pages; DELETE FROM plans; DELETE FROM batch_operations; DELETE FROM import_batches; DELETE FROM intakes; DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
         Ok(())
     }
 }
@@ -329,12 +333,16 @@ mod tests {
         store
             .connection
             .execute(
-                "INSERT INTO scans VALUES(?1,'hash',100,'{}','schedule')",
+                "INSERT INTO scans VALUES(?1,'hash',100,'{\"review_confirmed\":true}','schedule')",
                 [&id],
             )
             .unwrap();
         assert_eq!(store.cleanup(100 + 30 * 86400 - 1).unwrap(), 0);
         assert!(dir.exists());
+        assert_eq!(store.cleanup(100 + 365 * 86400).unwrap(), 0);
+        store
+            .set_setting("preferences", r#"{"retention_days":30}"#)
+            .unwrap();
         assert_eq!(store.cleanup(100 + 30 * 86400).unwrap(), 1);
         assert!(!dir.exists());
         assert_eq!(store.identical("hash").unwrap(), Some(id));
@@ -346,7 +354,7 @@ mod tests {
         assert!(store.scan_dir("../outside").is_err());
     }
     #[test]
-    fn failure_metadata_expires_after_thirty_days() {
+    fn failure_metadata_survives_until_deleted() {
         let temp = tempfile::tempdir().unwrap();
         let store = Store::open(temp.path()).unwrap();
         store
@@ -359,7 +367,7 @@ mod tests {
         store.cleanup(100 + 30 * 86400 - 1).unwrap();
         assert_eq!(store.failures().unwrap().len(), 1);
         store.cleanup(100 + 30 * 86400).unwrap();
-        assert!(store.failures().unwrap().is_empty());
+        assert_eq!(store.failures().unwrap().len(), 1);
     }
     #[test]
     fn pending_write_is_durable_and_reuses_attempt() {

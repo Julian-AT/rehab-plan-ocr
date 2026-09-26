@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Appointment, CompletionSuggestion, Run } from "@/lib/contracts";
 import { emptyMetadata } from "@/lib/contracts";
-import { problems } from "@/lib/validation";
+import { fieldConfirmed, problems } from "@/lib/validation";
 import type { Workbench } from "@/features/workbench/use-workbench";
 import { Panel } from "./panel";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ export function AppointmentSheet({
   const [draft, setDraft] = useState(appointment);
   const [discard, setDiscard] = useState(false);
   const [source, setSource] = useState(false);
+  const [sourceField, setSourceField] = useState<string | null>(null);
   const dirty = JSON.stringify(appointment) !== JSON.stringify(draft);
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
@@ -70,6 +71,16 @@ export function AppointmentSheet({
     setDraft((a) => ({
       ...a,
       approval: null,
+      fields: a.fields?.[field]
+        ? {
+            ...a.fields,
+            [field]: {
+              ...a.fields[field],
+              confirmed_at: null,
+              confirmed_value: null,
+            },
+          }
+        : a.fields,
       ...(field in emptyMetadata
         ? { metadata: { ...emptyMetadata, ...a.metadata, [field]: value } }
         : { [field]: value }),
@@ -137,12 +148,97 @@ export function AppointmentSheet({
         {draft.origins?.[field] && (
           <FieldDescription>{draft.origins[field].source}</FieldDescription>
         )}
+        {draft.fields?.[field] && (
+          <div className="flex flex-col gap-2 text-sm">
+            {!fieldConfirmed(draft, field) &&
+              draft.fields[field].reasons.map((reason) => (
+                <p key={reason}>{reason}</p>
+              ))}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                disabled={!!w.busy}
+                onClick={() => {
+                  setSourceField(field);
+                  setSource(true);
+                }}
+              >
+                {fieldLabels[field]} im Foto
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!!w.busy || !value}
+                onClick={() =>
+                  setDraft((a) => ({
+                    ...a,
+                    approval: null,
+                    fields: {
+                      ...a.fields,
+                      [field]: {
+                        ...a.fields![field],
+                        state: "legible",
+                        confirmed_value: value as string | number,
+                        confirmed_at: Math.floor(Date.now() / 1000),
+                      },
+                    },
+                  }))
+                }
+              >
+                Angabe am Foto bestätigt
+              </Button>
+              {["location", "therapist"].includes(field) && (
+                <Button
+                  variant="outline"
+                  disabled={!!w.busy}
+                  onClick={() =>
+                    setDraft((a) => ({
+                      ...a,
+                      [field]: "",
+                      approval: null,
+                      fields: {
+                        ...a.fields,
+                        [field]: {
+                          ...a.fields![field],
+                          state: "not_printed",
+                          confirmed_value: "",
+                          confirmed_at: Math.floor(Date.now() / 1000),
+                        },
+                      },
+                    }))
+                  }
+                >
+                  Nicht gedruckt
+                </Button>
+              )}
+            </div>
+            {run.refinement_readings
+              ?.filter(
+                (r) => r.appointment_id === draft.id && r.field === field,
+              )
+              .filter(
+                (r, i, all) =>
+                  all.findIndex((other) => other.value === r.value) === i,
+              )
+              .map((r) => (
+                <Button
+                  key={`${r.attempt}-${field}`}
+                  variant="outline"
+                  disabled={!!w.busy}
+                  onClick={() => edit(field, r.value)}
+                >
+                  Lesart: {String(r.value)}
+                </Button>
+              ))}
+            {fieldConfirmed(draft, field) && <p>Am Foto bestätigt.</p>}
+          </div>
+        )}
       </Field>
     );
   };
   const specialIssues = draft.issues.filter(
     (i) =>
       i.blocking &&
+      !(i.field && draft.fields?.[i.field]) &&
       ![
         "missing_date",
         "missing_start",
@@ -215,6 +311,7 @@ export function AppointmentSheet({
           </div>
           {input("title")}
           {input("location")}
+          {input("therapist")}
         </FieldGroup>
         {!!draft.suggestions?.some((s) => s.status === "pending") && (
           <section aria-label="Ergänzungsvorschläge">
@@ -283,7 +380,6 @@ export function AppointmentSheet({
         <details>
           <summary>Weitere Angaben</summary>
           <FieldGroup className="mt-4">
-            {input("therapist")}
             {input("end_date", "date")}
             {Object.keys(emptyMetadata).map((field) => input(field))}
             <Field>
@@ -321,10 +417,23 @@ export function AppointmentSheet({
         </Button>
         {source && (
           <SourceViewer
+            key={sourceField}
             simple
             run={run}
             native={w.native}
-            highlight={Object.values(draft.provenance).flat()}
+            highlight={
+              sourceField
+                ? (draft.provenance[sourceField] ?? [])
+                : Object.values(draft.provenance).flat()
+            }
+            focusPolygon={
+              sourceField
+                ? draft.fields?.[sourceField]?.polygon
+                : draft.row_polygon
+            }
+            focusFrame={
+              sourceField ? draft.fields?.[sourceField]?.frame : "page"
+            }
           />
         )}
         <details>

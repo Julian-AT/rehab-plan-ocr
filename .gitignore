@@ -36,3 +36,8 @@ __pycache__/
 
 # Incoming private evaluation images; keep out of commits and build contexts.
 /verify/
+
+# Standalone native build products; XcodeGen specification is authoritative.
+/apple/build/
+/apple/*.xcodeproj/
+**/xcuserdata/

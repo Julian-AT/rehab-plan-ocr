@@ -75,3 +75,13 @@ Deliver a signed private development build where signing allows, reproducible ev
 ## Dataset status at execution start
 
 2026-09-26: repository contained only Git metadata, `.gitignore` and `.gitattributes`. No clinical images were present. Exact dataset location requested; none has been supplied during implementation so far. No patient images moved, no verified clinical labels, no frozen clinical split, no clinical benchmark, no model trained. The synthetic fixture is explicitly invented and includes eight timed rows, one wrapped note, repeated appointments and one intentionally absent end time.
+
+## September 26, 2026 recognition and reference-review update
+
+The current automatic-review budget is 60 seconds total, including loading and
+preparation, with cancellation and retention of the last usable draft. Current
+references are per-original schema 2, and all previously inspected photos belong
+to development folds with transitive overlap isolation. Independent final testing
+requires new photos. Refer to [the current implementation](recognition-review.md)
+and [reference workflow](dataset.md); earlier 16/4 split and 30-second process-budget
+instructions are superseded. iPhone installation and signing are outside this task.

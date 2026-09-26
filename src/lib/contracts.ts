@@ -95,6 +95,8 @@ export const emptyMetadata: AppointmentMetadata = {
 };
 export interface Appointment {
   id: string;
+  fields?: Record<string, FieldAssessment>;
+  row_polygon?: Point[];
   section_id?: string | null;
   metadata?: AppointmentMetadata;
   origins?: Record<string, FieldOrigin>;
@@ -125,6 +127,7 @@ export interface Config {
   box_threshold: number;
   detailed_debug: boolean;
   quarter_turns: number;
+  mirrored?: boolean;
   page_corners: [Point, Point, Point, Point] | null;
 }
 export interface Stage {
@@ -135,6 +138,8 @@ export interface Stage {
   artifacts: string[];
 }
 export interface Run {
+  /** Canonical native revision; never persisted inside the run. */
+  revision?: string;
   schema_version: number;
   sections?: ScheduleSection[];
   refinement_attempts?: RefinementAttempt[];
@@ -194,6 +199,7 @@ export interface Proposal {
   document_id: string;
   schedule_id: string;
   operations: Operation[];
+  protected_event_ids?: string[];
 }
 export interface WriteResult {
   id: string;
@@ -202,6 +208,10 @@ export interface WriteResult {
   error: string | null;
 }
 export interface Preferences {
+  app_reminders_enabled?: boolean;
+  app_reminder_minutes?: number | null;
+  reminder_sound?: boolean;
+  reminder_preview?: boolean;
   appearance?: "system" | "light" | "dark";
   calendar_id?: string;
   completion_defaults?: CompletionDefault[];
@@ -210,6 +220,14 @@ export interface Preferences {
   detailed_debug: boolean;
 }
 export interface History {
+  intakes?: {
+    id: string;
+    filename: string;
+    imported_at: number;
+    status: string;
+    error: string | null;
+  }[];
+  batches?: ImportBatch[];
   failures?: {
     id: string;
     filename: string;
@@ -237,6 +255,19 @@ export interface History {
   }[];
   pending: number;
 }
+export interface ImportBatch {
+  id: string;
+  document_ids: string[];
+  created_at: number;
+  undo_of: string | null;
+  undone_by: string | null;
+  operations: {
+    attempt_id: string;
+    operation: Operation;
+    status: string;
+    result: WriteResult | null;
+  }[];
+}
 export interface Calendar {
   id: string;
   title: string;
@@ -249,6 +280,7 @@ export interface CalendarConnection {
   setup_error?: string;
 }
 export interface Annotation {
+  input_class?: "rehabilitation_plan" | "non_plan" | "unusable";
   schema_version: number;
   day_id: string;
   document_hashes: string[];
@@ -257,6 +289,47 @@ export interface Annotation {
   split: string;
   appointments: Appointment[];
   uncertainty_notes: string[];
+  sources?: ReferenceSource[];
+  lines?: ReferenceLine[];
+  coverage_confirmed?: boolean;
+  content_hash?: string | null;
+  approval_hash?: string | null;
+}
+export type PrintedState =
+  | "unreviewed"
+  | "legible"
+  | "not_printed"
+  | "illegible"
+  | "cropped"
+  | "contradictory";
+export interface FieldAssessment {
+  state: PrintedState;
+  polygon: Point[];
+  frame: string;
+  reasons: string[];
+  confirmed_value: string | number | null;
+  confirmed_at: number | null;
+}
+export interface ReferenceSource {
+  source_hash: string;
+  original_hash: string;
+  logical_page: string;
+  capture_series: string;
+  treatment_days: string[];
+  width: number;
+  height: number;
+  table_polygon: Point[];
+  relationships_confirmed: boolean;
+}
+export interface ReferenceLine {
+  id: string;
+  source_hash: string;
+  appointment_id: string;
+  field: string;
+  text: string;
+  polygon: Point[];
+  state: PrintedState;
+  error_causes: string[];
 }
 
 export const defaultConfig: Config = {
@@ -267,6 +340,7 @@ export const defaultConfig: Config = {
   box_threshold: 0.6,
   detailed_debug: false,
   quarter_turns: 0,
+  mirrored: false,
   page_corners: null,
 };
 export const defaultPreferences: Preferences = {
@@ -274,6 +348,10 @@ export const defaultPreferences: Preferences = {
   calendar_id: "",
   completion_defaults: [],
   timezone: "Europe/Vienna",
-  reminder: null,
+  reminder: 10,
+  app_reminders_enabled: false,
+  app_reminder_minutes: 10,
+  reminder_sound: true,
+  reminder_preview: true,
   detailed_debug: false,
 };

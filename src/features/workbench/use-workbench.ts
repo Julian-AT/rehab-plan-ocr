@@ -14,6 +14,13 @@ import {
 import { useNative } from "@/hooks/use-native";
 
 const emptyHistory: History = { scans: [], imports: [], pending: 0 };
+type ProcessingProgress = {
+  id: string;
+  stage: string;
+  elapsed_ms: number;
+  budget_ms: number;
+  draft_available: boolean;
+};
 type Runtime = {
   platform: string;
   portable_packaged: boolean;
@@ -29,6 +36,7 @@ export function useWorkbench() {
   const [history, setHistory] = useState(emptyHistory);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [busy, setBusy] = useState("");
+  const [progress, setProgress] = useState<ProcessingProgress | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [view, setView] = useState("run");
@@ -36,6 +44,7 @@ export function useWorkbench() {
   const saves = useRef<Promise<unknown>>(Promise.resolve());
   const saveError = useRef<unknown>(null);
   const revision = useRef(0);
+  const storedRevisions = useRef(new Map<string, string>());
   const report = useCallback(
     (error: unknown) =>
       setError(error instanceof Error ? error.message : String(error)),
@@ -60,6 +69,7 @@ export function useWorkbench() {
       const controller = new AbortController();
       active.current = controller;
       setBusy(label);
+      setProgress(null);
       setError("");
       setNotice("");
       try {
@@ -69,6 +79,7 @@ export function useWorkbench() {
       } finally {
         active.current = null;
         setBusy("");
+        setProgress(null);
       }
     },
     [report],
@@ -110,6 +121,39 @@ export function useWorkbench() {
     };
   }, [native, report, cancel, refresh]);
 
+  useEffect(() => {
+    if (!native) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void import("@tauri-apps/api/event")
+      .then(({ listen }) =>
+        listen<ProcessingProgress>("processing-progress", (event) => {
+          if (!disposed) setProgress(event.payload);
+        }),
+      )
+      .then((stop) => {
+        if (disposed) stop();
+        else unlisten = stop;
+      })
+      .catch(report);
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [native, report]);
+
+  useEffect(() => {
+    if (!busy) return;
+    const timer = window.setInterval(
+      () =>
+        setProgress((p) =>
+          p ? { ...p, elapsed_ms: Math.min(60000, p.elapsed_ms + 1000) } : p,
+        ),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [busy]);
+
   // Serialize snapshots in edit order. Explicit export/approval waits for this queue.
   function updateRun(patch: Partial<Run>, invalidate = true) {
     if (!run) return;
@@ -129,10 +173,13 @@ export function useWorkbench() {
           try {
             const saved = await command<Run>("save_review", {
               id: next.document.id,
+              expectedRevision: storedRevisions.current.get(next.document.id),
               appointments: next.appointments,
               complete: next.complete_page_confirmed,
               reviewed: next.review_confirmed,
             });
+            if (saved.revision)
+              storedRevisions.current.set(saved.document.id, saved.revision);
             if (revision.current === version) setRun(saved);
             saveError.current = null;
           } catch (error) {
@@ -158,6 +205,8 @@ export function useWorkbench() {
   }
 
   function acceptRun(run: Run) {
+    if (run.revision)
+      storedRevisions.current.set(run.document.id, run.revision);
     revision.current++;
     setRun(run);
     setConfig({ ...run.config, detailed_debug: false });
@@ -219,6 +268,38 @@ export function useWorkbench() {
     });
   }
 
+  async function recheckSaved(id: string, replacement?: File) {
+    return execute("Gespeicherten Plan am Foto erneut prüfen", async () => {
+      await flush();
+      let image: ImageInput;
+      let options = config;
+      if (replacement) {
+        image = {
+          base64: await encodeImage(replacement),
+          filename: replacement.name,
+        };
+      } else {
+        const old = await command<Run>("load_scan", { id });
+        options = { ...old.config, detailed_debug: false };
+        image = {
+          base64: await command<string>("source_bytes", { id }),
+          filename: old.document.filename,
+        };
+      }
+      const result = await processImage(image, options, true);
+      await command("associate_recheck", {
+        id: result.run.document.id,
+        previous: id,
+      });
+      acceptRun(result.run);
+      setNotice(
+        "Erneut gelesen. Angaben am Foto prüfen; Kalenderänderungen werden erst in der Vorschau bestätigt.",
+      );
+      await refresh();
+      return true;
+    });
+  }
+
   async function reprocess(options: Config) {
     if (!run) return;
     await execute("Reprocessing", async () => {
@@ -257,6 +338,7 @@ export function useWorkbench() {
     const saved = native
       ? await command<Run>("save_review", {
           id: run.document.id,
+          expectedRevision: storedRevisions.current.get(run.document.id),
           appointments,
           complete: run.complete_page_confirmed,
           reviewed: false,
@@ -275,6 +357,8 @@ export function useWorkbench() {
           })),
         };
     revision.current++;
+    if (saved.revision)
+      storedRevisions.current.set(saved.document.id, saved.revision);
     setRun(saved);
     await refresh();
     return saved;
@@ -332,6 +416,7 @@ export function useWorkbench() {
     history,
     runtime,
     busy,
+    progress,
     error,
     notice,
     view,
@@ -351,6 +436,7 @@ export function useWorkbench() {
     sample,
     openScan,
     reprocess,
+    recheckSaved,
     capture,
     savePreferences,
     removeScan,

@@ -1,76 +1,34 @@
-use crate::state::{failure, AppState, Response};
-use serde_json::{json, Value};
+//! Compatibility commands. Business rules live in reha-core::service.
+use crate::state::{AppState, Response, TauriPlatform};
+use serde_json::Value;
 use std::sync::Arc;
 use tauri::State;
-
 #[tauri::command]
 pub(crate) async fn erase_all(
     app: tauri::AppHandle,
     state: State<'_, Arc<AppState>>,
 ) -> Response<()> {
-    let _guard = state.calendar_lock.lock().await;
-    if !state.cancel.lock().map_err(failure)?.is_empty() {
-        return Err("Laufende Erkennung zuerst abbrechen.".into());
-    }
-    state.proposals.lock().map_err(failure)?.clear();
-    state
-        .store
-        .lock()
-        .map_err(failure)?
-        .erase_all()
-        .map_err(failure)?;
-    #[cfg(target_os = "ios")]
-    tauri::async_runtime::spawn_blocking(move || {
-        tauri_plugin_reha_calendar::call(&app, "forgetCalendar", json!({}))
-    })
-    .await
-    .map_err(failure)??;
-    #[cfg(not(target_os = "ios"))]
-    let _ = app;
-    Ok(())
+    reha_core::service::settings::erase_all(Arc::new(TauriPlatform(app)), state.inner()).await
 }
+
 #[tauri::command]
-pub(crate) fn maintenance(state: State<'_, Arc<AppState>>) -> Response<usize> {
-    state
-        .store
-        .lock()
-        .map_err(failure)?
-        .cleanup(chrono::Utc::now().timestamp())
-        .map_err(failure)
+pub(crate) async fn maintenance(state: State<'_, Arc<AppState>>) -> Response<usize> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || reha_core::service::settings::maintenance(&state))
+        .await
+        .map_err(crate::state::failure)?
 }
+
 #[tauri::command]
-pub(crate) fn settings(state: State<'_, Arc<AppState>>, value: Option<Value>) -> Response<Value> {
-    let store = state.store.lock().map_err(failure)?;
-    if let Some(value) = value {
-        let timezone = value["timezone"].as_str().ok_or("Zeitzone fehlt.")?;
-        timezone
-            .parse::<chrono_tz::Tz>()
-            .map_err(|_| "Unbekannte Zeitzone.")?;
-        if value["reminder"].as_u64().is_some_and(|m| m > 10080) {
-            return Err("Erinnerung maximal sieben Tage vorher.".into());
-        }
-        if let Some(defaults) = value.get("completion_defaults") {
-            let defaults: Vec<reha_core::contracts::CompletionDefault> =
-                serde_json::from_value(defaults.clone()).map_err(failure)?;
-            if defaults.len() > 100 {
-                return Err("Maximal 100 Vorgaben.".into());
-            }
-            for d in &defaults {
-                reha_core::review::validate_default(d).map_err(failure)?;
-            }
-        }
-        store
-            .set_setting("preferences", &value.to_string())
-            .map_err(failure)?;
-        return Ok(value);
-    }
-    Ok(store
-        .setting("preferences")
-        .map_err(failure)?
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or(json!({"timezone":"Europe/Vienna","reminder":null,"detailed_debug":false})))
+pub(crate) async fn settings(
+    app: tauri::AppHandle,
+    state: State<'_, Arc<AppState>>,
+    value: Option<Value>,
+) -> Response<Value> {
+    reha_core::service::settings::settings(Arc::new(TauriPlatform(app)), state.inner(), value).await
 }
+
 #[tauri::command]
 pub(crate) fn engine_status(state: State<'_, Arc<AppState>>) -> Value {
-    json!({"portable_packaged":state.models.join("manifest.json").exists(),"platform":std::env::consts::OS,"runtime":"ONNX Runtime 1.22.0 / ort 2.0.0-rc.10","cloud_recognition":false})
+    reha_core::service::settings::engine_status(state.inner())
 }

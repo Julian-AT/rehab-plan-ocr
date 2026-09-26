@@ -25,16 +25,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Agenda } from "./use-agenda";
+import type { AgendaResponse } from "@/lib/agenda";
 import { fieldLabels } from "./appointment-sheet";
 export function SettingsSheet({
   w,
   close,
   developer,
+  agenda,
 }: {
   w: Workbench;
   close: () => void;
   developer: () => void;
+  agenda: Agenda;
 }) {
+  const [testNotice, setTestNotice] = useState("");
   const [draft, setDraft] = useState(w.preferences);
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [discard, setDiscard] = useState(false);
@@ -87,8 +92,10 @@ export function SettingsSheet({
         <Button
           disabled={!!w.busy}
           onClick={async () => {
-            if (await w.savePreferences({ ...draft, detailed_debug: false }))
+            if (await w.savePreferences({ ...draft, detailed_debug: false })) {
+              await agenda.refresh();
               close();
+            }
           }}
         >
           {w.busy || "Einstellungen speichern"}
@@ -116,82 +123,210 @@ export function SettingsSheet({
             </AlertDescription>
           </Alert>
         )}
-        <FieldGroup>
+        <section
+          className="settings-section"
+          aria-labelledby="reminders-heading"
+        >
+          <h2 id="reminders-heading">Erinnerungen</h2>
+          <p>
+            {agenda.data.reminders.authorization === "denied"
+              ? "Mitteilungen sind nicht erlaubt. Aktiviere sie in den iPhone-Einstellungen. Kalenderalarme bleiben zuständig."
+              : agenda.data.reminders.enabled
+                ? `${agenda.data.reminders.scheduled} App-Erinnerungen eingeplant. Weitere Termine bleiben im Kalender abgesichert.`
+                : "Eine ruhige Erinnerung vor deinem Termin. Bestehende Kalenderalarme bleiben bis zur Aktivierung erhalten."}
+          </p>
           {select(
-            "appearance",
-            "Darstellung",
-            draft.appearance ?? "system",
+            "app-reminder",
+            "Vorlauf",
+            String(
+              draft.app_reminder_minutes === null
+                ? "none"
+                : (draft.app_reminder_minutes ?? 10),
+            ),
             [
-              ["system", "Wie das System"],
-              ["light", "Hell"],
-              ["dark", "Dunkel"],
-            ],
-            (appearance) =>
-              setDraft({
-                ...draft,
-                appearance: appearance as "system" | "light" | "dark",
-              }),
-          )}
-          <Field>
-            <FieldLabel htmlFor="timezone">Zeitzone</FieldLabel>
-            <Input
-              id="timezone"
-              value={draft.timezone}
-              disabled={!!w.busy}
-              onChange={(e) => setDraft({ ...draft, timezone: e.target.value })}
-            />
-          </Field>
-          {select(
-            "reminder",
-            "Erinnerung",
-            String(draft.reminder ?? "none"),
-            [
-              ["none", "Keine"],
+              ["none", "Aus"],
               ["5", "5 Minuten vorher"],
+              ["10", "10 Minuten vorher"],
               ["15", "15 Minuten vorher"],
               ["30", "30 Minuten vorher"],
-              ["60", "1 Stunde vorher"],
+              ["60", "60 Minuten vorher"],
             ],
             (value) =>
               setDraft({
                 ...draft,
+                app_reminder_minutes: value === "none" ? null : Number(value),
                 reminder: value === "none" ? null : Number(value),
               }),
           )}
-          {w.runtime?.platform === "ios" && (
-            <Button
-              variant="outline"
-              disabled={!!w.busy}
-              onClick={() =>
-                w.execute("Kalender werden geladen", async () => {
-                  const result = await command<CalendarConnection>(
-                    "calendars",
-                    { dedicated: true },
-                  );
-                  setCalendars(result.calendars);
-                  setDraft((d) => ({
-                    ...d,
-                    calendar_id: d.calendar_id || result.dedicated_id || "",
-                  }));
-                  if (result.setup_error) w.report(result.setup_error);
-                })
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.reminder_sound ?? true}
+              onChange={(e) =>
+                setDraft({ ...draft, reminder_sound: e.target.checked })
               }
+            />
+            Mit Ton
+          </label>
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.reminder_preview ?? true}
+              onChange={(e) =>
+                setDraft({ ...draft, reminder_preview: e.target.checked })
+              }
+            />
+            Behandlung und Raum anzeigen
+          </label>
+          {!agenda.data.reminders.enabled && (
+            <Button
+              disabled={!agenda.native || !!w.busy}
+              onClick={async () => {
+                if (!(await w.savePreferences(draft))) return;
+                const result = await w.execute(
+                  "Erinnerungen werden aktiviert",
+                  () => command<AgendaResponse>("enable_reminders"),
+                );
+                if (result) {
+                  agenda.setData(result);
+                  if (
+                    ["authorized", "provisional"].includes(
+                      result.reminders.authorization,
+                    )
+                  ) {
+                    const next = { ...draft, app_reminders_enabled: true };
+                    setDraft(next);
+                    await w.savePreferences(next);
+                  }
+                }
+              }}
             >
-              Kalender auswählen
+              Erinnerungen aktivieren
             </Button>
           )}
-          {!!calendars.length &&
-            select(
-              "default-calendar",
-              "Kalender für neue Pläne",
-              draft.calendar_id ?? "",
-              calendars.map((c) => [
-                c.id,
-                `${c.title}${c.source ? ` · ${c.source}` : ""}`,
-              ]),
-              (calendar_id) => setDraft({ ...draft, calendar_id }),
+          {!agenda.native && (
+            <p>Erinnerungen sind in der installierten iPhone-App verfügbar.</p>
+          )}
+          {agenda.data.reminders.protected > 0 && (
+            <p>
+              {agenda.data.reminders.protected} Termine mit eigenen
+              Kalenderalarmen bleiben im Kalender.
+            </p>
+          )}
+          {agenda.data.reminders.error && (
+            <p role="alert">{agenda.data.reminders.error}</p>
+          )}
+          <Button
+            variant="outline"
+            disabled={
+              !agenda.native ||
+              !!w.busy ||
+              !["authorized", "provisional"].includes(
+                agenda.data.reminders.authorization,
+              )
+            }
+            onClick={() =>
+              w.execute("Testmitteilung wird eingeplant", async () => {
+                await command("test_reminder");
+                setTestNotice(
+                  "Testmitteilung in 15 Sekunden. Du kannst dein iPhone jetzt sperren.",
+                );
+              })
+            }
+          >
+            Testmitteilung in 15 Sekunden
+          </Button>
+          {testNotice && <p role="status">{testNotice}</p>}
+          <p>
+            Fokus und deine iOS-Mitteilungseinstellungen bestimmen, wann
+            Mitteilungen erscheinen.
+          </p>
+        </section>
+        <section className="settings-section" aria-labelledby="widgets-heading">
+          <h2 id="widgets-heading">Widgets</h2>
+          <p>
+            Halte den Home-Bildschirm gedrückt und wähle „Bearbeiten“ → „Widget
+            hinzufügen“ → „Laßnitzhöhe“. Auf dem Sperrbildschirm findest du
+            „Laßnitzhöhe“ unter „Anpassen“.
+          </p>
+          <p>
+            Widgets zeigen deine gespeicherten Termine. iOS bestimmt die
+            Aktualisierung; öffne die App nach Kalenderänderungen.
+          </p>
+          <Button
+            variant="outline"
+            disabled={!agenda.native || agenda.loading}
+            onClick={() => void agenda.refresh()}
+          >
+            Widgets aktualisieren
+          </Button>
+        </section>
+        <section
+          className="settings-section"
+          aria-label="Darstellung und Kalender"
+        >
+          <FieldGroup>
+            {select(
+              "appearance",
+              "Darstellung",
+              draft.appearance ?? "system",
+              [
+                ["system", "Wie das System"],
+                ["light", "Hell"],
+                ["dark", "Dunkel"],
+              ],
+              (appearance) =>
+                setDraft({
+                  ...draft,
+                  appearance: appearance as "system" | "light" | "dark",
+                }),
             )}
-        </FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="timezone">Zeitzone</FieldLabel>
+              <Input
+                id="timezone"
+                value={draft.timezone}
+                disabled={!!w.busy}
+                onChange={(e) =>
+                  setDraft({ ...draft, timezone: e.target.value })
+                }
+              />
+            </Field>
+            {w.runtime?.platform === "ios" && (
+              <Button
+                variant="outline"
+                disabled={!!w.busy}
+                onClick={() =>
+                  w.execute("Kalender werden geladen", async () => {
+                    const result = await command<CalendarConnection>(
+                      "calendars",
+                      { dedicated: true },
+                    );
+                    setCalendars(result.calendars);
+                    setDraft((d) => ({
+                      ...d,
+                      calendar_id: d.calendar_id || result.dedicated_id || "",
+                    }));
+                    if (result.setup_error) w.report(result.setup_error);
+                  })
+                }
+              >
+                Kalender auswählen
+              </Button>
+            )}
+            {!!calendars.length &&
+              select(
+                "default-calendar",
+                "Kalender für neue Pläne",
+                draft.calendar_id ?? "",
+                calendars.map((c) => [
+                  c.id,
+                  `${c.title}${c.source ? ` · ${c.source}` : ""}`,
+                ]),
+                (calendar_id) => setDraft({ ...draft, calendar_id }),
+              )}
+          </FieldGroup>
+        </section>
         <details>
           <summary>Ergänzungsvorgaben</summary>
           <div className="mt-4 flex flex-col gap-4">
@@ -311,7 +446,7 @@ export function SettingsSheet({
           <summary>Speicher</summary>
           <FieldGroup className="mt-4">
             <FieldDescription>
-              Fotos, Entwürfe und Prüfnachweise werden nach 30 Tagen entfernt.
+              Fotos, Entwürfe und Prüfnachweise bleiben erhalten, bis du sie löschst.
               Bestätigte Kalenderzuordnungen und eigene Vorgaben bleiben
               erhalten.
             </FieldDescription>
@@ -352,7 +487,9 @@ export function SettingsSheet({
               <Alert>
                 <AlertDescription>
                   Fotos, Entwürfe, Vorgaben und Kalenderzuordnungen löschen?
-                  Kalendertermine bleiben bestehen.
+                  Kalendertermine bleiben bestehen. App-Erinnerungen werden
+                  entfernt und verwaltete Kalenderalarme vorher
+                  wiederhergestellt.
                   <Button
                     variant="destructive"
                     disabled={!!w.busy}

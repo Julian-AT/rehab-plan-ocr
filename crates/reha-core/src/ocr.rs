@@ -1,7 +1,10 @@
 //! Portable CPU inference; contains no Apple APIs and never performs network I/O.
 use crate::{contracts::*, geometry, Error, Result};
 use image::{imageops::FilterType, RgbImage};
-use ort::{session::Session, value::Tensor};
+use ort::{
+    session::{RunOptions, Session},
+    value::Tensor,
+};
 use std::{
     collections::VecDeque,
     path::Path,
@@ -84,6 +87,35 @@ impl OnnxEngine {
         artifacts: &Path,
         deadline: Option<Instant>,
     ) -> Result<(Vec<Region>, Vec<Observation>, Vec<Stage>)> {
+        let options = RunOptions::new().map_err(err)?;
+        std::thread::scope(|scope| {
+            let (done, finished) = std::sync::mpsc::channel::<()>();
+            let options_ref = &options;
+            scope.spawn(move || loop {
+                if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
+                    let _ = options_ref.terminate();
+                    break;
+                }
+                match finished.recv_timeout(std::time::Duration::from_millis(5)) {
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                    _ => break,
+                }
+            });
+            let result =
+                self.recognize_with_options(page, config, cancel, artifacts, deadline, &options);
+            let _ = done.send(());
+            result
+        })
+    }
+    fn recognize_with_options(
+        &mut self,
+        page: &RgbImage,
+        config: &PipelineConfig,
+        cancel: &AtomicBool,
+        artifacts: &Path,
+        deadline: Option<Instant>,
+        options: &RunOptions,
+    ) -> Result<(Vec<Region>, Vec<Observation>, Vec<Stage>)> {
         let start = Instant::now();
         if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
             return Ok((
@@ -113,7 +145,29 @@ impl OnnxEngine {
             }
         }
         let tensor = Tensor::from_array(([1, 3, dh as usize, dw as usize], input)).map_err(err)?;
-        let outputs = self.detector.run(ort::inputs![tensor]).map_err(err)?;
+        let outputs = match self
+            .detector
+            .run_with_options(ort::inputs![tensor], options)
+        {
+            Ok(output) => output,
+            Err(_)
+                if cancel.load(Ordering::Relaxed)
+                    || deadline.is_some_and(|d| Instant::now() >= d) =>
+            {
+                return Ok((
+                    vec![],
+                    vec![],
+                    vec![Stage {
+                        name: "detection".into(),
+                        status: "interrupted".into(),
+                        duration_ms: start.elapsed().as_millis() as u64,
+                        detail: "Lokales Zeitbudget oder Abbruch erreicht.".into(),
+                        artifacts: vec![],
+                    }],
+                ));
+            }
+            Err(e) => return Err(err(e)),
+        };
         let (shape, scores) = outputs[0].try_extract_tensor::<f32>().map_err(err)?;
         if shape.len() != 4 || shape[0] != 1 || shape[1] != 1 {
             return Err(err("Unsupported detector output shape"));
@@ -128,15 +182,16 @@ impl OnnxEngine {
             config.box_threshold,
         );
         let mut regions = vec![];
-        for (index, (x, y, r, b, score)) in boxes.iter().enumerate() {
-            let pad = ((*r - *x).min(*b - *y) as f64 * 0.7).max(2.);
-            let left = (*x as f64 - pad).max(0.) * w as f64 / mw as f64;
-            let top = (*y as f64 - pad).max(0.) * h as f64 / mh as f64;
-            let right = (*r as f64 + pad).min(mw as f64) * w as f64 / mw as f64;
-            let bottom = (*b as f64 + pad).min(mh as f64) * h as f64 / mh as f64;
+        for (index, (polygon, score)) in boxes.iter().enumerate() {
             regions.push(Region {
                 id: format!("region-{index:04}"),
-                polygon: geometry::rect(left, top, right - left, bottom - top),
+                polygon: polygon
+                    .iter()
+                    .map(|p| Point {
+                        x: p.x.clamp(0., mw as f64) * w as f64 / mw as f64,
+                        y: p.y.clamp(0., mh as f64) * h as f64 / mh as f64,
+                    })
+                    .collect(),
                 frame: "page".into(),
                 kind: if *score < config.box_threshold {
                     "uncertain_text"
@@ -158,7 +213,7 @@ impl OnnxEngine {
             status: "complete".into(),
             duration_ms: start.elapsed().as_millis() as u64,
             detail: format!(
-                "CPU / {dw}×{dh} / {} regions. DB connected components; axis-aligned crop boxes.",
+                "CPU / {dw}×{dh} / {} regions. DB minimum-area polygons, polygon scores, unclip 1.4; perspective line crops.",
                 regions.len()
             ),
             artifacts: vec![],
@@ -170,12 +225,11 @@ impl OnnxEngine {
             if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
                 break;
             }
-            let (x, y, r, b) = geometry::bounds(&region.polygon);
-            let x = x.floor().max(0.) as u32;
-            let y = y.floor().max(0.) as u32;
-            let cw = (r.ceil() as u32).min(w).saturating_sub(x).max(1);
-            let ch = (b.ceil() as u32).min(h).saturating_sub(y).max(1);
-            let crop = image::imageops::crop_imm(page, x, y, cw, ch).to_image();
+            let crop = match geometry::rectify(page, &region.polygon) {
+                Ok(crop) => crop,
+                Err(_) => continue,
+            };
+            let (cw, ch) = crop.dimensions();
             if config.detailed_debug {
                 crop.save(artifacts.join(format!("{}.png", region.id)))?;
             }
@@ -190,7 +244,19 @@ impl OnnxEngine {
                 }
             }
             let tensor = Tensor::from_array(([1, 3, 48, padded as usize], input)).map_err(err)?;
-            let outputs = self.recognizer.run(ort::inputs![tensor]).map_err(err)?;
+            let outputs = match self
+                .recognizer
+                .run_with_options(ort::inputs![tensor], options)
+            {
+                Ok(output) => output,
+                Err(_)
+                    if cancel.load(Ordering::Relaxed)
+                        || deadline.is_some_and(|d| Instant::now() >= d) =>
+                {
+                    break
+                }
+                Err(e) => return Err(err(e)),
+            };
             let (shape, data) = outputs[0].try_extract_tensor::<f32>().map_err(err)?;
             if shape.len() != 3 || shape[0] != 1 || shape[2] as usize != self.dictionary.len() {
                 return Err(err(format!(
@@ -248,8 +314,8 @@ fn components(
     w: usize,
     h: usize,
     threshold: f32,
-    _box_threshold: f32,
-) -> Vec<(usize, usize, usize, usize, f32)> {
+    box_threshold: f32,
+) -> Vec<(Vec<Point>, f32)> {
     let mut visited = vec![false; w * h];
     let mut result = vec![];
     for seed in 0..w * h {
@@ -259,7 +325,7 @@ fn components(
         let mut q = VecDeque::from([seed]);
         visited[seed] = true;
         let (mut left, mut right, mut top, mut bottom) = (seed % w, seed % w, seed / w, seed / w);
-        let mut sum = 0.;
+        let mut points = vec![];
         let mut count = 0;
         while let Some(i) = q.pop_front() {
             let x = i % w;
@@ -268,7 +334,7 @@ fn components(
             right = right.max(x);
             top = top.min(y);
             bottom = bottom.max(y);
-            sum += scores[i];
+            points.push(imageproc::point::Point::new(x as i32, y as i32));
             count += 1;
             for ny in y.saturating_sub(1)..=(y + 1).min(h - 1) {
                 for nx in x.saturating_sub(1)..=(x + 1).min(w - 1) {
@@ -281,10 +347,55 @@ fn components(
             }
         }
         if count >= 6 && right - left >= 3 && bottom - top >= 2 {
-            result.push((left, top, right + 1, bottom + 1, sum / count as f32));
+            let box_points = imageproc::geometry::min_area_rect(&points).map(|p| Point {
+                x: p.x as f64,
+                y: p.y as f64,
+            });
+            let width = geometry::distance(&box_points[0], &box_points[1]);
+            let height = geometry::distance(&box_points[0], &box_points[3]);
+            if width.min(height) < 3. {
+                continue;
+            }
+            let mut total = 0.;
+            let mut n = 0;
+            let (l, t, r, b) = geometry::bounds(&box_points);
+            for y in (t.floor().max(0.) as usize)..=(b.ceil() as usize).min(h - 1) {
+                for x in (l.floor().max(0.) as usize)..=(r.ceil() as usize).min(w - 1) {
+                    if geometry::inside(
+                        &box_points,
+                        &Point {
+                            x: x as f64,
+                            y: y as f64,
+                        },
+                    ) {
+                        total += scores[y * w + x];
+                        n += 1;
+                    }
+                }
+            }
+            let score = total / n.max(1) as f32;
+            if score < box_threshold {
+                continue;
+            }
+            // For a rectangle, the minimum-area box around a round polygon offset
+            // expands each edge by the same area/perimeter distance as DB unclip.
+            let pad = width * height * 1.4 / (2. * (width + height));
+            let ux = (box_points[1].x - box_points[0].x) / width;
+            let uy = (box_points[1].y - box_points[0].y) / width;
+            let vx = (box_points[3].x - box_points[0].x) / height;
+            let vy = (box_points[3].y - box_points[0].y) / height;
+            let expanded: Vec<Point> = box_points
+                .iter()
+                .zip([(-1., -1.), (1., -1.), (1., 1.), (-1., 1.)])
+                .map(|(p, (u, v))| Point {
+                    x: p.x + pad * (u * ux + v * vx),
+                    y: p.y + pad * (u * uy + v * vy),
+                })
+                .collect();
+            result.push((expanded, score));
         }
     }
-    result.sort_by_key(|(x, y, _, _, _)| (*y, *x));
+    result.sort_by(|(a, _), (b, _)| a[0].y.total_cmp(&b[0].y).then(a[0].x.total_cmp(&b[0].x)));
     result
 }
 #[cfg(test)]

@@ -1,3 +1,4 @@
+mod agenda;
 mod calendar;
 mod dataset;
 mod experiments;
@@ -8,16 +9,13 @@ mod state;
 
 use reha_core::store::Store;
 use state::AppState;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, sync::Arc};
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_reha_calendar::init())
         .setup(|app| {
             #[cfg(not(target_os = "ios"))]
@@ -42,20 +40,19 @@ pub fn run() {
             } else {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../models/private/small")
             };
-            app.manage(Arc::new(AppState {
-                store: Mutex::new(store),
-                models,
-                #[cfg(any(feature = "desktop-onnx", feature = "ios-onnx"))]
-                engine: Mutex::new(None),
-                cancel: Mutex::new(HashMap::new()),
-                proposals: Mutex::new(HashMap::new()),
-                calendar_lock: tokio::sync::Mutex::new(()),
-            }));
+            app.manage(Arc::new(AppState::new(store, models)));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            agenda::agenda,
+            agenda::agenda_presentation,
+            agenda::enable_reminders,
+            agenda::reminder_status,
+            agenda::pending_event_open,
+            agenda::test_reminder,
             scan::import_image,
             scan::retry_scan,
+            scan::associate_recheck,
             scan::cancel_processing,
             scan::history,
             scan::load_scan,
@@ -69,7 +66,14 @@ pub fn run() {
             scan::capture,
             calendar::share_export,
             calendar::prepare_calendar,
+            calendar::assess_draft,
+            calendar::preview_draft,
+            calendar::answer_draft_question,
+            calendar::accept_and_save,
+            calendar::export_draft_ics,
+            calendar::preview_replacement,
             calendar::resolve_proposal,
+            calendar::prepare_undo,
             calendar::approve_calendar,
             calendar::reconcile_calendar,
             calendar::resolve_pending_write,
@@ -80,6 +84,7 @@ pub fn run() {
             settings::engine_status,
             experiments::compare_regions,
             dataset::save_annotation,
+            dataset::freeze_reference_groups,
             dataset::provisional_reference,
             dataset::evaluate_annotation,
             dataset::dataset,

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function sample(page: Page) {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
@@ -22,7 +22,7 @@ test("cold launch is simple, German, accessible and does not load development co
   page.on("request", (r) => requests.push(r.url()));
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Foto aufnehmen", exact: true }),
+    page.getByRole("button", { name: "Plan importieren", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Importieren", exact: true }),
@@ -41,7 +41,7 @@ test("cold launch is simple, German, accessible and does not load development co
     expect(rect!.width).toBeGreaterThanOrEqual(44);
   }
   expect(
-    requests.every((r) => r.startsWith("http://127.0.0.1:1420")),
+    requests.every((r) => r.startsWith(new URL(page.url()).origin)),
   ).toBeTruthy();
 });
 test("review shares edits with workbench, protects unsaved changes and returns to simple on reload", async ({
@@ -74,7 +74,7 @@ test("review shares edits with workbench, protects unsaved changes and returns t
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("Dauer fehlt", { exact: true })).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
@@ -87,7 +87,7 @@ test("review shares edits with workbench, protects unsaved changes and returns t
   ).toHaveValue("20");
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Foto aufnehmen", exact: true }),
+    page.getByRole("button", { name: "Plan importieren", exact: true }),
   ).toBeVisible();
 });
 test("sheets adapt to mobile, dark mode, keyboard navigation and large text", async ({
@@ -145,4 +145,58 @@ test("calendar selection keeps missing appointments pending and source remains a
   await expect(page.getByRole("checkbox")).toHaveCount(7);
   await page.getByRole("button", { name: "Schließen", exact: true }).click();
   await expect(page.getByText("Dauer fehlt", { exact: true })).toHaveCount(1);
+});
+test("suspect room and therapist are visible, sourced and require explicit field confirmation", async ({
+  page,
+}) => {
+  await page.route("**/sample-run.json", async (route) => {
+    const response = await route.fetch();
+    const run = await response.json();
+    const a = run.appointments[1];
+    a.location = "Raum 107";
+    a.therapist = "A. Avenor";
+    a.fields = {
+      location: {
+        state: "contradictory",
+        polygon: [
+          { x: 1080, y: 500 },
+          { x: 1300, y: 500 },
+          { x: 1300, y: 575 },
+          { x: 1080, y: 575 },
+        ],
+        frame: "page",
+        reasons: ["Spaltengrenze am Foto prüfen"],
+        confirmed_at: null,
+        confirmed_value: null,
+      },
+    };
+    await route.fulfill({ response, json: run });
+  });
+  await sample(page);
+  await page
+    .getByRole("button", {
+      name: "08:15 Bewegungstherapie Bitte feste Schuhe mitbringen bearbeiten",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByLabel("Therapeut/in", { exact: true })).toHaveValue(
+    "A. Avenor",
+  );
+  await expect(
+    page.getByRole("button", { name: "Termin bestätigen", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Raum im Foto", exact: true }).click();
+  await expect(
+    page.getByRole("img", { name: "Feldausschnitt mit Nachbarzeilen" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Angabe am Foto bestätigt", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Termin bestätigen", exact: true }),
+  ).toBeEnabled();
+  await page.getByLabel("Raum", { exact: true }).fill("Raum 701");
+  await expect(
+    page.getByRole("button", { name: "Termin bestätigen", exact: true }),
+  ).toHaveCount(0);
 });

@@ -43,11 +43,13 @@ export function AppointmentEditor({
   appointments,
   onChange,
   onHighlight,
+  onReview,
   disabled = false,
 }: {
   appointments: Appointment[];
   onChange: (value: Appointment[]) => void;
   onHighlight?: (ids: string[]) => void;
+  onReview?: (appointment: Appointment) => void;
   disabled?: boolean;
 }) {
   const [details, setDetails] = useState<string | null>(null);
@@ -179,6 +181,16 @@ export function AppointmentEditor({
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  {onReview && (
+                    <Button
+                      variant="outline"
+                      disabled={disabled}
+                      aria-label={`Am Foto prüfen, Zeile ${index + 1}`}
+                      onClick={() => onReview(a)}
+                    >
+                      Am Foto prüfen
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"

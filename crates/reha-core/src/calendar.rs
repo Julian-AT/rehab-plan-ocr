@@ -1,15 +1,34 @@
 use crate::{contracts::*, Error, Result};
+
+/// Recurrence is metadata outside EventValues. Never infer that an unchanged
+/// snapshot makes a recurring event safe to update or delete.
+pub fn protect_recurring(operations: &mut [CalendarOperation], ids: &[String]) {
+    for op in operations {
+        if ids.contains(&op.id) && !["keep", "unchanged"].contains(&op.kind.as_str()) {
+            op.kind = "protected".into();
+            op.requires_resolution = true;
+            op.reason = "Wiederkehrender Termin oder Ausnahme: im Kalender behalten.".into();
+        }
+    }
+}
 use chrono::{DateTime, Duration, LocalResult, NaiveDate, NaiveTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use std::collections::{BTreeMap, HashSet};
 
 pub fn event_values(a: &Appointment, timezone: &str, reminder: Option<u32>) -> Result<EventValues> {
+    if let Some(issue) = crate::review::field_problems(a).first() {
+        return Err(Error::Invalid(issue.message.clone()));
+    }
     let issues = crate::parser::validate(a);
     if let Some(issue) = issues.iter().find(|i| i.blocking) {
         return Err(Error::Invalid(issue.message.clone()));
     }
     if a.issues.iter().any(|i| {
         i.blocking
+            && !i
+                .field
+                .as_deref()
+                .is_some_and(|f| crate::review::field_confirmed(a, f))
             && ![
                 "missing_date",
                 "missing_start",
@@ -23,6 +42,19 @@ pub fn event_values(a: &Appointment, timezone: &str, reminder: Option<u32>) -> R
         return Err(Error::Invalid(
             "Ungeklärte Erkennungsprobleme zuerst bestätigen.".into(),
         ));
+    }
+    validated_values(a, timezone, reminder)
+}
+
+/// Value validation without historical photo-approval gates. Callers must apply
+/// either the legacy review policy or the typed draft readiness policy first.
+pub(crate) fn validated_values(
+    a: &Appointment,
+    timezone: &str,
+    reminder: Option<u32>,
+) -> Result<EventValues> {
+    if let Some(issue) = crate::parser::validate(a).iter().find(|i| i.blocking) {
+        return Err(Error::Invalid(issue.message.clone()));
     }
     let zone: Tz = timezone
         .parse()
@@ -152,7 +184,15 @@ pub fn selected_ics_events(
     reminder: Option<u32>,
     previous: Option<&[String]>,
 ) -> Result<Vec<(String, EventValues)>> {
-    let mut events = selected_events(runs, selection, timezone, reminder)?;
+    let events = selected_events(runs, selection, timezone, reminder)?;
+    Ok(ics_identities(runs, selection, events, previous))
+}
+pub(crate) fn ics_identities(
+    runs: &[PipelineRun],
+    selection: &[String],
+    mut events: Vec<(String, EventValues)>,
+    previous: Option<&[String]>,
+) -> Vec<(String, EventValues)> {
     for (event, id) in events.iter_mut().zip(selection) {
         let a = runs
             .iter()
@@ -175,7 +215,7 @@ pub fn selected_ics_events(
             }
         }
     }
-    Ok(events)
+    events
 }
 
 pub fn schedule_fingerprint(events: &[EventValues]) -> String {

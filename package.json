@@ -1,11 +1,15 @@
 {
   "name": "rehab-plan-ocr",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-ios-project.mjs",
     "dev": "next dev --hostname 0.0.0.0 --port 1420",
+    "prebuild": "node scripts/sync-ios-project.mjs",
     "build": "next build",
+    "icons": "node scripts/generate-icons.mjs",
+    "icons:sync": "node scripts/sync-ios-icons.mjs",
     "preview": "serve out --listen 1420",
     "tauri": "tauri",
     "test": "vitest run",
@@ -15,10 +19,12 @@
     "verify": "npm run lint && npm run build && npm test && cargo test -p reha-core",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "ios:sync": "node scripts/sync-ios-project.mjs --force"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-deep-link": "^2.4.10",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.6",
     "lucide-react": "^0.577.0",
@@ -43,6 +49,7 @@
     "serve": "^14",
     "tailwindcss": "^4",
     "typescript": "~5.9.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "yaml": "^2.9.0"
   }
 }

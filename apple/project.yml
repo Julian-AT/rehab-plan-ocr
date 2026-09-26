@@ -1,0 +1,195 @@
+name: Termine
+options:
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: de
+  createIntermediateGroups: true
+packages:
+  RehaCore:
+    path: Packages/RehaCore
+  AppleServices:
+    path: Packages/AppleServices
+settings:
+  base:
+    DEVELOPMENT_TEAM: ZP2PFF43D2
+    ARCHS: arm64
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_EMIT_LOC_STRINGS: YES
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "0.3.0"
+    CURRENT_PROJECT_VERSION: "2026092606"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Termine:
+    type: application
+    platform: iOS
+    sources:
+      - path: Termine
+      - path: SharedIntake
+      - path: ../models/private/small
+        name: models
+        type: folder
+        buildPhase: resources
+      - path: ../models/private/supertonic-3
+        type: folder
+        buildPhase: resources
+      - path: ../licenses
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: RehaCore
+      - package: AppleServices
+      - target: RehaWidgets
+        embed: true
+      - target: RehaNotificationContent
+        embed: true
+      - target: RehaShare
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal
+        PRODUCT_NAME: Laßnitzhöhe
+        # Keep the technical executable name stable. Unicode normalization in
+        # the signing resource seal must not include the executable as a resource.
+        EXECUTABLE_NAME: Termine
+        PRODUCT_MODULE_NAME: Termine
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Termine/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: Laßnitzhöhe
+        CFBundleURLTypes:
+          - CFBundleURLName: at.rehakalender.personal
+            CFBundleURLSchemes: [reha-calendar]
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+          ]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers:
+          [at.rehakalender.personal.agenda-refresh]
+        NSMicrophoneUsageDescription: Spracheingaben auf diesem iPhone erkennen. Die Aufnahme startet nur durch Antippen.
+        NSSpeechRecognitionUsageDescription: Termine mit lokaler deutscher Spracherkennung finden und nach Bestätigung bearbeiten.
+        NSCameraUsageDescription: Terminpläne fotografieren und auf diesem Gerät erkennen.
+        NSCalendarsFullAccessUsageDescription: Bestätigte Termine speichern und mit vorhandenen Kalendereinträgen abgleichen.
+    entitlements:
+      path: Termine/Termine.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal, group.at.rehakalender.personal.intake]
+  RehaShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+      - path: SharedIntake
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.share
+        TARGETED_DEVICE_FAMILY: "1"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: Laßnitzhöhe
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 12
+              NSExtensionActivationSupportsFileWithMaxCount: 12
+    entitlements:
+      path: ShareExtension/Share.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal.intake]
+  RehaWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ../ios/Widgets
+      - path: Packages/AppleServices/Sources/AppleServices/AgendaShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.widgets
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: Extensions/Widgets-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: Laßnitzhöhe
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Extensions/Widgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal]
+  RehaNotificationContent:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ../ios/NotificationContent
+      - path: Packages/AppleServices/Sources/AppleServices/AgendaShared
+    dependencies:
+      - sdk: UserNotificationsUI.framework
+      - sdk: UserNotifications.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.notification-content
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: Extensions/Notification-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: Laßnitzhöhe
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.content-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationViewController
+          NSExtensionAttributes:
+            UNNotificationExtensionCategory:
+              [REHA_APPOINTMENT, REHA_APPOINTMENT_OPEN]
+            UNNotificationExtensionInitialContentSizeRatio: 0.7
+            UNNotificationExtensionDefaultContentHidden: true
+    entitlements:
+      path: Extensions/Notification.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal]
+  TermineUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Termine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.native-tests
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Termine:
+    build:
+      targets:
+        Termine: all
+        TermineUITests: [test]
+    test:
+      targets: [TermineUITests]

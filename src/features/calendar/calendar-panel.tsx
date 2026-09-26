@@ -88,7 +88,7 @@ export function CalendarPanel({
   }, [w.native, run.document.id, w.report]);
 
   async function connect() {
-    await w.execute("Setting up Reha Calendar", async () => {
+    await w.execute("Setting up Laßnitzhöhe", async () => {
       const value = await command<CalendarConnection>("calendars", {
         dedicated: true,
       });
@@ -171,7 +171,7 @@ export function CalendarPanel({
           disabled={w.runtime?.platform !== "ios" || !!w.busy}
           onClick={connect}
         >
-          Set up Reha Calendar
+          Set up Laßnitzhöhe
         </Button>
         <p className="text-xs text-muted-foreground">
           {w.preferences.timezone} ·{" "}
@@ -180,7 +180,7 @@ export function CalendarPanel({
       </div>
       {w.runtime?.platform === "ios" && (
         <FieldDescription>
-          New imports use a separate Reha Calendar. In Apple Calendar, open
+          New imports use a separate Laßnitzhöhe. In Apple Calendar, open
           Calendars and select or deselect it to show or hide these
           appointments. Existing imports keep their recorded calendar.
         </FieldDescription>

@@ -9,9 +9,20 @@ use tauri::State;
 #[tauri::command]
 pub(crate) fn evaluate_annotation(
     state: State<'_, Arc<AppState>>,
-    annotation: reha_core::evaluation::Annotation,
+    mut annotation: reha_core::evaluation::Annotation,
     run: PipelineRun,
 ) -> Response<reha_core::evaluation::Metrics> {
+    // Interactive evaluation only accepts the exact retained user-approved reference.
+    let stored = provisional_reference(state.clone(), run.document.source_hash.clone())?;
+    let saved: reha_core::evaluation::Annotation =
+        serde_json::from_value(stored).map_err(failure)?;
+    if saved.approval_hash.is_none()
+        || reha_core::evaluation::reference_hash(&saved)
+            != reha_core::evaluation::reference_hash(&annotation)
+    {
+        return Err("Referenz zuerst speichern und ausdrücklich freigeben.".into());
+    }
+    annotation = saved;
     guard_reference(&state, &annotation, true)?;
     if !annotation
         .document_hashes
@@ -19,12 +30,12 @@ pub(crate) fn evaluate_annotation(
     {
         return Err("Referenz und Vorhersage gehören nicht zum selben Dokument.".into());
     }
-    reha_core::evaluation::compare(&annotation, &run.appointments, false).map_err(failure)
+    reha_core::evaluation::compare_run(&annotation, &run, false).map_err(failure)
 }
 #[tauri::command]
 pub(crate) fn save_annotation(
     state: State<'_, Arc<AppState>>,
-    annotation: reha_core::evaluation::Annotation,
+    mut annotation: reha_core::evaluation::Annotation,
 ) -> Response<()> {
     #[cfg(target_os = "ios")]
     {
@@ -33,7 +44,7 @@ pub(crate) fn save_annotation(
     }
     #[cfg(not(target_os = "ios"))]
     {
-        if annotation.schema_version != 1
+        if annotation.schema_version != 2
             || annotation.day_id.is_empty()
             || !annotation
                 .day_id
@@ -42,15 +53,36 @@ pub(crate) fn save_annotation(
         {
             return Err("Ungültige Tages-ID.".into());
         }
+        reha_core::evaluation::validate_reference(&annotation, annotation.verified)
+            .map_err(failure)?;
+        annotation.content_hash = Some(reha_core::evaluation::reference_hash(&annotation));
+        annotation.approval_hash = if annotation.verified {
+            annotation.content_hash.clone()
+        } else {
+            None
+        };
+        annotation.reviewed_at = if annotation.verified {
+            Some(chrono::Utc::now().to_rfc3339())
+        } else {
+            None
+        };
         if annotation.verified
             && (!annotation.uncertainty_notes.is_empty() || annotation.reviewed_at.is_none())
         {
             return Err("Offene Fragen vor der Verifikation auflösen.".into());
         }
-        guard_reference(&state, &annotation, false)?;
+        guard_reference(&state, &annotation, annotation.verified)?;
         let dir = root(&state)?.join("labels");
         std::fs::create_dir_all(&dir).map_err(failure)?;
-        let mut path = dir.join(format!("{}.json", annotation.day_id));
+        if annotation.document_hashes.len() != 1 {
+            return Err("Eine Referenz pro Originalfoto speichern.".into());
+        }
+        let hash = &annotation.document_hashes[0];
+        if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err("Ungültiger Quellhash.".into());
+        }
+        std::fs::create_dir_all(dir.join("provisional")).map_err(failure)?;
+        let mut path = dir.join("provisional").join(format!("{hash}.json"));
         // Frozen day grouping must not be silently changed by the annotation editor.
         let split = dir.parent().unwrap().join("split.json");
         if split.exists() {
@@ -109,8 +141,16 @@ pub(crate) fn guard_reference(
     if split.exists() {
         let frozen: Value =
             serde_json::from_slice(&std::fs::read(split).map_err(failure)?).map_err(failure)?;
-        if evaluation && frozen["grouping_verified"] == false {
+        if evaluation && (frozen["schema_version"] != 3 || frozen["grouping_verified"] != true) {
             return Err("Seitengruppen zuerst verifizieren; vorläufige Referenzen sind kein Genauigkeitsbenchmark.".into());
+        }
+        if evaluation {
+            let references = read_references(&root(state)?)?;
+            if frozen["relationships_hash"].as_str()
+                != Some(&reha_core::evaluation::relationships_hash(&references))
+            {
+                return Err("Seitengruppen wurden nach dem Einfrieren verändert. Neue Datensatzversion vor der Bewertung anlegen.".into());
+            }
         }
         for (day, group) in frozen["days"]
             .as_object()
@@ -133,8 +173,85 @@ pub(crate) fn guard_reference(
                 }
             }
         }
+    } else if evaluation {
+        return Err("Bestätigte Entwicklungsgruppen fehlen.".into());
     }
     Ok(())
+}
+fn read_references(
+    directory: &std::path::Path,
+) -> Response<Vec<reha_core::evaluation::Annotation>> {
+    let data = inventory(directory)?;
+    data["entries"]
+        .as_array()
+        .ok_or("Inventar fehlt.")?
+        .iter()
+        .map(|e| {
+            let hash = e["sha256"]
+                .as_str()
+                .filter(|h| h.len() == 64 && h.chars().all(|c| c.is_ascii_hexdigit()))
+                .ok_or("Ungültiger Quellhash.")?;
+            serde_json::from_slice(
+                &std::fs::read(
+                    directory
+                        .join("labels/provisional")
+                        .join(format!("{hash}.json")),
+                )
+                .map_err(failure)?,
+            )
+            .map_err(failure)
+        })
+        .collect()
+}
+#[tauri::command]
+pub(crate) fn freeze_reference_groups(state: State<'_, Arc<AppState>>) -> Response<Value> {
+    let directory = root(&state)?;
+    let mut references = read_references(&directory)?;
+    let groups = reha_core::evaluation::development_groups(&references).map_err(failure)?;
+    if let Ok(bytes) = std::fs::read(directory.join("split.json")) {
+        let old: Value = serde_json::from_slice(&bytes).map_err(failure)?;
+        if old["grouping_verified"] == true {
+            if old != groups {
+                return Err("Eingefrorene Gruppierung verändert: bisherigen Versuch archivieren und eine neue Datensatzversion anlegen.".into());
+            }
+            return Ok(old);
+        }
+    }
+    // Update references before publishing a verified split: an interrupted write
+    // remains unusable for training and can be retried safely.
+    for reference in &mut references {
+        reference.day_id = groups["days"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .find(|(_, g)| {
+                g["document_hashes"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!(reference.document_hashes[0]))
+            })
+            .ok_or("Quelle fehlt in Gruppen.")?
+            .0
+            .clone();
+        reference.verified = false;
+        reference.reviewed_at = None;
+        reference.approval_hash = None;
+        reference.content_hash = None;
+        let path = directory
+            .join("labels/provisional")
+            .join(format!("{}.json", reference.document_hashes[0]));
+        let temp = path.with_extension("json.part");
+        std::fs::write(
+            &temp,
+            serde_json::to_vec_pretty(reference).map_err(failure)?,
+        )
+        .map_err(failure)?;
+        std::fs::rename(temp, path).map_err(failure)?;
+    }
+    let temp = directory.join("split.json.part");
+    std::fs::write(&temp, serde_json::to_vec_pretty(&groups).map_err(failure)?).map_err(failure)?;
+    std::fs::rename(temp, directory.join("split.json")).map_err(failure)?;
+    Ok(groups)
 }
 fn inventory(root: &std::path::Path) -> Response<Value> {
     if !root.join("inventory.json").exists() {
@@ -170,9 +287,14 @@ pub(crate) fn dataset(state: State<'_, Arc<AppState>>, path: Option<String>) -> 
         .unwrap_or(json!({"days":{}}));
     let entries=data["entries"].as_array().ok_or("Ungültiges Inventar.")?.iter().map(|entry|{
         let day=split["days"].as_object().and_then(|days|days.iter().find(|(_,group)|group["document_hashes"].as_array().is_some_and(|hashes|hashes.contains(&entry["sha256"]))));
-        json!({"filename":entry["filename"],"sha256":entry["sha256"],"bytes":entry["bytes"],"day_id":day.map(|(id,_)|id),"split":day.map(|(_,group)|&group["split"])})
+        let reference: Option<reha_core::evaluation::Annotation> = entry["sha256"].as_str().filter(|h|h.len()==64 && h.chars().all(|c|c.is_ascii_hexdigit())).and_then(|h|std::fs::read(directory.join("labels/provisional").join(format!("{h}.json"))).ok()).and_then(|b|serde_json::from_slice(&b).ok());
+        let approved=reference.as_ref().is_some_and(|r|r.verified && r.approval_hash.as_ref()==Some(&reha_core::evaluation::reference_hash(r)));
+        let reviewed=reference.as_ref().map(|r|r.appointments.iter().filter(|a|["date","start","end","title","location","therapist","notes"].iter().all(|f|a.fields.get(*f).is_some_and(|f|f.confirmed_at.is_some()))).count()).unwrap_or(0);
+        json!({"verified":approved,"reviewed_rows":reviewed,"reference_rows":reference.as_ref().map(|r|r.appointments.len()),"filename":entry["filename"],"sha256":entry["sha256"],"bytes":entry["bytes"],"day_id":day.map(|(id,_)|id),"split":day.map(|(_,group)|&group["split"])})
     }).collect::<Vec<_>>();
-    Ok(json!({"root":directory,"entries":entries,"split_frozen":split["schema_version"]==2}))
+    Ok(
+        json!({"root":directory,"entries":entries,"split_frozen":split["schema_version"]==3 && split["grouping_verified"]==true}),
+    )
 }
 #[tauri::command]
 pub(crate) fn dataset_image(state: State<'_, Arc<AppState>>, hash: String) -> Response<Value> {

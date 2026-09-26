@@ -1,6 +1,16 @@
-# Rehab Plan OCR
+# Laßnitzhöhe
 
-Local app for extracting and reviewing appointments from printed schedules. It opens with a minimal German interface; the development workbench remains under **Einstellungen → Entwickleransicht öffnen**. Next.js static export and shadcn/ui share one application state; Tauri 2 hosts the Rust pipeline with PP-OCRv6 and ONNX Runtime. No server is required by the packaged app.
+Private rehabilitation-plan app with on-device recognition. Current implementation and remaining release gates: [Laßnitzhöhe release](docs/lassnitzhoehe-release.md).
+
+Die iPhone-Version **0.3.0** ergänzt Heute-Ansicht, Widgets und eigene lokale Erinnerungen. [Umsetzung und Abnahme](docs/agenda-030.md).
+
+The latest delivery adds source-linked room/therapist review, a 60-second automatic
+pass, safe rechecking of saved imports, and a per-photo reference review workspace.
+See [implementation and verification](docs/recognition-review.md) and
+[reference approval and dataset exports](docs/dataset.md). All 20 originals have
+visual transcription drafts; training awaits your explicit reference approval.
+
+Local app for extracting and reviewing appointments from printed schedules. It opens with a minimal German interface; the fallback development workbench remains under **Mehr → Einstellungen → Entwickleransicht öffnen**. Next.js static export and shadcn/ui share one application state; Tauri 2 hosts the Rust pipeline with PP-OCRv6 and ONNX Runtime. No server is required by the packaged app.
 
 ## Development
 
@@ -14,6 +24,19 @@ npm run tauri -- dev
 ```
 
 `npm run dev` starts Next.js at port 1420. Browser mode loads recorded synthetic fixtures; OCR, persistence, and calendar export require Tauri. `npm run build` produces a static export in `out/`.
+
+App icons use the clinic's green emblem on white, with transparent rounded macOS
+artwork and an opaque iOS asset catalog. Run `npm run icons` to regenerate them;
+see [icon artwork and build integration](src-tauri/icon-artwork/README.md).
+
+Photo import accepts JPEG, PNG, **HEIC and HEIF** on macOS and iOS, including
+uppercase filename extensions. macOS decodes HEIC locally through ImageIO at full
+resolution and preserves the original file; no converter installation is needed.
+The macOS CLI supports the same HEIC decoder. Other desktop platforms accept JPEG/PNG.
+
+Native debug builds optimize the OCR core, image codecs and checksums while retaining
+debug symbols and assertions. The same 24 MP scan dropped from 34.6 to 2.8 seconds
+in the shared pipeline benchmark; see [timings and verification](docs/recognition-review.md#debug-performance).
 
 The workbench contains:
 
@@ -78,6 +101,8 @@ target/release/reha extract artifacts/private/example/run.json artifacts/private
 `extract` reruns field parsing from recorded OCR without loading a model. Other commands: `evaluate LABEL RUN REPORT` and `ics APPROVED_RUN OUTPUT.ics`. See [dataset workflow](docs/dataset.md) for inventory, verified labels, frozen day groups, and batch evaluation.
 
 ## Verification
+
+The native iPhone build now includes per-plan calendar selection, separate display calendars, confirmed event editing/undo and local German voice assistance. See [implementation, installation evidence and remaining device checks](docs/calendar-voice-implementation.md) and the [compact interface and neural voice refresh](docs/ui-voice-refresh.md).
 
 ```sh
 npm run lint

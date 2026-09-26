@@ -10,6 +10,7 @@ import { SourceViewer } from "@/components/source-viewer";
 import { AppointmentEditor } from "@/components/appointment-editor";
 import { TracePanel } from "./trace-panel";
 import { CalendarPanel } from "@/features/calendar/calendar-panel";
+import { AppointmentSheet } from "@/features/simple/appointment-sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,8 @@ export function RunPanel({
   const [crop, setCrop] = useState(false);
   const [corners, setCorners] = useState<Point[]>([]);
   const [date, setDate] = useState(run.appointments[0]?.date ?? "");
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const reviewAppointment = run.appointments.find((a) => a.id === reviewId);
   const unresolved = run.appointments.some((a) => problems(a).length > 0);
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -208,6 +211,7 @@ export function RunPanel({
               appointments={run.appointments}
               onChange={(appointments) => w.updateRun({ appointments })}
               onHighlight={setHighlight}
+              onReview={(a) => setReviewId(a.id)}
               disabled={!!w.busy}
             />
             <FieldGroup>
@@ -256,6 +260,15 @@ export function RunPanel({
           </TabsContent>
         </Tabs>
       </div>
+      {reviewAppointment && (
+        <AppointmentSheet
+          key={reviewAppointment.id}
+          appointment={reviewAppointment}
+          run={run}
+          w={w}
+          close={() => setReviewId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,68 +1,187 @@
 > Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
 
-# Private dataset and local experiments
+# Private reference dataset
 
-The user supplied 20 distinct HEIC originals in `verify/` for exploratory testing. The directory also contains one byte-identical HEIC duplicate and an existing PNG. Originals remain in place; full-resolution, upright PNG copies and their hash manifest are under `data/private/converted/verify-2026-09-26-s10/`. No verified reference annotations or clinical accuracy result exist. See [the first real-image baseline](real-image-baseline.md).
+The 20 distinct original photos have been visually transcribed into **188 row
+occurrences**. Alternate captures and revised plans remain separate references.
+These are **unapproved drafts**, including proposed text polygons and error causes;
+no verified clinical accuracy, trained checkpoint or independent final test exists.
+Personal data and every content-bearing artifact remain in ignored private storage.
 
-The committed `synthetic-day.png` is drawn from invented content by `scripts/make-synthetic.py`; it contains eight timed rows, two identical treatments and one intentionally absent end time.
+## Review and approval
 
-## HEIC conversion and exploratory checks
+Open **Einstellungen → Entwickleransicht öffnen → Dataset → Annotations &
+evaluation → Foto gegen Referenz prüfen** in the native desktop app. The inventory
+and references load without running OCR. Each original has a full-image overlay,
+field enlargement with neighboring rows, editable field values and printed states.
+
+1. Check logical page, capture series and every treatment day for all originals.
+   Alternative captures, revised plans and overlapping days belong together.
+2. Click **Bestätigte Seitengruppen einfrieren** after confirming those relationships
+   on every photo. Transitive overlap forms reproducible groups in four development
+   folds. This resets overall approvals while preserving field-review progress.
+3. Compare every row with the original, including meals, continuations and notes.
+   Correct field cells, individual text polygons and row blocks; add missing rows
+   or text lines and remove false ones. The table boundary must exclude the patient
+   header and unrelated background sheets. Initial polygons are suggestions.
+4. Classify fields as legible, not printed, illegible, cropped or contradictory.
+   Preserve original spelling and partial printed text. Never copy a missing name
+   from a similar plan. Confirm each row, complete coverage and resolve questions.
+5. Save progress at any time. **Referenz ausdrücklich für Training und Bewertung
+   freigeben** is the separate final action for that photo. Later changes revoke it.
+
+`data/private/labels/provisional/<source-hash>.json` remains the per-original path
+for drafts and approved references. The filename alone never grants approval.
+`data/private/visual-review.json` records the initial visual pass; old OCR seeds are
+archived under `labels/ocr-seed-v1`. Calendar values and old OCR are comparison
+material, never the source of the transcription.
+
+## Contracts and isolation
+
+Reference schema **2** records original HEIC and upright PNG hashes, logical page,
+capture series, treatment days, table boundary, text polygons, appointment/field
+links, field states and confirmations. `verified`, `reviewed_at`, `content_hash`
+and `approval_hash` are controlled on save. Numeric hash normalization preserves
+identical coordinates across Python/Rust/JSON serialization. Field text, geometry,
+coverage and source relationships participate in the content hash.
+
+Split schema **3** uses a transitive union of shared days, logical pages, capture
+series and original/source hashes, then seed `reha-development-folds-v2`. Every
+original and derivative inherits one group and fold. Fewer than four independent
+groups blocks splitting. Changed frozen relationships block evaluation/export;
+archive the experiment and create a new dataset version rather than reshuffling.
+The old `dataset.py freeze` day-only interface is disabled. These previously
+inspected photos are all development data; `benchmark.py --final` rejects them.
+New, untouched plans are needed for independent final acceptance.
+
+The core CLI validates a reference with `reference-check FILE [--approved]` and
+prints its content hash. `reference-groups DATASET_ROOT` previews confirmed groups
+without changing files. No command can turn an OCR seed into verified truth.
+
+## Variants and exports
+
+After source relationships are confirmed, the desktop action or the CLI can freeze
+and describe variants:
 
 ```sh
-uv run scripts/convert-images.py verify data/private/converted/verify-2026-09-26-s10
+uv run scripts/reference-data.py --root data/private freeze
+uv run scripts/reference-data.py --root data/private recipes
+```
+
+There are exactly 24 recipes per original: unchanged, three quarter turns, four
+small skews, two perspectives, two shadows, brightness/contrast, mild blur,
+compression/resolution, horizontal/vertical reflection, a cut column and covered
+characters. Pixels are generated on request in a size-bounded cache, default
+256 MiB. Geometry transforms accompany all row, cell and text polygons. Data
+outside the confirmed table boundary are masked before any variant is generated.
+
+Approved references are required for export and raster materialization:
+
+```sh
+uv run scripts/reference-data.py --root data/private export artifacts/private/fold-0 --fold 0
+uv run scripts/reference-data.py --root data/private materialize RECIPE_ID
+uv run scripts/reference-data.py --root data/private materialize-line RECIPE_ID LINE_ID
+```
+
+Exports contain separate `detection.jsonl`, `recognition.jsonl`,
+`table-assignment.jsonl` and `orientation.jsonl` adapters plus provenance, fold,
+recipe/reference/file hashes and transforms. A consumer requests the recipe ID
+through the materializer; text lines are perspective-rectified from the variant.
+Detection labels use `###` for ignored unreadable text. Recognition excludes
+cropped/occluded labels and mirrored writing. Table labels remove full values when
+the variant destroys their evidence. Mirrored images support orientation tests
+only. Maximum label lengths are exported, never silently truncated.
+
+`uv run scripts/synthetic-plans.py NEW_OUTPUT_DIRECTORY` generates 200 reproducible
+invented tables, images and exact text polygons. A generated set is available in
+`data/private/synthetic-200`. Names, rooms and treatments are sampled independently;
+examples include similar room numbers, long names/degrees, two therapists, blank
+cells, overlapping times and identical events. Font/generator/image/label hashes
+and seeds are recorded. Synthetics are training/robustness examples, not additional
+real-world validation cases. Do not place them in the held-out development fold.
+
+## Local evaluation and subsequent training
+
+After approving all references and freezing groups, compare the unchanged small
+and medium models with the same dataset and configuration choices:
+
+```sh
 cargo build --release -p reha-core --features onnx-download
-python3 scripts/check-images.py data/private/converted/verify-2026-09-26-s10/manifest.json artifacts/private/verify-baseline-2026-09-26-s10
+python3 scripts/benchmark.py --models models/private/small --config data/private/config-small.json
+python3 scripts/benchmark.py --models models/private/medium --config data/private/config-medium.json
 ```
 
-Use new output directories for another run; these commands refuse to overwrite existing results. Conversion reads the primary HEIC image, applies orientation, retains resolution and the ICC profile, and strips EXIF/XMP. PNG pixels are checked after writing, and original hashes are checked again. Identical source bytes share one PNG. HDR inputs are decoded to 8-bit RGB for the OCR pipeline; this dataset's originals were already 8-bit. The existing source PNG is untouched and excluded from this HEIC-only baseline.
+The runner evaluates original photos separately, aggregates raw counts by group
+and fold, and records config/model/binary/source/reference hashes. Variants cannot
+inflate original-photo accuracy. Matching uses unique geometric assignment, never
+room or therapist equality. Reports separate printed and empty-field denominators,
+character errors, row/column swaps, missing/invented rows, date/time accuracy,
+correct whole photos, review burden and automatically correct appointments.
+Correction time is not claimed to have been measured.
 
-The checker uses the current portable CPU pipeline and saves per-image runs, a reproducible manifest, `report.json`, and a local `review.html` with images beside extracted fields. On macOS, each OCR process runs with network access denied by `sandbox-exec`. Other platforms require their own network isolation. These reports count missing fields and record latency; they do not calculate accuracy without verified references. All 20 inputs are exploratory examples, not a frozen final holdout. Do not equate image count with day count: OCR detected several pages with multiple date headings.
+Fine-tuning is deliberately **not started before joint reference approval**. First
+inspect errors on correct text crops. If repeated recognition errors remain, use
+official PP-OCRv6 small training weights and its dictionary, preserve full labels,
+and compare frozen-backbone and full low-learning-rate recognition runs. The shared
+budget is eight hours, at most 20 epochs per run and early stop after three
+non-improving evaluations. Run PaddlePaddle on CPU on this Mac. Record the exact
+configuration, elapsed time, data hashes and every checkpoint. Detection training
+requires evidence that remaining failures originate in detection. Training
+execution/configuration and ONNX parity measurement belong to this post-approval
+stage; no untested training runner is presented as validated here.
 
-## Inventory and relocation
+An adapted model may replace the unchanged pipeline only after group-wide gains,
+no additional critical date/time or missing/invented appointment errors, and
+matching outputs after ONNX export. Independent acceptance still needs new plans.
+The small pretrained model remains active until these conditions are demonstrated.
 
-Supply the exact image directory. Run `python3 scripts/dataset.py inventory /absolute/image/directory`, inspect ignored `data/private/inventory.json`, then `python3 scripts/dataset.py relocate`. Only the inventoried JPEG/PNG/HEIC/HEIF images move. The script preserves names and bytes, checks all sources before starting, verifies each destination before removing its original, and resumes after interruption. Duplicate filenames in separate directories require disambiguating the input before relocation. Keep unrelated files untouched.
+Implementation references: [PaddleOCR DB postprocessing](https://github.com/PaddlePaddle/PaddleOCR/blob/main/ppocr/postprocess/db_postprocess.py),
+[official small recognition training configuration](https://github.com/PaddlePaddle/PaddleOCR/blob/main/configs/rec/PP-OCRv6/PP-OCRv6_small_rec.yml),
+[PaddlePaddle macOS support](https://www.paddlepaddle.org.cn/documentation/docs/en/install/pip/macos-pip_en.html).
 
-Do not place personal data in committed tests, documentation, screenshots or Git issues. `data/private/`, `artifacts/private/` and `models/private/` are ignored. Research originals and labels are deliberately retained for development; the app's separate 30-day rule does not erase them.
+## Originals and existing tooling
 
-## Day, page and capture identities
+`verify/` retains the supplied originals, including one byte-identical duplicate.
+Upright PNGs, hashes and conversion records are in
+`data/private/converted/verify-2026-09-26-s10/`; `data/private/raw/` is the review input.
+Research data are separate from the app's capture archive, which now retains sources until deletion by default.
+`convert-images.py` preserves pixel resolution and source hashes while stripping
+EXIF/XMP from derived PNGs. `check-images.py` creates diagnostic reports and a local
+image/data HTML view; on macOS its OCR subprocesses have network access denied.
+These diagnostic reports are explicitly unverified. Never commit private images,
+labels, screenshots, exported text or calendar values.
 
-Before tuning, identify 20 distinct treatment days. Multiple pages and alternate photographs of a day stay together. A **capture** is one complete set of page photographs. Alternate photographs are separate capture scenarios, never extra appointments:
+## Laßnitzhöhe evaluation gate
 
-```json
-{
-  "2026-09-26": {
-    "captures": [
-      {
-        "id": "first-photo",
-        "pages": { "page-1": "SHA256_A", "page-2": "SHA256_B" }
-      },
-      {
-        "id": "second-photo",
-        "pages": { "page-1": "SHA256_C", "page-2": "SHA256_B" }
-      }
-    ]
-  }
-}
-```
+Target 40 real plan photos and approximately 10 non-plan/unusable inputs. The
+existing 20 are development data only; none of their references is currently
+approved. New captures, overlapping days and revisions must remain grouped. No
+threshold tuning, activity rules, dual-reader acceptance, model replacement or
+fine-tuning is enabled for this release without the approved evaluation set.
+The training notes above are historical research directions, outside this release.
 
-Save the full 20-day mapping privately. `python3 scripts/dataset.py freeze data/private/grouping.json` validates hash ownership and complete page sets, then freezes four holdout days and 16 development days in four grouped folds. Split v2 records the seed, grouping hash and capture structure. The command refuses to overwrite an existing split. Crops and augmentations must inherit their source day; they are never additional evaluation days.
+`uv run scripts/reference-data.py --root data/private readiness` reports counts
+without publishing patient data or granting approval. References may explicitly
+label `input_class` as `rehabilitation_plan`, `non_plan` or `unusable`; the optional
+field preserves old reference hashes when absent. Non-plan references must have
+zero appointments. Empty negative references still require source geometry,
+relationship approval and full coverage confirmation. Use the full image as the
+source region when there is no appointment table. Editing the class revokes
+approval, just like editing any other label.
 
-## Reference annotations
+`benchmark.py --freeze-baseline NEW_PRIVATE_DIRECTORY --record-baseline-runs`
+(with the normal model, config and binary arguments) preserves the portable binary,
+configuration, model manifest and extraction-source hashes before accuracy work.
+These raw runs and times do not constitute accuracy measurements. The frozen
+20-photo run is under `artifacts/private/lassnitzhoehe-portable-baseline`.
+Use `--evaluator` to score a frozen extraction binary with an evaluator supporting
+new annotation fields; both binary hashes are recorded. Approved benchmarks report
+raw precision/recall counts, plan-only whole-plan denominators, negative cases and
+review burden separately. Unapproved references and the previously explored set
+still cannot pass `--final` acceptance.
 
-In the native desktop app, import a plan, open Dataset, and create a provisional reference from the draft. Correct every printed item, including meals/breaks, titles, times, rooms, therapists and notes. Inspect the photograph and field evidence. Add missing items, remove false detections and resolve questions. Check the verification box only after comparing with the paper. Model output alone is never verified ground truth.
-
-Canonical labels live at `data/private/labels/<day-id>.json`. A reference has `schema_version: 1`, `day_id`, **all** original `document_hashes` for that day, `verified`, `reviewed_at`, frozen `split`, `appointments` (the shared draft contract including provenance) and `uncertainty_notes`. For multi-page days, combine the verified appointment lists once per logical page and include all alternate source hashes. Reference inclusion toggles do not remove items from evaluation: every printed item counts. Missing facts in the paper must remain missing and be explained, not guessed.
-
-## Reproducible batch comparison
-
-1. Download a public pinned candidate: `uv run scripts/fetch-models.py --tier small` (or `tiny`, `medium`). Network access here downloads public model files only.
-2. Build the local CLI: `cargo build --release -p reha-core --features onnx-download`.
-3. Export an experiment configuration from Configuration. Keep its `engine` consistent with the model tier.
-4. Run `python3 scripts/benchmark.py --models models/private/small --config data/private/config-small.json`.
-5. Open the resulting `artifacts/private/benchmark-*/report.json` in Dataset. Compare run JSON files side by side. Retain manifests and exact config/model/binary hashes.
-
-Each complete capture is compared against its day's verified reference. Reports distinguish distinct days from correlated alternate captures, include raw counts, and do not pretend correction time or peak memory was measured. The report's p95 is from the recorded machine, not from a physical iPhone. Cold CLI launches include model loading; app runs additionally record session reuse.
-
-After development-only selection, save a private JSON with `config_sha256` and `model_manifest_sha256`. Run the same command with `--final --selection <file>` once. A marker is created before inference so interruptions cannot silently reopen the holdout. If holdout errors influence tuning, record contamination and obtain fresh independent days. Never erase that marker to claim a new independent result.
-
-No training is currently justified by verified data. Fine-tune only the component responsible for repeatable development errors, retain local checkpoints/early-stopping evidence, and evaluate independent days before selecting an adaptation.
+Keep 99% critical-field correctness, 99% appointment precision/recall, 90% whole-plan
+correctness and zero observed critical false acceptances visible as targets, not
+measured claims. Final acceptance and enabling automatic review still require new,
+human-approved groups and a frozen policy. Forty plans cannot establish broad
+reliability; report uncertainty alongside the observed results.

@@ -1,7 +1,7 @@
 import Foundation
 
-enum AppStorage {
-  static func prepare() throws -> URL {
+public enum AppStorage {
+  public static func prepare() throws -> URL {
     guard let identifier = Bundle.main.bundleIdentifier else {
       throw CocoaError(.fileNoSuchFile)
     }

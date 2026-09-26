@@ -1,0 +1,1346 @@
+{
+  "sourceLanguage": "de",
+  "strings": {
+    "Native callbacks must not block the main thread": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native callbacks must not block the main thread"
+          }
+        }
+      }
+    },
+    "Kalenderantwort unvollständig.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderantwort unvollständig."
+          }
+        }
+      }
+    },
+    "Foto konnte nicht gelesen werden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto konnte nicht gelesen werden."
+          }
+        }
+      }
+    },
+    "Öffnen fehlgeschlagen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen fehlgeschlagen"
+          }
+        }
+      }
+    },
+    "Erneut versuchen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Heute": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        }
+      }
+    },
+    "Pläne": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pläne"
+          }
+        }
+      }
+    },
+    "Termin öffnen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin öffnen"
+          }
+        }
+      }
+    },
+    "Einstellungen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        }
+      }
+    },
+    "Der gespeicherte Termin ist unter Heute sichtbar. Das zugehörige Foto wurde bereits bereinigt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der gespeicherte Termin ist unter Heute sichtbar. Das zugehörige Foto wurde bereits bereinigt."
+          }
+        }
+      }
+    },
+    "Bild nicht verfügbar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild nicht verfügbar."
+          }
+        }
+      }
+    },
+    "Quellfoto. Zum Vergrößern aufziehen und zum Verschieben ziehen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellfoto. Zum Vergrößern aufziehen und zum Verschieben ziehen."
+          }
+        }
+      }
+    },
+    "Foto laden …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto laden …"
+          }
+        }
+      }
+    },
+    "Fertig": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        }
+      }
+    },
+    "init(coder:) unavailable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "init(coder:) unavailable"
+          }
+        }
+      }
+    },
+    "Oben links": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oben links"
+          }
+        }
+      }
+    },
+    "Oben rechts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oben rechts"
+          }
+        }
+      }
+    },
+    "Unten rechts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unten rechts"
+          }
+        }
+      }
+    },
+    "Unten links": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unten links"
+          }
+        }
+      }
+    },
+    "Originalfoto zur Seitenkorrektur": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Originalfoto zur Seitenkorrektur"
+          }
+        }
+      }
+    },
+    "Drehung im Uhrzeigersinn": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drehung im Uhrzeigersinn"
+          }
+        }
+      }
+    },
+    "Seitenecken im Originalfoto": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenecken im Originalfoto"
+          }
+        }
+      }
+    },
+    "Seitenecken manuell setzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenecken manuell setzen"
+          }
+        }
+      }
+    },
+    "Die Korrektur startet eine neue Erkennung. Das bisherige Foto und deine Prüfdaten bleiben erhalten.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Korrektur startet eine neue Erkennung. Das bisherige Foto und deine Prüfdaten bleiben erhalten."
+          }
+        }
+      }
+    },
+    "Foto korrigieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto korrigieren"
+          }
+        }
+      }
+    },
+    "Abbrechen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        }
+      }
+    },
+    "Neu erkennen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu erkennen"
+          }
+        }
+      }
+    },
+    "Diagnose": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnose"
+          }
+        }
+      }
+    },
+    "Foto importieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto importieren"
+          }
+        }
+      }
+    },
+    "Plan fotografieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan fotografieren"
+          }
+        }
+      }
+    },
+    "Foto wird vorbereitet …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto wird vorbereitet …"
+          }
+        }
+      }
+    },
+    "Ein Entwurf ist bereits gesichert.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Entwurf ist bereits gesichert."
+          }
+        }
+      }
+    },
+    "Erkennung abbrechen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkennung abbrechen"
+          }
+        }
+      }
+    },
+    "Unklare Kalenderänderungen prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unklare Kalenderänderungen prüfen"
+          }
+        }
+      }
+    },
+    "Aufbewahrte Pläne": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufbewahrte Pläne"
+          }
+        }
+      }
+    },
+    "Noch keine Pläne. Importiere ein Foto deines Terminplans.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Pläne. Importiere ein Foto deines Terminplans."
+          }
+        }
+      }
+    },
+    "Plan ohne bestätigtes Datum": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan ohne bestätigtes Datum"
+          }
+        }
+      }
+    },
+    ", ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        }
+      }
+    },
+    "Gespeicherte Termine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherte Termine"
+          }
+        }
+      }
+    },
+    "Noch keine Kalenderimporte.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Kalenderimporte."
+          }
+        }
+      }
+    },
+    "Foto und Prüfdaten löschen? Bereits gespeicherte Kalendertermine bleiben erhalten.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto und Prüfdaten löschen? Bereits gespeicherte Kalendertermine bleiben erhalten."
+          }
+        }
+      }
+    },
+    "Plan löschen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan löschen"
+          }
+        }
+      }
+    },
+    "Foto ist nicht lokal verfügbar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto ist nicht lokal verfügbar."
+          }
+        }
+      }
+    },
+    "Aufnahme konnte nicht gelesen werden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnahme konnte nicht gelesen werden."
+          }
+        }
+      }
+    },
+    "Einstellungen laden …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen laden …"
+          }
+        }
+      }
+    },
+    "Zeitzone für neue Pläne": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitzone für neue Pläne"
+          }
+        }
+      }
+    },
+    "App-Erinnerungen verwenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Erinnerungen verwenden"
+          }
+        }
+      }
+    },
+    "Termindetails in Vorschau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termindetails in Vorschau"
+          }
+        }
+      }
+    },
+    "Testerinnerung senden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testerinnerung senden"
+          }
+        }
+      }
+    },
+    "Vorgabe entfernen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorgabe entfernen"
+          }
+        }
+      }
+    },
+    "Vorgabe hinzufügen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorgabe hinzufügen"
+          }
+        }
+      }
+    },
+    ", treatment: ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", treatment: "
+          }
+        }
+      }
+    },
+    ", field: ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", field: "
+          }
+        }
+      }
+    },
+    ", value: .text(value: ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", value: .text(value: "
+          }
+        }
+      }
+    },
+    "Vorgaben werden nur vorgeschlagen und müssen bei der Terminprüfung angenommen werden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorgaben werden nur vorgeschlagen und müssen bei der Terminprüfung angenommen werden."
+          }
+        }
+      }
+    },
+    "Fotos und Prüfdaten bleiben erhalten, bis du sie löschst. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos und Prüfdaten bleiben erhalten, bis du sie löschst. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt."
+          }
+        }
+      }
+    },
+    "Alle lokalen Daten löschen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle lokalen Daten löschen"
+          }
+        }
+      }
+    },
+    "Wird gespeichert …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird gespeichert …"
+          }
+        }
+      }
+    },
+    "Speichern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        }
+      }
+    },
+    "Änderungen verwerfen?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen verwerfen?"
+          }
+        }
+      }
+    },
+    "Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen."
+          }
+        }
+      }
+    },
+    "Mitteilungen sind in den iPhone-Einstellungen ausgeschaltet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitteilungen sind in den iPhone-Einstellungen ausgeschaltet."
+          }
+        }
+      }
+    },
+    "Stand neu laden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stand neu laden"
+          }
+        }
+      }
+    },
+    "Quellfoto ansehen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellfoto ansehen"
+          }
+        }
+      }
+    },
+    "Fotoausrichtung und Seitenecken": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoausrichtung und Seitenecken"
+          }
+        }
+      }
+    },
+    "Termine prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine prüfen"
+          }
+        }
+      }
+    },
+    ", $0.start ?? ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", $0.start ?? "
+          }
+        }
+      }
+    },
+    ", $0.id) < ($1.date ?? ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", $0.id) < ($1.date ?? "
+          }
+        }
+      }
+    },
+    ", $1.start ?? ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", $1.start ?? "
+          }
+        }
+      }
+    },
+    "Bezeichnung fehlt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bezeichnung fehlt"
+          }
+        }
+      }
+    },
+    "Ungeprüfter Entwurf": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungeprüfter Entwurf"
+          }
+        }
+      }
+    },
+    "Termin ergänzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin ergänzen"
+          }
+        }
+      }
+    },
+    "Auswählen, bestätigen und speichern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen, bestätigen und speichern"
+          }
+        }
+      }
+    },
+    "Kalenderänderungen werden erst nach einer gesonderten Bestätigung geschrieben.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderänderungen werden erst nach einer gesonderten Bestätigung geschrieben."
+          }
+        }
+      }
+    },
+    "Plan laden …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan laden …"
+          }
+        }
+      }
+    },
+    "Plan prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan prüfen"
+          }
+        }
+      }
+    },
+    "Datum (JJJJ-MM-TT)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum (JJJJ-MM-TT)"
+          }
+        }
+      }
+    },
+    "Beginn (HH:MM)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beginn (HH:MM)"
+          }
+        }
+      }
+    },
+    "Ende (HH:MM)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ende (HH:MM)"
+          }
+        }
+      }
+    },
+    "Enddatum bei Tageswechsel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enddatum bei Tageswechsel"
+          }
+        }
+      }
+    },
+    "Dauer in Minuten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dauer in Minuten"
+          }
+        }
+      }
+    },
+    "In diesen Plan aufnehmen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesen Plan aufnehmen"
+          }
+        }
+      }
+    },
+    "Weitere Angaben": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Angaben"
+          }
+        }
+      }
+    },
+    "Mit dem Foto abgleichen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Foto abgleichen"
+          }
+        }
+      }
+    },
+    "Quelle und Feldmarkierungen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle und Feldmarkierungen"
+          }
+        }
+      }
+    },
+    "Alle Angaben mit dem Foto abgeglichen; leere Felder sind nicht gedruckt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Angaben mit dem Foto abgeglichen; leere Felder sind nicht gedruckt"
+          }
+        }
+      }
+    },
+    "Termin bearbeiten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin bearbeiten"
+          }
+        }
+      }
+    },
+    "Änderungen verwerfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen verwerfen"
+          }
+        }
+      }
+    },
+    "Weiter bearbeiten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter bearbeiten"
+          }
+        }
+      }
+    },
+    "Stand nicht aktuell. Zum Aktualisieren nach unten ziehen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stand nicht aktuell. Zum Aktualisieren nach unten ziehen."
+          }
+        }
+      }
+    },
+    "Kalender derzeit nicht verfügbar. Zugriff in den Einstellungen prüfen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender derzeit nicht verfügbar. Zugriff in den Einstellungen prüfen."
+          }
+        }
+      }
+    },
+    "Als Nächstes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Nächstes"
+          }
+        }
+      }
+    },
+    "Alle Termine heute": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Termine heute"
+          }
+        }
+      }
+    },
+    "Heute keine gespeicherten Termine.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute keine gespeicherten Termine."
+          }
+        }
+      }
+    },
+    "Kalender wird geladen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender wird geladen …"
+          }
+        }
+      }
+    },
+    "Stand aus letztem Abgleich": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stand aus letztem Abgleich"
+          }
+        }
+      }
+    },
+    "Termine auswählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine auswählen"
+          }
+        }
+      }
+    },
+    "Alle gedruckten Termine dieser Seite erfasst": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle gedruckten Termine dieser Seite erfasst"
+          }
+        }
+      }
+    },
+    "Zielkalender auswählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zielkalender auswählen"
+          }
+        }
+      }
+    },
+    "Eigenen Reha-Kalender verwenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenen Reha-Kalender verwenden"
+          }
+        }
+      }
+    },
+    "Bitte auswählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte auswählen"
+          }
+        }
+      }
+    },
+    "Fehlende bisherige Termine entfernen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlende bisherige Termine entfernen"
+          }
+        }
+      }
+    },
+    "Auswahl bestätigen und Vorschau erstellen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl bestätigen und Vorschau erstellen"
+          }
+        }
+      }
+    },
+    "Kalenderstand behalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderstand behalten"
+          }
+        }
+      }
+    },
+    "Papierwerte verwenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papierwerte verwenden"
+          }
+        }
+      }
+    },
+    "Als zusätzlichen Termin speichern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als zusätzlichen Termin speichern"
+          }
+        }
+      }
+    },
+    "Angezeigte Löschungen ausdrücklich erlauben": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angezeigte Löschungen ausdrücklich erlauben"
+          }
+        }
+      }
+    },
+    "Kalenderänderungen speichern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderänderungen speichern"
+          }
+        }
+      }
+    },
+    "Nicht sicher gespeichert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht sicher gespeichert"
+          }
+        }
+      }
+    },
+    "Unklare Änderungen abgleichen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unklare Änderungen abgleichen"
+          }
+        }
+      }
+    },
+    "Auswahl bestätigen und ICS erstellen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl bestätigen und ICS erstellen"
+          }
+        }
+      }
+    },
+    "Kalenderdatei teilen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderdatei teilen"
+          }
+        }
+      }
+    },
+    "Wird vorbereitet …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird vorbereitet …"
+          }
+        }
+      }
+    },
+    "Kalender & Export": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender & Export"
+          }
+        }
+      }
+    },
+    "Angezeigte Kalenderänderungen jetzt schreiben?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angezeigte Kalenderänderungen jetzt schreiben?"
+          }
+        }
+      }
+    },
+    "Jetzt speichern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt speichern"
+          }
+        }
+      }
+    },
+    "Neu erstellen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu erstellen"
+          }
+        }
+      }
+    },
+    "Zuordnung klären": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuordnung klären"
+          }
+        }
+      }
+    },
+    "Konflikt klären": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konflikt klären"
+          }
+        }
+      }
+    },
+    "Zuerst abgleichen. Ein unklarer Schreibvorgang wird dabei nicht erneut ausgeführt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuerst abgleichen. Ein unklarer Schreibvorgang wird dabei nicht erneut ausgeführt."
+          }
+        }
+      }
+    },
+    "Kalender abgleichen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender abgleichen"
+          }
+        }
+      }
+    },
+    "Nach Prüfung im Kalender manuell auflösen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Prüfung im Kalender manuell auflösen"
+          }
+        }
+      }
+    },
+    "Keine unklaren Schreibvorgänge.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine unklaren Schreibvorgänge."
+          }
+        }
+      }
+    },
+    "Ergebnis im Kalender geprüft?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnis im Kalender geprüft?"
+          }
+        }
+      }
+    },
+    "Änderung wurde nicht ausgeführt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderung wurde nicht ausgeführt"
+          }
+        }
+      }
+    },
+    "Löschung wurde ausgeführt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschung wurde ausgeführt"
+          }
+        }
+      }
+    },
+    "Erkannten Plan prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkannten Plan prüfen"
+          }
+        }
+      }
+    },
+    "Laßnitzhöhe öffnen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laßnitzhöhe öffnen …"
+          }
+        }
+      }
+    },
+    "Laßnitzhöhe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laßnitzhöhe"
+          }
+        }
+      }
+    },
+    "Archiv": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiv"
+          }
+        }
+      }
+    },
+    "Mehr": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr"
+          }
+        }
+      }
+    },
+    "Original gespeichert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original gespeichert"
+          }
+        }
+      }
+    },
+    "Importverlauf": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importverlauf"
+          }
+        }
+      }
+    },
+    "Weitere Seite": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Seite"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -49,3 +49,52 @@ test("projective overlays divide by homogeneous coordinate", () => {
     y: 40,
   });
 });
+test("populated suspect room stays blocked until source confirmation, which expires on change", () => {
+  const a = emptyAppointment("2026-09-10");
+  Object.assign(a, {
+    start: "08:00",
+    end: "08:30",
+    title: "Übung",
+    location: "Raum 107",
+  });
+  a.fields = {
+    location: {
+      state: "contradictory",
+      polygon: [],
+      frame: "page",
+      reasons: ["Spaltengrenze"],
+      confirmed_at: null,
+      confirmed_value: null,
+    },
+  };
+  expect(problems(a)).toEqual(["location: Spaltengrenze"]);
+  Object.assign(a.fields.location, {
+    state: "legible",
+    confirmed_at: 1,
+    confirmed_value: "Raum 107",
+  });
+  expect(problems(a)).toEqual([]);
+  a.location = "Raum 701";
+  expect(problems(a)).toEqual(["location: Spaltengrenze"]);
+});
+test("confirmed absence is valid but an empty cropped column stays unresolved", () => {
+  const a = emptyAppointment("2026-09-10");
+  Object.assign(a, { start: "08:00", end: "08:30", title: "Übung" });
+  a.fields = {
+    therapist: {
+      state: "cropped",
+      polygon: [],
+      frame: "page",
+      reasons: [],
+      confirmed_at: null,
+      confirmed_value: null,
+    },
+  };
+  expect(problems(a)).toHaveLength(1);
+  Object.assign(a.fields.therapist, {
+    state: "not_printed",
+    confirmed_at: 1,
+    confirmed_value: "",
+  });
+  expect(problems(a)).toEqual([]);
+});

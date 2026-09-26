@@ -19,7 +19,8 @@ fn execute() -> Result<()> {
         }
         Some("extract") if args.len() == 4 => {
             let run: PipelineRun = serde_json::from_slice(&std::fs::read(&args[2])?)?;
-            let (appointments, issues, unassigned) = reha_core::parser::extract(&run.document.id, &run.observations, &run.regions);
+            let original_observations:Vec<_>=run.observations.iter().filter(|o|!o.id.starts_with("reread-")).cloned().collect();
+            let (appointments, issues, unassigned) = reha_core::parser::extract(&run.document.id, &original_observations, &run.regions);
             let result = serde_json::json!({
                 "extraction_version": reha_core::parser::EXTRACTION_VERSION,
                 "source_hash": run.document.source_hash,
@@ -28,10 +29,24 @@ fn execute() -> Result<()> {
             std::fs::write(&args[3], serde_json::to_vec_pretty(&result)?)?;
             println!("{} appointments; extraction saved locally.", appointments.len());
         }
+        Some("reference-check") if (3..=4).contains(&args.len()) => {
+            let annotation = serde_json::from_slice(&std::fs::read(&args[2])?)?;
+            reha_core::evaluation::validate_reference(&annotation, args.get(3).is_some_and(|s|s=="--approved"))?;
+            println!("{}", reha_core::evaluation::reference_hash(&annotation));
+        }
+        Some("reference-groups") if args.len() == 3 => {
+            let root=std::path::Path::new(&args[2]);
+            let inventory:serde_json::Value=serde_json::from_slice(&std::fs::read(root.join("inventory.json"))?)?;
+            let references=inventory["entries"].as_array().ok_or_else(||Error::Invalid("Inventar fehlt.".into()))?.iter().map(|e| {
+                let hash=e["sha256"].as_str().filter(|h|h.len()==64 && h.chars().all(|c|c.is_ascii_hexdigit())).ok_or_else(||Error::Invalid("Quellhash fehlt.".into()))?;
+                Ok(serde_json::from_slice(&std::fs::read(root.join("labels/provisional").join(format!("{hash}.json")))?)?)
+            }).collect::<Result<Vec<reha_core::evaluation::Annotation>>>()?;
+            println!("{}",reha_core::evaluation::development_groups(&references)?);
+        }
         Some("evaluate") if args.len() == 5 => {
             let annotation = serde_json::from_slice(&std::fs::read(&args[2])?)?;
             let run: PipelineRun = serde_json::from_slice(&std::fs::read(&args[3])?)?;
-            let metrics = reha_core::evaluation::compare(&annotation, &run.appointments, false)?;
+            let metrics = reha_core::evaluation::compare_run(&annotation, &run, false)?;
             std::fs::write(&args[4], serde_json::to_vec_pretty(&metrics)?)?;
             println!("Reference {}, predictions {}, fully correct {}.", metrics.reference_count, metrics.predicted_count, metrics.fully_correct_count);
         }
@@ -83,7 +98,7 @@ fn scan(args: &[String]) -> Result<()> {
             now: chrono::Utc::now().timestamp(),
             config,
             dir: output,
-            deadline: started + std::time::Duration::from_secs(30),
+            deadline: started + std::time::Duration::from_secs(60),
         },
         &AtomicBool::new(false),
         false,

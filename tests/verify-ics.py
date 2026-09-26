@@ -4,6 +4,7 @@
 # ///
 """Independent RFC parser check, exclusively using an invented reviewed fixture."""
 
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -33,6 +34,65 @@ with tempfile.TemporaryDirectory() as temporary:
     )
     run["appointments"][0]["notes"] = "Zeile eins\nZweite Zeile; Komma, Backslash \\"
     run["appointments"][0]["therapist"] = "Alex Beispiel MSc"
+    # Explicit confirmations use the current contract. Legacy approval must no
+    # longer be silently upgraded into source-checked room/therapist evidence.
+    run["schema_version"] = 3
+    run["document"]["schema_version"] = 3
+    metadata_fields = [
+        "clinic",
+        "department",
+        "address",
+        "contact",
+        "treatment_code",
+        "preparation",
+        "document_reference",
+        "appointment_notes",
+    ]
+    fields = [
+        "date",
+        "start",
+        "end",
+        "end_date",
+        "duration_minutes",
+        "title",
+        "location",
+        "therapist",
+        "notes",
+    ]
+    for a in run["appointments"]:
+        a.setdefault("therapist", "")
+        a["metadata"] = {f: a.get("metadata", {}).get(f, "") for f in metadata_fields}
+        values = {
+            **{f: a.get(f) for f in fields},
+            **a["metadata"],
+            "included": a["included"],
+        }
+        a["fields"] = {
+            f: {
+                "state": "legible" if a[f] else "not_printed",
+                "frame": "page",
+                "polygon": [],
+                "reasons": [],
+                "confirmed_at": 1,
+                "confirmed_value": a[f],
+            }
+            for f in ["location", "therapist"]
+        }
+        a["approval"] = (
+            {
+                "approved_at": 1,
+                "values_hash": hashlib.sha256(
+                    json.dumps(
+                        values,
+                        sort_keys=True,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest(),
+            }
+            if a["included"]
+            else None
+        )
     run["review_confirmed"] = True
     approved = folder / "approved.json"
     approved.write_text(json.dumps(run))
@@ -52,7 +112,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert str(events[0]["SUMMARY"]) == run["appointments"][0]["title"].strip()
     assert (
         str(events[0]["DESCRIPTION"])
-        == "Therapeut: Alex Beispiel MSc\n" + run["appointments"][0]["notes"]
+        == "Raum: Speisesaal\nTherapeut: Alex Beispiel MSc\nHinweise: Zeile eins\n  Zweite Zeile; Komma, Backslash \\"
     )
     assert events[0].decoded("DTSTART").isoformat() == "2026-09-10T05:30:00+00:00"
     assert events[0].decoded("DTEND").isoformat() == "2026-09-10T06:00:00+00:00"

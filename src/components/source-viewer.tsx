@@ -21,6 +21,8 @@ export function SourceViewer({
   onRegion,
   onCorner,
   corners = [],
+  focusPolygon = [],
+  focusFrame = "page",
 }: {
   run: Run;
   native: boolean;
@@ -29,6 +31,8 @@ export function SourceViewer({
   onRegion?: (id: string) => void;
   onCorner?: (point: Point) => void;
   corners?: Point[];
+  focusPolygon?: Point[];
+  focusFrame?: string;
 }) {
   const [zoom, setZoom] = useState(1);
   const [overlay, setOverlay] = useState(false);
@@ -38,6 +42,29 @@ export function SourceViewer({
       .filter((o) => highlight.includes(o.id))
       .flatMap((o) => o.region_ids),
   );
+  const focus = focusPolygon.map((p) =>
+    focusFrame === "original" ? p : mapPoint(run.page_to_original, p),
+  );
+  const box = focus.length
+    ? {
+        x: Math.max(
+          0,
+          Math.min(...focus.map((p) => p.x)) - run.document.width * 0.04,
+        ),
+        y: Math.max(
+          0,
+          Math.min(...focus.map((p) => p.y)) - run.document.height * 0.035,
+        ),
+        right: Math.min(
+          run.document.width,
+          Math.max(...focus.map((p) => p.x)) + run.document.width * 0.04,
+        ),
+        bottom: Math.min(
+          run.document.height,
+          Math.max(...focus.map((p) => p.y)) + run.document.height * 0.035,
+        ),
+      }
+    : null;
   return (
     <section
       aria-label={simple ? "Quellfoto" : "Source image"}
@@ -88,6 +115,26 @@ export function SourceViewer({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+      {src && box && (
+        <svg
+          viewBox={`${box.x} ${box.y} ${box.right - box.x} ${box.bottom - box.y}`}
+          className="max-h-[40vh] w-full rounded border"
+          role="img"
+          aria-label="Feldausschnitt mit Nachbarzeilen"
+        >
+          <image
+            href={src}
+            width={run.document.width}
+            height={run.document.height}
+          />
+          <polygon
+            points={focus.map((p) => `${p.x},${p.y}`).join(" ")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          />
+        </svg>
+      )}
       <div className="max-h-[65vh] overflow-auto rounded-md border bg-muted/30">
         <div className="relative" style={{ width: `${zoom * 100}%` }}>
           {src ? (
@@ -127,7 +174,8 @@ export function SourceViewer({
             {run.regions
               .filter(
                 (r) =>
-                  r.kind === "text" && (overlay || selectedRegions.has(r.id)),
+                  ["text", "uncertain_text"].includes(r.kind) &&
+                  (overlay || selectedRegions.has(r.id)),
               )
               .map((region) => (
                 <polygon

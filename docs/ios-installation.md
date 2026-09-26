@@ -2,11 +2,17 @@
 
 # iPhone installation and calendar setup
 
+Current native release: **Laßnitzhöhe 0.3.0, build 2026092606**, installed in place on the iPhone 17 on 12 September 2026. See [the interface refresh, Supertonic voice, simulator tests and verified in-place update](ui-voice-refresh.md). The instructions below describe the earlier Tauri release; do not use its older binary for a binary-only rollback after schema migration.
+
 The development app is **Termine 0.2.0**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
 
 ## Install the private build
 
-The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0.ipa`. Installation requires a device included in its signing profile. The paired iPhone 17 is included. The current profile expires **September 26, 2026, 10:57 UTC**; build and sign a fresh package when it expires.
+The current package is `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0-20260926-s11.ipa`.
+It includes the clinic logo, HEIC import, updated source review and recognition
+improvements. Installation requires a device included in its signing profile. The
+paired iPhone 17 is included. The current profile expires **September 26, 2026,
+10:57 UTC**; build and sign a fresh package when it expires.
 
 1. Connect the iPhone to the Mac, unlock it and accept **Trust This Computer** if prompted.
 2. Open Xcode's **Window → Devices and Simulators** and select the phone.
@@ -15,9 +21,10 @@ The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0.ipa`
 5. If iOS blocks the first launch, open **Settings → General → VPN & Device Management**, select the developer entry for the app and trust its certificate. This approval must be completed on the phone. [Apple's Personal Team instructions](https://developer.apple.com/documentation/appclip/fruta-building-a-feature-rich-app-with-swiftui)
 6. Open **Termine** on the phone.
 
-The first 0.2.0 update was installed and its startup/data preservation checked.
-The final package adds a tested metadata-conflict correction; its reinstall currently
-awaits reconnection of the phone. [Build hashes and exact verification](simple-app-delivery.md).
+The September 26, 2026 update was installed on the connected iPhone 17 / iOS 26.6.
+The post-install database check retained all seven scan records and 32 calendar
+import records unchanged. [Current package and device verification](iphone-update-20260926-s11.md).
+Earlier installation evidence remains in [the initial delivery](simple-app-delivery.md).
 
 Use the same bundle identifier and signing team when updating. The application's retained scans and import ledger are preserved by an ordinary app update.
 

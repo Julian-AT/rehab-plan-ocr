@@ -1,0 +1,4 @@
+[bindings.swift]
+module_name = "RehaCore"
+ffi_module_name = "RehaCoreFFI"
+generate_module_map = true

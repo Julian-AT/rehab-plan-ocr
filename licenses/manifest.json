@@ -16,5 +16,10 @@
   "tailwindcss-license.txt": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
   "tauri-license-mit": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d",
   "tw-animate-css-license.txt": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109",
-  "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
+  "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
+  "uniffi-mpl-2.0.txt": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+  "uniffi-source.txt": "adb66737a1dcc220969b25f438c4cc03108d8d2291dd6998a35a5683baabcfea",
+  "supertonic-code-mit.txt": "0dfe0d0ba84416fe3879d9a34f4909d8d0137c78d1e95834177b0414ac096fa2",
+  "supertonic-model-openrail.txt": "0d944a9110fed9a9602d60e0423a272903e7bd21ab060490774efc77c2275e9f",
+  "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a"
 }

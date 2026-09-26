@@ -5,6 +5,9 @@ pub mod geometry;
 #[cfg(feature = "onnx")]
 pub mod ocr;
 pub mod parser;
+mod photo;
+#[cfg(target_os = "macos")]
+mod photo_macos;
 pub mod pipeline;
 pub mod store;
 
@@ -29,6 +32,11 @@ pub fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
+pub mod readiness;
 pub mod review;
 
 pub mod refinement;
+
+pub mod service;
+#[cfg(feature = "onnx")]
+pub mod speech;

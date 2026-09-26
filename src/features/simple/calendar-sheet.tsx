@@ -6,6 +6,7 @@ import type {
   Proposal,
   Run,
   WriteResult,
+  Values,
 } from "@/lib/contracts";
 import type { Workbench } from "@/features/workbench/use-workbench";
 import { command, exportFile } from "@/lib/native";
@@ -23,6 +24,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+function shownValue(
+  values: Values | null | undefined,
+  field: keyof Values,
+): string {
+  if (!values) return "—";
+  if (field === "start_utc" || field === "end_utc")
+    return new Intl.DateTimeFormat("de-AT", {
+      timeZone: values.timezone,
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(values[field]));
+  return String(values[field] ?? "") || "—";
+}
 export function CalendarSheet({
   run,
   w,
@@ -258,10 +272,90 @@ export function CalendarSheet({
                           : "Als zusätzlichen Termin anlegen"}
                     </Button>
                   ))}
+                  {op.kind === "ambiguous" &&
+                    proposal.operations
+                      .filter(
+                        (previous) =>
+                          previous.kind === "keep" &&
+                          !previous.after &&
+                          previous.before &&
+                          previous.external_id &&
+                          !proposal.protected_event_ids?.includes(previous.id),
+                      )
+                      .map((previous) => (
+                        <Button
+                          key={previous.id}
+                          variant="outline"
+                          disabled={!!w.busy}
+                          onClick={() =>
+                            w.execute(
+                              "Früheren Kalendereintrag zuordnen",
+                              async () =>
+                                setProposal(
+                                  await command<Proposal>("resolve_proposal", {
+                                    token: proposal.token,
+                                    eventId: op.id,
+                                    choice: `match:${previous.id}`,
+                                  }),
+                                ),
+                            )
+                          }
+                        >
+                          Zuordnen: {previous.before?.title} ·{" "}
+                          {shownValue(previous.before, "start_utc")}
+                        </Button>
+                      ))}
                 </div>
               </AlertDescription>
             </Alert>
           ))}
+        {proposal && (
+          <div
+            className="flex flex-col gap-3"
+            aria-label="Kalenderänderungen vorher und nachher"
+          >
+            {proposal.operations
+              .filter((o) => !["unchanged", "keep"].includes(o.kind))
+              .map((op) => (
+                <div className="overflow-x-auto rounded border p-3" key={op.id}>
+                  <p className="mb-2 font-medium">
+                    {op.after?.title ?? op.before?.title} ·{" "}
+                    {op.kind === "create" ? "Neu" : "Änderung prüfen"}
+                  </p>
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr>
+                        <th>Angabe</th>
+                        <th>Bisher im Kalender</th>
+                        <th>Geprüfter Plan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(
+                        [
+                          ["title", "Termin"],
+                          ["start_utc", "Beginn"],
+                          ["end_utc", "Ende"],
+                          ["location", "Raum"],
+                          ["notes", "Therapeut / Hinweise"],
+                        ] as const
+                      ).map(([field, label]) => (
+                        <tr key={field}>
+                          <th className="py-2 pr-3 align-top">{label}</th>
+                          <td className="whitespace-pre-wrap px-2 align-top">
+                            {shownValue(op.before, field)}
+                          </td>
+                          <td className="whitespace-pre-wrap px-2 align-top">
+                            {shownValue(op.after, field)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+          </div>
+        )}
         {proposal && (
           <p className="text-sm">
             {proposal.operations.filter((o) => o.kind === "create").length} neue

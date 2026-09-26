@@ -3,7 +3,7 @@ import UIKit
 
 /// Called only on the plugin's serial calendar queue, after full access is granted.
 final class DedicatedCalendar {
-  static let title = "Reha Calendar"
+  static let title = "Laßnitzhöhe"
   private let defaults: UserDefaults
   private let key = "reha-calendar.destination"
 
@@ -19,8 +19,9 @@ final class DedicatedCalendar {
     let saved = defaults.dictionary(forKey: key) as? [String: String]
     if let id = saved?["id"], let calendar = store.calendar(withIdentifier: id) {
       guard calendar.allowsContentModifications else {
-        throw Failure.message("Reha Calendar is read-only. Choose a writable calendar.")
+        throw Failure.message("Der gespeicherte Kalender ist schreibgeschützt. Wähle einen beschreibbaren Kalender.")
       }
+      try renameOwnedDefault(calendar, saved: saved, in: store)
       remember(calendar)
       return calendar
     }
@@ -52,7 +53,7 @@ final class DedicatedCalendar {
       ?? (eligible.count == 1 ? eligible.first : nil)
     guard let source else {
       throw Failure.message(
-        "Create a calendar named Reha Calendar in Apple Calendar, then retry. No unambiguous account supports calendar creation."
+        "Erstelle in Apple Kalender einen Kalender namens Laßnitzhöhe und versuche es erneut. Kein eindeutiger Account unterstützt die Kalendererstellung."
       )
     }
 
@@ -63,6 +64,14 @@ final class DedicatedCalendar {
     try store.saveCalendar(calendar, commit: true)
     remember(calendar)
     return calendar
+  }
+
+  private func renameOwnedDefault(_ calendar: EKCalendar, saved: [String: String]?, in store: EKEventStore) throws {
+    // A persisted destination is evidence of app setup. Preserve any user rename.
+    guard saved?["id"] == calendar.calendarIdentifier,
+          saved?["title"] == "Reha Calendar", calendar.title == "Reha Calendar" else { return }
+    calendar.title = Self.title
+    try store.saveCalendar(calendar, commit: true)
   }
 
   private func remember(_ calendar: EKCalendar) {

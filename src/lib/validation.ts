@@ -1,4 +1,18 @@
 import type { Appointment, Point } from "./contracts";
+export function fieldConfirmed(a: Appointment, field: string): boolean {
+  const f = a.fields?.[field];
+  const value =
+    field in (a.metadata ?? {})
+      ? a.metadata?.[field as keyof NonNullable<Appointment["metadata"]>]
+      : a[field as keyof Appointment];
+  return (
+    !!f &&
+    f.confirmed_at !== null &&
+    f.confirmed_value === value &&
+    ["legible", "not_printed"].includes(f.state) &&
+    (f.state !== "not_printed" || !value)
+  );
+}
 export function problems(a: Appointment): string[] {
   if (!a.included) return [];
   const issues: string[] = [];
@@ -25,9 +39,18 @@ export function problems(a: Appointment): string[] {
   )
     issues.push("Confirm end date for overnight interval");
   if (!a.title.trim()) issues.push("Missing title");
+  for (const [field, f] of Object.entries(a.fields ?? {}))
+    if (
+      (!["legible", "not_printed"].includes(f.state) || f.reasons.length > 0) &&
+      !fieldConfirmed(a, field)
+    )
+      issues.push(
+        `${field}: ${f.reasons.join(" ") || "Gedruckte Angabe am Foto prüfen."}`,
+      );
   for (const issue of a.issues)
     if (
       issue.blocking &&
+      !(issue.field && fieldConfirmed(a, issue.field)) &&
       ![
         "missing_date",
         "missing_start",

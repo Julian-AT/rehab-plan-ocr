@@ -1,0 +1,62 @@
+targets:
+  RehaWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ../../../ios/Widgets
+      - path: ../../../apple/Packages/AppleServices/Sources/AppleServices/AgendaShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.widgets
+        PRODUCT_NAME: RehaWidgets
+        SKIP_INSTALL: true
+        APPLICATION_EXTENSION_API_ONLY: true
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: RehaWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Laßnitzhöhe
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: RehaWidgets/RehaWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal]
+  RehaNotificationContent:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    # The extension host discovers its context class at runtime. A Swift import
+    # of the protocol alone does not retain this framework in the linked image.
+    dependencies:
+      - sdk: UserNotificationsUI.framework
+      - sdk: UserNotifications.framework
+    sources:
+      - path: ../../../ios/NotificationContent
+      - path: ../../../apple/Packages/AppleServices/Sources/AppleServices/AgendaShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.notification-content
+        PRODUCT_NAME: RehaNotificationContent
+        SKIP_INSTALL: true
+        APPLICATION_EXTENSION_API_ONLY: true
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: RehaNotificationContent/Info.plist
+      properties:
+        CFBundleDisplayName: Laßnitzhöhe
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.content-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationViewController
+          NSExtensionAttributes:
+            UNNotificationExtensionCategory:
+              [REHA_APPOINTMENT, REHA_APPOINTMENT_OPEN]
+            UNNotificationExtensionInitialContentSizeRatio: 0.7
+            UNNotificationExtensionDefaultContentHidden: true
+    entitlements:
+      path: RehaNotificationContent/RehaNotificationContent.entitlements
+      properties:
+        com.apple.security.application-groups: [group.at.rehakalender.personal]

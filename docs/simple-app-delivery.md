@@ -2,6 +2,10 @@
 
 # Simple app and bounded local refinement — 0.2.0
 
+This report records the initial delivery. The [September 26, 2026 iPhone update](iphone-update-20260926-s11.md)
+supersedes its pending-reinstallation status and includes the later recognition,
+HEIC and icon changes.
+
 The app opens in German with **Foto aufnehmen**, **Importieren**, recent plans and
 unfinished reviews. **Einstellungen → Entwickleransicht öffnen** loads the existing
 workbench on demand. Both interfaces use one application state. Cold launches

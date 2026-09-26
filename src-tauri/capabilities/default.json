@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Local application window only",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "deep-link:default"]
 }

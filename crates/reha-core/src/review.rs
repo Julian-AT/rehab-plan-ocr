@@ -55,6 +55,7 @@ pub fn values_hash(a: &Appointment) -> String {
 }
 pub fn approved(a: &Appointment) -> bool {
     a.included
+        && field_problems(a).is_empty()
         && a.approval
             .as_ref()
             .is_some_and(|s| s.values_hash == values_hash(a))
@@ -85,10 +86,59 @@ pub fn migrate(run: &mut PipelineRun) -> Result<()> {
                 });
             }
         }
-        run.schema_version = SCHEMA_VERSION;
-        run.document.schema_version = SCHEMA_VERSION;
     }
+    if run.schema_version < 3 {
+        for a in &mut run.appointments {
+            for field in ["location", "therapist"] {
+                a.fields.entry(field.into()).or_insert_with(|| FieldAssessment {
+                    state: PrintedState::Unreviewed,
+                    reasons: vec!["Bestandswert: Zuordnung zum Foto noch nicht geprüft.".into()],
+                    ..Default::default()
+                });
+            }
+            // Keep values and external identities, but never upgrade an old approval.
+            a.approval = None;
+        }
+        run.review_confirmed = false;
+    }
+    run.schema_version = SCHEMA_VERSION;
+    run.document.schema_version = SCHEMA_VERSION;
     Ok(())
+}
+pub fn field_confirmed(a: &Appointment, field: &str) -> bool {
+    a.fields.get(field).is_some_and(|f| {
+        f.confirmed_at.is_some()
+            && f.confirmed_value.clone().unwrap_or_default() == value(a, field)
+            && matches!(f.state, PrintedState::Legible | PrintedState::NotPrinted)
+            && (f.state != PrintedState::NotPrinted || empty(&value(a, field)))
+    })
+}
+pub fn field_problems(a: &Appointment) -> Vec<Issue> {
+    a.fields
+        .iter()
+        // Reserved row decisions are not assessments of printed fields.
+        .filter(|(field, _)| !field.starts_with("issue:"))
+        .filter_map(|(field, f)| {
+            let uncertain = !matches!(f.state, PrintedState::Legible | PrintedState::NotPrinted)
+                || !f.reasons.is_empty();
+            (uncertain && !field_confirmed(a, field)).then(|| {
+                Issue::new(
+                    "field_review",
+                    &format!(
+                        "{}: {}",
+                        field,
+                        if f.reasons.is_empty() {
+                            "Gedruckte Angabe mit dem Foto klären.".into()
+                        } else {
+                            f.reasons.join(" ")
+                        }
+                    ),
+                    Some(field),
+                    true,
+                )
+            })
+        })
+        .collect()
 }
 pub fn approve_selection(run: &mut PipelineRun, ids: &[String], now: i64) -> Result<()> {
     let unique: HashSet<_> = ids.iter().collect();
@@ -122,6 +172,9 @@ pub fn edit(old: Option<&Appointment>, mut next: Appointment) -> Result<Appointm
     let blank = Appointment::empty(next.id.clone());
     let old = old.unwrap_or(&blank);
     let requested_suggestions = next.suggestions.clone();
+    let requested_fields = next.fields.clone();
+    next.fields = old.fields.clone();
+    next.row_polygon = old.row_polygon.clone();
     next.origins = old.origins.clone();
     next.approval = old.approval.clone();
     next.calendar_event_id = old.calendar_event_id.clone();
@@ -151,6 +204,33 @@ pub fn edit(old: Option<&Appointment>, mut next: Appointment) -> Result<Appointm
     }
     for field in FIELDS {
         let v = value(&next, field);
+        if v != value(old, field) {
+            if let Some(f) = next.fields.get_mut(*field) {
+                f.confirmed_at = None;
+                f.confirmed_value = None;
+            }
+        }
+        // Explicit UI confirmation is the only path to a field approval. Geometry
+        // and detected reasons always come from the retained native snapshot.
+        if let Some(request) = requested_fields.get(*field) {
+            if request.confirmed_value.clone().unwrap_or_default() == v
+                && request.confirmed_at.is_some()
+                && matches!(
+                    request.state,
+                    PrintedState::Legible | PrintedState::NotPrinted
+                )
+            {
+                if request.state == PrintedState::NotPrinted && !empty(&v) {
+                    return Err(Error::Invalid(
+                        "Nicht gedruckte Felder müssen leer sein.".into(),
+                    ));
+                }
+                let f = next.fields.entry((*field).into()).or_default();
+                f.state = request.state.clone();
+                f.confirmed_value = Some(v.clone());
+                f.confirmed_at = Some(chrono::Utc::now().timestamp());
+            }
+        }
         if v != value(old, field) {
             let suggestion = next
                 .suggestions
@@ -188,6 +268,18 @@ pub fn edit(old: Option<&Appointment>, mut next: Appointment) -> Result<Appointm
     }
     if values_hash(&next) != values_hash(old) {
         next.approval = None;
+    }
+    // A webview cannot dismiss detected issues simply by omitting them.
+    for issue in &old.issues {
+        if issue.blocking
+            && issue
+                .field
+                .as_deref()
+                .is_some_and(|f| old.fields.contains_key(f))
+            && !next.issues.contains(issue)
+        {
+            next.issues.push(issue.clone());
+        }
     }
     Ok(next)
 }

@@ -9,15 +9,25 @@ targets:
     platform: iOS
     sources:
       - smoke-tests.swift
+      - agenda-native-tests.swift
+      - event-editing-tests.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/event-editing.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/ServiceRequest.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/calendar-contracts.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/agenda-service.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/AgendaShared
+      - ../../ios/Widgets
+      - ../../ios/NotificationContent
       - dedicated-calendar-tests.swift
       - app-storage-tests.swift
-      - ../../plugins/calendar/ios/Sources/dedicated-calendar.swift
-      - ../../plugins/calendar/ios/Sources/app-storage.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/dedicated-calendar.swift
+      - ../../apple/Packages/AppleServices/Sources/AppleServices/app-storage.swift
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Simulator integration tests use invented appointments and remove them afterward.
         CODE_SIGNING_ALLOWED: NO
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: AGENDA_TESTING
         SWIFT_VERSION: "5.0"
 schemes:
   RehaSmoke:

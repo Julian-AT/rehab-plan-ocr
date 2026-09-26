@@ -224,7 +224,8 @@ fn agreeing_rereads_recover_missing_fields_and_conflicts_keep_both_candidates() 
         attempt: attempt.into(),
     };
     refinement::apply_readings(&mut r, &[reading("one", "08:30")]).unwrap();
-    assert_eq!(r.appointments[0].end, None);
+    assert_eq!(r.appointments[0].end.as_deref(), Some("08:30"));
+    assert!(!review::field_problems(&r.appointments[0]).is_empty());
     refinement::apply_readings(&mut r, &[reading("one", "08:30"), reading("two", "08:30")])
         .unwrap();
     assert_eq!(r.appointments[0].end.as_deref(), Some("08:30"));
@@ -258,7 +259,8 @@ fn v1_migration_keeps_edits_bindings_and_expires_refinement_evidence() {
         .bind_schedule(&r.document.id, "schedule", "hash")
         .unwrap();
     let migrated = store.load_run(&r.document.id).unwrap();
-    assert_eq!(migrated.schema_version, 2);
+    assert_eq!(migrated.schema_version, 3);
+    assert!(migrated.appointments[0].approval.is_none());
     assert_eq!(migrated.appointments[0].title, "Old manual edit");
     assert_eq!(migrated.appointments[0].origins["title"].kind, "manual");
     assert_eq!(
@@ -268,6 +270,9 @@ fn v1_migration_keeps_edits_bindings_and_expires_refinement_evidence() {
     let dir = store.scan_dir(&r.document.id).unwrap();
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("refinement-readings.json"), "private evidence").unwrap();
+    store
+        .set_setting("preferences", r#"{"retention_days":30}"#)
+        .unwrap();
     assert_eq!(store.cleanup(100 + 30 * 86400 - 1).unwrap(), 0);
     assert_eq!(store.cleanup(100 + 30 * 86400).unwrap(), 1);
     assert!(!dir.exists());
@@ -275,6 +280,63 @@ fn v1_migration_keeps_edits_bindings_and_expires_refinement_evidence() {
         store.list_scans().unwrap()[0].schedule_id.as_deref(),
         Some("schedule")
     );
+}
+
+#[test]
+fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
+    let mut r = run();
+    r.appointments = parser::extract(&r.document.id, &r.observations, &r.regions).0;
+    assert!(!r.appointments.is_empty());
+    r.extraction_version = 5;
+    let mut edited = r.appointments[0].clone();
+    edited.title = "Meine geprüfte Bezeichnung".into();
+    r.appointments[0] = review::edit(Some(&r.appointments[0]), edited).unwrap();
+    let a = &mut r.appointments[0];
+    a.calendar_event_id = Some("retained-calendar-id".into());
+    a.ics_event_id = Some("retained-ics-id".into());
+    a.calendar_saved_hash = Some("retained-calendar-hash".into());
+    a.fields
+        .entry("start".into())
+        .or_default()
+        .reasons
+        .push("Obsolete column warning".into());
+    let clipped = a.fields.entry("therapist".into()).or_default();
+    clipped.state = PrintedState::Cropped;
+    clipped
+        .reasons
+        .push("Text berührt den Bildrand; möglicherweise abgeschnitten.".into());
+    let ids: Vec<_> = r.appointments.iter().map(|a| a.id.clone()).collect();
+    let mut structural_change = r.clone();
+    structural_change.appointments.pop();
+    let unchanged = serde_json::to_value(&structural_change).unwrap();
+    assert!(!refinement::refresh_cached_mapping(&mut structural_change).unwrap());
+    assert_eq!(unchanged, serde_json::to_value(&structural_change).unwrap());
+    assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+    assert_eq!(r.extraction_version, parser::EXTRACTION_VERSION);
+    assert_eq!(
+        ids,
+        r.appointments
+            .iter()
+            .map(|a| a.id.clone())
+            .collect::<Vec<_>>()
+    );
+    let a = &r.appointments[0];
+    assert_eq!(a.title, "Meine geprüfte Bezeichnung");
+    assert_eq!(a.calendar_event_id.as_deref(), Some("retained-calendar-id"));
+    assert_eq!(a.ics_event_id.as_deref(), Some("retained-ics-id"));
+    assert_eq!(
+        a.calendar_saved_hash.as_deref(),
+        Some("retained-calendar-hash")
+    );
+    assert!(!a.fields["start"]
+        .reasons
+        .iter()
+        .any(|r| r == "Obsolete column warning"));
+    assert_eq!(a.fields["therapist"].state, PrintedState::Cropped);
+    assert!(a.approval.is_none());
+    r.extraction_version = 6;
+    assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+    assert!(!refinement::refresh_cached_mapping(&mut r).unwrap());
 }
 
 #[test]
@@ -533,4 +595,85 @@ fn approved_history_suggests_only_allowed_fields_from_the_same_clinic() {
     suggested.value = serde_json::json!(90);
     forged.duration_minutes = Some(90);
     assert!(review::edit(Some(&r.appointments[0]), forged).is_err());
+}
+
+#[test]
+fn populated_uncertain_fields_block_only_the_affected_appointment_and_cannot_be_erased() {
+    let mut r = run();
+    let ready = complete("ready");
+    let mut uncertain = complete("uncertain");
+    uncertain.location = "Raum 107 Fr. A. Belvara".into();
+    uncertain.fields.insert(
+        "location".into(),
+        FieldAssessment {
+            state: PrintedState::Contradictory,
+            frame: "page".into(),
+            polygon: geometry::rect(600., 100., 200., 40.),
+            reasons: vec!["Text überquert die Namensspalte".into()],
+            ..Default::default()
+        },
+    );
+    r.appointments = vec![ready, uncertain.clone()];
+    review::approve_selection(&mut r, &["ready".into()], 100).unwrap();
+    assert!(review::approved(&r.appointments[0]));
+    assert!(review::approve_selection(&mut r, &["uncertain".into()], 101).is_err());
+    let mut erased = uncertain.clone();
+    erased.fields.clear();
+    erased.issues.clear();
+    let guarded = review::edit(Some(&uncertain), erased).unwrap();
+    assert!(!review::field_problems(&guarded).is_empty());
+    assert!(calendar::event_values(&guarded, "Europe/Vienna", None).is_err());
+    let mut confirmed = guarded.clone();
+    confirmed.location = "Raum 107".into();
+    let field = confirmed.fields.get_mut("location").unwrap();
+    field.state = PrintedState::Legible;
+    field.confirmed_value = Some(serde_json::json!("Raum 107"));
+    field.confirmed_at = Some(102);
+    let mut confirmed = review::edit(Some(&guarded), confirmed).unwrap();
+    assert!(review::field_problems(&confirmed).is_empty());
+    confirmed.location = "Raum 701".into();
+    assert!(!review::field_problems(&confirmed).is_empty());
+}
+
+#[test]
+fn blank_printed_cell_requires_confirmation_but_never_a_fabricated_name() {
+    let mut a = complete("blank");
+    a.fields.insert(
+        "therapist".into(),
+        FieldAssessment {
+            state: PrintedState::Cropped,
+            reasons: vec!["rechte Spalte fehlt".into()],
+            ..Default::default()
+        },
+    );
+    assert!(calendar::event_values(&a, "Europe/Vienna", None).is_err());
+    let mut edited = a.clone();
+    let f = edited.fields.get_mut("therapist").unwrap();
+    f.state = PrintedState::NotPrinted;
+    f.confirmed_at = Some(1);
+    f.confirmed_value = Some(serde_json::json!(""));
+    let edited = review::edit(Some(&a), edited).unwrap();
+    assert!(calendar::event_values(&edited, "Europe/Vienna", None).is_ok());
+    assert!(edited.therapist.is_empty());
+}
+
+#[test]
+fn recurring_calendar_updates_remain_protected_and_partial_checks_do_not_remove() {
+    let values = calendar::event_values(&complete("bound"), "Europe/Vienna", None).unwrap();
+    let mut op = CalendarOperation {
+        id: "bound".into(),
+        kind: "update".into(),
+        calendar_id: "calendar".into(),
+        external_id: Some("external".into()),
+        before: Some(values.clone()),
+        after: Some(values),
+        requires_resolution: false,
+        reason: "changed".into(),
+    };
+    calendar::protect_recurring(std::slice::from_mut(&mut op), &["bound".into()]);
+    assert_eq!(op.kind, "protected");
+    assert!(op.requires_resolution);
+    let dir = tempfile::tempdir().unwrap();
+    let store = Store::open(dir.path()).unwrap();
+    assert!(store.begin_operation("schedule", &op).is_err());
 }

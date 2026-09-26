@@ -1,7 +1,29 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
+/// A missing OCR value is not evidence that the printed cell is empty.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PrintedState {
+    #[default]
+    Unreviewed,
+    Legible,
+    NotPrinted,
+    Illegible,
+    Cropped,
+    Contradictory,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct FieldAssessment {
+    pub state: PrintedState,
+    pub polygon: Vec<Point>,
+    pub frame: String,
+    pub reasons: Vec<String>,
+    pub confirmed_value: Option<serde_json::Value>,
+    pub confirmed_at: Option<i64>,
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefinementReading {
     pub appointment_id: String,
@@ -119,6 +141,10 @@ pub struct CompletionDefault {
 pub struct Appointment {
     pub id: String,
     #[serde(default)]
+    pub fields: BTreeMap<String, FieldAssessment>,
+    #[serde(default)]
+    pub row_polygon: Vec<Point>,
+    #[serde(default)]
     pub section_id: Option<String>,
     #[serde(default)]
     pub metadata: Metadata,
@@ -156,6 +182,8 @@ impl Appointment {
     pub fn empty(id: String) -> Self {
         Self {
             id,
+            fields: BTreeMap::new(),
+            row_polygon: vec![],
             section_id: None,
             metadata: Metadata::default(),
             origins: BTreeMap::new(),
@@ -210,6 +238,8 @@ pub struct PipelineConfig {
     pub box_threshold: f32,
     pub detailed_debug: bool,
     pub quarter_turns: u8,
+    #[serde(default)]
+    pub mirrored: bool,
     pub page_corners: Option<[Point; 4]>,
 }
 fn default_engine() -> String {
@@ -225,6 +255,7 @@ impl Default for PipelineConfig {
             box_threshold: 0.6,
             detailed_debug: false,
             quarter_turns: 0,
+            mirrored: false,
             page_corners: None,
         }
     }
@@ -281,6 +312,14 @@ pub struct ImportRecord {
     pub approved: EventValues,
     pub status: String,
     pub operation_id: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalendarOverlap {
+    pub appointment_id: String,
+    pub external_id: String,
+    pub title: String,
+    pub start_utc: String,
+    pub end_utc: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarOperation {

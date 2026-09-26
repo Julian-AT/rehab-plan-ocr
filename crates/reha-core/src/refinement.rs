@@ -6,7 +6,78 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 
 pub type Reading = RefinementReading;
-/// Require two independent preprocessing attempts to agree on a missing value.
+
+/// Refresh the version-5/6 column checks from retained OCR when row identities
+/// stay unambiguous. Structural changes still require a full explicit reprocess.
+pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
+    if ![5, 6].contains(&run.extraction_version) || run.observations.is_empty() {
+        return Ok(false);
+    }
+    let observations: Vec<_> = run
+        .observations
+        .iter()
+        .filter(|o| !o.id.starts_with("reread-"))
+        .cloned()
+        .collect();
+    let source_regions: HashSet<_> = observations.iter().flat_map(|o| &o.region_ids).collect();
+    let regions: Vec<_> = run
+        .regions
+        .iter()
+        .filter(|r| source_regions.contains(&r.id))
+        .cloned()
+        .collect();
+    let (appointments, issues, unassigned) =
+        crate::parser::extract(&run.document.id, &observations, &regions);
+    if appointments.len() != run.appointments.len() {
+        return Ok(false);
+    }
+    let mut next = run.clone();
+    next.appointments = appointments;
+    next.extraction_version = crate::parser::EXTRACTION_VERSION;
+    next.sections = crate::parser::sections(&observations, &regions);
+    next.unassigned = unassigned;
+    // Preserve capture-quality warnings, including clipping added after parsing.
+    for issue in issues {
+        if !next.issues.contains(&issue) {
+            next.issues.push(issue);
+        }
+    }
+    preserve_review(run, &mut next)?;
+    let old_ids: HashSet<_> = run.appointments.iter().map(|a| &a.id).collect();
+    if next.appointments.len() != old_ids.len()
+        || next.appointments.iter().any(|a| !old_ids.contains(&a.id))
+    {
+        return Ok(false);
+    }
+    for a in &mut next.appointments {
+        let old = run.appointments.iter().find(|old| old.id == a.id).unwrap();
+        for (field, assessment) in &old.fields {
+            for reason in assessment
+                .reasons
+                .iter()
+                .filter(|r| r.starts_with("Text berührt den Bildrand"))
+            {
+                let f = a.fields.entry(field.clone()).or_default();
+                f.state = PrintedState::Cropped;
+                if !f.reasons.contains(reason) {
+                    f.reasons.push(reason.clone());
+                }
+            }
+        }
+    }
+    next.refinement_readings.clear();
+    next.refinement_attempts.clear();
+    next.review_confirmed = false;
+    next.complete_page_confirmed = false;
+    next.stages.push(Stage {
+        name: "column_mapping_refresh".into(), status: "complete".into(), duration_ms: 0,
+        detail: "Spaltenprüfung aus gespeichertem OCR aktualisiert. Manuelle Angaben und Kalenderbindungen erhalten; alte Nachlesungen verworfen. Unklare Felder erneut am Foto prüfen.".into(),
+        artifacts: vec![],
+    });
+    *run = next;
+    Ok(true)
+}
+/// Repeated preprocessing uses the same model and supplies candidates, never proof.
 /// Printed contradictions stay visible and block approval; edits always win.
 pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()> {
     for a in &mut run.appointments {
@@ -30,7 +101,7 @@ pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()>
                 continue;
             }
             let distinct: HashSet<_> = matches.iter().map(|r| r.value.to_string()).collect();
-            let attempts: HashSet<_> = matches.iter().map(|r| &r.attempt).collect();
+
             let current = review::value(a, field);
             let conflicting = distinct.len() > 1
                 || (!review::empty(&current) && matches.iter().any(|r| r.value != current));
@@ -43,9 +114,12 @@ pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()>
                 );
                 if !a.issues.contains(&issue) {
                     a.issues.push(issue);
+                    let f = a.fields.entry((*field).into()).or_default();
+                    f.state = PrintedState::Contradictory;
+                    f.reasons.push("Widersprüchliche Nachlesungen.".into());
                 }
                 a.approval = None;
-            } else if review::empty(&current) && attempts.len() >= 2 {
+            } else if review::empty(&current) {
                 let mut candidate = a.clone();
                 review::set_value(&mut candidate, field, matches[0].value.clone())?;
                 // Validate the specific field; unrelated missing fields remain pending.
@@ -69,6 +143,11 @@ pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()>
                         source: "Lokale Nachprüfung am Foto".into(),
                     },
                 );
+                a.fields
+                    .entry((*field).into())
+                    .or_default()
+                    .reasons
+                    .push("Nachlesung desselben Modells: Wert am Foto bestätigen.".into());
                 a.approval = None;
             }
         }
@@ -87,7 +166,10 @@ pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()>
     }
     Ok(())
 }
-fn appointment_bounds(a: &Appointment, run: &PipelineRun) -> Option<(f64, f64, f64, f64)> {
+pub fn appointment_bounds(a: &Appointment, run: &PipelineRun) -> Option<(f64, f64, f64, f64)> {
+    if !a.row_polygon.is_empty() {
+        return Some(geometry::bounds(&a.row_polygon));
+    }
     let ids: HashSet<_> = a
         .provenance
         .iter()
@@ -119,11 +201,37 @@ pub fn refine(
     cancel: &std::sync::atomic::AtomicBool,
     deadline: std::time::Instant,
 ) -> Result<()> {
+    refine_with_original(engine, run, dir, cancel, deadline, None)
+}
+
+/// Reuse original pixels from the initial pass. Explicit later retries still
+/// load the retained photograph through `refine`.
+#[cfg(feature = "onnx")]
+pub(crate) fn refine_with_original(
+    engine: &mut crate::ocr::OnnxEngine,
+    run: &mut PipelineRun,
+    dir: &std::path::Path,
+    cancel: &std::sync::atomic::AtomicBool,
+    deadline: std::time::Instant,
+    original: Option<&image::RgbImage>,
+) -> Result<()> {
     use std::{sync::atomic::Ordering, time::Instant};
     let started = Instant::now();
     let available = || !cancel.load(Ordering::Relaxed) && Instant::now() < deadline;
     let mut targets = vec![];
     for a in &run.appointments {
+        for field in ["location", "therapist"] {
+            if let Some(f) = a
+                .fields
+                .get(field)
+                .filter(|f| !f.polygon.is_empty() && !f.reasons.is_empty())
+            {
+                if !review::field_confirmed(a, field) {
+                    let (x, y, r, b) = geometry::bounds(&f.polygon);
+                    targets.push((Some(a.id.clone()), Some(field.to_string()), x, y, r, b));
+                }
+            }
+        }
         let weak = a.provenance.values().flatten().any(|id| {
             run.observations
                 .iter()
@@ -143,6 +251,7 @@ pub fn refine(
                     .map(|s| geometry::bounds(&s.polygon));
                 targets.push((
                     Some(a.id.clone()),
+                    None,
                     section.map_or(x, |s| s.0),
                     y,
                     section.map_or(r, |s| s.2),
@@ -165,54 +274,62 @@ pub fn refine(
             || obs.is_some_and(|o| run.unassigned.contains(&o.id) && apparent_time(&o.text))
         {
             let (x, y, r, b) = geometry::bounds(&region.polygon);
-            targets.push((None, x, y, r, b));
+            targets.push((None, None, x, y, r, b));
         }
     }
     let mut readings = vec![];
     let mut discovered: BTreeMap<String, Vec<(String, Appointment)>> = BTreeMap::new();
+    let loaded;
     let original = if available() && !targets.is_empty() {
-        Some(image::open(dir.join("original.png"))?.to_rgb8())
+        if let Some(original) = original {
+            Some(original)
+        } else {
+            loaded = image::open(dir.join("original.png"))?.into_rgb8();
+            Some(&loaded)
+        }
     } else {
         None
     };
-    for (target, x, y, r, b) in targets.into_iter().take(24) {
+    for (target, field, x, y, r, b) in targets.into_iter().take(24) {
         let Some(original) = &original else {
             break;
         };
         let height = (b - y).max(12.);
-        let polygon = geometry::rect(
-            (x - height).max(0.),
-            (y - height * 0.6).max(0.),
-            (r - x + height * 2.).min(run.page_width as f64),
-            (b - y) + height * 1.2,
-        );
+        let polygon = if let Some(field) = &field {
+            run.appointments
+                .iter()
+                .find(|a| Some(&a.id) == target.as_ref())
+                .and_then(|a| a.fields.get(field))
+                .map(|f| f.polygon.clone())
+                .unwrap_or_else(|| geometry::rect(x, y, r - x, b - y))
+        } else {
+            geometry::rect(
+                (x - height).max(0.),
+                (y - height * 0.6).max(0.),
+                (r - x + height * 2.).min(run.page_width as f64),
+                (b - y) + height * 1.2,
+            )
+        };
         let points: Vec<_> = polygon
             .iter()
             .map(|p| geometry::map(&run.page_to_original, p))
             .collect();
-        let (ox, oy, or, ob) = geometry::bounds(&points);
-        let ox = (ox.floor().max(0.) as u32).min(original.width().saturating_sub(1));
-        let oy = (oy.floor().max(0.) as u32).min(original.height().saturating_sub(1));
-        let cw = (or.ceil().max(0.) as u32)
-            .min(original.width())
-            .saturating_sub(ox)
-            .max(1);
-        let ch = (ob.ceil().max(0.) as u32)
-            .min(original.height())
-            .saturating_sub(oy)
-            .max(1);
+        if !available() {
+            break;
+        }
+        // The exact field quadrilateral is rectified from original pixels. An
+        // enclosing axis-aligned box can contain the neighboring name column.
+        let Ok((source_crop, crop_to_original)) =
+            geometry::rectify_with_transform(original, &points)
+        else {
+            continue;
+        };
         for variant in 0..2 {
             if !available() {
                 break;
             }
             let attempt_started = Instant::now();
-            let mut crop = image::imageops::crop_imm(original, ox, oy, cw, ch).to_image();
-            crop = match run.config.quarter_turns % 4 {
-                1 => image::imageops::rotate90(&crop),
-                2 => image::imageops::rotate180(&crop),
-                3 => image::imageops::rotate270(&crop),
-                _ => crop,
-            };
+            let mut crop = source_crop.clone();
             let scale = if variant == 0 { 1. } else { 1.5 };
             if variant == 1 {
                 crop = image::imageops::contrast(&crop, 20.);
@@ -224,11 +341,8 @@ pub fn refine(
                 );
             }
             let to_original = geometry::multiply(
-                &[1., 0., ox as f64, 0., 1., oy as f64, 0., 0., 1.],
-                &geometry::multiply(
-                    &geometry::inverse(&geometry::rotation(run.config.quarter_turns, cw, ch))?,
-                    &[1. / scale, 0., 0., 0., 1. / scale, 0., 0., 0., 1.],
-                ),
+                &crop_to_original,
+                &[1. / scale, 0., 0., 0., 1. / scale, 0., 0., 0., 1.],
             );
             let to_page = geometry::multiply(&run.original_to_page, &to_original);
             let id = format!("reread-{:04}", run.refinement_attempts.len());
@@ -279,51 +393,66 @@ pub fn refine(
                         o.region_ids = o.region_ids.iter().map(|r| format!("{id}-{r}")).collect();
                     }
                     attempt.observation_ids = observations.iter().map(|o| o.id.clone()).collect();
-                    let inside = |o: &Observation| {
-                        let pts: Vec<_> = run
-                            .regions
+                    if complete && field.is_some() {
+                        let text = observations
                             .iter()
-                            .filter(|r| o.region_ids.contains(&r.id))
-                            .flat_map(|r| r.polygon.clone())
-                            .collect();
-                        let (l, t, r, b) = geometry::bounds(&pts);
-                        let center = Point {
-                            x: (l + r) / 2.,
-                            y: (t + b) / 2.,
+                            .map(|o| o.text.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        if !text.trim().is_empty() {
+                            readings.push(Reading {
+                                appointment_id: target.clone().unwrap(),
+                                field: field.clone().unwrap(),
+                                value: serde_json::json!(text),
+                                evidence: attempt.observation_ids.clone(),
+                                attempt: id.clone(),
+                            });
+                        }
+                    } else if complete {
+                        let inside = |o: &Observation| {
+                            let pts: Vec<_> = run
+                                .regions
+                                .iter()
+                                .filter(|r| o.region_ids.contains(&r.id))
+                                .flat_map(|r| r.polygon.clone())
+                                .collect();
+                            let (l, t, r, b) = geometry::bounds(&pts);
+                            let center = Point {
+                                x: (l + r) / 2.,
+                                y: (t + b) / 2.,
+                            };
+                            let p = geometry::map(
+                                &geometry::inverse(&to_page).unwrap_or(geometry::IDENTITY),
+                                &center,
+                            );
+                            p.x >= 0.
+                                && p.y >= 0.
+                                && p.x < crop.width() as f64
+                                && p.y < crop.height() as f64
                         };
-                        let p = geometry::map(
-                            &geometry::inverse(&to_page).unwrap_or(geometry::IDENTITY),
-                            &center,
-                        );
-                        p.x >= 0.
-                            && p.y >= 0.
-                            && p.x < crop.width() as f64
-                            && p.y < crop.height() as f64
-                    };
-                    let mut combined: Vec<_> = run
-                        .observations
-                        .iter()
-                        .filter(|o| !o.id.starts_with("reread-") && !inside(o))
-                        .cloned()
-                        .collect();
-                    combined.extend(observations.clone());
-                    let mut all_regions = run.regions.clone();
-                    all_regions.extend(regions.clone());
-                    let (candidates, _, _) =
-                        crate::parser::extract(&run.document.id, &combined, &all_regions);
-                    let view = PipelineRun {
-                        observations: combined,
-                        regions: all_regions,
-                        ..run.clone()
-                    };
-                    let candidates: Vec<_> = candidates
-                        .into_iter()
-                        .filter(|a| {
-                            appointment_bounds(a, &view)
-                                .is_some_and(|(_, t, _, bottom)| t < b && bottom > y)
-                        })
-                        .collect();
-                    if complete {
+                        let mut combined: Vec<_> = run
+                            .observations
+                            .iter()
+                            .filter(|o| !o.id.starts_with("reread-") && !inside(o))
+                            .cloned()
+                            .collect();
+                        combined.extend(observations.clone());
+                        let mut all_regions = run.regions.clone();
+                        all_regions.extend(regions.clone());
+                        let (candidates, _, _) =
+                            crate::parser::extract(&run.document.id, &combined, &all_regions);
+                        let view = PipelineRun {
+                            observations: combined,
+                            regions: all_regions,
+                            ..run.clone()
+                        };
+                        let candidates: Vec<_> = candidates
+                            .into_iter()
+                            .filter(|a| {
+                                appointment_bounds(a, &view)
+                                    .is_some_and(|(_, t, _, bottom)| t < b && bottom > y)
+                            })
+                            .collect();
                         if let Some(target) = &target {
                             if candidates.len() == 1 {
                                 for field in review::FIELDS {
@@ -406,6 +535,12 @@ pub fn refine(
         )
         .to_string();
         candidate.approval = None;
+        candidate.issues.push(Issue::new(
+            "recovered_row",
+            "Zusätzliche Zeile aus Nachlesung: Existenz am Foto bestätigen.",
+            None,
+            true,
+        ));
         run.appointments.push(candidate);
     }
     let artifact = serde_json::to_vec(&run.refinement_readings.iter().map(|r|serde_json::json!({"appointment_id":r.appointment_id,"field":r.field,"value":r.value,"evidence":r.evidence,"attempt":r.attempt})).collect::<Vec<_>>())?;
@@ -502,9 +637,37 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
                     review::set_value(a, field, review::value(old, field))?;
                     a.origins
                         .insert((*field).into(), old.origins[*field].clone());
+                    if let Some(f) = a.fields.get_mut(*field) {
+                        f.confirmed_at = None;
+                        f.confirmed_value = None;
+                        f.reasons
+                            .push("Manuelle Angabe erhalten; neue Bildzuordnung prüfen.".into());
+                    } else if let Some(f) = old.fields.get(*field) {
+                        let mut f = f.clone();
+                        if f.frame == "page" {
+                            f.polygon = f
+                                .polygon
+                                .iter()
+                                .map(|p| {
+                                    geometry::map(
+                                        &next.original_to_page,
+                                        &geometry::map(&previous.page_to_original, p),
+                                    )
+                                })
+                                .collect();
+                        }
+                        f.confirmed_at = None;
+                        f.confirmed_value = None;
+                        f.reasons
+                            .push("Frühere manuelle Angabe am Foto prüfen.".into());
+                        a.fields.insert((*field).into(), f);
+                    }
                 }
             }
-            if review::values_hash(a) == review::values_hash(old) {
+            if next.extraction_version == previous.extraction_version
+                && a.fields == old.fields
+                && review::values_hash(a) == review::values_hash(old)
+            {
                 a.approval = old.approval.clone();
             }
         } else if old.approval.is_some()

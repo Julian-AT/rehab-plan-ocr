@@ -78,14 +78,9 @@ class DatasetTests(unittest.TestCase):
                 dataset.PRIVATE / "inventory.json",
                 {"entries": [{"sha256": str(i)} for i in range(20)]},
             )
-            dataset.freeze(grouping)
-            days = json.loads((dataset.PRIVATE / "split.json").read_text())["days"]
-            self.assertEqual(sum(d["split"] == "holdout" for d in days.values()), 4)
-            self.assertEqual(
-                [sum(d["fold"] == f for d in days.values()) for f in range(4)], [4] * 4
-            )
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, "Legacy day-only"):
                 dataset.freeze(grouping)
+            self.assertFalse((dataset.PRIVATE / "split.json").exists())
 
 
 if __name__ == "__main__":

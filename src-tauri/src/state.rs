@@ -1,32 +1,24 @@
-use reha_core::{contracts::CalendarOperation, store::Store};
-use serde::Serialize;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{atomic::AtomicBool, Arc, Mutex},
-};
-
-pub(crate) type Response<T> = std::result::Result<T, String>;
-pub(crate) fn failure(e: impl std::fmt::Display) -> String {
-    e.to_string()
-}
-pub(crate) struct AppState {
-    pub(crate) store: Mutex<Store>,
-    pub(crate) models: PathBuf,
-    #[cfg(any(feature = "desktop-onnx", feature = "ios-onnx"))]
-    pub(crate) engine: Mutex<Option<reha_core::ocr::OnnxEngine>>,
-    pub(crate) cancel: Mutex<HashMap<String, Arc<AtomicBool>>>,
-    pub(crate) proposals: Mutex<HashMap<String, Proposal>>,
-    pub(crate) calendar_lock: tokio::sync::Mutex<()>,
-}
-#[derive(Clone, Serialize)]
-pub(crate) struct Proposal {
-    pub(crate) token: String,
-    pub(crate) document_id: String,
-    pub(crate) document_ids: Vec<String>,
-    pub(crate) run_hash: String,
-    pub(crate) schedule_id: String,
-    pub(crate) fingerprint: String,
-    pub(crate) operations: Vec<CalendarOperation>,
-    pub(crate) bindings: std::collections::BTreeMap<String, String>,
+pub(crate) use reha_core::service::{failure, Application as AppState, Proposal, Response};
+pub(crate) struct TauriPlatform(pub tauri::AppHandle);
+impl reha_core::service::Platform for TauriPlatform {
+    fn overlaps(
+        &self,
+        events: std::collections::BTreeMap<String, reha_core::contracts::EventValues>,
+        exclude: Vec<String>,
+    ) -> Response<Option<Vec<reha_core::contracts::CalendarOverlap>>> {
+        let response = self.call(
+            "overlaps",
+            serde_json::json!({"events":events,"exclude":exclude}),
+        )?;
+        serde_json::from_value(response["overlaps"].clone())
+            .map(Some)
+            .map_err(failure)
+    }
+    fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value> {
+        tauri_plugin_reha_calendar::call(&self.0, command, arguments)
+    }
+    fn progress(&self, value: serde_json::Value) {
+        use tauri::Emitter;
+        let _ = self.0.emit("processing-progress", value);
+    }
 }

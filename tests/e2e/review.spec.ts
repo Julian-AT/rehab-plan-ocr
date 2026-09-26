@@ -1,5 +1,71 @@
 import { expect, test } from "@playwright/test";
 
+test("debug table can resolve genuinely blank printed cells from the photo review", async ({
+  page,
+}) => {
+  await page.route("**/sample-run.json", async (route) => {
+    const response = await route.fetch();
+    const run = await response.json();
+    const a = run.appointments[0];
+    a.fields = Object.fromEntries(
+      ["location", "therapist"].map((field) => [
+        field,
+        {
+          state: "unreviewed",
+          polygon: a.row_polygon ?? [],
+          frame: "page",
+          reasons: [
+            "Leer erkannt: am Foto bestätigen, ob nichts gedruckt ist.",
+          ],
+          confirmed_at: null,
+          confirmed_value: null,
+        },
+      ]),
+    );
+    a.location = "";
+    a.therapist = "";
+    await route.fulfill({ response, json: run });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Erinnerungen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Load fixture", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Am Foto prüfen, Zeile 1", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Termin bearbeiten" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Termin bestätigen", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Raum im Foto", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Nicht gedruckt", exact: true })
+    .nth(0)
+    .click();
+  await page
+    .getByRole("button", { name: "Nicht gedruckt", exact: true })
+    .nth(1)
+    .click();
+  await page
+    .getByRole("button", { name: "Termin bestätigen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Termin bearbeiten" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("list", { name: "Validation errors" }).getByText(/^Row 1:/),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Row 6: Missing end time or duration", { exact: true }),
+  ).toBeVisible();
+});
+
 test("review preserves repeated items, provenance, and explicit approval", async ({
   page,
 }, info) => {
@@ -9,13 +75,13 @@ test("review preserves repeated items, provenance, and explicit approval", async
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Reha Calendar Lab" }),
+    page.getByRole("heading", { name: "Laßnitzhöhe · Diagnose" }),
   ).toBeVisible();
   await expect(page.getByLabel("Input images")).toBeDisabled();
   await page.getByRole("button", { name: "Load fixture" }).click();
@@ -61,7 +127,7 @@ test("review preserves repeated items, provenance, and explicit approval", async
   expect(
     requests.every(
       (url) =>
-        url.startsWith("http://127.0.0.1:1420") || url.startsWith("data:"),
+        url.startsWith(new URL(page.url()).origin) || url.startsWith("data:"),
     ),
   ).toBeTruthy();
   expect(errors).toEqual([]);
@@ -77,7 +143,7 @@ test("trace exposes actual observations and unavailable stages", async ({
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
@@ -107,7 +173,7 @@ test("offline edits and selection retain appointment multiplicity", async ({
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
@@ -137,7 +203,7 @@ test("offline edits and selection retain appointment multiplicity", async ({
 test("annotation corrections invalidate verification", async ({ page }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Einstellungen", exact: true })
+    .getByRole("button", { name: "Erinnerungen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
