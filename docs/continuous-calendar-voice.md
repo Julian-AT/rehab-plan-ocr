@@ -2,7 +2,7 @@
 
 # Fließender Kalender und lokales Gespräch – Build 2026092612
 
-Version 0.3.0. [Simulatorvorschau und Hörproben](preview/2026-09-26-s12-continuous/README.md). Dieser Build ist noch nicht auf dem iPhone installiert. Der zuletzt dokumentierte Gerätebuild bleibt 2026092611.
+Version 0.3.0. [Simulatorvorschau und Hörproben](preview/2026-09-26-s12-continuous/README.md). Nach ausdrücklicher Freigabe auf dem iPhone 17 installiert: [frische Sicherung, Start und bestandener Datenvergleich](continuous-voice-device-update.md).
 
 ## Kalender
 
@@ -44,7 +44,7 @@ Vollständige Satzpräfixe werden bereits während der Modellgenerierung synthet
 
 - 62 Rust-Kerntests mit Kokoro/ONNX bestanden; darin sieben gezielte Sprach-/Normalisierungs-/Dauerprüfungen.
 - Swift-6-Bindungsintegration bestanden: typisierte Daten, Revisionen, Freigaben, ICS, Wiederöffnung, Abbruch und Artefaktbegrenzung.
-- Aktueller Release-Build für iOS/arm64 bestanden, ohne Signierung oder Geräteinstallation. Bestehende Warnungen in AppleServices und der Benachrichtigungserweiterung bleiben bestehen.
+- Release-Build für iOS/arm64 bestanden; das anschließend signierte Archiv wurde nach Freigabe installiert. Bestehende Warnungen in AppleServices und der Benachrichtigungserweiterung bleiben bestehen.
 - Reine Swift-Prüfungen für Wischrichtung, Wochen-/Jahreswechsel, 23-/25-Stunden-Tage, inverse Scrollposition, Farben, Negationen, Satzpräfixe sowie 1,2-/2,5-Sekunden-Endpunkte bestanden.
 - Gepinnter C-VAD: Stille und ungültige Fenster verworfen; echte Victoria-Probe mit 504 von 547 als Sprache erkannten 20-ms-Fenstern verarbeitet. Das ist kein Nachweis für Echounterdrückung.
 - Neue Hörproben einschließlich Frühstück I/II, Behandlung XII, Dr. Muster, Raum 2.14, Kalenderdaten und Uhrzeiten erzeugt; alle Wortmarken monoton und innerhalb der WAV-Dauer. Abbruch laufender ONNX-Synthese geprüft.
@@ -55,6 +55,6 @@ Die konkrete UI-Abnahme und ihre Dateien stehen in der Vorschau. Ein im Test gef
 
 **Offen auf dem iPhone:** echte deutsche Mikrofontranskription, Foundation-Models-Antwortqualität und Datumsfolgefragen, automatische Wiederaufnahme, leises Hineinsprechen, eigene Lautsprecher-Echos, Störgeräusche, Kopfhörerwechsel und Systemunterbrechungen. Der Simulator stellt keine nutzbare lokale deutsche Erkennung bereit; freie Modellaufrufe führen hier zur Fehlerbehandlung. Simulator-Audio belegt keine akustische Echounterdrückung oder reale Mikrofonqualität.
 
-Nach ausdrücklicher Freigabe von Vorschau und Hörproben: frisch sichern, ohne Deinstallation aktualisieren, dauerhafte Daten vergleichen und dann die offenen Gerätefälle durchführen. Es wurde in dieser Umsetzung kein Geräteupdate vorgenommen. Originale, Sicherungen, Modellgewichte und Buildprodukte bleiben ausgeschlossen.
+Das freigegebene Geräteupdate ist abgeschlossen: frisch gesichert, ohne Deinstallation aktualisiert und dauerhafte Daten erfolgreich verglichen. Die oben genannten akustischen und freien Gesprächsfälle bleiben offen. Originale, Sicherungen, Modellgewichte und Buildprodukte bleiben ausgeschlossen.
 
 API-Grundlagen: [Apple: Tool calling](https://developer.apple.com/documentation/foundationmodels/expanding-generation-with-tool-calling), [Apple: Sprachverarbeitung](https://developer.apple.com/documentation/avfaudio/avaudioionode/setvoiceprocessingenabled(_:)), [Apple: native Scroll-Ziele](https://developer.apple.com/documentation/swiftui/view/scrolltargetbehavior(_:)), [libfvad](https://github.com/dpirch/libfvad). Context7 lieferte für die spezifischen Foundation-Models-APIs keine Treffer; dafür wurden Apples Primärdokumentation und die installierten SDK-Schnittstellen verwendet.

@@ -2,7 +2,7 @@
 
 # Vorschau – Kalenderseiten und lokales Gespräch
 
-Build **2026092612**, Version **0.3.0**. Ausschließlich synthetische Termine. Noch kein Geräteupdate.
+Build **2026092612**, Version **0.3.0**. Ausschließlich synthetische Termine in dieser Vorschau. Nach Nutzerfreigabe auf dem iPhone 17 installiert; [Geräteupdate und Datenvergleich](../../continuous-voice-device-update.md) bestanden.
 
 - [Kalenderseiten: Wischen, Zurückgleiten und Wochenblättern](kalender-seiten.mp4)
 - [Victoria mit Text während echter Wiedergabe](victoria-text.mp4)
@@ -24,4 +24,4 @@ Die Videos sind Bildschirmmitschnitte ohne Tonspur. Die separaten WAV-Hörproben
 
 Für die Geräteabnahme stehen insbesondere reale Spracherkennung, Modellfolgefragen, automatische Gesprächsrunden und Echounterdrückung noch aus. Prüffolge nach Installation: „Was habe ich am 26. September 2026?“, „Und am Dienstag danach?“, „Wo ist der zweite Termin?“, eine Datumsberichtigung, „Habe ich keine Termine?“, mehrere Treffer und ein Änderungsvorschlag, der erst am Bildschirm bestätigt wird. Danach kurze/lange Denkpausen, Hineinsprechen, Lautsprecherecho, Geräusche, Pause, X, Hintergrund und Kopfhörerwechsel prüfen.
 
-Geräteinstallation erst nach ausdrücklicher Freigabe dieser Vorschau und der Hörproben gemäß [AGENTS.md](../../../AGENTS.md), dann frisch sichern, ohne Deinstallation aktualisieren und dauerhafte Daten vergleichen.
+Die gemäß [AGENTS.md](../../../AGENTS.md) erforderliche Freigabe liegt vor. Frische Sicherung, Update ohne Deinstallation und Vergleich der dauerhaften Daten sind abgeschlossen.

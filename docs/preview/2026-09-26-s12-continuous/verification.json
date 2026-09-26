@@ -62,7 +62,7 @@
       "valid_monotonic_marks": true
     }
   ],
-  "device_installation": "not performed; explicit preview and sample approval required",
+  "device_installation": "completed after explicit user approval; fresh durable-data backup, in-place update and strict retention comparison passed",
   "physical_device_checks": "pending: microphone recognition, live Foundation Models multi-turn quality, echo cancellation, barge-in, headphones and audio interruptions",
   "simulator_audio_after_stop": {
     "playing_frames": 142,
@@ -81,6 +81,20 @@
   "final_simulator_test_build": {
     "result": "passed",
     "log": "reha-continuous-simulator-final.log"
+  },
+  "physical_device_delivery": {
+    "build": "2026092612",
+    "previous_build": "2026092611",
+    "device": "iPhone 17",
+    "installed_and_launched": true,
+    "calendar_screen_verified": true,
+    "backup_files": 87,
+    "backup_bytes": 570969678,
+    "unchanged_database_tables": 14,
+    "durable_files_byte_identical": 78,
+    "durable_json_semantically_identical": 1,
+    "settings_unchanged": true,
+    "report": "../../continuous-voice-device-update.md"
   },
   "record_kind": "historical-technical-record",
   "original_attestation": "external-private-archive"
