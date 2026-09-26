@@ -11,7 +11,6 @@ use reha_core::{
     service::{self, Application, Platform},
     store::Store,
 };
-use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -30,8 +29,9 @@ fn read_photo_source(path: &std::path::Path) -> Result<Vec<u8>> {
     })
 }
 
-fn convert<T: Serialize, U: DeserializeOwned>(value: T) -> Result<U> {
-    serde_json::from_value(serde_json::to_value(value).map_err(storage)?).map_err(storage)
+// Preferences retain their version-compatible JSON storage boundary.
+fn decode_stored_preferences(value: Value) -> Result<Preferences> {
+    serde_json::from_value(value).map_err(storage)
 }
 pub(crate) fn storage(e: impl std::fmt::Display) -> AppError {
     AppError::Storage {
@@ -226,9 +226,13 @@ pub struct ReviewSnapshot {
 fn snapshot(run: domain::PipelineRun) -> Result<ReviewSnapshot> {
     Ok(ReviewSnapshot {
         revision: service::scan::revision(&run),
-        document: convert(run.document)?,
-        appointments: convert(run.appointments)?,
-        issues: convert(run.issues)?,
+        document: run.document.into(),
+        appointments: run
+            .appointments
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<_>>()?,
+        issues: run.issues.into_iter().map(Into::into).collect(),
         complete_page_confirmed: run.complete_page_confirmed,
         timezone: run.config.timezone,
         page_width: run.page_width,
@@ -823,7 +827,7 @@ impl NativeApplication {
             Ok(Diagnostics {
                 engine: run.engine,
                 manifest_json: run.model_manifest.to_string(),
-                stages: convert(run.stages)?,
+                stages: run.stages.into_iter().map(Into::into).collect(),
                 source_hash: run.document.source_hash,
                 total_ms: run.total_ms,
             })
@@ -876,8 +880,10 @@ impl NativeApplication {
         .await
     }
     pub async fn preferences(&self) -> Result<Preferences> {
-        self.blocking(|s| convert(service::settings::settings_value(&s, None).map_err(failure)?))
-            .await
+        self.blocking(|s| {
+            decode_stored_preferences(service::settings::settings_value(&s, None).map_err(failure)?)
+        })
+        .await
     }
     /// Versioned JSON transport for the shared calendar application contract.
     /// The same Application and SQLite connection serve photo and voice actions.
@@ -946,7 +952,7 @@ impl NativeApplication {
                 );
             let persisted =
                 service::settings::settings_value(&s, Some(existing)).map_err(failure)?;
-            let preferences = convert(persisted)?;
+            let preferences = decode_stored_preferences(persisted)?;
             // Preferences are durable. Neither cache preparation nor an OS
             // reminder/widget failure may report the user's save as rejected.
             let maintenance = service::agenda::sync_request(&s)
@@ -975,7 +981,10 @@ impl NativeApplication {
                 service::scan::save_review(
                     &s,
                     id,
-                    convert(appointments)?,
+                    appointments
+                        .into_iter()
+                        .map(TryInto::try_into)
+                        .collect::<Result<_>>()?,
                     complete,
                     false,
                     Some(selection),
@@ -1101,10 +1110,7 @@ impl NativeApplication {
                 id,
                 revision,
                 question_id,
-                value
-                    .map(serde_json::to_value)
-                    .transpose()
-                    .map_err(storage)?,
+                value.map(Into::into),
                 timezone,
             )
             .map_err(failure)
@@ -1399,7 +1405,11 @@ impl NativeApplication {
             let corners = if request.page_corners.is_empty() {
                 None
             } else {
-                let points: Vec<domain::Point> = convert(request.page_corners)?;
+                let points: Vec<domain::Point> = request
+                    .page_corners
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_>>()?;
                 Some(points.try_into().map_err(|_| AppError::Validation {
                     message: "Vier Seitenecken erforderlich.".into(),
                 })?)
@@ -1442,11 +1452,11 @@ impl NativeApplication {
 pub fn new_appointment(date: Option<String>) -> Result<Appointment> {
     let mut appointment = domain::Appointment::empty(uuid::Uuid::new_v4().to_string());
     appointment.date = date;
-    convert(appointment)
+    appointment.try_into()
 }
 #[uniffi::export]
 pub fn confirm_appointment_fields(appointment: Appointment) -> Result<Appointment> {
-    let mut a: domain::Appointment = convert(appointment)?;
+    let mut a: domain::Appointment = appointment.try_into()?;
     for field in reha_core::review::FIELDS {
         let value = reha_core::review::value(&a, field);
         let empty = value.is_null() || value.as_str().is_some_and(|s| s.is_empty());
@@ -1459,7 +1469,7 @@ pub fn confirm_appointment_fields(appointment: Appointment) -> Result<Appointmen
         assessment.confirmed_value = Some(value);
         assessment.confirmed_at = Some(chrono::Utc::now().timestamp());
     }
-    convert(a)
+    a.try_into()
 }
 #[uniffi::export]
 pub fn accept_suggestion(
@@ -1467,7 +1477,7 @@ pub fn accept_suggestion(
     suggestion_id: String,
     accept: bool,
 ) -> Result<Appointment> {
-    let mut a: domain::Appointment = convert(appointment)?;
+    let mut a: domain::Appointment = appointment.try_into()?;
     let suggestion = a
         .suggestions
         .iter_mut()
@@ -1479,19 +1489,18 @@ pub fn accept_suggestion(
         reha_core::review::set_value(&mut a, &field, value)
             .map_err(|e| failure(e.to_string().into()))?;
     }
-    convert(a)
+    a.try_into()
 }
 #[uniffi::export]
 pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<Vec<Issue>> {
-    let a: domain::Appointment = convert(appointment)?;
+    let a: domain::Appointment = appointment.try_into()?;
     let assessment = reha_core::readiness::appointment(&a, "", &timezone);
-    convert(
-        assessment
-            .issues
-            .into_iter()
-            .chain(assessment.warnings)
-            .collect::<Vec<_>>(),
-    )
+    Ok(assessment
+        .issues
+        .into_iter()
+        .chain(assessment.warnings)
+        .map(Into::into)
+        .collect())
 }
 
 #[cfg(test)]
@@ -2240,6 +2249,73 @@ fn allowed_trace_artifact(run: &domain::PipelineRun, artifact: &str) -> bool {
                 .refinement_attempts
                 .iter()
                 .any(|attempt| artifact == format!("region-{}.png", attempt.id)))
+}
+
+#[cfg(test)]
+mod preference_storage_tests {
+    use super::*;
+
+    #[test]
+    fn stored_preferences_keep_defaults_unknown_keys_and_explicit_nulls() {
+        let empty = decode_stored_preferences(json!({})).unwrap();
+        assert_eq!(
+            serde_json::to_value(empty).unwrap(),
+            serde_json::to_value(Preferences::default()).unwrap()
+        );
+        let stored = json!({
+            "future_preference": {"nested": [1, "kept in storage", null]},
+            "display_selection_revision": u64::MAX,
+            "timezone": "UTC", "reminder": null, "app_reminder_minutes": null,
+            "calendar_id": "calendar-fixture", "display_calendar_ids": ["b", "a"],
+            "completion_defaults": [{
+                "id": "default-fixture", "clinic": "Testklinik", "treatment": "Test",
+                "field": "duration_minutes", "value": u64::MAX,
+                "future_default_metadata": {"enabled": true}
+            }]
+        });
+        let previous: Preferences =
+            serde_json::from_value(serde_json::to_value(&stored).unwrap()).unwrap();
+        let decoded = decode_stored_preferences(stored).unwrap();
+        assert_eq!(decoded.timezone, "UTC");
+        assert_eq!(decoded.reminder, None);
+        assert_eq!(decoded.app_reminder_minutes, None);
+        assert!(decoded.reminder_sound);
+        assert_eq!(decoded.appearance, "system");
+        assert_eq!(decoded.display_calendar_ids, ["b", "a"]);
+        assert_eq!(
+            decoded.completion_defaults[0].value,
+            FieldValue::Unsigned { value: u64::MAX }
+        );
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            serde_json::to_value(previous).unwrap()
+        );
+    }
+
+    #[test]
+    fn malformed_known_preferences_remain_storage_errors() {
+        for stored in [
+            Value::Null,
+            json!({"timezone": null}),
+            json!({"reminder": -1}),
+            json!({"display_calendar_ids": "invalid"}),
+            json!({"completion_defaults": [{
+                "id": "fixture", "clinic": "", "treatment": "", "field": "location",
+                "value": {"unsupported": true}
+            }]}),
+        ] {
+            let previous =
+                serde_json::from_value::<Preferences>(serde_json::to_value(&stored).unwrap());
+            let previous_error = match previous {
+                Err(error) => error.to_string(),
+                Ok(_) => panic!("invalid fixture unexpectedly decoded"),
+            };
+            match decode_stored_preferences(stored) {
+                Err(AppError::Storage { message }) => assert_eq!(message, previous_error),
+                _ => panic!("invalid stored preferences must remain a storage error"),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

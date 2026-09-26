@@ -28,6 +28,7 @@ mod speech;
 pub use speech::*;
 mod application;
 mod application_projections;
+mod review_projections;
 pub use application::*;
 mod assistant;
 pub use assistant::*;
