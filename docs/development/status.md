@@ -87,6 +87,11 @@ audio checks passed; the cause remains unexplained. The broad run used the build
 at `53c6fe5`, before extraction v10 and the common interpretation provider. Host
 clamshell sleep inflated some test durations, so they are not latency measurements.
 The complete UI/audio release gate remains open.
+The formerly skipped reduced-motion case now controls the actual Settings switch
+on a disposable simulator, verifies the system accessibility state, checks the
+speaking control and still orb, and restores the previous setting. Its targeted
+run passes with zero skips. It remains part of the full suite; this isolated result
+does not resolve the audio failures below.
 The five affected cases now pass in separate current-build runs; the later two
 passed during serial simulator use. This does not resolve the intermittent abort
 or establish a complete UI pass. The [run record](../releases/history/2026-09-26-s17-ui-audio.md)

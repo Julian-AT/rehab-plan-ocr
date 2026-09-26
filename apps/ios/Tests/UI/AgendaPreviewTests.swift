@@ -3,6 +3,13 @@ import XCTest
 
 @MainActor final class AgendaPreviewTests: XCTestCase {
   private var app: XCUIApplication!
+  private var motionSettings: XCUIApplication?
+  private var originalMotionSetting: String?
+  private func motionSwitch(in settings: XCUIApplication) -> XCUIElement {
+    settings.switches.matching(
+      NSPredicate(format: "label IN %@", ["Reduce Motion", "Bewegung reduzieren"])
+    ).firstMatch
+  }
   private func launch(_ mode: String, extra: [String] = []) {
     continueAfterFailure = false
     app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
@@ -18,6 +25,18 @@ import XCTest
     waitForExpectations(timeout: 20)
   }
   override func tearDown() async throws {
+    if let settings = motionSettings, let original = originalMotionSetting {
+      settings.activate()
+      let toggle = motionSwitch(in: settings)
+      XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+      if toggle.value as? String != original {
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+      }
+      let restored = expectation(
+        for: NSPredicate(format: "value == %@", original), evaluatedWith: toggle)
+      await fulfillment(of: [restored], timeout: 10)
+      settings.terminate()
+    }
     guard let app else { return }
     app.terminate()
     app.launchArguments = ["--agenda-fixture", "cleanup"]
@@ -630,9 +649,37 @@ import XCTest
     capture("25-abgebrochene-wiedergabe")
   }
   func testReducedMotionSystemSettingKeepsVoiceUsable() throws {
-    guard UIAccessibility.isReduceMotionEnabled else {
-      throw XCTSkip("Enable ReduceMotionEnabled on the preview simulator")
-    }
+    continueAfterFailure = false
+    #if targetEnvironment(simulator)
+      // Exercise the actual accessibility environment; do not inject an app-only
+      // override. The test runner permits only disposable native-test simulators.
+      let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+      settings.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+      settings.launch()
+      for titles in [["Accessibility", "Bedienungshilfen"], ["Motion", "Bewegung"]] {
+        let row = settings.staticTexts.matching(NSPredicate(format: "label IN %@", titles))
+          .firstMatch
+        for _ in 0..<8 where !row.isHittable { settings.swipeUp() }
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+      }
+      let toggle = motionSwitch(in: settings)
+      XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+      let original = try XCTUnwrap(toggle.value as? String)
+      XCTAssertTrue(["0", "1"].contains(original))
+      motionSettings = settings
+      originalMotionSetting = original
+      if original != "1" {
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+      }
+      expectation(for: NSPredicate(format: "value == %@", "1"), evaluatedWith: toggle)
+      waitForExpectations(timeout: 10)
+      expectation(
+        for: NSPredicate { _, _ in UIAccessibility.isReduceMotionEnabled }, evaluatedWith: nil)
+      waitForExpectations(timeout: 10)
+    #else
+      throw XCTSkip("This test changes accessibility settings only on disposable simulators")
+    #endif
     launch("one")
     app.tabBars.buttons["Sprechen"].tap()
     XCTAssertTrue(app.buttons["speak"].isHittable)

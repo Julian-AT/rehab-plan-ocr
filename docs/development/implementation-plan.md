@@ -109,6 +109,22 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Real reduced-motion setting without a skipped test — 2026-09-26
+
+The existing accessibility UI case now opens Settings on the disposable simulator,
+enables Reduce Motion and waits for both the switch and `UIAccessibility` to confirm
+it. The speaking control remains usable and the orb pixels stay unchanged over a
+one-second observation. Teardown restores the original switch value, including
+after test failure. Physical test destinations cannot run the setting change.
+
+The first run exposed an ineffective center-of-row tap. Targeting the switch and
+waiting for its value fixes the test setup. Run 002 passes one test with zero
+failures/skips in 30.106 seconds, including restoration from on to off. Evidence:
+`.local/runs/reduced-motion-20260926-s18-002.xcresult`. The discoverable command is
+`make test-reduced-motion`; the case also remains in the full UI suite. Swift/shell
+format checks pass. This closes the formerly skipped isolated setting check, not
+the separate real-audio, whole-suite or physical usability gates.
+
 ### Custom OCR in the actual app import pipeline — 2026-09-26
 
 The normal Debug simulator app now has an isolated recognition probe that forbids

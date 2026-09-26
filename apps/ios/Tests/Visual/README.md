@@ -58,3 +58,11 @@ uv run --locked python tooling/checks/compare-visual-suite.py \
 The retained large-text references include arbitrary scroll positions. Those must
 match before claiming exact whole-image equivalence; different viewport positions
 are reported as differences and are not silently registered or masked away.
+
+## Actual reduced-motion setting
+
+`make test-reduced-motion` uses the same disposable UI runner. It opens Settings,
+enables Reduce Motion, verifies the real system accessibility state and checks the
+speaking control and stationary orb. Teardown restores the previous switch value.
+The test does not inject a SwiftUI environment override or change physical-device
+settings. It also runs as part of the complete UI suite.
