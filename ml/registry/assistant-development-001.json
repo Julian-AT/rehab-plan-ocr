@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "assistant-development-001",
+  "qualified": false,
+  "status": "experimental-quality-and-deployment-parity-failed",
+  "base_registry": "ml/registry/assistant-base.json",
+  "run_identity_sha256": "f60f76431622ad81eb4bb5d343b60cb6cd13128055ddd328b77c1faf83c35ca5",
+  "dataset_sha256": "676f0667dbf058b930520bfaa72ae5336cfe4fd8a386fdec95773672493ba89c",
+  "selection": {
+    "epoch": 7,
+    "steps": 392,
+    "stale_epochs": 3,
+    "best_epoch": 4,
+    "best_score": [
+      10,
+      23,
+      0.575,
+      0.3398752085528354
+    ],
+    "stopped": true
+  },
+  "checkpoint_sha256": "48d37f19ad21a1c14de53c51f4b7f5605bb15936f7f85e33c331a777c9d22256",
+  "artifact": {
+    "format": "GGUF-F16",
+    "sha256": "c522352314c4291de620ec947653c272ab7622eb477edca8cac422d157f2651d",
+    "bytes": 1198182240,
+    "path": ".local/runs/assistant-development-001/deployment/assistant.gguf"
+  },
+  "deployment_complete_answer_parity": {
+    "cases": 40,
+    "fusion_equal": 40,
+    "runtime_equal": 34,
+    "all_equal": false,
+    "report_sha256": "e66f23c95f46d357996714ce88358bd8fbb1c3d121ecba14da05c76b9212a7ed"
+  },
+  "validation": {
+    "cases": 40,
+    "families": 10,
+    "train_cases": 112,
+    "train_families": 28,
+    "human_review": "pending",
+    "independent_real_dialogues": 0,
+    "desktop_runtime_counts": {
+      "adapter": {
+        "schema_valid": 38,
+        "exact_match": 17,
+        "unsafe_mutation": 10
+      },
+      "fused": {
+        "schema_valid": 38,
+        "exact_match": 17,
+        "unsafe_mutation": 10
+      },
+      "baseline": {
+        "schema_valid": 18,
+        "exact_match": 4,
+        "unsafe_mutation": 7
+      },
+      "assistant": {
+        "schema_valid": 37,
+        "exact_match": 17,
+        "unsafe_mutation": 11
+      }
+    }
+  },
+  "limits": [
+    "Invented development data only; source families remain separate and no final holdout was opened.",
+    "Unsafe proposed mutations exceed baseline; no operation executed and no app provider changed.",
+    "Complete-answer GGUF parity fails 6/40 cases; no gate was relaxed.",
+    "No shipping iOS runtime, physical latency, human German review or listening qualification."
+  ]
+}
