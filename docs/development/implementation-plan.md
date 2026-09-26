@@ -109,6 +109,21 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Explicit simulator runtime identity — 2026-09-26
+
+UI tests now require the configured runtime identifier, version and OS build
+before compiling or touching a simulator. Local iOS 26.4/23E244 and hosted
+iOS 26.5/23F77 are explicit separate profiles; neither silently selects a newer
+installed runtime. Reuse additionally requires an owned, available iPhone 17 on
+that exact runtime. A new environment receipt is retained for every successful
+preflight, and complete CI artifacts include those receipts. Minimum-iOS and
+physical-hardware acceptance remain independent.
+
+Three new selection regressions cover runtime drift, unavailable builds and
+unowned/wrong-runtime device reuse. All 214 tool tests, repository lint and the
+actual read-only local preflight pass. The next hosted run will verify its profile
+against the runner inventory. These checks do not claim native-suite success.
+
 ### Focused native failure evidence — 2026-09-26
 
 CI now prepares a separate `native-triage` artifact after the UI step, retaining

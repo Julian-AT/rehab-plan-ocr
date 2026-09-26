@@ -4,6 +4,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
+runtime=$(python3 tooling/checks/native-simulator.py --profile "${REHA_SIMULATOR_PROFILE:-local}" --simulator "${REHA_TEST_SIMULATOR:-}")
 if [ "${1:-}" = --built ]; then shift; else sh tooling/build/build-native.sh simulator; fi
 # Build tests before signing the simulator copy. A subsequent `test` build would
 # reinstall the unsigned product and lose its App Group entitlements.
@@ -12,9 +13,8 @@ xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration De
   -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
 if [ -n "${REHA_TEST_SIMULATOR:-}" ]; then
   simulator=$REHA_TEST_SIMULATOR
-  xcrun simctl list devices --json | python3 -c 'import json,sys; devices=[d for group in json.load(sys.stdin)["devices"].values() for d in group]; assert any(d["udid"] == sys.argv[1] and d["name"].startswith("Termine-Native-Test-") for d in devices), "Only a disposable native-test simulator can be reused"' "$simulator"
 else
-  simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
+  simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$runtime")
 fi
 printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)

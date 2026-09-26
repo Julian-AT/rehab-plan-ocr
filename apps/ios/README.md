@@ -26,6 +26,14 @@ XCFrameworks. Die Rust-Bibliothek wird mit ONNX Runtime 1.22.0 verbunden. `check
 vergleicht generierte UniFFI-Bindings mit den versionierten Dateien. `test-native-bindings.sh`
 prüft echte Rust/Swift-Aufrufe, Revisionen, Bestätigung, Kalenderidentitäten und Abbruch.
 Die vollständige UI-Prüfung erzeugt einen Simulator ausschließlich mit synthetischen Daten.
+`config/testing/simulator.json` bindet dafür Version und Build der Laufzeit:
+lokal iOS 26.4/23E244, mit `REHA_SIMULATOR_PROFILE=ci` iOS 26.5/23F77.
+Eine fehlende oder abweichende Laufzeit führt vor dem Build zum Fehler; es gibt
+keinen automatischen Wechsel auf die neueste installierte Version. Ein bestehender
+`REHA_TEST_SIMULATOR` muss ein eigener iPhone-17-Testsimulator derselben Laufzeit sein.
+Jeder erfolgreiche Vorabcheck schreibt eine neue `simulator-environment-*.json`
+unter `apps/ios/build`; CI bewahrt diese Identität mit dem Testergebnis auf.
+Diese beiden Profile ersetzen keine Prüfung der Mindestversion iOS 26.0.
 
 `sh tooling/build/build-native.sh archive` erzeugt ein signiertes privates Archiv und führt die
 Paketprüfung aus. Das ist keine Geräteinstallation. Für Installation gilt die Freigabegrenze

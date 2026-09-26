@@ -1,0 +1,12 @@
+{
+  "local": {
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4",
+    "version": "26.4",
+    "build": "23E244"
+  },
+  "ci": {
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "version": "26.5",
+    "build": "23F77"
+  }
+}

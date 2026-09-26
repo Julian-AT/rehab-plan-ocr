@@ -35,6 +35,7 @@ jobs:
     timeout-minutes: 120
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+      REHA_SIMULATOR_PROFILE: ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,6 +79,7 @@ jobs:
           name: native-checks-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             apps/ios/build/*-bundle-verification.json
+            apps/ios/build/simulator-environment-*.json
             apps/ios/build/ci-ui.xcresult
             apps/ios/build/ci-ui.log
             apps/ios/build/EventTests/Logs/Test/*.xcresult
