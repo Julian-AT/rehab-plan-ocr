@@ -60,3 +60,34 @@ Even byte-exact agreement establishes only this intermediate diagnostic. A later
 export correction still requires its own frozen protocol, full intended corpus
 including previous successes, deployment runtime checks and the independent
 quality gates. No model is promoted by this experiment.
+
+## Actual result
+
+Implementation/protocol commit before execution: `038fa30`. The run
+`.local/runs/ocr-batchnorm-reciprocal-20260926-s19-001` passes all five byte-exact
+controls: three affine coefficients, the retained primitive graph output and
+the earlier separate C output. All protected source hashes remain unchanged.
+
+Hardware division reproduces **all 184,320 saved Paddle values byte-for-byte**,
+with zero maximum error. The reciprocal control retains the previous maximum
+Paddle difference of `9.5367431640625e-7`; hardware division differs from the
+saved native ONNX output by that same maximum. Both remain within the unchanged
+intermediate tolerance. No native inference session or full-model/corpus run
+was executed, and no deployment graph or model was changed.
+
+This identifies the reciprocal arithmetic as the remaining explanation for this
+first BatchNorm tensor when the Paddle offset grouping is retained. It does not
+prove that every later operation or optimized deployment graph has the same
+cause. An ONNX-level correction must separately reproduce the native control,
+survive the deployment optimizer and pass the entire intended corpus.
+
+Seven independent arithmetic/rejection tests passed before execution. Compiler,
+machine, library/source identities, prepared human protocol, all four coefficient
+vectors per mode and both outputs are retained. The development checks and clean
+source archive are in `.local/runs/ocr-reciprocal-development-20260926-s19-001`.
+
+Protocol SHA-256:
+`6d9b242b86a30c7d2552027a58973850e59709a26ed936fdd75112440182ec91`.
+
+Report SHA-256:
+`2c0dee07dcb9fc4f3da274ef867621e2458bc9f636b79110d0111580f88c40e0`.
