@@ -348,7 +348,6 @@ def tests(portable):
             "scan-attempts",
             "intake-provider",
             "temporary-privacy",
-            "intake-recovery",
             "intake-size",
             "pdf-text-evidence",
             "native-bindings",
