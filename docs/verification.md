@@ -47,7 +47,7 @@ The paired physical device is iPhone 17 (iPhone18,3), last-reported iOS 26.6 (23
 
 ## Data and remaining checks
 
-An incoming `verify/` directory contains 22 images with 21 distinct byte hashes. Its contents were not opened or used for tuning; originals remain unchanged, with a private hash inventory. The folder is excluded from Git and Docker. It has not been classified or assigned to a frozen evaluation split.
+After the workbench refactor, the user authorized exploratory processing of the images in `verify/`. All 20 unique HEIC originals were converted to full-resolution PNG and processed locally; an exact HEIC duplicate and the existing PNG were excluded from the denominator. Originals remain unchanged. [The real-image baseline](real-image-baseline.md) records the results, conversion checks and private review artifacts. This was not a verified accuracy benchmark or final holdout evaluation.
 
 No verified development benchmark, final holdout, training, or VLM qualification has been performed. Physical camera/HEIC and calendar flows, full accessibility testing, native revision/failure fault injection, Apple/Google `.ics` imports, and device-level content-network inspection remain open. Earlier synthetic robustness probes are retained privately but have not been rerun as a fresh accuracy benchmark for this refactor.
 

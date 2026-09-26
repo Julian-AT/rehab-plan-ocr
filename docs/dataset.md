@@ -2,7 +2,21 @@
 
 # Private dataset and local experiments
 
-No clinic images were present at implementation start. No clinical images have been moved or annotated, and no clinical accuracy result exists. The committed `synthetic-day.png` is drawn from invented content by `scripts/make-synthetic.py`; it contains eight timed rows, two identical treatments and one intentionally absent end time.
+The user supplied 20 distinct HEIC originals in `verify/` for exploratory testing. The directory also contains one byte-identical HEIC duplicate and an existing PNG. Originals remain in place; full-resolution, upright PNG copies and their hash manifest are under `data/private/converted/verify-2026-09-26-s10/`. No verified reference annotations or clinical accuracy result exist. See [the first real-image baseline](real-image-baseline.md).
+
+The committed `synthetic-day.png` is drawn from invented content by `scripts/make-synthetic.py`; it contains eight timed rows, two identical treatments and one intentionally absent end time.
+
+## HEIC conversion and exploratory checks
+
+```sh
+uv run scripts/convert-images.py verify data/private/converted/verify-2026-09-26-s10
+cargo build --release -p reha-core --features onnx-download
+python3 scripts/check-images.py data/private/converted/verify-2026-09-26-s10/manifest.json artifacts/private/verify-baseline-2026-09-26-s10
+```
+
+Use new output directories for another run; these commands refuse to overwrite existing results. Conversion reads the primary HEIC image, applies orientation, retains resolution and the ICC profile, and strips EXIF/XMP. PNG pixels are checked after writing, and original hashes are checked again. Identical source bytes share one PNG. HDR inputs are decoded to 8-bit RGB for the OCR pipeline; this dataset's originals were already 8-bit. The existing source PNG is untouched and excluded from this HEIC-only baseline.
+
+The checker uses the current portable CPU pipeline and saves per-image runs, a reproducible manifest, `report.json`, and a local `review.html` with images beside extracted fields. On macOS, each OCR process runs with network access denied by `sandbox-exec`. Other platforms require their own network isolation. These reports count missing fields and record latency; they do not calculate accuracy without verified references. All 20 inputs are exploratory examples, not a frozen final holdout. Do not equate image count with day count: OCR detected several pages with multiple date headings.
 
 ## Inventory and relocation
 
@@ -35,7 +49,7 @@ Save the full 20-day mapping privately. `python3 scripts/dataset.py freeze data/
 
 ## Reference annotations
 
-In the native desktop app, import a plan, open Labor, and create a provisional reference from the draft. Correct every printed item, including meals/breaks, titles, times, rooms and notes. Inspect the photograph and field evidence. Add missing items, remove false detections and resolve questions. Check the verification box only after comparing with the paper. Model output alone is never verified ground truth.
+In the native desktop app, import a plan, open Dataset, and create a provisional reference from the draft. Correct every printed item, including meals/breaks, titles, times, rooms, therapists and notes. Inspect the photograph and field evidence. Add missing items, remove false detections and resolve questions. Check the verification box only after comparing with the paper. Model output alone is never verified ground truth.
 
 Canonical labels live at `data/private/labels/<day-id>.json`. A reference has `schema_version: 1`, `day_id`, **all** original `document_hashes` for that day, `verified`, `reviewed_at`, frozen `split`, `appointments` (the shared draft contract including provenance) and `uncertainty_notes`. For multi-page days, combine the verified appointment lists once per logical page and include all alternate source hashes. Reference inclusion toggles do not remove items from evaluation: every printed item counts. Missing facts in the paper must remain missing and be explained, not guessed.
 
@@ -43,9 +57,9 @@ Canonical labels live at `data/private/labels/<day-id>.json`. A reference has `s
 
 1. Download a public pinned candidate: `uv run scripts/fetch-models.py --tier small` (or `tiny`, `medium`). Network access here downloads public model files only.
 2. Build the local CLI: `cargo build --release -p reha-core --features onnx-download`.
-3. Export an experiment configuration from app Settings. Keep its `engine` consistent with the model tier.
+3. Export an experiment configuration from Configuration. Keep its `engine` consistent with the model tier.
 4. Run `python3 scripts/benchmark.py --models models/private/small --config data/private/config-small.json`.
-5. Open the resulting `artifacts/private/benchmark-*/report.json` in Labor. Compare run JSON files side by side. Retain manifests and exact config/model/binary hashes.
+5. Open the resulting `artifacts/private/benchmark-*/report.json` in Dataset. Compare run JSON files side by side. Retain manifests and exact config/model/binary hashes.
 
 Each complete capture is compared against its day's verified reference. Reports distinguish distinct days from correlated alternate captures, include raw counts, and do not pretend correction time or peak memory was measured. The report's p95 is from the recorded machine, not from a physical iPhone. Cold CLI launches include model loading; app runs additionally record session reuse.
 
