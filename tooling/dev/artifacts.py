@@ -9,6 +9,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import math
 import os
 import shutil
 import stat
@@ -313,7 +314,7 @@ def apply(root, source):
 def space(root, peak_gib):
     reserve = json.loads((root / POLICY).read_text())["reserve_gib"]
     free = shutil.disk_usage(root).free / GIB
-    if peak_gib < 0 or free < reserve + peak_gib:
+    if not math.isfinite(peak_gib) or peak_gib < 0 or free < reserve + peak_gib:
         raise ValueError(f"{free:.1f} GiB free; need {reserve} GiB reserve + {peak_gib:g} GiB peak")
     return {"free_gib": free, "reserve_gib": reserve, "peak_gib": peak_gib}
 
@@ -338,4 +339,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ValueError as error:
+        raise SystemExit(str(error)) from error

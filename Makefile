@@ -36,6 +36,16 @@ check-storage:
 	python3 tooling/dev/artifacts.py space --peak-gib "$(PEAK_GIB)"
 
 
+# Reserve is additional to the expected temporary build/export/checkpoint peak.
+# Direct low-level scripts retain their historical recovery contracts; supported
+# heavy workflows enter here before generating any new artifacts.
+build test-ios build-assistant-native build-assistant-runtime build-assistant-trial: PEAK_GIB = 4
+train-ocr resume-ocr: PEAK_GIB = 4
+train-assistant resume-assistant: PEAK_GIB = 3
+export-ocr export-assistant assistant-smoke: PEAK_GIB = 8
+build test-ios build-assistant-native build-assistant-runtime build-assistant-trial \
+train-ocr resume-ocr train-assistant resume-assistant export-ocr export-assistant assistant-smoke: check-storage
+
 help:
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'

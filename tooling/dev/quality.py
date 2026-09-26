@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import re
@@ -130,13 +131,19 @@ def installed(tool):
     ) is not None and (tool != "xcodegen" or xcodegen_resources_ready(binary))
 
 
-def space(gib):
+def space(gib, *, working_reserve=False):
     free = shutil.disk_usage(ROOT).free / 1024**3
-    if free < gib:
+    reserve = (
+        json.loads((ROOT / "config/storage/retention.json").read_text())["reserve_gib"]
+        if working_reserve
+        else 0
+    )
+    required = reserve + gib
+    if not math.isfinite(gib) or gib < 0 or free < required:
         raise RuntimeError(
-            f"{free:.1f} GiB frei; dieser Schritt benötigt mindestens {gib:g} GiB. Private Daten bleiben erhalten."
+            f"{free:.1f} GiB frei; benötigt: {reserve:g} GiB Reserve + {gib:g} GiB Spitzenbedarf. Private Daten bleiben erhalten."
         )
-    print(f"Speicherprüfung: {free:.1f} GiB frei (Mindestreserve {gib:g} GiB).")
+    print(f"Speicherprüfung: {free:.1f} GiB frei (benötigt {required:g} GiB).")
 
 
 def bootstrap():
@@ -353,7 +360,7 @@ def main():
     elif args.action == "doctor":
         doctor(args.portable)
     elif args.action == "space":
-        space(float(args.value or 2))
+        space(float(args.value or 2), working_reserve=True)
     elif args.action in ["format", "lint"]:
         style(args.action == "format", args.portable)
     elif args.action == "test":
@@ -362,12 +369,12 @@ def main():
         tool_tests()
     elif args.action == "test-ios":
         doctor()
-        space(4)
+        space(4, working_reserve=True)
         run("sh", "tooling/checks/test-calendar-events.sh")
         run("sh", "tooling/build/build-native.sh", "test")
     else:
         doctor()
-        space(3)
+        space(4, working_reserve=True)
         run("sh", "tooling/build/build-native.sh", args.value or "simulator")
 
 

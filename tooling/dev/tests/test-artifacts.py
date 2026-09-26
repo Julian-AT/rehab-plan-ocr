@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
@@ -59,6 +60,15 @@ class CleanupTests(unittest.TestCase):
         (self.cache / "object").write_bytes(b"rebuilt later")
         self.assertEqual(artifacts.apply(self.root, self.manifest), result)
         self.assertEqual((self.cache / "object").read_bytes(), b"rebuilt later")
+
+    def test_peak_is_additional_and_cannot_bypass_the_reserve(self):
+        with patch.object(
+            artifacts.shutil, "disk_usage", return_value=SimpleNamespace(free=24 * artifacts.GIB)
+        ):
+            self.assertEqual(artifacts.space(self.root, 4)["reserve_gib"], 20)
+            for peak in [4.1, -1, float("nan"), float("inf")]:
+                with self.subTest(peak=peak), self.assertRaises(ValueError):
+                    artifacts.space(self.root, peak)
 
     def test_new_changed_and_disappeared_files_refuse_deletion(self):
         self.plan()

@@ -40,7 +40,25 @@ Spitzenbedarf. Logische Größen und belegte Blöcke sind keine garantierte Ersp
 APFS kann Extents teilen. Der Abschlussbeleg nennt die tatsächlich beobachtete
 Änderung des freien Volume-Speichers; parallele Systemaktivität bleibt ein Einfluss.
 
+Die großen Make-Einstiege für App-/Assistentenbuilds, Training/Wiederaufnahme und
+Export prüfen diese Reserve vor ihrer Arbeit. `quality.py build`, `test-ios` und
+die Speicherprüfungen des nativen Buildskripts verwenden dieselbe Regel. Die
+Spitzenbudgets sind konservative Planwerte (3/4/8 GiB), noch keine gemessenen
+Höchststände. Direkte historische Trainingsskripte behalten ihre quellidentischen
+Wiederaufnahmeverträge; sie sind kein alternativer Einstieg zur Speicherumgehung.
+
 Noch offen: zentrale unveränderliche Modellobjekte, checkpointbewusste Begrenzung
-aktiver Trainings, bereinigte alte Exportduplikate und automatische Durchsetzung
-der Reserve an allen großen Einstiegspunkten. Diese erste geprüfte Regel erlaubt
-deren Entfernung ausdrücklich noch nicht.
+aktiver Trainings und bereinigte alte Exportduplikate. Diese erste geprüfte Regel
+erlaubt deren Entfernung ausdrücklich noch nicht.
+
+## Ausgeführt am 26. September 2026
+
+Vorschau `.local/maintenance/intermediates-20260926-s18-002.json`, SHA-256
+`070214fc5ec02b67e01795aaa263e8df19ca2eaf79be9d5da8e6057d80a0eef5`:
+4.518 Dateien mit 148.424.974 logischen Bytes entfernt. Gemessene Volume-Differenz
+135.393.280 Bytes (129,1 MiB), frei danach 3.069.435.904 Bytes. **20 GiB nicht erreicht.**
+Die Inhaltsprüfsumme aller 116.748 geschützten Dateien/Symlink-Ziele blieb vor und
+nach Ausführung identisch:
+`85fd462bf4fc718859b00f389b9bb2833cba84d2216dbd35aa1463108557f39a`.
+Journal und Abschlussbeleg liegen neben der Vorschau. Eine abgeschlossene
+Wiederholung wird geprüft; zusätzlicher Systemverbrauch bleibt separat sichtbar.
