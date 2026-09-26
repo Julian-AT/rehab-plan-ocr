@@ -21,7 +21,7 @@
   "uniffi-source.txt": "adb66737a1dcc220969b25f438c4cc03108d8d2291dd6998a35a5683baabcfea",
   "kokoro-source.txt": "107d0eaf20562b0d93a12b37ec391e4cf7750ab4c7f418b3e90f544c22b89ad6",
   "kokoro-apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-  "kokoro-onnx-mit.txt": "807ef3768c755f1d4ab609bc73cd833a88f304717ac9116bfe9c052cd90f4f74",
+  "kokoro-onnx-mit.txt": "f61fdd0217de9ece8fa699912848d91187d84879fc2e689f0906d0c1299e955e",
   "espeak-ng-gpl-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
   "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a"
 }
