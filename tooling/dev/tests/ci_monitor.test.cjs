@@ -93,7 +93,7 @@ test('action verification checks actual pinned commits and rejects floating tags
 function evidenceFixture(mutate = () => {}) {
   const workflow = { id: 123, head_sha: sha, run_attempt: 2, status: 'completed', conclusion: 'failure' };
   const artifact = { id: 456, name: `native-checks-${sha}-2`, expired: false,
-    workflow_run: { id: 123, head_sha: sha }, digest: 'sha256:reported-by-service' };
+    workflow_run: { id: 123, head_sha: sha }, digest: 'sha256:reported-by-service', size_in_bytes: 1024 };
   mutate(workflow, artifact);
   const calls = [];
   const run = (binary, args) => {
@@ -153,16 +153,44 @@ test('stale commits, pending runs, expired artifacts and wrong attempts cannot d
   } finally { rmSync(directory, { recursive: true }); }
 });
 
-test('failed downloads retain an explicitly incomplete receipt', () => {
+test('download deadlines follow artifact size while failures retain incomplete evidence', () => {
   const directory = mkdtempSync(join(tmpdir(), 'reha-ci-interrupted-'));
   try {
-    const fixture = evidenceFixture();
+    const fixture = evidenceFixture((_, artifact) => { artifact.size_in_bytes = 1418587080; });
     const output = join(directory, 'partial');
     assert.throws(() => main(['evidence', '123', '--repo', 'owner/repo', '--commit', sha,
-      '--output', output], (binary, args) => {
-      if (args[0] === 'run') throw new Error('Download interrupted');
+      '--output', output], (binary, args, options) => {
+      if (args[0] === 'run') {
+        assert.equal(options.timeout, 1473000);
+        throw Object.assign(new Error('Download interrupted'), { code: 'ETIMEDOUT' });
+      }
+      assert.equal(options, undefined);
       return fixture.run(binary, args);
     }), /interrupted/);
-    assert.equal(JSON.parse(readFileSync(join(output, 'receipt.json'))).status, 'download-started');
+    const receipt = JSON.parse(readFileSync(join(output, 'receipt.json')));
+    assert.equal(receipt.status, 'download-failed');
+    assert.equal(receipt.failureCode, 'ETIMEDOUT');
+    assert.equal(receipt.downloadTimeoutMs, 1473000);
+  } finally { rmSync(directory, { recursive: true }); }
+});
+
+test('download deadline bounds and malformed sizes cannot escape the contract', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'reha-ci-size-'));
+  try {
+    for (const [size, expected] of [[0, 300000], [10 * 1024 ** 3, 1800000]]) {
+      const fixture = evidenceFixture((_, artifact) => { artifact.size_in_bytes = size; });
+      const result = JSON.parse(main(['evidence', '123', '--repo', 'owner/repo', '--commit', sha,
+        '--output', join(directory, String(size))], (binary, args, options) => {
+        if (args[0] === 'run') assert.equal(options.timeout, expected);
+        return fixture.run(binary, args);
+      }));
+      assert.equal(result.downloadTimeoutMs, expected);
+    }
+    for (const size of [undefined, -1, '1024', Number.POSITIVE_INFINITY]) {
+      const fixture = evidenceFixture((_, artifact) => { artifact.size_in_bytes = size; });
+      assert.throws(() => main(['evidence', '123', '--repo', 'owner/repo', '--commit', sha,
+        '--output', join(directory, 'invalid')], fixture.run), /size/);
+      assert.equal(existsSync(join(directory, 'invalid')), false);
+    }
   } finally { rmSync(directory, { recursive: true }); }
 });

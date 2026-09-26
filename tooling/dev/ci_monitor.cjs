@@ -31,9 +31,7 @@ Requires Node.js 22+ and an authenticated GitHub CLI. Read commands never dispat
 or cancel workflows. Dispatch never pushes commits or changes the remote branch.
 `;
 
-function execute(binary, args) {
-  // Complete UI result bundles include retained video and can exceed a gigabyte.
-  const timeout = binary === 'gh' && args[0] === 'run' && args[1] === 'download' ? 300000 : 60000;
+function execute(binary, args, { timeout = 60000 } = {}) {
   return execFileSync(binary, args, {
     encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024,
     env: { ...process.env, GH_PROMPT_DISABLED: '1', GH_PAGER: 'cat' },
@@ -124,15 +122,29 @@ function main(args, run = execute, read = readFileSync) {
       || artifact.workflow_run?.head_sha !== values.commit) {
       throw new Error('Artifact is expired or belongs to another run/commit.');
     }
+    if (!Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes < 0) {
+      throw new Error('Artifact size is missing or invalid.');
+    }
+    // Allow 1 MiB/s plus setup for retained videos; bound downloads to 5–30 minutes.
+    const downloadTimeoutMs = Math.max(300000,
+      Math.min(1800000, Math.ceil(artifact.size_in_bytes / 1048576) * 1000 + 120000));
     const output = resolve(values.output);
     mkdirSync(output); // Refuse all existing destinations, including incomplete prior downloads.
     const contents = join(output, 'contents');
     mkdirSync(contents);
     const receipt = { ...result, selectedArtifact: artifact.id, status: 'download-started',
-      archiveDigestVerified: false };
+      archiveDigestVerified: false, downloadTimeoutMs };
     const record = () => writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
     record();
-    gh('run', 'download', id, '--repo', repo, '--name', name, '--dir', contents);
+    try {
+      run('gh', ['run', 'download', id, '--repo', repo, '--name', name, '--dir', contents],
+        { timeout: downloadTimeoutMs });
+    } catch (error) {
+      receipt.status = 'download-failed';
+      receipt.failureCode = error.code || 'DOWNLOAD_ERROR';
+      record();
+      throw error;
+    }
     receipt.files = fileInventory(contents);
     if (!Object.keys(receipt.files).length) throw new Error('Downloaded evidence is empty.');
     receipt.status = 'downloaded';
