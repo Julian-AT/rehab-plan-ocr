@@ -58,3 +58,14 @@ Aufnahmeschwankungen von den bereits pixelgleichen Ansichten.
 Der [Aufnahmevertrag](capture-contract.md) dokumentiert die einzelnen neun
 historischen Abweichungen und legt überprüfbare Scrollpositionen für den nächsten
 Kandidatenlauf fest. Die Originalbilder und Vergleichsschwellen bleiben erhalten.
+
+Die Ergebnisauswertung prüft ab 26. September 2026 zusätzlich die Identitäten der drei
+Aufnahmetests im vollständigen XCTest-Baum. Jeder muss im richtigen Testbundle
+genau einmal bestanden sein; die zugehörigen Bilder müssen aus dem jeweils
+festgelegten Test stammen. Damit können auch Aufnahmen eines größeren gemeinsamen
+UI-Laufs ausgewertet werden. Dessen Gesamtstatus muss weiterhin bestanden sein,
+ohne fehlgeschlagene oder übersprungene Tests. Fehlende, wiederholte oder fremde
+Aufnahmetests lassen sich nicht durch eine passende Gesamtzahl ersetzen.
+Pixelvergleich, Originalhashes und Ausschluss der oberen 160 Systempixel ändern
+sich dadurch nicht. Ein historisches Result-Bundle wird weiterhin nicht dem
+heutigen App-Quellstand zugeschrieben.

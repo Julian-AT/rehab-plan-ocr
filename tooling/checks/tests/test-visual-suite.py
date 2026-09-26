@@ -39,7 +39,45 @@ class VisualSuiteTests(unittest.TestCase):
                 }
             )
         (self.baseline / "baseline.json").write_text(json.dumps({"images": entries}))
-        self.manifest = [{"attachments": attachments}]
+        self.manifest = [
+            {
+                "attachments": attachments,
+                "testIdentifier": suite.CAPTURE_TESTS[0],
+                "testIdentifierURL": self.capture_url(suite.CAPTURE_TESTS[0]),
+            }
+        ]
+
+    @staticmethod
+    def capture_url(identifier):
+        return "test://com.apple.xcode/Termine/TermineUITests/" + identifier.removesuffix("()")
+
+    def capture_tree(self):
+        return {
+            "testNodes": [
+                {
+                    "nodeType": "Test Suite",
+                    "children": [
+                        {
+                            "nodeType": "Test Case",
+                            "nodeIdentifier": identifier,
+                            "nodeIdentifierURL": self.capture_url(identifier),
+                            "result": "Passed",
+                        }
+                        for identifier in suite.CAPTURE_TESTS
+                    ],
+                }
+            ]
+        }
+
+    @staticmethod
+    def passed_summary(count=3):
+        return {
+            "result": "Passed",
+            "totalTestCount": count,
+            "passedTests": count,
+            "failedTests": 0,
+            "skippedTests": 0,
+        }
 
     def compare(self):
         (self.attachments / "manifest.json").write_text(json.dumps(self.manifest))
@@ -69,6 +107,54 @@ class VisualSuiteTests(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertTrue(all("exactly one" in r["error"] for r in result["images"]))
 
+    def test_picture_from_another_test_is_not_a_capture(self):
+        self.manifest[0]["testIdentifier"] = suite.CAPTURE_TESTS[1]
+        self.manifest[0]["testIdentifierURL"] = self.capture_url(suite.CAPTURE_TESTS[1])
+        result = self.compare()
+        self.assertFalse(result["passed"])
+        self.assertTrue(all("declared test" in r["error"] for r in result["images"]))
+
+    def test_required_capture_identities_can_belong_to_a_complete_larger_run(self):
+        tree = self.capture_tree()
+        self.assertTrue(suite.capture_test_status(self.passed_summary(), tree)["passed"])
+        tree["testNodes"].append(
+            {"nodeType": "Test Case", "nodeIdentifier": "Other/test()", "result": "Passed"}
+        )
+        status = suite.capture_test_status(self.passed_summary(4), tree)
+        self.assertTrue(status["passed"])
+        self.assertTrue(status["complete_run_passed"])
+        self.assertEqual(len(status["required_tests"]), 3)
+
+    def test_counts_cannot_substitute_missing_failed_skipped_or_retried_captures(self):
+        for change in ("missing", "wrong-bundle", "failed", "skipped", "duplicate", "unknown"):
+            with self.subTest(change=change):
+                tree = self.capture_tree()
+                cases = tree["testNodes"][0]["children"]
+                if change == "missing":
+                    cases.pop()
+                elif change == "wrong-bundle":
+                    cases[0]["nodeIdentifierURL"] = cases[0]["nodeIdentifierURL"].replace(
+                        "/TermineUITests/", "/UnrelatedTests/"
+                    )
+                elif change == "duplicate":
+                    cases.append(dict(cases[0]))
+                else:
+                    cases[0]["result"] = change.title()
+                status = suite.capture_test_status(self.passed_summary(), tree)
+                self.assertFalse(status["passed"])
+
+    def test_failed_incomplete_or_skipped_surrounding_run_remains_failed(self):
+        for change in (
+            {"result": "Failed", "failedTests": 1},
+            {"passedTests": 2},
+            {"skippedTests": 1},
+            {"totalTestCount": None},
+            {"totalTestCount": True},
+        ):
+            with self.subTest(change=change):
+                summary = self.passed_summary() | change
+                self.assertFalse(suite.capture_test_status(summary, self.capture_tree())["passed"])
+
     def test_export_indexes_only_a_disposable_copy_and_records_unchanged_original(self):
         bundle = self.root / "source.xcresult"
         bundle.mkdir()
@@ -91,6 +177,7 @@ class VisualSuiteTests(unittest.TestCase):
             return '{"result":"Passed"}'
 
         self.assertEqual(suite.export_evidence(bundle, output, run), {"result": "Passed"})
+        self.assertTrue((output / "test-tree.json").is_file())
         receipt = json.loads((output / "source-result.json").read_text())
         self.assertTrue(receipt["unchanged"])
         self.assertEqual(set(receipt["files"]), {"Data"})
@@ -130,13 +217,8 @@ class VisualSuiteTests(unittest.TestCase):
                 (attachments / path.name).write_bytes(path.read_bytes())
             (attachments / "manifest.json").write_text(json.dumps(self.manifest))
             (destination / "source-result.json").write_text("{}")
-            return {
-                "result": "Passed",
-                "totalTestCount": 3,
-                "passedTests": 3,
-                "failedTests": 0,
-                "skippedTests": 0,
-            }
+            (destination / "test-tree.json").write_text(json.dumps(self.capture_tree()))
+            return self.passed_summary()
 
         with (
             patch.object(suite, "ROOT", self.root),

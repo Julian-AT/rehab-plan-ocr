@@ -29,6 +29,72 @@ spec = importlib.util.spec_from_file_location(
 )
 comparison = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(comparison)
+CAPTURE_TESTS = (
+    "CalmCalendarTests/testMutedPaletteCardsListAndLegend()",
+    "CalmCalendarTests/testLargeCalendarText()",
+    "CalmCalendarTests/testVisualFinishedDay()",
+)
+
+
+def capture_owner(name):
+    if name.startswith("large-"):
+        return CAPTURE_TESTS[1]
+    if name.startswith("past-events-"):
+        return CAPTURE_TESTS[2]
+    if name.startswith(("cards-", "list-", "legend-")):
+        return CAPTURE_TESTS[0]
+    raise ValueError(f"No declared capture test for {name}")
+
+
+def belongs_to_capture(identifier, url, expected):
+    return (
+        identifier == expected
+        and isinstance(url, str)
+        and url.startswith("test://")
+        and url.endswith("/TermineUITests/" + expected.removesuffix("()"))
+    )
+
+
+def capture_test_status(summary, tests):
+    cases = []
+
+    def visit(nodes):
+        for node in nodes:
+            if node.get("nodeType") == "Test Case":
+                cases.append(node)
+            visit(node.get("children", []))
+
+    visit(tests.get("testNodes", []))
+    captures = []
+    for identifier in CAPTURE_TESTS:
+        matches = [
+            case
+            for case in cases
+            if belongs_to_capture(
+                case.get("nodeIdentifier"), case.get("nodeIdentifierURL"), identifier
+            )
+        ]
+        captures.append(
+            {
+                "identifier": identifier,
+                "results": [case.get("result") for case in matches],
+                "passed": len(matches) == 1 and matches[0].get("result") == "Passed",
+            }
+        )
+    total = summary.get("totalTestCount")
+    complete = (
+        summary.get("result") == "Passed"
+        and type(total) is int
+        and total >= len(CAPTURE_TESTS)
+        and summary.get("passedTests") == total
+        and summary.get("failedTests") == 0
+        and summary.get("skippedTests") == 0
+    )
+    return {
+        "passed": complete and all(case["passed"] for case in captures),
+        "complete_run_passed": complete,
+        "required_tests": captures,
+    }
 
 
 def sha(path):
@@ -46,7 +112,7 @@ def compare_suite(baseline, attachments, output):
             raise ValueError("Baseline identity differs from its preserved catalog")
         pattern = re.compile(r"^calm-" + re.escape(Path(name).stem) + r"(?:_|\.png$)")
         matches = [
-            attachment
+            (test, attachment)
             for test in manifest
             for attachment in test["attachments"]
             if pattern.match(attachment["suggestedHumanReadableName"])
@@ -54,10 +120,16 @@ def compare_suite(baseline, attachments, output):
         result = {"baseline": name, "passed": False}
         if len(matches) != 1:
             result["error"] = f"Expected exactly one capture, found {len(matches)}"
-        elif matches[0]["isAssociatedWithFailure"]:
+        elif not belongs_to_capture(
+            matches[0][0].get("testIdentifier"),
+            matches[0][0].get("testIdentifierURL"),
+            capture_owner(name),
+        ):
+            result["error"] = "Capture does not belong to its declared test"
+        elif matches[0][1]["isAssociatedWithFailure"]:
             result["error"] = "Capture belongs to a failed test"
         else:
-            attachment = matches[0]
+            attachment = matches[0][1]
             filename = attachment["exportedFileName"]
             if Path(filename).name != filename:
                 raise ValueError("Attachment filename escapes its export directory")
@@ -137,6 +209,8 @@ def export_evidence(bundle, output, run=command):
             )
         )
         (output / "test-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        tests = json.loads(run(["get", "test-results", "tests", "--path", str(working)]))
+        (output / "test-tree.json").write_text(json.dumps(tests, indent=2) + "\n")
         run(
             [
                 "export",
@@ -183,12 +257,8 @@ def main():
                     "sh",
                     "tooling/checks/test-native-ui.sh",
                     *[
-                        "-only-testing:TermineUITests/CalmCalendarTests/" + name
-                        for name in [
-                            "testMutedPaletteCardsListAndLegend",
-                            "testLargeCalendarText",
-                            "testVisualFinishedDay",
-                        ]
+                        "-only-testing:TermineUITests/" + test.removesuffix("()")
+                        for test in CAPTURE_TESTS
                     ],
                     "-resultBundlePath",
                     str(result_bundle),
@@ -211,13 +281,11 @@ def main():
         )
     summary = export_evidence(result_bundle, output)
     report = compare_suite(BASELINE, output / "attachments", output / "previews")
-    report["tests_passed"] = (
-        summary.get("result") == "Passed"
-        and summary.get("totalTestCount") == 3
-        and summary.get("passedTests") == 3
-        and summary.get("failedTests") == 0
-        and summary.get("skippedTests") == 0
+    report["capture_tests"] = capture_test_status(
+        summary, json.loads((output / "test-tree.json").read_text())
     )
+    report["tests_passed"] = report["capture_tests"]["passed"]
+    report["test_tree_sha256"] = sha(output / "test-tree.json")
     report["passed"] = report["passed"] and report["tests_passed"]
     # A supplied historical bundle does not identify the app with today's checkout.
     report["capture_mode"] = "fresh" if args.capture else "provided-result"
