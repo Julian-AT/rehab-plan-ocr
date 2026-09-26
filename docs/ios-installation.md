@@ -12,7 +12,8 @@ The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`
 2. Open Xcode's **Window → Devices and Simulators** and select the phone.
 3. On the phone, enable **Settings → Privacy & Security → Developer Mode**, restart and confirm. The option appears after pairing with Xcode. [Apple Developer Mode instructions](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device)
 4. In Xcode's device view, click **+** under **Installed Apps**, select the IPA and wait for installation. [Apple installation instructions](https://help.apple.com/xcode/mac/current/en.lproj/devade83d1d7.html)
-5. Open **Reha Calendar Lab** on the phone.
+5. If iOS blocks the first launch, open **Settings → General → VPN & Device Management**, select the developer entry for the app and trust its certificate. This approval must be completed on the phone. [Apple's Personal Team instructions](https://developer.apple.com/documentation/appclip/fruta-building-a-feature-rich-app-with-swiftui)
+6. Open **Reha Calendar Lab** on the phone.
 
 Use the same bundle identifier and signing team when updating. The application's retained scans and import ledger are preserved by an ordinary app update.
 

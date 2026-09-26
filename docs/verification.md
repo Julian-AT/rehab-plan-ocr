@@ -43,7 +43,7 @@ Committed synthetic tests cover split weekday headings, conflicting dates and we
 
 Build environment: Apple M4 Pro / 24 GiB, Rust 1.98.1, Node 22.22.3, npm 11, Xcode 26.4 (17E192), Swift 6.3, ONNX Runtime 1.22.0, `ort` 2.0.0-rc.10. Deployment minimum is iOS 17. Native models use the portable CPU adapter; no Apple recognition is required.
 
-The paired physical device is iPhone 17 (iPhone18,3), last-reported iOS 26.6 (23G71), and remains unavailable. No physical installation, live OS validation, latency percentile, memory-pressure, thermal, or repeated-scan acceptance result is claimed.
+During the initial build checks, the paired physical iPhone 17 was unavailable. Subsequent installation evidence is recorded below. No physical latency percentile, memory-pressure, thermal, or repeated-scan acceptance result is claimed.
 
 ## Data and remaining checks
 
@@ -64,4 +64,12 @@ Fresh checks on September 26, 2026:
 - **Three iPhone 17 / iOS 26.4 simulator tests passed, zero skipped.** Tests exercised native OCR/persistence; creation of a separate calendar; seven sample events saved there rather than in the system default; repeated import without duplicates; calendar reuse after relaunch and rename; unchanged system default; and failure without calendar creation when a saved destination is unavailable. Test-created events and calendars were removed afterward.
 - Signed `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`: 37,343,104 bytes; SHA256 `8534ce72bd0ef87739ba7586b65bcaa1d0f15bd453d96c437fd42df4088284da`. Bundle version 0.1.1 and identifier `at.rehakalender.personal` verified. `codesign --verify --deep --strict` passed. The profile covers the paired iPhone 17 and expires **September 26, 2026, 10:57 UTC**. The unversioned IPA alias now points to this build.
 
-Evidence is under `artifacts/private/dedicated-calendar/`: `ios-simulator-build.log`, `ios-device-build.log`, `native-tests.log`, `native-tests.xcresult`, and `signing-check.json`. The physical phone remains unavailable; no installation or physical-device acceptance is claimed. See [installation and calendar visibility instructions](ios-installation.md).
+Evidence is under `artifacts/private/dedicated-calendar/`: `ios-simulator-build.log`, `ios-device-build.log`, `native-tests.log`, `native-tests.xcresult`, and `signing-check.json`. See [installation and calendar visibility instructions](ios-installation.md).
+
+## Physical installation — September 26, 2026
+
+The connected device reports **iPhone 17 (iPhone18,3), iOS 26.6 (23G71)**, with Developer Mode enabled. The IPA hash, signature, profile expiry and device eligibility were checked before installation. `devicectl device install app` succeeded, and querying installed applications confirmed **Reha Calendar Lab 0.1.1**, bundle version 0.1.1.
+
+The initial launch was denied by iOS with a signing/entitlements/developer-trust security error. The package's local signature verification passed; the user was directed to trust the developer certificate under Settings → General → VPN & Device Management. **The subsequent launch succeeded at 15:57 local time.** No recognition or calendar acceptance result is inferred from installation and launch alone.
+
+Private evidence: `physical-install.json`, `installed-app.json`, `physical-device.json`, `physical-launch.json` (initial denial), and `physical-launch-retry.json` (successful launch) under `artifacts/private/dedicated-calendar/`.
