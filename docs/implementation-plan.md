@@ -40,7 +40,7 @@ Both custom models must be trained and evaluated before the project is complete.
 
 - [ ] Mechanical moves to apps/packages/ml/tooling/config/docs/.github.
 - [ ] Consumer inventory, documentation consolidation and verified private migration.
-- [ ] Separate make targets for restore/generate/convert/build/test/package.
+- [x] Separate make targets for restore/generate/convert/build/test/package.
 - [ ] Read-only normal-build manifest verification and identity-based caches.
 - [x] Independent locked training and app-tooling environments.
 - [ ] Discoverable isolated tests and portable/native/simulator/policy/package CI.
@@ -62,7 +62,7 @@ Both custom models must be trained and evaluated before the project is complete.
 
 ### 4. Assistant, voice and qualification
 
-- [ ] Validated Qwen3-0.6B LoRA/fusion/export smoke test.
+- [x] Qwen3-0.6B LoRA/fusion/export desktop smoke test (quality gate failed).
 - [ ] Checked German structured-intent data and independent dialogue families.
 - [ ] Common provider contract; compare rules/Apple/untuned/tuned models.
 - [ ] Evaluated custom checkpoint and supported offline capability fallbacks.
@@ -111,13 +111,28 @@ the current request when older FoundationModels sessions exceed context limits.
 Title/duration changes produce minimal patches. Broader German dialogue coverage
 and actual older-iOS inference remain open.
 
-Verification: 157 Rust core tests passed; workspace Clippy passed with warnings
+Verification: 165 Rust workspace tests passed; workspace Clippy passed with warnings
 as errors. The native calendar suite completed 14 tests with one simulator-only
 skip and zero failures. Voice/date/state probes and four model-restoration tests
 passed. The current simulator app builds. The Today-link UI regression passed.
 A broad UI run found an audio timeout and an obsolete save-receipt assertion;
-the isolated real-audio rerun passed. Save-receipt verification is being repeated
-against the existing conversation wording. The full UI suite is not yet green.
+the isolated real-audio rerun passed. The completed conversation receipt now
+survives a subsequent question; the save-confirmation UI regression passed after
+correcting its obsolete wording. The full UI suite is not yet green.
+
+Feature, Apple/Rust package, tooling and ML moves preserve source behavior and
+resource contents. Build targets separate online restoration, offline conversion,
+binding generation, compilation and packaging; normal builds verify pinned assets.
+An offline simulator build passed. Source/toolchain caches cover phonemizer builds;
+broader cache work, private working-asset migration and cleanup remain open.
+Agenda event projections now cache parsed timestamps, with wire values preserved
+through edits and encoding. Two targeted agenda/voice UI tests passed. A five-pair
+desktop microbenchmark is recorded in
+[the projection experiment](../ml/experiments/2026-09-26-s16-calendar-projection.md).
+Schema 10 adds disposable compact archive summaries, deterministic chronological
+indexes and transactional backfill. Original runs/preferences remain unchanged;
+four new cache/migration regressions, the workspace suite and simulator build pass.
+Archive pagination is not yet complete.
 
 Training environments are separately locked and load successfully. The official
 PP-OCRv6 Small training checkpoint matches all 422 state tensors and the exact
@@ -125,7 +140,12 @@ shipping dictionary. Four optimizer steps on eight invented training lines,
 export and conversion to ONNX completed; 24/24 Paddle/ONNX parity cases passed.
 See [the experiment record](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
 This is a synthetic pipeline smoke test, not a promoted OCR checkpoint or a
-real-photo quality result. Qwen3 training/export verification is in progress.
+real-photo quality result. Qwen3 completed eight LoRA steps, fusion, GGUF export and
+local runtime execution with hashes and lineage. Its first-token fusion probe
+passed 12/12 cases; full-answer parity is unverified. Both base and tuned artifacts
+failed all 12 strict structured-output cases and remain unqualified. See
+[the assistant experiment](../ml/experiments/2026-09-26-s16-assistant-compatibility.md).
+The 47 portable Python tooling tests pass, including eight intent-contract tests.
 
 The known iPhone 17 was unavailable during the read-only device inventory. No
 device was updated. No real-device speed, energy, thermal or usability improvement

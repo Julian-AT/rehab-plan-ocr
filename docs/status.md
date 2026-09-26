@@ -23,12 +23,22 @@ a fresh backup and a persistent-data comparison without uninstalling.
   calendar snapshots invalidate pending previews.
 - New stores default to 30-day completed-source retention. Schema 9 adds durable
   aggregate deletion, including PDF originals, with interruption recovery.
+- Schema 10 caches compact scan summaries with transactional backfill and
+  invalidation on recognition changes. Original evidence and preferences survive
+  migration. Archive pagination is still being implemented.
 - Recognition preserves unreadable day boundaries and rejects clipped column
   rereads. German date corrections and explicit conversation states have targeted
   regressions; broader dialogue and patient testing are still required.
-- The Rust core passes 157 tests and workspace Clippy. Native calendar tests pass
+- The Rust workspace passes 165 tests and Clippy. Native calendar tests pass
   with one simulator-only skip. Current simulator builds pass. The full UI suite
   is still under verification; the ledger records failures and targeted reruns.
+- iOS sources now live by feature; Apple and Rust packages, model development,
+  tooling, runtime model manifests and notices have dedicated locations. Normal
+  builds verify assets/bindings without restoring or converting them. An offline
+  simulator build passed; private-asset migration and documentation cleanup remain.
+- Agenda timestamps are parsed once per event value. A paired desktop projection
+  microbenchmark improved from 220.14 ms to 13.37 ms median including construction;
+  this does not establish real-device or full-interaction performance.
 
 ## Dataset and models
 
@@ -43,6 +53,11 @@ Separate OCR and MLX-LM environments are locked under `ml/training/`. A matching
 trainable OCR checkpoint loads and has completed a synthetic training/export
 smoke test with 24/24 ONNX parity cases. See the
 [model experiment](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
+Qwen3-0.6B also completed an eight-step LoRA/fusion/GGUF smoke run and local runtime
+execution. Both untuned and briefly tuned models failed the 12-case structured
+output diagnostic: all outputs were rejected. The artifacts remain experimental,
+with no app provider change. See the
+[assistant experiment](../ml/experiments/2026-09-26-s16-assistant-compatibility.md).
 
 Custom model qualification, frozen real-data evaluation, human-authored dialogue
 evaluation, local voice listening tests, complete offline capability tiers and

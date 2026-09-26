@@ -8,6 +8,7 @@ help:
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
 	@echo 'Package an existing archive: make package'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
+	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
 
 bootstrap doctor format lint test:
 	python3 tooling/dev/quality.py $@
@@ -66,3 +67,19 @@ restore-assistant-training:
 
 restore-assistant-export:
 	UV_PROJECT_ENVIRONMENT=$(CURDIR)/.local/envs/assistant-export uv sync --locked --project ml/training/assistant/export
+
+.PHONY: restore-assistant-assets build-assistant-runtime assistant-smoke evaluate-assistant
+restore-assistant-assets: restore-assistant-training restore-assistant-export
+	.local/envs/assistant/bin/python ml/training/assistant/restore.py
+	python3 ml/training/assistant/runtime.py restore
+
+build-assistant-runtime:
+	python3 ml/training/assistant/runtime.py build
+
+assistant-smoke:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/smoke.py --output "$(RUN)" --execute
+
+evaluate-assistant:
+	@test -n "$(RUN)" || { echo 'Set RUN to the completed smoke directory'; exit 2; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/evaluation/conversation/compare.py --run "$(RUN)" --output "$(RUN)/evaluation"
