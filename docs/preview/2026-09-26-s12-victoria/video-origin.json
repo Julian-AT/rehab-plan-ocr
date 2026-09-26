@@ -1,0 +1,10 @@
+{
+  "test": "AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt()",
+  "clip_start_seconds": 12.307999992370606,
+  "clip_duration_seconds": 3.35,
+  "audio_track": false,
+  "recording_timestamp": 1789222974.961,
+  "frame_timestamp": 1789222990.619,
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

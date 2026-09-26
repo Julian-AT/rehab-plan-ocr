@@ -1,9 +1,16 @@
-Kokoro-82M German Martin ONNX model and voice parameters
-Model revision: a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804
-https://huggingface.co/Godelaune/Kokoro-82M-ONNX-German-Martin/tree/a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804
-Original German fine-tune: kikiri-tts/kikiri-german-martin; architecture: hexgrad/Kokoro-82M.
+Kikiri German Victoria model and voice parameters, converted locally to ONNX
+Model revision: ce81e200ff9203e1a3b042cd678c48e3ffb85cef
+https://huggingface.co/kikiri-tts/kikiri-german-victoria/tree/ce81e200ff9203e1a3b042cd678c48e3ffb85cef
 The pinned model card declares Apache-2.0. A copy is bundled as MODEL_CARD.md.
+German Stage 2 fine-tune built on kikiri-german-base-51speakers-synthetic.
 The model renders audible speech. No sample recording is used as a fallback.
+The matching Victoria tensor is exported as a raw 510 x 256 voice.f32 matrix.
+Source weights and voice SHA-256 values and the export recipe are pinned in
+scripts/export-victoria.py. PyTorch loads tensor weights with weights_only=True.
+Architecture/export: hexgrad/Kokoro 0.9.4 (Apache-2.0), PyTorch 2.8.0 (BSD-3-Clause).
+https://github.com/hexgrad/kokoro/tree/v0.9.4
+Configuration: hexgrad/Kokoro-82M revision f3ff3571791e39611d31c381e3a41a3af07b4987.
+Its vocabulary is checked against the application phoneme vocabulary.
 
 Tokenizer vocabulary: kokoro-onnx 0.4.9, config.json (vocab), MIT.
 https://pypi.org/project/kokoro-onnx/0.4.9/

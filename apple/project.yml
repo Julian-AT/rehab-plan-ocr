@@ -18,7 +18,7 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.3.0"
-    CURRENT_PROJECT_VERSION: "2026092608"
+    CURRENT_PROJECT_VERSION: "2026092609"
     CODE_SIGN_STYLE: Automatic
 targets:
   Termine:
@@ -31,7 +31,7 @@ targets:
         name: models
         type: folder
         buildPhase: resources
-      - path: ../models/private/kokoro-martin
+      - path: ../models/private/kokoro-german
         type: folder
         buildPhase: resources
       - path: ../licenses

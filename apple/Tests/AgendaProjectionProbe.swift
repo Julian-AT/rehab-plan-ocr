@@ -81,6 +81,22 @@ import Foundation
         precondition(DayAgenda(events: [multiday], date: now, now: now, calendar: calendar).timed.first?.duration == 1440)
         let lastDay = iso.date(from: "2026-09-14T10:00:00Z")!
         precondition(DayAgenda(events: [multiday], date: lastDay, now: now, calendar: calendar).timed.first?.duration == 180)
-        print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday and 23/25-hour DST days passed")
+        let early = event("early", "2026-09-12T03:00:00Z", "2026-09-12T04:00:00Z")
+        let late = event("late", "2026-09-12T16:00:00Z", "2026-09-12T17:00:00Z")
+        let crossing = event("crossing", "2026-09-12T15:59:00Z", "2026-09-12T17:00:00Z")
+        let windowDay = DayAgenda(events: all + [early, late, crossing, multiday], date: now, now: now, calendar: calendar)
+        let window = AgendaWindow(agenda: windowDay, now: now, calendar: calendar)
+        precondition(calendar.component(.hour, from: window.start) == 6 && calendar.component(.hour, from: window.end) == 18)
+        precondition(window.minutes == 720 && Set(window.outside.map(\.id)) == ["early", "late"])
+        precondition(window.timed.first { $0.id == "midnight" }?.duration == 420)
+        precondition(window.timed.first { $0.id == "multi" }?.duration == 720)
+        precondition(window.timed.first { $0.id == "crossing" }?.duration == 1)
+        precondition(AgendaLayout.place(window.timed).first { $0.id == "crossing" }!.height >= 44)
+        precondition(window.timed.allSatisfy { $0.start >= 0 && $0.start + $0.duration <= 720 })
+        precondition(AgendaWindow(agenda: autumn, now: dstNow, calendar: calendar).minutes == 720)
+        precondition(AgendaWindow(agenda: springDay, now: springDate, calendar: calendar).minutes == 720)
+        precondition(!DayAgenda(events: [past, late], date: now, now: now, calendar: calendar).isComplete)
+        precondition(window.scrollMinute >= 0 && window.scrollMinute <= 720)
+        print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday 23/25-hour DST days and clipped 06–18 window passed")
     }
 }

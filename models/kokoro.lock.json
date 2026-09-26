@@ -1,8 +1,8 @@
 {
-  "model": "Godelaune/Kokoro-82M-ONNX-German-Martin",
-  "revision": "a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804",
+  "model": "kikiri-tts/kikiri-german-victoria",
+  "revision": "ce81e200ff9203e1a3b042cd678c48e3ffb85cef",
   "sample_rate": 24000,
-  "voice": "martin",
+  "voice": "victoria",
   "espeak_version": "1.52.0",
   "files": [
     {
@@ -12,13 +12,20 @@
     },
     {
       "path": "MODEL_CARD.md",
-      "sha256": "4beed07717aaaef3625984f6fc952c207ac3fd7b3d57b69dffdccc80412a1f6d",
-      "bytes": 12162
+      "bytes": 1679,
+      "sha256": "05eb9070a975754d0bc0034787288a2f53c89b5884b72458c61c3a59eb09f69b",
+      "remote": "README.md"
     },
     {
       "path": "NOTICE",
-      "sha256": "107d0eaf20562b0d93a12b37ec391e4cf7750ab4c7f418b3e90f544c22b89ad6",
-      "bytes": 1917
+      "bytes": 2434,
+      "sha256": "a58472014834928595c9fdf289fed0a851a32b07b4e9cd31a56e5c2fed781cbf"
+    },
+    {
+      "path": "config.json",
+      "bytes": 2351,
+      "sha256": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
+      "remote_url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/config.json"
     },
     {
       "path": "espeak-ng-data/de_dict",
@@ -61,14 +68,9 @@
       "bytes": 58652
     },
     {
-      "path": "kokoro-martin.onnx",
-      "sha256": "c302f1d8bc7adf40a842cb550e18c39a5026bdb1afdd29dbb700b501cb49276b",
-      "bytes": 325512630
-    },
-    {
-      "path": "martin.f32",
-      "sha256": "85a6335d4f8c589a7522a52893efa3aca45c8fa2881ab1bb3f9b9f16924ef847",
-      "bytes": 522240
+      "path": "model.onnx",
+      "bytes": 325493007,
+      "sha256": "254f3a540ab734d44b6dbd2a6043ba6034df001cdc19d1370a1f4a9ddb127595"
     },
     {
       "path": "vocab.json",
@@ -76,9 +78,10 @@
       "bytes": 1375
     },
     {
-      "path": "voices-martin.npz",
-      "sha256": "5b9c8553398d7abf67498ce500c186cefaa7b68fed3e3d415da5380670105acd",
-      "bytes": 522506
+      "path": "voice.f32",
+      "bytes": 522240,
+      "sha256": "12f217e95cd8bed185f1e0571cfa1fe12d2d4b86902855ec440a9272f79e221a"
     }
-  ]
+  ],
+  "bundle_directory": "kokoro-german"
 }

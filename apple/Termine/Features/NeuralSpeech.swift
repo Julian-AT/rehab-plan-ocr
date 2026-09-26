@@ -23,14 +23,14 @@ import RehaCore
     #endif
     var speaking: Bool { phase == .playing || phase == .preparing }
     var voiceID: String {
-        get { "martin" }
-        set { UserDefaults.standard.set("martin", forKey: "voice.neural.id") }
+        get { "victoria" }
+        set { UserDefaults.standard.set("victoria", forKey: "voice.neural.id") }
     }
     var rate: Double {
         get { let v = UserDefaults.standard.double(forKey: "voice.neural.rate"); return v == 0 ? 0.95 : min(1.25, max(0.75, v)) }
         set { UserDefaults.standard.set(newValue, forKey: "voice.neural.rate") }
     }
-    private let renderer = NativeSpeech(modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-martin").path)
+    private let renderer = NativeSpeech(modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-german").path)
     private var player: AVAudioPlayer?
     private var generation: UInt64 = 0
     private var task: Task<Void, Never>?
@@ -39,7 +39,7 @@ import RehaCore
     private var cachedAudio: [Data] = []
     func speak(_ text: String) {
         stop(); lastText = text
-        voiceID = "martin"
+        voiceID = "victoria"
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { status = "Kein Text zum Vorlesen"; return }
         if UIAccessibility.isVoiceOverRunning {
             status = "VoiceOver liest den Text vor"

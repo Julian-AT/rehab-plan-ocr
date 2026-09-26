@@ -1,0 +1,27 @@
+{
+  "source_revision": "ce81e200ff9203e1a3b042cd678c48e3ffb85cef",
+  "checks": [
+    {
+      "tokens": 11,
+      "speed": 0.95,
+      "samples": 27000,
+      "peak": 0.48597776889801025
+    },
+    {
+      "tokens": 6,
+      "speed": 0.75,
+      "samples": 28200,
+      "peak": 0.3153221309185028
+    },
+    {
+      "tokens": 11,
+      "speed": 1.25,
+      "samples": 22200,
+      "peak": 0.434004545211792
+    }
+  ],
+  "onnx_sha256": "254f3a540ab734d44b6dbd2a6043ba6034df001cdc19d1370a1f4a9ddb127595",
+  "voice_sha256": "12f217e95cd8bed185f1e0571cfa1fe12d2d4b86902855ec440a9272f79e221a",
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

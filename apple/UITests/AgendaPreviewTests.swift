@@ -47,6 +47,16 @@ import UIKit
         XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
         XCTAssertTrue(row("Physiotherapie").isHittable)
         capture("03-termine-hell")
+        let timeline = app.scrollViews["day-timeline"]
+        XCTAssertFalse(app.staticTexts["timeline-hour-5"].exists)
+        XCTAssertFalse(app.staticTexts["timeline-hour-19"].exists)
+        for _ in 0..<8 where !app.staticTexts["timeline-hour-6"].isHittable { timeline.swipeDown() }
+        XCTAssertTrue(app.staticTexts["timeline-hour-6"].isHittable)
+        capture("31-kalender-ab-sechs")
+        for _ in 0..<8 where !app.staticTexts["timeline-hour-18"].isHittable { timeline.swipeUp() }
+        XCTAssertTrue(app.staticTexts["timeline-hour-18"].isHittable)
+        capture("32-kalender-bis-achtzehn")
+
         let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch
         let selectedID = selected.identifier
         app.buttons["next-week"].tap()

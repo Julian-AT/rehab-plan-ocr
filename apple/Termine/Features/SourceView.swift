@@ -200,7 +200,7 @@ struct DiagnosticsView: View {
             Form {
                 if let error { Text(error) }
                 Section("Sprache") {
-                    LabeledContent("Stimme", value: "Kokoro · Martin · Deutsch")
+                    LabeledContent("Stimme", value: "Kokoro · Victoria · Deutsch")
                     LabeledContent("Audio", value: "24 kHz · lokal")
                     Text("Apple Intelligence kann die Einordnung unterstützen. Befehle und manuelle Auswahl funktionieren auch ohne sie.")
                 }

@@ -6,7 +6,6 @@ import EventKit
 @MainActor @Observable final class TodayModel {
     enum Availability { case loading, ready, noAccess, noSelection, failed }
     var events: [CalendarEvent] = []
-    var colors: [String: [Double]] = [:]
     var availability: Availability = .loading
     var error: String?
     private var revision = 0
@@ -26,9 +25,7 @@ import EventKit
             _ = try await NativeBridge.request("agenda", ["records": history.imports.map(NativeBridge.record), "preferences": NativeBridge.preferences(preferences)])
             let iso = ISO8601DateFormatter()
             let result = try await core.eventRequest("queryCalendarEvents", ["start_utc": iso.string(from: week.start), "end_utc": iso.string(from: week.end)], as: Response.self)
-            let calendars = try JSONDecoder().decode(CalendarDestinations.self, from: await NativeBridge.request("eventCalendars"))
             guard request == revision, !Task.isCancelled else { return }
-            colors = Dictionary(uniqueKeysWithValues: calendars.calendars.compactMap { c in c.color_components.map { (c.id, $0) } })
             events = result.events; availability = .ready
         } catch {
             guard request == revision, !Task.isCancelled else { return }
@@ -76,11 +73,12 @@ struct TodayView: View {
                         List {
                             ForEach(agenda.events) { event in
                                 Button { editor = event } label: { CalendarAgendaRow(event: event, now: context.date) }
+                                    .buttonStyle(.plain)
                                     .accessibilityIdentifier("agenda-event-\(event.id)")
                             }
                         }.accessibilityIdentifier("agenda-accessible-list")
                     } else {
-                        DayTimeline(agenda: agenda, now: context.date, colors: model.colors) { editor = $0 }
+                        DayTimeline(agenda: agenda, now: context.date) { editor = $0 }
                             .id(selectedDate)
                     }
                 }
@@ -165,6 +163,7 @@ private struct WeekSelector: View {
             }
             if typeSize.isAccessibilitySize {
                 DatePicker("Tag", selection: $selection, displayedComponents: .date)
+                    .labelsHidden().accessibilityLabel("Tag")
                     .accessibilityIdentifier("agenda-date")
             } else {
                 HStack(spacing: 0) {
@@ -193,12 +192,12 @@ private struct WeekSelector: View {
 private struct DayTimeline: View {
     let agenda: DayAgenda
     let now: Date
-    let colors: [String: [Double]]
     let select: (CalendarEvent) -> Void
     private let hourHeight = 96.0
     @State private var position = ScrollPosition()
     @State private var positioned = false
     var body: some View {
+        let window = AgendaWindow(agenda: agenda, now: now)
         VStack(spacing: 0) {
                     if !agenda.allDay.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -216,23 +215,21 @@ private struct DayTimeline: View {
                     GeometryReader { geometry in
                         let width = max(0, geometry.size.width - 64)
                         ZStack(alignment: .topLeading) {
-                            ForEach(0...Int(agenda.minutes / 60), id: \.self) { hour in
-                                let date = agenda.date.addingTimeInterval(Double(hour) * 3600)
+                            ForEach(0...Int(window.minutes / 60), id: \.self) { hour in
+                                let date = window.start.addingTimeInterval(Double(hour) * 3600)
                                 HStack(spacing: 8) {
-                                    VStack(alignment: .trailing, spacing: 0) {
-                                        Text(hour == Int(agenda.minutes / 60) ? "24:00" : eventTime(date))
-                                        if agenda.minutes > 1440 && [2, 3].contains(hour) { Text(TimeZone.current.abbreviation(for: date) ?? "") }
-                                    }.font(.caption).monospacedDigit().foregroundStyle(.secondary).frame(width: 48, alignment: .trailing)
+                                    Text(eventTime(date)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                                        .frame(width: 48, alignment: .trailing).accessibilityIdentifier("timeline-hour-\(hour + 6)")
                                     Rectangle().fill(Color(uiColor: .separator).opacity(0.4)).frame(height: 0.5)
                                 }.frame(height: 16).offset(y: Double(hour) * hourHeight).id(hour)
                             }
-                            ForEach(AgendaLayout.place(agenda.timed, pointsPerHour: hourHeight)) { item in
+                            ForEach(AgendaLayout.place(window.timed, pointsPerHour: hourHeight)) { item in
                                 let columnWidth = width / Double(item.columns)
                                 Button { select(item.segment.event) } label: {
                                     block(item.segment.event, compact: item.height < 70)
                                         .padding(.horizontal, 8).padding(.vertical, 4)
                                         .frame(width: max(0, columnWidth - 4), height: item.height, alignment: .topLeading)
-                                        .background(color(item.segment.event).opacity(0.15), in: .rect(cornerRadius: 10))
+                                        .background(AppPalette.tint.opacity(0.2), in: .rect(cornerRadius: 10))
                                         .clipped().contentShape(.rect)
                                 }.buttonStyle(.plain)
                                     .offset(x: 56 + Double(item.column) * columnWidth, y: item.segment.start / 60 * hourHeight + 8)
@@ -241,18 +238,26 @@ private struct DayTimeline: View {
                             }
 
                         }
-                    }.frame(height: agenda.minutes / 60 * hourHeight + 52)
+                    }.frame(height: window.minutes / 60 * hourHeight + 52)
                     .padding(.vertical, 12)
             }.accessibilityIdentifier("day-timeline")
                 .scrollPosition($position)
                 .onScrollGeometryChange(for: Bool.self) { $0.containerSize.height > 0 && $0.contentSize.height > 0 } action: { _, ready in
-                    if ready && !positioned { positioned = true; position.scrollTo(y: agenda.scrollMinute / 60 * hourHeight) }
+                    if ready && !positioned { positioned = true; position.scrollTo(y: window.scrollMinute / 60 * hourHeight) }
                 }
+            if !window.outside.isEmpty {
+                DisclosureGroup("Außerhalb von 06:00–18:00") {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(window.outside) { event in
+                                Button { select(event) } label: { CalendarAgendaRow(event: event, now: now) }
+                                    .buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
+                            }
+                        }
+                    }.frame(maxHeight: 200)
+                }.padding().accessibilityIdentifier("agenda-outside-hours")
+            }
         }
-    }
-    private func color(_ event: CalendarEvent) -> Color {
-        guard let rgb = colors[event.calendar_id], rgb.count == 3 else { return AppPalette.tint }
-        return Color(red: rgb[0], green: rgb[1], blue: rgb[2])
     }
     private func block(_ event: CalendarEvent, compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {

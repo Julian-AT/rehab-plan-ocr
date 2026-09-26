@@ -1,4 +1,4 @@
-//! Offline German Kokoro/Martin, 24 kHz PCM. eSpeak-NG produces phonemes only;
+//! Offline German Kokoro/Victoria, 24 kHz PCM. eSpeak-NG produces phonemes only;
 //! audible audio comes exclusively from Kokoro. No network or persistent audio.
 use crate::{Error, Result};
 use ort::{
@@ -108,7 +108,7 @@ impl SpeechEngine {
                 return Err(err("Sprachdatei ist beschädigt"));
             }
         }
-        let raw = std::fs::read(root.join("martin.f32"))?;
+        let raw = std::fs::read(root.join("voice.f32"))?;
         if raw.len() != 510 * 256 * 4 {
             return Err(err("Stimmeninformationen sind beschädigt"));
         }
@@ -126,7 +126,7 @@ impl SpeechEngine {
             .map_err(err)?
             .with_inter_threads(1)
             .map_err(err)?
-            .commit_from_file(root.join("kokoro-martin.onnx"))
+            .commit_from_file(root.join("model.onnx"))
             .map_err(err)?;
         Ok(Self {
             root: root.to_path_buf(),
@@ -199,7 +199,7 @@ impl SpeechEngine {
                 let result = self
                     .model
                     .run_with_options(
-                        ort::inputs! {"tokens" => tokens, "style" => style, "speed" => speed},
+                        ort::inputs! {"input_ids" => tokens, "style" => style, "speed" => speed},
                         &options,
                     )
                     .map_err(err)

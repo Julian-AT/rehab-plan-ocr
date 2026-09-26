@@ -198,7 +198,7 @@ struct VoiceSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Stimme", value: "Martin · Deutsch")
+                LabeledContent("Stimme", value: "Victoria · Deutsch")
                 VStack(alignment: .leading) {
                     LabeledContent("Sprechtempo", value: rate.formatted(.number.precision(.fractionLength(2))) + "×")
                     Slider(value: $rate, in: 0.75...1.25, step: 0.05) { Text("Sprechtempo") }

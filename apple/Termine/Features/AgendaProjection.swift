@@ -89,6 +89,35 @@ struct DayAgenda {
     }
 }
 
+/// The visible day is 06:00–18:00 in local civil time. Keep the full-day
+/// projection intact for completion, all-day events and access to other times.
+struct AgendaWindow {
+    let start: Date
+    let end: Date
+    let timed: [DayAgenda.Segment]
+    let outside: [CalendarEvent]
+    let scrollMinute: Double
+    var minutes: Double { end.timeIntervalSince(start) / 60 }
+
+    init(agenda: DayAgenda, now: Date, calendar: Calendar = .current) {
+        let start = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: agenda.date)!
+        let end = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: agenda.date)!
+        self.start = start; self.end = end
+        timed = agenda.timed.compactMap { segment in
+            let event = segment.event
+            let from = max(start, event.values.start), to = min(end, event.values.end)
+            guard to > from else { return nil }
+            return DayAgenda.Segment(event: event, start: from.timeIntervalSince(start) / 60,
+                                     duration: to.timeIntervalSince(from) / 60)
+        }
+        outside = agenda.timed.map(\.event).filter { $0.values.end <= start || $0.values.start >= end }
+        let today = calendar.isDate(agenda.date, inSameDayAs: now)
+        let target = today ? timed.first { $0.event.values.end > now } : timed.first
+        let minute = target.map { today && $0.event.values.start <= now ? now.timeIntervalSince(start) / 60 : $0.start }
+        scrollMinute = min(end.timeIntervalSince(start) / 60, max(0, (minute ?? timed.first?.start ?? 120) - 30))
+    }
+}
+
 struct TimelinePlacement: Identifiable {
     let segment: DayAgenda.Segment
     let column: Int

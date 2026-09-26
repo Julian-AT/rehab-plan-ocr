@@ -1,0 +1,120 @@
+{
+  "README.md": {
+    "bytes": 2303,
+    "sha256": "4f2edd47863e9375b89ff221372ac3a6230b640d091bd1f4d108e17373638581"
+  },
+  "abgebrochene-wiedergabe.png": {
+    "bytes": 363238,
+    "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+  },
+  "archiv-groesste-schrift.png": {
+    "bytes": 181430,
+    "sha256": "0965a1936f1b4b5fd360a8d3044cca0347db8b761856be8fc0d50c2943bd7903"
+  },
+  "audio-meter.json": {
+    "bytes": 194,
+    "sha256": "72d845c4f65a1a0339fcc1fe14ea8fd16a14c2283822b3982f58fae2cc7ed442"
+  },
+  "bewegung-reduziert.png": {
+    "bytes": 363238,
+    "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+  },
+  "gespraechsdetails.png": {
+    "bytes": 186450,
+    "sha256": "735d827da070652ee972e22e12e6af8e3e6f285eb1fe3229a15160faae6dc25c"
+  },
+  "kalender-ab-sechs.png": {
+    "bytes": 154373,
+    "sha256": "d71e1a61c328cfcdc77325a4e86b07ce97939138548d54057dcaa8715fd6226a"
+  },
+  "kalender-bis-achtzehn.png": {
+    "bytes": 182013,
+    "sha256": "e403c2be3f4e08e6e623a629918993620af3b8a9a564379c8f1345ecc6db45a0"
+  },
+  "kurze-termine.png": {
+    "bytes": 160669,
+    "sha256": "d97de869264117b26cf6ab9920ec8eec9ca7fb7206a709ae5b41687a098120e8"
+  },
+  "mehr-groesste-schrift.png": {
+    "bytes": 215078,
+    "sha256": "e47b50b883413eb52bba6b0da90b325564f5135509389fc0b31c1fdbc34876d1"
+  },
+  "model-export.json": {
+    "bytes": 691,
+    "sha256": "936d48442ffcbd02de8c15a7982e504fdf151cfd3ee6e443ba92f5e82ae2e4c4"
+  },
+  "spracheinstellungen.png": {
+    "bytes": 236592,
+    "sha256": "ccd99e26a4a30dd4a17f105da7d4c5d7ba37b1889beefaf81b89434e9ef19535"
+  },
+  "spracherkennung-nativer-hinweis.png": {
+    "bytes": 383273,
+    "sha256": "78cac5cf4369a382c2c0015f3227d30b56a73d8e914c1d7b36b145bbe7807495"
+  },
+  "sprachvorschlag-gespeichert.png": {
+    "bytes": 327900,
+    "sha256": "c75e5ad4b5705f53f36d28d543c20f612dbe7810221103c4f0a23db6a99d9579"
+  },
+  "sprachvorschlag-vor-bestaetigung.png": {
+    "bytes": 218529,
+    "sha256": "b54b4f74453984560f2d09dd35e2eac0b2d7107c5550cd19e003b5cd917738c8"
+  },
+  "sprechen-audio.mp4": {
+    "bytes": 180405,
+    "sha256": "e934b6b58ec03e527480d09abe5caa7638183d840a028d373df57dc34c53891a"
+  },
+  "sprechen-dunkel.png": {
+    "bytes": 329046,
+    "sha256": "ae237462775ff3c1f960916ed5e006698ae5d23e9e306bba74b3fabceb3cefd6"
+  },
+  "sprechen-echte-wiedergabe.png": {
+    "bytes": 401702,
+    "sha256": "5e3ceba6cd29080074f013ea0af7ef94ffac49e3abb21c43d32ffc0822083856"
+  },
+  "sprechen-groesste-schrift.png": {
+    "bytes": 335338,
+    "sha256": "20994a886063ef8a38a240f7ff368305292353bf6b150252d990b18af67b3c50"
+  },
+  "sprechen-ruhe.png": {
+    "bytes": 363238,
+    "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+  },
+  "tagesliste-groesste-schrift.png": {
+    "bytes": 248571,
+    "sha256": "a184ba958c57ff795763d11d14afd4e3a56c24d67f89bc68679967eba13ffff6"
+  },
+  "termine-hell.png": {
+    "bytes": 181597,
+    "sha256": "2b042c6a486838f7e25eaeb17fed25805c76ba7177baaaccd9e1ff0b380e96b4"
+  },
+  "terminformular.png": {
+    "bytes": 169592,
+    "sha256": "3af1db644989dc230f77d391250d5ce4356d547afbe2173721b750bb254144e2"
+  },
+  "ueberlappung-dunkel.png": {
+    "bytes": 166891,
+    "sha256": "f3f2766c083ba0bd7a9e4a37a1697b34704fbc6a2f0668f0fb00dbf02d276d02"
+  },
+  "verification-results.json": {
+    "bytes": 1466,
+    "sha256": "f8e07de19adcc7f0165d1bd79ac264925ffba8f2ec11cae7db45ecead95a2a60"
+  },
+  "victoria-kalender.wav": {
+    "bytes": 705644,
+    "sha256": "a1a9ac616e632ec0b538864f14ae214411e602bdff8cc8064bab2b8966744012"
+  },
+  "victoria-lange-antwort.wav": {
+    "bytes": 1454444,
+    "sha256": "732d6ace40d7b611a206632ff7dec1a2a5d24340caffc2c0502c65cc556945b4"
+  },
+  "victoria-langsam.wav": {
+    "bytes": 924044,
+    "sha256": "d9373ff176d74c472e89d98ac8279e2aef337ecdc01fea7e594622494e18c6b1"
+  },
+  "video-origin.json": {
+    "bytes": 252,
+    "sha256": "009b46605b37f9b7ca254dae847665800238b0168d5f37fd503b172c238d73e2"
+  },
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

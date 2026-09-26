@@ -72,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         assert hashlib.sha256((app / "small" / entry["path"]).read_bytes()).hexdigest() == entry["sha256"]
     speech_manifest = json.loads((ROOT / "models/kokoro.lock.json").read_text())
     for entry in speech_manifest["files"]:
-        assert hashlib.sha256((app / "kokoro-martin" / entry["path"]).read_bytes()).hexdigest() == entry["sha256"]
+        assert hashlib.sha256((app / "kokoro-german" / entry["path"]).read_bytes()).hexdigest() == entry["sha256"]
     for name, digest in json.loads((ROOT / "licenses/manifest.json").read_text()).items():
         assert hashlib.sha256((app / "licenses" / name).read_bytes()).hexdigest() == digest
     output = ROOT / "apple/build/Laßnitzhöhe.ipa"
