@@ -11,6 +11,7 @@ mod photo;
 mod photo_macos;
 pub mod photo_source;
 pub mod pipeline;
+pub mod recognition_input;
 pub mod store;
 
 pub type Result<T> = std::result::Result<T, Error>;

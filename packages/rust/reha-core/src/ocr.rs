@@ -1,4 +1,5 @@
 //! Portable CPU inference; contains no Apple APIs and never performs network I/O.
+use crate::recognition_input::{self, recognition_width};
 use crate::{contracts::*, geometry, Error, Result};
 use image::{imageops::FilterType, RgbImage};
 use ort::{
@@ -287,20 +288,12 @@ impl OnnxEngine {
                 if config.detailed_debug {
                     crop.save(artifacts.join(format!("{}.png", region.id)))?;
                 }
-                let (rw, pw) = recognition_width(crop.width(), crop.height());
+                let (_, pw) = recognition_width(crop.width(), crop.height());
                 if padded != 0 && padded != pw {
                     return Err(err("Inconsistent exact-width recognition batch"));
                 }
                 padded = pw;
-                let resized = image::imageops::resize(&crop, rw, 48, FilterType::Triangle);
-                let offset = inputs.len();
-                inputs.resize(offset + 3 * (padded * 48) as usize, 0f32);
-                for (x, y, p) in resized.enumerate_pixels() {
-                    for c in 0..3 {
-                        inputs[offset + c * (padded * 48) as usize + (y * padded + x) as usize] =
-                            (p[2 - c] as f32 / 255. - 0.5) / 0.5;
-                    }
-                }
+                recognition_input::append(&crop, &mut inputs)?;
                 recognized.push(*region);
             }
             if recognized.is_empty() {
@@ -360,10 +353,6 @@ impl OnnxEngine {
         stages.push(Stage{name:"recognition".into(),status:if observations.len() == regions.len() { "complete" } else { "partial" }.into(),duration_ms:start.elapsed().as_millis() as u64,detail:"CTC greedy decoding. Mean token scores are engine signals, not appointment-correctness probabilities. Alternatives unavailable.".into(),artifacts:if config.detailed_debug{regions.iter().map(|r|format!("{}.png",r.id)).collect()}else{vec![]}});
         Ok((regions, observations, stages))
     }
-}
-fn recognition_width(width: u32, height: u32) -> (u32, u32) {
-    let resized = ((48. * width as f64 / height.max(1) as f64).ceil() as u32).clamp(8, 3200);
-    (resized, resized.max(320).div_ceil(8) * 8)
 }
 fn crop_width(polygon: &[Point]) -> u32 {
     if polygon.len() != 4 {

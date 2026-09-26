@@ -16,6 +16,9 @@ serde_json = { version = "1", features = ["float_roundtrip"] }
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 
+[build-dependencies]
+sha2 = "0.10"
+
 [[bin]]
 name = "reha"
 path = "src/main.rs"

@@ -173,6 +173,7 @@ help:
 	@echo 'Integrated voice trial test (already built, serial): make test-assistant-voice-trial RUN=<new-local-run> SIMULATOR=<owned-fresh-uuid> SOURCE_COMMIT=<exact-clean-commit>; see docs/development/assistant-voice-trial.md'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
 	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
+	@echo 'Model-free native OCR input: make recognition-fixture CROP=<rectified.png> FIXTURE_OUTPUT=<new-local-directory>'
 	@echo 'Isolated OCR convolution fixture: make prepare-ocr-convolution-lowering DIAGNOSTIC_RUN=.local/runs/<new-experiment> (preparation only)'
 	@echo 'Execute prepared OCR convolution fixture: make diagnose-ocr-convolution-lowering DIAGNOSTIC_RUN=.local/runs/<prepared-experiment>'
 	@echo 'Human reference review: make reference-review-packet DATASET=<private-root> RUN=.local/runs/<new-packet> (creates no approvals)'
@@ -426,6 +427,12 @@ intake:
 OCR_MODE ?= frozen-backbone
 OCR_EPOCHS ?= 100
 OCR_PATIENCE ?= 5
+.PHONY: recognition-fixture
+recognition-fixture: PEAK_GIB = 4
+recognition-fixture: check-workspace check-storage
+	@test -n "$(CROP)" -a -n "$(FIXTURE_OUTPUT)" || { echo 'Set CROP to a rectified PNG and FIXTURE_OUTPUT to a new directory below .local'; exit 2; }
+	/usr/bin/env cargo run --offline --locked -p reha-cli -- recognition-fixture "$(CROP)" "$(FIXTURE_OUTPUT)"
+
 FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
 SYNTHETIC_COUNT ?= 200
 SYNTHETIC_SOURCES ?= 2

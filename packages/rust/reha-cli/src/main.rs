@@ -1,4 +1,6 @@
 use reha_core::{contracts::*, Error, Result};
+#[cfg(not(target_os = "ios"))]
+mod recognition_fixture;
 
 fn main() {
     if let Err(error) = execute() {
@@ -10,6 +12,11 @@ fn main() {
 fn execute() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
+        #[cfg(not(target_os = "ios"))]
+        Some("recognition-fixture") if args.len() == 4 => {
+            let manifest = recognition_fixture::write(std::path::Path::new(&args[2]), std::path::Path::new(&args[3]))?;
+            println!("{}", serde_json::to_string_pretty(&manifest)?);
+        }
         #[cfg(not(target_os = "ios"))]
         Some("lab") => {
             let value = reha_core::lab::command(&args[2..])?;
@@ -63,7 +70,7 @@ fn execute() -> std::result::Result<(), Box<dyn std::error::Error>> {
             std::fs::write(&args[3], reha_core::calendar::ics(&events, chrono::Utc::now())?)?;
             println!("ICS created locally.");
         }
-        _ => return Err(Error::Invalid("Usage: reha scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics [SELECTION.json]\nDesktop inference requires --features onnx-download.".into()).into()),
+        _ => return Err(Error::Invalid("Usage: reha recognition-fixture CROP_PNG NEW_OUTPUT_DIRECTORY | scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics [SELECTION.json]\nrecognition-fixture needs no ONNX feature or model. Desktop inference requires --features onnx-download.".into()).into()),
     }
     Ok(())
 }
