@@ -39,7 +39,7 @@ einen Vergleich dauerhafter Daten. Installation ohne Deinstallation.
 
 ## Externe Voraussetzungen
 
-- GitHub-Actions-Abrechnung: zuletzt vor Runnerstart blockiert; noch kein neuer Nachweis.
+- GitHub-Actions-Abrechnung: auch Lauf `35382848454` vor Runnerstart blockiert.
 - Referenzprüfung, deutsche Sprachprüfung, neue Pläne und Aufnahmen mit Einwilligung.
 - Hörtests und zwei moderierte Bedienungsrunden mit jeweils mindestens fünf Personen.
 - Testhardware mit und ohne Apple Intelligence, einschließlich Mindestbetriebssystem.
@@ -194,7 +194,47 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
   `f7b8aa7`; Aufgaben und lokales Protokoll vorbereitet, vier Dokumentationsprüfungen
   bestanden. Tatsächliche Teilnehmende, Durchführung und Ergebnisse stehen aus.
 
-Der zuletzt vorhandene CI-Lauf `35336726552` an `7d3d3e9` wurde erneut lesend geprüft:
+## Gemeinsame Fortsetzung nach den Einzelprüfungen
+
+- Kalenderstatus und Verlaufsverwaltung: `7015223`; 232 Core-/FFI-Tests,
+  offizielle Bindings und nativer/Gesprächs-Rundweg bestanden. Import-/Agenda-
+  Übergabe an den nativen Worker: `6d393da`; Verträge, 71 Agenda-Prüfungen und
+  strenge Typprüfung bestanden. Aktive Core-JSON-Effekte bleiben ausdrücklich
+  [offen dokumentiert](typed-boundaries.md).
+- Gemeinsamer Simulator-Appbuild: `a52d38b`; getrennte Read-/Import-Datentypen
+  korrekt abgebildet. Build und tatsächliche Prüfung aller zwölf Mach-O-Dateien,
+  Ressourcen und Notices bestanden. Vorherige Produktgeneration vollständig
+  erhalten; kein alter Ergebnisordner wurde überschrieben.
+- Werkzeuglauf unter `.local/runs/combined-verification-20260926-s18-001/`:
+  232 Rusttests und 375 Pythonfälle (sieben umgebungsbedingte Skips) sowie die
+  ausgeführten nativen Probes bestanden. Der Gesamtbefehl scheiterte anschließend
+  an einem nie vorhandenen zusätzlichen Shell-Einstieg. `9520788` entfernt diesen
+  redundanten Eintrag und prüft die tatsächlich geplanten Probe-Dateien; beide
+  echten Intake-Recovery-Probes und die folgenden Probes bestehen. Ein vollständig
+  erfolgreicher Gesamtbefehl auf dem neuen Stand steht noch aus.
+- Korrigierter Assistenten-Vollvergleich: `5e24ed8`; alle 40 Eingaben tokenidentisch,
+  Ausgaben nur 38/40 identisch, Exportparität **fehlgeschlagen**. Unveränderter
+  Replay der neuen Antworten durch den aktuellen Swift-Router: `35269e1`,
+  33/40 exakt, null unsichere und null zusätzlich falsche Vorschläge. Ein
+  Entwicklungscluster, keine realen unabhängigen Dialoge oder Sprachabnahme.
+- Begrenzter OCR-Gesamtgraphversuch: `22344a7`, `4ef8f3c`; unveränderte Schwellen,
+  erster Fall **fehlgeschlagen**, übrige elf Fälle und Vollkorpus nicht gestartet.
+  Das isoliert exakte MatMul-Verfahren qualifiziert den Gesamtgraphen nicht.
+- Tatsächliche Checkpoint-Bereinigung: `07f90b8`; 15 nicht referenzierte
+  Assistentenzwischenstände entfernt, bester und jüngster vollständiger Zustand
+  einschließlich Optimizer/RNG erhalten und mit den echten Lesern geladen.
+  Kein gemessener Volume-Speichergewinn behauptet; alle neun OCR-Checkpoints
+  bleiben wegen Diagnoseverweisen geschützt.
+- Tatsächliche EventKit-Abnahme: `643654f`; 18 Erfolge, ein erwarteter
+  Simulator-Dateischutz-Skip, null Fehler unter `eventkit-20260926-s18-002`.
+  Importwiederaufnahme erzeugt keine neuen Termine; gespeicherte Änderungen
+  bleiben trotz anschließendem Erinnerungsjournalfehler erfolgreich. Vollständige
+  Resultate und ausführbare Produkte bleiben privat erhalten.
+- Simulator-Spitzenbedarf: `21d6da3`; sechs Make-Einstiege prüfen 16 GiB
+  zusätzlich zur 20-GiB-Reserve, bevor ein Simulator startet. Zwölf gezielte
+  Speicher-/Make-Prüfungen bestanden.
+
+Der zuletzt vorhandene CI-Lauf `35382848454` an `5718dd5` wurde erneut lesend geprüft:
 beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.
 Die Freischaltung des Kontos ist noch nicht bestätigt. Menschliche Daten-/Stimmen-
 und Gerätefreigaben bleiben externe Voraussetzungen; sie werden nicht durch

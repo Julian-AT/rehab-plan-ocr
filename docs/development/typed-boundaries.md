@@ -86,8 +86,10 @@ Speicherfehler, statt beim FFI-Übergang in eine andere Erinnerung überzulaufen
 vollständige native Swift-6-Typprüfung mit Warnungen als Fehler sind bestanden.
 Die Typprüfung umfasst den neuen EventKit-Regressionstest, beide bestehenden
 Agenda-/Mitteilungstests und die Erweiterungen. Belege liegen unter
-`.local/runs/import-contracts-20260926-s18-001/`. Tatsächliche Simulatorausführung
-und der gemeinsame Appbuild werden getrennt geprüft.
+`.local/runs/import-contracts-20260926-s18-001/`. Der gemeinsame Appbuild besteht
+an `a52d38b`. Die tatsächliche Simulatorausführung unter
+`.local/runs/eventkit-20260926-s18-002/` besteht mit 18 Erfolgen, einem erwarteten
+Dateischutz-Skip und null Fehlern, einschließlich der typisierten Importwiederaufnahme.
 
 ## Kalenderstatus und Verlaufsverwaltung
 
@@ -107,8 +109,8 @@ Vorschläge müssen dafür nicht dem aktuellen Replay-Decoder entsprechen.
 232 Core-/FFI-Tests, Clippy ohne Warnungen, offizieller Bindingsvergleich,
 Swift–Rust–Swift-Roundtrip und vollständige VoiceModel-Probe sind bestanden.
 Belege: `.local/runs/calendar-administration-20260926-s18/`. Die Integration der
-neuen Verwaltungsansichten und des App-Adapters wird im gemeinsamen Appbuild
-geprüft; dies ist noch keine bestandene UI-Abnahme.
+neuen Verwaltungsansichten und des App-Adapters kompiliert im gemeinsamen
+Appbuild an `a52d38b`; dies ist noch keine bestandene UI-Abnahme.
 
 ## Kalenderberechtigung und Mitteilungszustand
 
@@ -133,9 +135,10 @@ doppelte oder überholte Mitteilungsaufträge verwenden jetzt die typisierten An
 Commit `662f84f` besteht 71 Agenda-/Vertragsprüfungen und die vollständige native
 iOS-26-Typprüfung einschließlich beider geänderter Integrationstestdateien,
 Widget und Mitteilungsansicht: Swift 6, vollständige Nebenläufigkeitsprüfung,
-Warnungen als Fehler. Ausführung der Integrationstests im Simulator und der
-anschließende gemeinsame Appbuild bleiben separate Nachweise. Rohlogs und
-Quellhashes liegen unter `.local/runs/reminder-contracts-20260926-s18-001/`.
+Warnungen als Fehler. Der gemeinsame Appbuild besteht an `a52d38b`; die
+Mitteilungstests bestehen tatsächlich im Simulatorlauf `eventkit-20260926-s18-002`.
+Rohlogs und Quellhashes der Vertragsprüfung liegen unter
+`.local/runs/reminder-contracts-20260926-s18-001/`.
 
 ## Wiederanlauf nach bestätigten Kalenderänderungen
 

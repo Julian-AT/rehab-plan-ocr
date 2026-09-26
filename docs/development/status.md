@@ -36,8 +36,9 @@ Current verified implementation slices:
 - Permission, reminder status and one-off notification receipts now cross Swift
   queues as typed values (`662f84f`). Seventy-one agenda/contract checks and the
   full iOS 26 native-service/integration-source typecheck pass under Swift 6 strict
-  concurrency with warnings as errors. The existing race scenarios now exercise
-  the typed result; their simulator execution and the integrated app rebuild are pending.
+  concurrency with warnings as errors. The integrated app builds at `a52d38b`;
+  actual EventKit run `eventkit-20260926-s18-002` passes 18 tests with one expected
+  simulator file-protection skip, including the typed notification race scenarios.
 - Shared receipt publication has a visible cancellation action, a provider
   deadline and an atomic publication fence (`eadde06`). Interrupted new copies
   cannot reappear through recovery; complete receipts and originals remain intact.
@@ -75,7 +76,9 @@ Current verified implementation slices:
   offline without depending on a Homebrew installation (`150edc9`).
 - Xcode product generations preserve previous files before changing a resource
   contract (`d16dacb`); twelve controlled rotation/recovery tests pass. The first
-  root-workspace rotation remains pending; the isolated fresh build passes. Bundle policy checks embedded Mach-O
+  root-workspace rotation now preserves the previous product generation under
+  `.local/builds/ios/generations/53e92e4a9ff04810b6f880d5d047f6fb/` with no deletion.
+  The integrated app and twelve-Mach-O bundle check pass at `a52d38b`. Bundle policy checks embedded Mach-O
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
@@ -135,12 +138,12 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Area | Current evidence and limit |
 | --- | --- |
 | Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The earlier 232-tool-test baseline and later 303-test working-tree run are separate observations; final combined checks remain pending. Sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
-| EventKit | 17 native tests, with one simulator-only file-protection skip. |
+| EventKit | Run `.local/runs/eventkit-20260926-s18-002/` passes 18 of 19 tests, with one simulator-only file-protection skip and zero failures. It includes typed import recovery and committed writes despite alarm-journal failure. Complete result and executable products are retained. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
-| Current CI prerequisite | The latest inspected run [35336726552](archive:github/run-35336726552) at `7d3d3e9` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
+| Current CI prerequisite | The latest inspected run [35382848454](archive:github/run-35382848454) at `5718dd5` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
 | Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
-| Local audio/UI | Earlier CoreAudio aborts also occurred in an independent minimal app. The new isolated probe builds successfully on the pinned iOS 26.4 runtime, but run `.local/runs/audio-runtime-20260926-s18-resume-003` times out at simulator launch before any probe-stage record; this is not a new audio-engine result. CI run 35295159442 showed actual playback while retained accessibility values were stale. Current-query/scroll corrections compile and await behavioral verification. Complete audio acceptance remains open. |
+| Local audio/UI | Earlier CoreAudio aborts also occurred in an independent minimal app. The new isolated probe builds successfully on the pinned iOS 26.4 runtime, but run `.local/runs/audio-runtime-20260926-s18-resume-003` times out at simulator launch before any probe-stage record; this is not a new audio-engine result. CI run 35295159442 showed actual playback while retained accessibility values were stale. The actual playback/cancellation case passes locally in `ui-regressions-20260926-s18-002` at `a52d38b`; two large-font cases fail on test queries/scroll positions and are being corrected. This is one functional audio observation, not physical latency or complete audio acceptance. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
 | Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
@@ -188,6 +191,11 @@ static-Paddle-to-ONNX differences remain separate and unresolved. An alternative
 export without reparameterization eliminates dynamic/static differences on those
 57 cases but still fails ONNX numeric parity; disabling optimization also leaves
 failures. These alternatives remain diagnostic and excluded from the app.
+The precommitted [bounded convolution experiment](../../ml/experiments/2026-09-26-s18-ocr-convolution-stage.md)
+then fails its first full-graph case: one of 748,400 numeric values exceeds the
+unchanged gate, despite matching tokens. The remaining eleven selected cases
+and full corpus were not run. The isolated exact operation is insufficient; no
+model was promoted and original weights/reports remain unchanged (`4ef8f3c`).
 Critical-field metric
 version 2 covers appointment identity, room and therapist as well as dates/times,
 and row-level regression checks catch relocated missing/invented appointments.
@@ -208,10 +216,14 @@ quality fix; all original model gates remain open.
 Subsequent [token diagnosis](../../ml/experiments/2026-09-26-s18-assistant-token-parity.md)
 found that the old CLI text-file option removed a final newline, changing input
 tokens despite unchanged token counts. All four consumers now preserve exact
-prompt bytes (`2d38d8e`). A corrected single-case comparison agrees; all forty
-MLX instrumentation controls reproduce the retained fused answers. The complete
-corrected CLI comparison remains pending. Equal output alone would not resolve
-the remaining incorrect intent/date predictions.
+prompt bytes (`2d38d8e`). All forty MLX instrumentation controls reproduce the retained fused answers.
+The corrected complete CLI comparison finishes at 38/40 identical outputs; two
+differences remain, so export parity still fails (`5e24ed8`). Replaying the forty
+new native answers through the current Swift router gives 33 exact operations,
+zero unsafe proposals and zero newly incorrect results relative to both retained
+variants (`35269e1`): 24 rule answers and 16 admitted model answers. These cases
+are one connected development group, without speech, independent real dialogs
+or fresh inference in the replay; complete conversation acceptance stays open.
 
 Nine installed German system voices now have 90 anonymous host previews rendered
 by the actual product provider, with 1,782 checked word-progress markers and no
