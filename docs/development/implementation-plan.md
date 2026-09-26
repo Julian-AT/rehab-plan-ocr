@@ -129,6 +129,17 @@ the other. Twelve monitor regressions pass, including default scope and invalid
 target rejection before network access. Hosted verification of the new scope is
 recorded separately from native acceptance.
 
+Hosted run [35299521071](archive:github/run-35299521071)
+passes at `9c8d31ca627b2bfd86e0bb55bedb515c1792fcea`: 174 Linux Rust tests,
+206 tool tests, twelve monitor tests, portable lint and native VAD probe. The Apple
+job is explicitly skipped. Local macOS Rust totals remain 178 because four HEIF
+import/orientation tests are macOS-only; their absence is not an additional Linux
+pass. Run identity, dispatch scope and complete portable logs are retained in
+`.local/runs/hosted-ci-portable-20260926-s18-001`; summary SHA-256
+`992b6a3efab361e29aceeb6a4b3eacd40a9dead4e8d771fbb8a1d3abc8d68c74`.
+Full native runs 35295159442 and 35297619578 continue independently. No native
+acceptance or physical-device update follows from this portable success.
+
 ### Reproducible OCR model cards — 2026-09-26
 
 `make register-ocr` creates a new experimental card directly from complete training

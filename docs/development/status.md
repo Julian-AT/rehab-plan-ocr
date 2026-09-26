@@ -43,9 +43,10 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 Rust workspace tests and 206 tool tests pass. Repository lint passed before the later model-card helper; its Python formatting/lint and documentation checks pass. Relevant headless Swift probes are recorded in the ledger. |
+| Portable/native logic | 178 macOS Rust tests, 174 Linux Rust tests, 206 tool tests and twelve CI-monitor tests pass. Four HEIF cases require macOS. Portable lint passes on the latest tooling candidate; headless Swift probes are recorded in the ledger. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Run 35295159442 tests `0597aab`; portable and pre-UI Apple stages pass, full UI is running. Run 35297619578 tests the later evaluation/tooling candidate `a303bc2` on a separate branch. No complete candidate pass is claimed yet. |
+| Portable CI scope | Run 35299521071 passes at `9c8d31c`, with its Apple job explicitly skipped. Full remains the default for manual dispatch and the required push/PR scope. This tool-development run does not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
 | Local audio/UI | Full local runs reproduce CoreAudio aborts, also seen in an independent minimal app. Three affected cases pass on the hosted environment. Combining isolated passes does not establish whole-suite acceptance. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
