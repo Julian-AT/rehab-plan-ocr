@@ -294,7 +294,6 @@ impl Platform for NoEffects {
 }
 #[tokio::test]
 async fn decoding_or_model_failure_keeps_the_source_in_both_shells_shared_service() {
-    use base64::Engine;
     let dir = tempfile::tempdir().unwrap();
     let state = Arc::new(Application::new(
         Store::open(dir.path()).unwrap(),
@@ -307,7 +306,7 @@ async fn decoding_or_model_failure_keeps_the_source_in_both_shells_shared_servic
         service::inference::ImportRequest {
             id: id.clone(),
             filename: "broken.jpg".into(),
-            base64: base64::engine::general_purpose::STANDARD.encode(b"not an image"),
+            bytes: b"not an image".to_vec(),
             config: PipelineConfig::default(),
             force: false,
         },
@@ -324,7 +323,6 @@ async fn decoding_or_model_failure_keeps_the_source_in_both_shells_shared_servic
 
 #[tokio::test]
 async fn attempt_journal_failure_does_not_leave_recognition_locked() {
-    use base64::Engine;
     let dir = tempfile::tempdir().unwrap();
     let store = Store::open(dir.path()).unwrap();
     store.connection.execute_batch("CREATE TRIGGER fail_attempt BEFORE INSERT ON processing_attempts BEGIN SELECT RAISE(ABORT, 'simulated storage failure'); END;").unwrap();
@@ -336,7 +334,7 @@ async fn attempt_journal_failure_does_not_leave_recognition_locked() {
         service::inference::ImportRequest {
             id: id.clone(),
             filename: "photo.jpg".into(),
-            base64: base64::engine::general_purpose::STANDARD.encode(b"retained bytes"),
+            bytes: b"retained bytes".to_vec(),
             config: PipelineConfig::default(),
             force: false,
         },
@@ -413,4 +411,93 @@ fn pdf_header_rejects_short_and_invalid_originals_with_the_existing_error() {
             .to_string()
             .contains("Keine lesbare PDF-Datei."));
     }
+}
+
+#[tokio::test]
+async fn binary_duplicate_import_retains_the_complete_reviewed_run() {
+    let directory = tempfile::tempdir().unwrap();
+    let original = b"\x00\xff\x80original bytes\r\n";
+    let mut prior: PipelineRun = serde_json::from_str(include_str!(
+        "../../../../ml/evaluation/fixtures/sample-run.json"
+    ))
+    .unwrap();
+    prior.document.source_hash = reha_core::hash(original);
+    prior.extraction_version = reha_core::parser::EXTRACTION_VERSION;
+    let appointment = &mut prior.appointments[0];
+    appointment.title = "Bestätigter Titel – unverändert".into();
+    appointment.fields.insert(
+        "title".into(),
+        FieldAssessment {
+            state: PrintedState::Legible,
+            confirmed_value: Some(serde_json::json!(appointment.title)),
+            confirmed_at: Some(12345),
+            ..Default::default()
+        },
+    );
+    let store = Store::open(directory.path()).unwrap();
+    store.save_run(&prior).unwrap();
+    // Existing load-time compatibility migration is outside the import boundary.
+    prior = store.load_run(&prior.document.id).unwrap();
+    let expected = serde_json::to_value(&prior).unwrap();
+    let state = Arc::new(Application::new(
+        store,
+        directory.path().join("missing-models"),
+    ));
+    let id = uuid::Uuid::new_v4().to_string();
+    let result = service::scan::import_image(
+        Arc::new(NoEffects),
+        &state,
+        service::inference::ImportRequest {
+            id: id.clone(),
+            filename: "duplicate.bin".into(),
+            bytes: original.to_vec(),
+            config: prior.config,
+            force: false,
+        },
+    )
+    .await
+    .unwrap();
+    assert!(result.duplicate);
+    assert_eq!(serde_json::to_value(result.run).unwrap(), expected);
+    assert!(state.cancel.lock().unwrap().is_empty());
+    let store = state.store.lock().unwrap();
+    assert_eq!(store.intake(&id).unwrap().unwrap().status, "duplicate");
+    assert_eq!(
+        std::fs::read(store.source_path(&id).unwrap()).unwrap(),
+        original
+    );
+    assert_eq!(
+        serde_json::to_value(store.load_run(&prior.document.id).unwrap()).unwrap(),
+        expected
+    );
+}
+
+#[tokio::test]
+async fn binary_import_rejects_oversized_original_before_staging() {
+    let directory = tempfile::tempdir().unwrap();
+    let state = Arc::new(Application::new(
+        Store::open(directory.path()).unwrap(),
+        directory.path().join("missing-models"),
+    ));
+    let id = uuid::Uuid::new_v4().to_string();
+    let result = service::scan::import_image(
+        Arc::new(NoEffects),
+        &state,
+        service::inference::ImportRequest {
+            id: id.clone(),
+            filename: "oversized.bin".into(),
+            bytes: vec![0; reha_core::photo_source::MAX_BYTES + 1],
+            config: PipelineConfig::default(),
+            force: false,
+        },
+    )
+    .await;
+    assert!(
+        matches!(result, Err(service::ServiceError::Legacy(ref message))
+        if message.contains("40 MB"))
+    );
+    assert!(state.cancel.lock().unwrap().is_empty());
+    let store = state.store.lock().unwrap();
+    assert!(store.intake(&id).unwrap().is_none());
+    assert!(!store.source_path(&id).unwrap().exists());
 }

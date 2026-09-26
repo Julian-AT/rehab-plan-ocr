@@ -642,3 +642,27 @@ Die neue Gesprächsregression prüft einen Auswahlwechsel zwischen Ziel- und
 Referenztag, die Sperre des alten Antwortcaches und den anschließenden Neustart
 mit einem neuen Token. Diese Host-Nachweise ersetzen den gemeinsamen Appbuild
 und die Geräteabnahme nicht.
+
+## Binärer interner Fotoimport und typisiertes Erkennungsergebnis
+
+Der aktive Import und die Wiederaufnahme übergeben Originalbytes direkt an
+`ImportRequest`. Die zusätzliche Base64-Kopie zwischen FFI und Core entfällt.
+Dieser interne Rust-Auftrag hat keinen JSON-/CLI-Verbraucher; die nativen
+öffentlichen Methodensignaturen und bisherigen Speicherformate bleiben erhalten.
+Die 40-MiB-Grenze wird vor dem Vormerken geprüft. Unveränderte Originale werden
+weiter atomar gespeichert; auch ein späterer Decoder-/Modellfehler entfernt sie
+nicht.
+
+`ImportOutcome` trägt den vollständigen `PipelineRun` und die explizite
+Duplikatentscheidung. Neue Ergebnisse, vorhandene Duplikate und erhaltene Entwürfe
+nach Abbruch oder Fehler erreichen die native Ansicht ohne zwischenzeitliches
+JSON, erneutes Deserialisieren oder stillen Standardwert für `duplicate`.
+Die gleiche Änderung gilt für beide Wiederaufnahmepfade. Laufzeitbudget,
+Abbruchbesitzer, Entwurfs-/Prüfwerte und Verarbeitungsjournale bleiben unverändert.
+
+Die gezielten Importregressionen prüfen die unveränderten Binärbytes einschließlich
+Null-/Nicht-UTF-8-Bytes, die vollständige bestehende Prüfreferenz bei Duplikaten,
+die Größenablehnung vor Anlage eines Eingangs sowie Fehler-/Migrationswiederanlauf.
+Der gemeinsame Prüfbeleg bindet diese Änderung und den separat typisierten
+Löscheffekt an die tatsächlich geprüften Quellen; die vollständige gemeinsame
+App-/Simulatorabnahme folgt weiterhin gesondert.

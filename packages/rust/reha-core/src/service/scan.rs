@@ -1,7 +1,6 @@
 use crate as reha_core;
-use crate::service::inference::{self, ImportRequest};
+use crate::service::inference::{self, ImportOutcome, ImportRequest};
 use crate::service::{domain_failure, failure, AppState, DomainFailure, Response};
-use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::contracts::*;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -14,7 +13,7 @@ pub async fn import_image(
     app: Arc<dyn super::Platform>,
     state: &Arc<AppState>,
     request: ImportRequest,
-) -> Response<Value> {
+) -> Response<ImportOutcome> {
     let started = std::time::Instant::now();
     let admission = state.lifecycle_lock.lock().await;
     uuid::Uuid::parse_str(&request.id).map_err(failure)?;
@@ -27,12 +26,9 @@ pub async fn import_image(
     {
         return Err("Scan-ID wird bereits verwendet.".into());
     }
-    if request.base64.len() > 56 * 1024 * 1024 {
+    if request.bytes.len() > crate::photo_source::MAX_BYTES {
         return Err("Foto ist zu groß (maximal 40 MB).".into());
     }
-    let bytes = STANDARD
-        .decode(&request.base64)
-        .map_err(|_| "Ungültige Bilddaten.")?;
     state
         .store
         .lock()
@@ -40,7 +36,7 @@ pub async fn import_image(
         .stage_intake(
             &request.id,
             &request.filename,
-            &bytes,
+            &request.bytes,
             &request.config,
             chrono::Utc::now().timestamp(),
         )
@@ -59,7 +55,7 @@ pub async fn import_image(
         )
         .map_err(failure)?;
     app.progress(json!({"id":request.id,"stage":"Original gespeichert","draft_available":false}));
-    let source_hash = reha_core::hash(&bytes);
+    let source_hash = reha_core::hash(&request.bytes);
     if !request.force {
         let store = state.store.lock().map_err(failure)?;
         if let Some(id) = store.identical(&source_hash).map_err(failure)? {
@@ -70,7 +66,10 @@ pub async fn import_image(
                     store
                         .intake_status(&request.id, "duplicate", None)
                         .map_err(failure)?;
-                    return Ok(json!({"run":run,"duplicate":true}));
+                    return Ok(ImportOutcome {
+                        run,
+                        duplicate: true,
+                    });
                 }
             }
         }
@@ -108,8 +107,7 @@ pub async fn import_image(
     let worker_cancel = cancel.clone();
     let worker_id = id.clone();
     let mut task = tokio::task::spawn_blocking(move || {
-        let result =
-            inference::process(app, shared.clone(), request, bytes, worker_cancel, started);
+        let result = inference::process(app, shared.clone(), request, worker_cancel, started);
         if let Ok(store) = shared.store.lock() {
             // A timeout/cancel may have returned earlier. Do not overwrite it.
             let cancelled = shared
@@ -162,7 +160,7 @@ pub async fn import_image(
                     if let Ok(mut run) = store.load_run(&id) {
                         run.stages.push(Stage { name: "automatic_review".into(), status: status.into(), duration_ms: started.elapsed().as_millis() as u64, detail: "Letzter brauchbarer Entwurf bleibt erhalten.".into(), artifacts: vec![] });
                         store.save_run(&run).map_err(failure)?;
-                        return Ok(json!({"run":run,"duplicate":false}));
+                        return Ok(ImportOutcome { run, duplicate: false });
                     }
                     return Err("Prüfung beendet (Abbruch oder 60 Sekunden). Der bisherige Entwurf bleibt erhalten; noch kein neuer Entwurf verfügbar.".into());
                 }
@@ -188,7 +186,10 @@ pub async fn import_image(
                 artifacts: vec![],
             });
             store.save_run(&run).map_err(failure)?;
-            return Ok(json!({"run":run,"duplicate":false}));
+            return Ok(ImportOutcome {
+                run,
+                duplicate: false,
+            });
         }
     }
     result
@@ -365,19 +366,19 @@ pub async fn retry_scan(
         }
     };
     if let Some((intake, bytes)) = intake {
-        let value = import_image(
+        let outcome = import_image(
             app,
             state,
             ImportRequest {
                 id,
                 filename: intake.filename,
-                base64: STANDARD.encode(bytes),
+                bytes,
                 config: intake.config,
                 force: true,
             },
         )
         .await?;
-        return serde_json::from_value(value["run"].clone()).map_err(failure);
+        return Ok(outcome.run);
     }
     #[cfg(not(feature = "onnx"))]
     {

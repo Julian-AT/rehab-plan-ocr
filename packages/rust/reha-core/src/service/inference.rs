@@ -1,19 +1,25 @@
 use crate as reha_core;
 // Native adapters around the shared image-to-appointment pipeline.
 use crate::service::{AppState, Response};
-use reha_core::contracts::PipelineConfig;
-use serde::Deserialize;
+use reha_core::contracts::{PipelineConfig, PipelineRun};
+#[cfg(feature = "onnx")]
 use serde_json::Value;
 use std::sync::{atomic::AtomicBool, Arc};
 
-#[derive(Deserialize)]
+/// In-process request: original bytes never need an intermediate Base64 copy.
 pub struct ImportRequest {
     pub id: String,
     pub filename: String,
-    pub base64: String,
+    pub bytes: Vec<u8>,
     pub config: PipelineConfig,
-    #[serde(default)]
     pub force: bool,
+}
+
+/// The exact retained draft and duplicate decision from the import owner.
+#[derive(Debug)]
+pub struct ImportOutcome {
+    pub run: PipelineRun,
+    pub duplicate: bool,
 }
 
 #[cfg(feature = "onnx")]
@@ -21,10 +27,9 @@ pub fn process(
     app: Arc<dyn super::Platform>,
     state: Arc<AppState>,
     request: ImportRequest,
-    bytes: Vec<u8>,
     cancel: Arc<AtomicBool>,
     started: std::time::Instant,
-) -> Response<Value> {
+) -> Response<ImportOutcome> {
     use crate::service::{domain_failure, failure};
     use reha_core::{
         contracts::*,
@@ -33,7 +38,8 @@ pub fn process(
     use serde_json::json;
     use std::time::Instant;
 
-    let source_hash = reha_core::hash(&bytes);
+    let bytes = &request.bytes;
+    let source_hash = reha_core::hash(bytes);
     let directly_decodable = cfg!(target_os = "macos")
         || bytes.starts_with(&[0xff, 0xd8, 0xff])
         || bytes.starts_with(b"\x89PNG\r\n\x1a\n");
@@ -63,7 +69,7 @@ pub fn process(
                     // Native conversions must restore the actual input photo.
                     let source_retained = directly_decodable
                         || store.scan_dir(&request.id).ok().is_some_and(|dir| {
-                            std::fs::write(dir.join("source.bin"), &bytes).is_ok()
+                            std::fs::write(dir.join("source.bin"), bytes).is_ok()
                         });
                     if source_retained && store.save_run(&draft).is_ok() {
                         draft_saved.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -90,7 +96,7 @@ pub fn process(
         let decoded = if directly_decodable {
             std::borrow::Cow::Borrowed(bytes.as_slice())
         } else {
-            std::borrow::Cow::Owned(app.decode_photo(&bytes)?)
+            std::borrow::Cow::Owned(app.decode_photo(bytes)?)
         };
         let mut load_ms = 0;
         let mut cached = false;
@@ -208,10 +214,13 @@ pub fn process(
                 .map_err(failure)?
                 .load_run(&request.id)
                 .map_err(domain_failure)?;
-            return Ok(json!({"run":saved,"duplicate":false}));
+            return Ok(ImportOutcome {
+                run: saved,
+                duplicate: false,
+            });
         }
         if !directly_decodable {
-            std::fs::write(directory.join("source.bin"), &bytes).map_err(failure)?;
+            std::fs::write(directory.join("source.bin"), bytes).map_err(failure)?;
             run.document.source_hash = source_hash.clone();
         }
         if let Some(previous) = &previous {
@@ -251,12 +260,16 @@ pub fn process(
         }
         let store = state.store.lock().map_err(failure)?;
         if cancel.load(std::sync::atomic::Ordering::Relaxed) {
-            return Ok(
-                json!({"run":store.load_run(&request.id).map_err(domain_failure)?,"duplicate":false}),
-            );
+            return Ok(ImportOutcome {
+                run: store.load_run(&request.id).map_err(domain_failure)?,
+                duplicate: false,
+            });
         }
         store.save_run(&run).map_err(failure)?;
-        Ok(json!({ "run": run, "duplicate": false }))
+        Ok(ImportOutcome {
+            run,
+            duplicate: false,
+        })
     })();
     result
 }
@@ -266,10 +279,9 @@ pub fn process(
     _: Arc<dyn super::Platform>,
     _: Arc<AppState>,
     _: ImportRequest,
-    _: Vec<u8>,
     _: Arc<AtomicBool>,
     _: std::time::Instant,
-) -> Response<Value> {
+) -> Response<ImportOutcome> {
     Err("This build has no portable inference runtime.".into())
 }
 

@@ -751,20 +751,20 @@ impl NativeApplication {
                 return Err(AppError::Cancelled);
             }
             if let Some((intake, bytes)) = staged {
-                let value = service::scan::import_image(
+                let outcome = service::scan::import_image(
                     bridge,
                     &state,
                     service::inference::ImportRequest {
                         id,
                         filename: intake.filename,
-                        base64: STANDARD.encode(bytes),
+                        bytes,
                         config: intake.config,
                         force: true,
                     },
                 )
                 .await
                 .map_err(failure)?;
-                snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)
+                snapshot(outcome.run)
             } else {
                 snapshot(
                     service::scan::retry_scan(bridge, &state, id)
@@ -1365,19 +1365,19 @@ impl NativeApplication {
                     .unwrap_or_default()
                     .to_string_lossy()
                     .into(),
-                base64: STANDARD.encode(bytes),
+                bytes,
                 config,
                 force: request.force,
             };
             if job.is_cancelled() {
                 return Err(AppError::Cancelled);
             }
-            let value = service::scan::import_image(bridge, &state, request)
+            let outcome = service::scan::import_image(bridge, &state, request)
                 .await
                 .map_err(failure)?;
             Ok(ScanOutcome {
-                duplicate: value["duplicate"].as_bool().unwrap_or(false),
-                scan: snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)?,
+                duplicate: outcome.duplicate,
+                scan: snapshot(outcome.run)?,
             })
         })
         .await
