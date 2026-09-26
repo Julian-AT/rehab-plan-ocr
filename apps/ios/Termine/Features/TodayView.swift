@@ -120,7 +120,7 @@ struct TodayView: View {
             WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
             Divider()
             TimelineView(.periodic(from: .now, by: 15)) { context in
-                sharedTimeline(now: context.date)
+                sharedTimeline(now: AgendaPreviewClock.now(context.date))
             }.onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
                 followToday(Calendar.current.startOfDay(for: .now))
             }

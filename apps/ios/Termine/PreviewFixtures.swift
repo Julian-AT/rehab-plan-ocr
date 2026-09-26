@@ -1,3 +1,4 @@
+import Foundation
 #if DEBUG && targetEnvironment(simulator)
 import EventKit
 import UIKit
@@ -50,7 +51,7 @@ import RehaCore
         preferences.calendarId = calendars[0].calendarIdentifier
         preferences.appearance = arguments.contains("--preview-dark") ? "dark" : "light"
         _ = try await core.savePreferences(value: preferences)
-        let now = Date(), day = Calendar.current.startOfDay(for: .now)
+        let now = AgendaPreviewClock.now(Date()), day = Calendar.current.startOfDay(for: .now)
         func add(_ title: String, start: Date, end: Date, calendar: Int = 0, allDay: Bool = false, room: String = "Raum 2.14") throws {
             let event = EKEvent(eventStore: store)
             event.calendar = calendars[calendar]; event.title = title; event.location = room
@@ -68,6 +69,14 @@ import RehaCore
             let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!
             for (index, title) in ["Frühstück I", "Ärztliches Gespräch", "Physiotherapie", "Anmeldung", "Freier Termin"].enumerated() {
                 try add(title, start: next.addingTimeInterval(Double(7 + index) * 3600), end: next.addingTimeInterval(Double(7 + index) * 3600 + 1800))
+            }
+        }
+        if mode == "axis" {
+            for offset in [1, 3] {
+                let date = Calendar.current.date(byAdding: .day, value: offset, to: day)!
+                for hour in 8...17 {
+                    try add("Therapie Tag \(offset), \(hour) Uhr", start: date.addingTimeInterval(Double(hour) * 3600), end: date.addingTimeInterval(Double(hour) * 3600 + 1800))
+                }
             }
         }
         if mode == "readable" {
@@ -110,3 +119,18 @@ import RehaCore
     }
 }
 #endif
+
+/// Keep visual fixtures inside the timeline at every wall-clock hour. This is
+/// compiled only for simulator DEBUG launches with an explicit fixture argument.
+enum AgendaPreviewClock {
+    static func now(_ actual: Date) -> Date {
+        #if DEBUG && targetEnvironment(simulator)
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "--agenda-fixture"), arguments.indices.contains(index + 1),
+           ["timeline", "short", "full"].contains(arguments[index + 1]) {
+            return Calendar.current.startOfDay(for: actual).addingTimeInterval(10 * 3600)
+        }
+        #endif
+        return actual
+    }
+}

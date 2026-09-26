@@ -10,18 +10,23 @@ if [ "${1:-}" = --built ]; then shift; else sh scripts/build-native.sh simulator
 xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
-simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
+if [ -n "${REHA_TEST_SIMULATOR:-}" ]; then
+  simulator=$REHA_TEST_SIMULATOR
+  xcrun simctl list devices --json | python3 -c 'import json,sys; devices=[d for group in json.load(sys.stdin)["devices"].values() for d in group]; assert any(d["udid"] == sys.argv[1] and d["name"].startswith("Termine-Native-Test-") for d in devices), "Only a disposable native-test simulator can be reused"' "$simulator"
+else
+  simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
+fi
 printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)
 cleanup() {
-  if [ "${REHA_KEEP_SIMULATOR:-0}" != 1 ]; then
+  if [ "${REHA_KEEP_SIMULATOR:-0}" != 1 ] && [ -z "${REHA_TEST_SIMULATOR:-}" ]; then
     xcrun simctl shutdown "$simulator" >/dev/null 2>&1 || true
     xcrun simctl delete "$simulator" >/dev/null 2>&1 || true
   fi
   rm -rf "$staging"
 }
 trap cleanup EXIT INT TERM
-xcrun simctl boot "$simulator"
+xcrun simctl boot "$simulator" 2>/dev/null || true
 xcrun simctl bootstatus "$simulator" -b
 app="$staging/Laßnitzhöhe.app"
 # File-provider metadata can reappear immediately under Documents. Sign a
@@ -38,7 +43,11 @@ if ! xcrun simctl install "$simulator" "$app"; then
   xcrun simctl install "$simulator" "$app"
 fi
 container=$(xcrun simctl get_app_container "$simulator" at.rehakalender.personal data)
-cargo run --locked --quiet -p reha-ffi --example seed_fixture -- "$container/Library/Application Support/at.rehakalender.personal" --ui
+if [ -z "${REHA_TEST_SIMULATOR:-}" ]; then
+  cargo run --locked --quiet -p reha-ffi --example seed_fixture -- "$container/Library/Application Support/at.rehakalender.personal" --ui
+else
+  printf 'Reusing synthetic test data in disposable simulator.\n'
+fi
 xcrun simctl privacy "$simulator" grant calendar at.rehakalender.personal
 xcrun simctl privacy "$simulator" grant microphone at.rehakalender.personal
 xcrun simctl launch "$simulator" com.apple.DocumentsApp >/dev/null

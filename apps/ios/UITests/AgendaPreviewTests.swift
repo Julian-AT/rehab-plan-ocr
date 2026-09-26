@@ -65,6 +65,37 @@ import UIKit
         XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
         capture("03-wischen-ueber-wochengrenze")
     }
+    func testAxisLockFixedTimeColumnAndAnchorAcrossEmptyDay() {
+        launch("axis")
+        let days = app.scrollViews["agenda-days"]
+        XCTAssertTrue(days.waitForExistence(timeout: 8))
+        days.swipeLeft()
+        XCTAssertTrue(row("Therapie Tag 1, 12 Uhr").waitForExistence(timeout: 8))
+        let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch
+        let beforeDay = selected.label
+        let timeline = app.scrollViews["day-timeline"]
+        let origin = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.75))
+        origin.press(forDuration: 0.02, thenDragTo: origin.withOffset(CGVector(dx: 40, dy: -170)), withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertEqual(selected.label, beforeDay)
+        let hour = app.staticTexts["timeline-hour-12"]
+        let anchorY = hour.frame.minY
+        let anchorX = hour.frame.minX
+        XCTAssertLessThan(anchorX, 56)
+        capture("quality-01-vertikale-diagonale")
+        let start = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        start.press(forDuration: 0.02, thenDragTo: start.withOffset(CGVector(dx: -25, dy: 1)), withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertEqual(selected.label, beforeDay)
+        XCTAssertEqual(hour.frame.minX, anchorX, accuracy: 1)
+        XCTAssertEqual(hour.frame.minY, anchorY, accuracy: 2)
+        days.swipeLeft()
+        XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts["timeline-hour-12"].isHittable)
+        capture("quality-02-leerer-nachbartag")
+        days.swipeLeft()
+        XCTAssertTrue(row("Therapie Tag 3, 12 Uhr").waitForExistence(timeout: 8))
+        XCTAssertEqual(app.staticTexts["timeline-hour-12"].frame.minY, anchorY, accuracy: 2)
+        capture("quality-03-uhrzeit-erhalten")
+    }
     func testCalendarDensityAndListPersistAfterRestart() {
         launch("readable")
         app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
