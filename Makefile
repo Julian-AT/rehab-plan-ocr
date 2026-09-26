@@ -550,6 +550,16 @@ diagnose-ocr-batchnorm-onnx: check-storage
 	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private diagnostic directory'; exit 2; }
 	.local/envs/ocr/bin/python ml/evaluation/recognition/batchnorm_onnx.py execute --output "$(DIAGNOSTIC_RUN)"
 
+.PHONY: prepare-ocr-batchnorm-stage diagnose-ocr-batchnorm-stage
+prepare-ocr-batchnorm-stage:
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to a new private diagnostic directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/batchnorm_stage.py prepare --output "$(DIAGNOSTIC_RUN)"
+
+diagnose-ocr-batchnorm-stage: PEAK_GIB = 4
+diagnose-ocr-batchnorm-stage: check-storage
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private diagnostic directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/batchnorm_stage.py execute --output "$(DIAGNOSTIC_RUN)"
+
 .PHONY: prepare-assistant-router-replay assess-assistant-router-replay
 prepare-assistant-router-replay:
 	@test -n "$(RUN)" -a -n "$(APP_RUN)" -a -n "$(DEPLOYMENT_RUN)" -a -n "$(NATIVE_RUN)" || { echo 'Set RUN (new), APP_RUN, DEPLOYMENT_RUN and NATIVE_RUN'; exit 2; }
