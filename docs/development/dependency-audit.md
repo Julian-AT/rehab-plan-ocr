@@ -264,3 +264,38 @@ microsecond batch timestamp versus the full advisory's nanosecond timestamp.
 The corrected reader accepts only the upstream's directed microsecond truncation;
 different full-precision timestamps still fail. All 27 isolated regressions pass,
 including the actual retained response pair and changed-time counterexamples.
+
+### Qualified assistant export upgrades on 2026-09-26
+
+The assistant export lock now contains the exact privately qualified toolchain:
+Torch 2.13.0, Setuptools 83.0.0, Protobuf 6.33.5, Transformers 5.10.1 and Hub 1.5.0.
+Tokenizers remains 0.22.2. Three separate stages converted the same base and
+development-002 fused weights with the unchanged pinned llama.cpp converter.
+All six converters exited 0 and produced byte-identical complete baseline and
+assistant F16 GGUFs; the [assistant development notes](../../ml/training/assistant/README.md)
+record both sizes, hashes and the three retained reports.
+
+The final Transformers/Hub stage changes exactly two resolved versions, adds eleven
+required HTTP/CLI packages and removes `requests`, `urllib3` and `charset-normalizer`.
+The other 22 package objects are unchanged. Its 35-package candidate passed the
+exact lock/installed-closure checks, official artifact checks and a fresh OSV query
+with no returned entries. All 13 changed/new wheels were independently downloaded
+and matched their official SHA256 and sizes before installation. The preceding
+39 synthetic controls and offline API checks preserve every recorded tokenizer,
+template, vocabulary, special-ID, 40-prompt and F16 check value; only the declared
+Transformers version and two diagnostic tokenizer class names differ.
+
+The actual Stage3 conversion ran from 15:15:41 to 15:16:34 UTC. Its retained report
+is `.local/runs/assistant-export-upgrade-stage3-20260926-s21-001/report.json`, SHA256
+`b56493e3065d53ab47c2c6b813fc197fa54d6e72a509db654eb4dfc2bc7b47e9`.
+Complete weight, environment, converter, prompt and source bindings match before
+and after the run. The promoted lock SHA256 is
+`68fcde6c01c55a55343e2a1db7f68a5bc9dddafd19380656f94ee21717222a37`.
+
+This promotes the qualified manifest/lock only; existing canonical environments
+are not synchronized. Original inputs, all duplicate GGUFs, environments and
+historical reports remain retained. No new answers, refusion or model-quality
+claim result from these conversions. The historical 40-answer parity is referenced
+only through identical artifact bytes. This dated export-closure query does not
+supersede the earlier five-lock audit or clear its remaining findings; a current
+five-lock audit must bind the changed lock separately.

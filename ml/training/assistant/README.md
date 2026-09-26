@@ -3,24 +3,30 @@
 The fixed base and converter revisions are in `ml/registry/assistant-base.json`.
 Weights, downloads, fused models, GGUF files and run logs stay in ignored `.local/`
 storage. The training environment uses MLX-LM 0.31.3 / Transformers 5; the separate
-conversion environment uses Transformers 4.57.6 and the pinned llama.cpp converter.
+conversion lock uses Transformers 5.10.1 and the pinned llama.cpp converter.
 Training packages are not app dependencies.
 
-The conversion toolchain pins Torch 2.13.0, Setuptools 83.0.0 and Protobuf 6.33.5.
-On 2026-09-26, separate Torch/Setuptools and Protobuf upgrade runs converted the
-unchanged base and development-002 fused weights. Both runs produced the same
+The conversion toolchain pins Torch 2.13.0, Setuptools 83.0.0 and Protobuf 6.33.5;
+the resolved Hub version is 1.5.0 and Tokenizers remains 0.22.2.
+On 2026-09-26, three separate Torch/Setuptools, Protobuf and Transformers/Hub
+upgrade runs converted the unchanged base and development-002 fused weights.
+All three runs produced the same
 complete F16 GGUF bytes as the retained originals: baseline 1,509,347,584 bytes
 (SHA256 `cf3244d20b79dd454f06fb9be8744c5beecf76b9e75a7cc581f17d6c29b09220`),
 assistant 1,198,182,240 bytes
 (SHA256 `0dfee2695c0c1bf44bbb1aa2bd9d59ce17c723fdf8b76f9a0ad2ad96da0f44a2`).
-All four converter processes exited successfully; weight, tokenizer, converter,
+All six converter processes exited successfully; weight, tokenizer, converter,
 environment, prompt and source bindings matched before and after each run.
-Private receipts are `.local/runs/assistant-export-upgrade-stage1-20260926-s21-001/report.json`
-and `.local/runs/assistant-export-upgrade-stage2-20260926-s21-001/report.json`.
+Private receipts are `.local/runs/assistant-export-upgrade-stage1-20260926-s21-001/report.json`,
+`.local/runs/assistant-export-upgrade-stage2-20260926-s21-001/report.json` and
+`.local/runs/assistant-export-upgrade-stage3-20260926-s21-001/report.json`.
+The Stage3 report SHA256 is
+`b56493e3065d53ab47c2c6b813fc197fa54d6e72a509db654eb4dfc2bc7b47e9`.
 This carries forward the existing 40-answer parity evidence by artifact identity;
-it does not record fresh inference or establish model quality. Transformers 4.57.6
-retains known dependency findings and requires a separate upgrade stage. The
-Protobuf step changed no other resolved package.
+it does not record fresh inference or establish model quality. The 35-package
+Stage3 environment returned no entries in its dated OSV query; this does not
+replace the audit of the other Python locks. The exact qualified manifest/lock
+is promoted; existing environments are not synchronized by that promotion.
 
 On the configured Apple Silicon development machine:
 
@@ -50,10 +56,11 @@ set. Tokenization checks prompt masking and sequence length before training; no
 example is silently truncated. Logs and run identities record pinned checkpoints,
 environment locks, dataset, configuration, source hashes, commands and failures.
 
-MLX fusion reserializes the tokenizer with Transformers 5. The pinned converter's
-Transformers 4 cannot read that representation. `preserve_tokenizer` verifies the
+MLX fusion reserializes the tokenizer with Transformers 5. `preserve_tokenizer` verifies the
 complete vocabulary, added vocabulary, special IDs and chat template before
 copying the byte-identical pinned tokenizer files. Model weights are retained.
+Introduced for the former Transformers 4 exporter, this preservation step remains
+part of the qualified byte-identity contract after the Transformers 5 upgrade.
 This follows the documented [Transformers token metadata changes](https://github.com/huggingface/transformers/blob/main/MIGRATION_GUIDE_V5.md)
 and [chat-template serialization](https://github.com/huggingface/transformers/blob/main/docs/source/en/chat_templating_writing.md).
 
