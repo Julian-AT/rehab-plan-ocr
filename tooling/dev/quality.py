@@ -211,6 +211,7 @@ def tests(portable):
             "agenda-projection",
             "agenda-cache",
             "archive",
+            "replacement-preview",
             "agenda",
             "voice-rules",
             "conversation-rules",

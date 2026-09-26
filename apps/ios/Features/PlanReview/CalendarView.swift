@@ -1,3 +1,4 @@
+import EventKit
 import RehaCore
 import SwiftUI
 
@@ -8,9 +9,8 @@ struct CalendarView: View {
   @Environment(\.dismiss) private var dismiss
   @State private var pages: [ReviewSnapshot]
   @State private var assessment: DraftAssessment?
-  @State private var proposal: Proposal?
+  @State private var replacement = ReplacementPreviewState<Proposal>()
   @State private var complete = false
-  @State private var approveRemovals = false
   @State private var busy = false
   @State private var error: String?
   @State private var exportURL: URL?
@@ -18,6 +18,9 @@ struct CalendarView: View {
   @State private var previousScans: [ScanSummary] = []
   @State private var previousID = ""
   @State private var history = false
+  private var replacementInputs: ReplacementPreviewState<Proposal>.Inputs {
+    .init(previousID: previousID, complete: complete)
+  }
   init(core: NativeApplication, original: ReviewSnapshot, pages: [ReviewSnapshot]? = nil) {
     self.core = core
     self.original = original
@@ -50,7 +53,7 @@ struct CalendarView: View {
               busy || !complete)
           }
         }
-        if let proposal {
+        if let proposal = replacement.current(inputs: replacementInputs) {
           Section("Ersetzung") {
             ForEach(proposal.operations, id: \.id) { op in
               VStack(alignment: .leading, spacing: AppSpacing.small) {
@@ -60,10 +63,12 @@ struct CalendarView: View {
                 if let after = op.after { Text("Plan: \(after.startUtc)").font(.subheadline) }
                 if op.requiresResolution {
                   Text(op.reason).font(.subheadline)
-                  Button("Kalenderstand behalten") { resolve(op, "keep") }
-                  if op.kind == .conflict { Button("Planwerte verwenden") { resolve(op, "paper") } }
+                  Button("Kalenderstand behalten") { resolve(op, "keep") }.disabled(busy)
+                  if op.kind == .conflict {
+                    Button("Planwerte verwenden") { resolve(op, "paper") }.disabled(busy)
+                  }
                   if op.kind == .ambiguous {
-                    Button("Zusätzlichen Termin speichern") { resolve(op, "new") }
+                    Button("Zusätzlichen Termin speichern") { resolve(op, "new") }.disabled(busy)
                     ForEach(
                       proposal.operations.filter {
                         $0.kind == .keep && $0.after == nil && $0.before != nil
@@ -71,19 +76,21 @@ struct CalendarView: View {
                     ) { old in
                       Button("Zuordnen: \(old.before?.title ?? "Termin")") {
                         resolve(op, "match:\(old.id)")
-                      }
+                      }.disabled(busy)
                     }
                   }
                 }
               }
             }
             if proposal.operations.contains(where: { $0.kind == .remove }) {
-              Toggle("Angezeigte Löschungen erlauben", isOn: $approveRemovals)
+              Toggle("Angezeigte Löschungen erlauben", isOn: $replacement.removalsApproved)
             }
             Button("Ersetzung speichern") { Task { await write() } }
               .disabled(
                 busy || proposal.operations.contains(where: \.requiresResolution)
-                  || (proposal.operations.contains { $0.kind == .remove } && !approveRemovals))
+                  || (proposal.operations.contains { $0.kind == .remove }
+                    && !replacement.removalsApproved)
+              )
           }
         }
         if let outcome {
@@ -105,14 +112,12 @@ struct CalendarView: View {
           }
         }
         .task { await load() }
-        .onChange(of: complete) {
-          proposal = nil
-          approveRemovals = false
+        .onChange(of: complete) { replacement.invalidate() }
+        .onChange(of: previousID) { replacement.invalidate() }
+        .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
+          replacement.invalidate()
         }
-        .onChange(of: previousID) {
-          proposal = nil
-          approveRemovals = false
-        }
+        .onDisappear { replacement.invalidate() }
         .sheet(isPresented: $history) {
           ImportHistoryView(
             core: core, documentID: original.document.id, initialBatchID: outcome?.batchId)
@@ -150,56 +155,84 @@ struct CalendarView: View {
     }
   }
   private func compareReplacement() async {
+    guard !busy, complete else { return }
     busy = true
     defer { busy = false }
-    proposal = nil
-    approveRemovals = false
+    let request = replacement.begin(inputs: replacementInputs)
     do {
-      if !previousID.isEmpty {
-        try await core.associateRecheck(id: original.document.id, previous: previousID)
+      if !request.inputs.previousID.isEmpty {
+        try await core.associateRecheck(
+          id: original.document.id, previous: request.inputs.previousID)
       }
+      guard replacement.accepts(request, inputs: replacementInputs) else { return }
       let ids = try await core.pageGroup(id: original.document.id)
+      guard replacement.accepts(request, inputs: replacementInputs) else { return }
       for id in ids {
         let page = try await core.loadScan(id: id)
+        guard replacement.accepts(request, inputs: replacementInputs) else { return }
         _ = try await core.saveReview(
-          id: id, revision: page.revision, appointments: page.appointments, complete: complete,
+          id: id, revision: page.revision, appointments: page.appointments,
+          complete: request.inputs.complete,
           selection: [])
+        guard replacement.accepts(request, inputs: replacementInputs) else { return }
       }
       let preferences = try await core.preferences()
+      guard replacement.accepts(request, inputs: replacementInputs) else { return }
       guard !preferences.calendarId.isEmpty else {
         throw AppError.Validation(message: "Kalender zuerst beim Plan einrichten.")
       }
       let preview = try await core.previewReplacement(
         id: original.document.id, calendarId: preferences.calendarId, timezone: original.timezone,
         reminder: preferences.reminder)
+      guard replacement.finish(request, inputs: replacementInputs, value: preview.proposal) else {
+        return
+      }
       assessment = preview.assessment
-      proposal = preview.proposal
       error = nil
-    } catch { self.error = userMessage(error) }
+    } catch {
+      guard replacement.accepts(request, inputs: replacementInputs) else { return }
+      replacement.invalidate()
+      self.error = userMessage(error)
+    }
   }
   private func resolve(_ op: CalendarOperation, _ choice: String) {
-    guard let proposal else { return }
+    guard let proposal = replacement.current(inputs: replacementInputs), !busy else { return }
+    busy = true
+    let request = replacement.begin(inputs: replacementInputs, retainingValue: true)
     Task {
-      busy = true
       defer { busy = false }
       do {
-        self.proposal = try await core.resolveProposal(
+        let resolved = try await core.resolveProposal(
           token: proposal.token, eventId: op.id, choice: choice)
-        approveRemovals = false
-      } catch { self.error = userMessage(error) }
+        guard replacement.finish(request, inputs: replacementInputs, value: resolved) else {
+          return
+        }
+        error = nil
+      } catch {
+        guard replacement.accepts(request, inputs: replacementInputs) else { return }
+        replacement.invalidate()
+        self.error = userMessage(error)
+      }
     }
   }
   private func write() async {
-    guard let proposal, let assessment else { return }
+    guard let proposal = replacement.current(inputs: replacementInputs), let assessment, !busy
+    else {
+      return
+    }
     busy = true
     defer { busy = false }
     do {
       outcome = try await core.acceptAndSave(
-        token: proposal.token, selection: assessment.readyIds, approveRemovals: approveRemovals)
-      self.proposal = nil
+        token: proposal.token, selection: assessment.readyIds,
+        approveRemovals: replacement.removalsApproved)
+      replacement.invalidate()
       error = nil
       await load()
-    } catch { self.error = userMessage(error) }
+    } catch {
+      replacement.invalidate()
+      self.error = userMessage(error)
+    }
   }
 }
 func operationTitle(_ kind: OperationKind) -> String {

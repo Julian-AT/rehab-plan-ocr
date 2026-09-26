@@ -237,3 +237,12 @@ calendar/voice runs can skip unrelated Photos/Files fixture setup with
 and voice-confirmation UI runs still abort in CoreAudio's `AURemoteIO::Cleanup`
 RPC timeout during `ConversationAudio.attachPlayer`. Their failures remain open;
 the save/undo pass does not qualify speech output or the full UI suite.
+
+Replacement previews now retain the exact comparison inputs and reject late
+comparison/resolution results after input changes, A→B→A changes, calendar-store
+notifications or leaving the screen. Each suspension before subsequent preparation
+writes checks the request again. Resolution retains visible rows while busy;
+invalidations clear deletion approval. Failed commits discard the obsolete preview,
+and successful committed receipts remain independent of later invalidation. The
+new native state probe passes; the simulator app builds with Swift 6 checking.
+Backend snapshot/revision validation remains the final write-time protection.

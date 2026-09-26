@@ -93,3 +93,7 @@ hosted CI and public distribution have not been activated.
 Older delivery reports describe their original builds and measurements. They do
 not supersede the current ledger or establish new accuracy, latency or release
 acceptance.
+
+Replacement-preview concurrency now has a dedicated passing regression probe:
+changed inputs, late resolutions, A→B→A changes and calendar invalidation cannot
+restore an old preview or its deletion approval. The simulator build passes.
