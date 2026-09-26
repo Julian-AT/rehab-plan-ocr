@@ -1,7 +1,6 @@
-import AVFoundation
-import AppleServices
+import Foundation
+import Observation
 import RehaCore
-import SwiftUI
 
 struct VoiceSnapshot {
   let session: String
@@ -33,8 +32,9 @@ struct VoiceSnapshot {
   private let interpretation: InterpretationRouter
   private var modelToken = UUID()
   typealias Question = ConversationState.Question
-  let core: NativeApplication
-  let recorder = LocalSpeechRecorder()
+  private let dependencies: VoiceDependencies
+  private let output: any VoiceSpeaking
+  let recorder: any VoiceRecording
   let edits: EventSession
   private(set) var session = UUID().uuidString
   private(set) var turn: UInt64 = 0
@@ -68,23 +68,23 @@ struct VoiceSnapshot {
     set { interaction.intent = newValue }
   }
   var title = ""
-  var date = Calendar.current.startOfDay(for: .now)
-  var time = Date()
+  var date: Date
+  var time: Date
   var duration = 0
   private var responseTask: Task<InterpretationResult, Error>?
-  init(core: NativeApplication) {
-    let understanding = AssistantProviderSelection.make()
+  init(
+    dependencies: VoiceDependencies, understanding: any InterpretationProvider,
+    edits: EventSession, recorder: any VoiceRecording, output: any VoiceSpeaking
+  ) {
+    self.dependencies = dependencies
     self.understanding = understanding
+    self.edits = edits
+    self.recorder = recorder
+    self.output = output
+    date = dependencies.calendar().startOfDay(for: dependencies.now())
+    time = dependencies.now()
     interpretation = InterpretationRouter(generation: understanding)
-    self.core = core
-    edits = EventSession(core: core, origin: "voice")
-    calendarConversation = CalendarConversation(fetch: { start, end in
-      let iso = ISO8601DateFormatter()
-      return try await core.eventRequest(
-        "queryCalendarEvents",
-        ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
-        as: CalendarQueryResponse.self)
-    })
+    calendarConversation = CalendarConversation(fetch: dependencies.fetchCalendar)
     recorder.onEndpoint = { [weak self] in self?.turnTask = Task { await self?.endTurn() } }
     recorder.onBargeIn = { [weak self] in self?.interruptAnswer() }
     recorder.onFailure = { [weak self] message in
@@ -93,8 +93,8 @@ struct VoiceSnapshot {
     }
   }
   private func installOutputCallbacks() {
-    SpeechOutput.shared.onFinished = { [weak self] in self?.answerFinished() }
-    SpeechOutput.shared.onFailure = { [weak self] message in
+    output.onFinished = { [weak self] in self?.answerFinished() }
+    output.onFailure = { [weak self] message in
       self?.pauseSession()
       self?.failure = message
     }
@@ -102,16 +102,15 @@ struct VoiceSnapshot {
   var isSessionRunning: Bool { running }
   private func rememberSpoken() {
     guard !rounds.isEmpty else { return }
-    let output = SpeechOutput.shared
     guard rounds[rounds.count - 1].outputID == output.responseID else { return }
     rounds[rounds.count - 1].heard.capture(
       playback: output.responseID, completedWords: output.spokenText)
   }
   private func answerFinished() {
-    LocalDiagnostics.shared.record(.playback, .completed, correlation: session)
+    dependencies.trace(.playbackCompleted(session))
     rememberSpoken()
     guard running, edits.proposal == nil else { return }
-    if UIAccessibility.isVoiceOverRunning {
+    if dependencies.isVoiceOverRunning() {
       pauseSession()
       return
     }
@@ -123,7 +122,7 @@ struct VoiceSnapshot {
     }
   }
   func pauseSession() {
-    LocalDiagnostics.shared.record(.interruption, .completed, correlation: session)
+    dependencies.trace(.interrupted(session))
     let endedToken = modelToken
     running = false
     sessionState = .paused
@@ -132,7 +131,7 @@ struct VoiceSnapshot {
     responseTask?.cancel()
     understanding.discard()
     responseTask = nil
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     recorder.cancelTurn()
     session = UUID().uuidString
@@ -143,13 +142,13 @@ struct VoiceSnapshot {
   }
   private func interruptAnswer() {
     guard running, edits.proposal == nil else { return }
-    LocalDiagnostics.shared.record(.interruption, .completed, correlation: session)
+    dependencies.trace(.interrupted(session))
     let endedToken = modelToken
     responseTask?.cancel()
     understanding.discard()
     responseTask = nil
     turnTask?.cancel()
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     session = UUID().uuidString
     modelToken = UUID()
@@ -169,7 +168,7 @@ struct VoiceSnapshot {
   func attach() -> VoiceSnapshot { snapshot() }
   private func say(_ text: String, question: Question? = nil) {
     installOutputCallbacks()
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     let reply = ConversationReply(text)
     response = reply.text
@@ -185,12 +184,12 @@ struct VoiceSnapshot {
       sessionState = .speaking
       recorder.monitorForInterruption()
     }
-    SpeechOutput.shared.speak(reply)
-    if !rounds.isEmpty { rounds[rounds.count - 1].outputID = SpeechOutput.shared.responseID }
+    output.speak(reply)
+    if !rounds.isEmpty { rounds[rounds.count - 1].outputID = output.responseID }
   }
   func repeatResponse() {
     installOutputCallbacks()
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     if !rounds.isEmpty {
       rounds[rounds.count - 1].answer = preparedResponse.text
@@ -200,17 +199,19 @@ struct VoiceSnapshot {
       sessionState = .speaking
       recorder.monitorForInterruption()
     }
-    SpeechOutput.shared.speak(preparedResponse)
-    if !rounds.isEmpty { rounds[rounds.count - 1].outputID = SpeechOutput.shared.responseID }
+    output.speak(preparedResponse)
+    if !rounds.isEmpty { rounds[rounds.count - 1].outputID = output.responseID }
   }
   func beginTurn(preRoll: Bool = false) async {
+    // A cancelled endpoint/barge-in task may not have started executing yet.
+    guard !Task.isCancelled else { return }
     failure = nil
     guard !busy, edits.proposal == nil else { return }
-    if SpeechOutput.shared.speaking {
-      SpeechOutput.shared.stop()
+    if output.speaking {
+      output.stop()
       rememberSpoken()
     }
-    LocalDiagnostics.shared.record(.speechRecognition, .started, correlation: session)
+    dependencies.trace(.recognitionStarted(session))
     running = true
     sessionState = .listening
     turn += 1
@@ -227,15 +228,14 @@ struct VoiceSnapshot {
     }
   }
   func endTurn() async {
-    guard !busy else { return }
+    guard !busy, !Task.isCancelled else { return }
     busy = true
     sessionState = .thinking
     let current = session
     defer { if session == current { busy = false } }
     do {
       let text = try await recorder.endTurn()
-      LocalDiagnostics.shared.record(
-        .speechRecognition, .completed, correlation: current, count: text.count)
+      dependencies.trace(.recognitionCompleted(current, text.count))
       guard session == current, !Task.isCancelled else { return }
       guard !text.isEmpty else {
         busy = false
@@ -262,9 +262,8 @@ struct VoiceSnapshot {
       failed("Ich habe keine Sprache erkannt.")
       return
     }
-    let now = Date.now
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = .current
+    let now = dependencies.now()
+    let calendar = dependencies.calendar()
     let parsed = VoiceRules.parse(text, now: now, calendar: calendar)
     if parsed.action == .cancel {
       cancelSession()
@@ -272,7 +271,7 @@ struct VoiceSnapshot {
     }
     if parsed.negatedChange || interaction.rejectsPendingChange(text) {
       say(
-        VoiceAddress.saved().choose(
+        dependencies.address().choose(
           "Es wird nichts geändert. Was möchtest du wissen?",
           "Es wird nichts geändert. Was möchten Sie wissen?"), question: .action)
       return
@@ -361,7 +360,7 @@ struct VoiceSnapshot {
     guard !busy, !edits.busy, edits.proposal == nil else { return }
     let current = session
     recorder.cancelTurn()
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     failure = nil
     busy = true
@@ -384,7 +383,7 @@ struct VoiceSnapshot {
     guard current == session, modelToken == token, !Task.isCancelled else { return }
     do {
       let result = try await calendarConversation.resolve(
-        request, token: token, address: VoiceAddress.saved())
+        request, token: token, now: dependencies.now(), address: dependencies.address())
       guard current == session, modelToken == token, !Task.isCancelled else { return }
       candidates = result.events
       selected = candidates.count == 1 ? candidates.first : nil
@@ -407,7 +406,7 @@ struct VoiceSnapshot {
     let current = session
     let token = UUID()
     modelToken = token
-    LocalDiagnostics.shared.record(.tools, .started, correlation: current)
+    dependencies.trace(.interpretationStarted(current))
     await calendarConversation.begin(token)
     guard session == current, modelToken == token, !Task.isCancelled else { return }
     do {
@@ -435,7 +434,7 @@ struct VoiceSnapshot {
         await answerCalendar(query, token: token)
       case .clarify:
         say(
-          AssistantInterpretation.clarification(result.problem, address: VoiceAddress.saved()),
+          AssistantInterpretation.clarification(result.problem, address: dependencies.address()),
           question: .action)
       case .cancel:
         say("Es wird nichts geändert.", question: .action)
@@ -470,7 +469,7 @@ struct VoiceSnapshot {
           var request = query
           request.detail = .list
           let matches = try await calendarConversation.resolve(
-            request, token: token, address: VoiceAddress.saved())
+            request, token: token, now: dependencies.now(), address: dependencies.address())
           guard session == current, modelToken == token, !Task.isCancelled else { return }
           candidates = matches.events
           if matches.total == 1, let event = candidates.first {
@@ -479,7 +478,8 @@ struct VoiceSnapshot {
             say(matches.text, question: .action)
           } else {
             say(
-              VoiceAddress.saved().choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?")
+              dependencies.address().choose(
+                "Welchen Termin meinst du?", "Welchen Termin meinen Sie?")
                 + " " + matches.text, question: .event)
           }
         }
@@ -500,7 +500,7 @@ struct VoiceSnapshot {
     let current = session
     busy = true
     failure = nil
-    SpeechOutput.shared.stop()
+    output.stop()
     rememberSpoken()
     let actionLabel: String =
       switch action {
@@ -520,9 +520,9 @@ struct VoiceSnapshot {
     edits.interrupt()
     failures = 0
     question = .action
-    intent = VoiceIntent()
+    intent = VoiceIntent(timezone: dependencies.calendar().timeZone.identifier)
     intent.action = action
-    if action == .list { intent.date = intent.calendar.startOfDay(for: .now) }
+    if action == .list { intent.date = intent.calendar.startOfDay(for: dependencies.now()) }
     selected = nil
     candidates = []
     if action == .create {
@@ -544,21 +544,17 @@ struct VoiceSnapshot {
     let current = session
     let calendar = intent.calendar
     do {
-      let start = intent.date ?? calendar.startOfDay(for: .now)
+      let start = intent.date ?? calendar.startOfDay(for: dependencies.now())
       let end = calendar.date(
         byAdding: .day, value: intent.date == nil && intent.action != .list ? 90 : 1, to: start)!
-      let iso = ISO8601DateFormatter()
-      let response = try await core.eventRequest(
-        "queryCalendarEvents",
-        ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
-        as: CalendarQueryResponse.self)
+      let response = try await dependencies.fetchCalendar(start, end)
       var found = response.events
       guard session == current else { return }
       if let name = intent.calendarName {
         found = found.filter { VoiceRules.normalized($0.calendar_title) == name }
       }
       if intent.action == .next {
-        found = found.filter { $0.values.end > .now }
+        found = found.filter { $0.values.end > dependencies.now() }
         candidates = Array(found.prefix(1))
       } else {
         if let minutes = intent.referenceTime {
@@ -594,10 +590,10 @@ struct VoiceSnapshot {
         await choose(candidates[0])
       } else {
         say(
-          VoiceAddress.saved().choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?"),
+          dependencies.address().choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?"),
           question: .event)
       }
-    } catch { if session == current { say(userMessage(error), question: .action) } }
+    } catch { if session == current { say(dependencies.errorMessage(error), question: .action) } }
   }
   func choose(_ event: CalendarEvent) async {
     let current = session
@@ -641,7 +637,7 @@ struct VoiceSnapshot {
       say("Wie heißt der Termin?", question: .title)
     } else if intent.newDate == nil {
       say(
-        VoiceAddress.saved().choose(
+        dependencies.address().choose(
           "An welchem Datum hast du den Termin?", "An welchem Datum haben Sie den Termin?"),
         question: .date)
     } else if intent.newTime == nil {
@@ -706,13 +702,11 @@ struct VoiceSnapshot {
     }
     if let title = intent.title { patch["title"] = .string(title) }
     do {
-      let p = try await core.preferences()
+      let p = try await dependencies.preferences()
       guard session == current else { return }
       var target = selected?.calendar_id ?? p.calendarId
       if intent.action == .create, let name = intent.calendarName {
-        let calendars = try JSONDecoder().decode(
-          CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")
-        ).calendars.filter {
+        let calendars = try await dependencies.destinations().filter {
           VoiceRules.normalized($0.title) == name && $0.writable
             && (p.displayCalendarIds.contains($0.id) || p.calendarId == $0.id)
         }
@@ -735,14 +729,14 @@ struct VoiceSnapshot {
         kind: intent.action == .create ? "create" : "update", calendar: target, event: selected,
         patch: patch)
       if session == current { presentProposal() }
-    } catch { if session == current { say(userMessage(error)) } }
+    } catch { if session == current { say(dependencies.errorMessage(error)) } }
   }
   private func presentProposal() {
     running = false
     sessionState = .paused
     recorder.cancelTurn()
     if let proposal = edits.proposal {
-      say(proposal.conversationText(address: .saved()), question: .confirmation)
+      say(proposal.conversationText(address: dependencies.address()), question: .confirmation)
     } else if edits.systemEvent != nil {
       say("Einladungen und ganze Serien bitte im Systemkalender bearbeiten.", question: .action)
     } else {
@@ -750,10 +744,11 @@ struct VoiceSnapshot {
     }
   }
   func confirmProposal() async {
-    guard !busy else { return }
+    // A duplicate tap must not reset the session while its first write is pending.
+    guard !busy, !edits.busy, edits.proposal != nil else { return }
     let current = session
     recorder.cancelTurn()
-    SpeechOutput.shared.stop()
+    output.stop()
     await edits.confirm()
     guard session == current else { return }
     candidates = []
@@ -761,7 +756,7 @@ struct VoiceSnapshot {
     say(edits.conversationResult ?? edits.error ?? "Bitte Kalender abgleichen.", question: .action)
   }
   func cancelSession(preserveResponse: Bool = false, reason: String = "action") {
-    LocalDiagnostics.shared.record(.speechSession, .cancelled, correlation: session)
+    dependencies.trace(.cancelled(session))
     #if DEBUG && targetEnvironment(simulator)
       if ProcessInfo.processInfo.arguments.contains("--agenda-fixture") {
         print("Voice session ended: \(reason), phase \(sessionState), question \(question)")
@@ -788,12 +783,12 @@ struct VoiceSnapshot {
     question = .action
     candidates = []
     selected = nil
-    intent = VoiceIntent()
+    intent = VoiceIntent(timezone: dependencies.calendar().timeZone.identifier)
     title = ""
     failures = 0
     failure = nil
     response = preserveResponse ? previousResponse : ""
     if !preserveResponse { preparedResponse = ConversationReply() }
-    SpeechOutput.shared.stop()
+    output.stop()
   }
 }

@@ -65,7 +65,7 @@ private final class SpeechInput: @unchecked Sendable {
 }
 
 @MainActor @Observable final class LocalSpeechRecorder {
-  enum State { case idle, preparing, recording, finishing }
+  typealias State = VoiceRecordingState
   private(set) var state: State = .idle
   private(set) var transcript = ""
   private(set) var level = 0.0

@@ -66,8 +66,8 @@ Terminauswahl, sichtbarer Bestätigung, Kalenderwirkung und Audio.
 Der trainierte Replay bleibt bei sieben Fällen falsch: vier kombinierte
 Negation/Änderungswünsche werden konservativ zur Klärung zurückgegeben; drei
 minimale Erstellungen behalten die frühere falsche `invalid_date`-Klärung.
-Der direkte mehrstufige VoiceModel-Pfad benötigt weiterhin eine eigene
-Gesamtabnahme. Die neue Grenze ist konservativ und muss mit weiteren sprachlich
+Der direkte mehrstufige VoiceModel-Pfad benötigt weiterhin eine Geräte- und
+Sprachabnahme. Die neue Grenze ist konservativ und muss mit weiteren sprachlich
 geprüften Fällen auf unnötige Rückfragen untersucht werden.
 
 Lokaler, nicht versionierter Beleg:
@@ -82,3 +82,32 @@ Neue ungesehene Daten, menschlich geprüfte Referenzen, tatsächliche native
 Inferenz des endgültigen Kandidaten, vollständige Dialoge und Geräteprüfungen
 bleiben Voraussetzung für eine Freigabe. Der Replay öffnet keinen abschließenden
 Testsatz und verbessert keine Modellgewichte.
+
+## Gesprächssteuerung mit ersetzten Geräteeffekten
+
+`make test-voice-flow` kompiliert und prüft den tatsächlichen `VoiceModel`,
+`VoiceRules`, `InterpretationRouter`, `CalendarConversation`, `ConversationState`
+und `EventSession` gemeinsam mit Swift 6. Nur Zeit, Kalendertransport,
+Interpretationsanbieter und Audioeffekte werden deterministisch vorgegeben.
+Der iOS-Adapter benutzt weiterhin dieselben Kalenderdienste, denselben Recorder
+und dieselbe Ausgabe. Die Darstellung bleibt erhalten.
+
+Der Host-Ablauf prüft Kalenderfragen bei fehlendem Modell, Raum-/Danach-Folgefragen,
+zwischenzeitlich ausgeblendete Termine, eine Erstellung über Titel/Datum/Zeit/Dauer,
+ungültige Daten, ein ausgeblendetes Schreibziel, Auswahl des zweiten Termins,
+Themenwechsel und bestätigungsfreie Ablehnung unsicherer Wünsche. Gesprochene
+Zustimmung erzeugt keinen Schreibauftrag; erst `confirmProposal()` schickt über
+den echten EventSession die Knopfbestätigung. Eine verzögerte Bestätigung und
+ein zweiter Aufruf erzeugen genau einen Schreibauftrag. Erfolg bleibt auch bei
+nachgelagerter Erinnerungs-/Widgetwarnung sichtbar.
+
+Weitere Fälle prüfen Abbruch während Vorschau, Erkennung und Modellantwort,
+bereits abgebrochene Aufnahme-Tasks, tatsächlich ausgelöste Barge-in-Callbacks,
+nur bereits gehörte Wörter in der Historie sowie Wiederholung und Lesefehler.
+Die Eintrittsprüfungen verhindern, dass ein zweiter Bestätigungsaufruf die laufende
+Sitzung zurücksetzt oder ein bereits abgebrochener Audio-Task erneut aufnimmt.
+
+Dieser Ablauf ist bestanden. Er misst weder reale Erkennungs-/Synthesequalität
+noch Unterbrechungslatenz und ersetzt keine EventKit-, UI- oder Geräteabnahme.
+Die freie sprachliche Abdeckung, insbesondere ordinale Bezüge innerhalb eines
+Änderungsauftrags, ist davon getrennt zu prüfen.

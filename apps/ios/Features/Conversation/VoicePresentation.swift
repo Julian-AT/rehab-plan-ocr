@@ -394,6 +394,11 @@ private struct SpokenResponseLine: View {
         .fixedSize(horizontal: false, vertical: true)
         .contentTransition(.opacity)
         .accessibilityLabel(fullText).accessibilityIdentifier("voice-response")
+        #if DEBUG && targetEnvironment(simulator)
+          .accessibilityValue(
+            ProcessInfo.processInfo.arguments.contains("--audio-evidence")
+              ? String(output.words.last?.id ?? -1) : "")
+        #endif
         .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
       }.scrollIndicators(.hidden)
     }
@@ -406,7 +411,7 @@ private struct SpokenResponseLine: View {
 /// Only microphone levels enter this short, in-memory history. Silence adds
 /// flat marks; playback volume and decorative oscillators never drive it.
 private struct MicrophoneWaveform: View {
-  let recorder: LocalSpeechRecorder
+  let recorder: any VoiceRecording
   @State private var levels = Array(repeating: 0.0, count: 40)
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
