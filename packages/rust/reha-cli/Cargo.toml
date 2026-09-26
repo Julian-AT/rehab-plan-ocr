@@ -8,6 +8,7 @@ license.workspace = true
 default = []
 onnx = ["reha-core/onnx"]
 onnx-download = ["onnx", "reha-core/onnx-download"]
+voice = ["onnx-download", "reha-core/kokoro"]
 
 [dependencies]
 reha-core = { path = "../reha-core" }
@@ -18,3 +19,7 @@ uuid = { version = "1", features = ["v4"] }
 [[bin]]
 name = "reha"
 path = "src/main.rs"
+
+[[example]]
+name = "voice_samples"
+required-features = ["voice"]

@@ -101,6 +101,12 @@ answers equal to MLX. Both quality and parity gates fail. See the
 [development experiment](../../ml/experiments/2026-09-26-s17-assistant-development.md).
 No calendar operation was executed by these evaluations and no provider was promoted.
 
+The [listening preparation](../../ml/evaluation/speech/README.md) now produces 100
+host previews: ten invented texts through Victoria and nine available German
+system voices. Its anonymous browser form and audio-integrity checks pass. No
+human listener has scored the set; no voice is selected or qualified for iPhone
+release by these exports.
+
 ## Still required
 
 Complete uncertainty/dialogue regressions,

@@ -172,6 +172,15 @@ has been claimed. Milestones 1–4 remain open until their complete exit gates p
 
 ## Verified implementation slices — 2026-09-26
 
+The German listening pipeline exports ten invented cases through the shared
+Victoria SpeechEngine and every available German Mac system voice. Ten voices
+produce 100 complete non-silent PCM16 samples with identical prepared text, hashes
+and source/toolchain identity. An anonymous local form preserves per-voice answers,
+records reference disclosure and exports draft JSON. Browser interaction and four
+integrity regressions pass. No human listening score, voice promotion, offline-iOS
+qualification or first-audible latency claim follows from these host exports.
+See the [listening workflow](../../ml/evaluation/speech/README.md).
+
 German date rules now accept month names and day ordinals, validate leap dates and
 year lengths, and retain the latest explicit self-correction across time formats.
 The reproduced “09:30, ich meine um zehn” error now yields 10:00. Negated field

@@ -10,6 +10,7 @@ summarizes remaining work without replacing the evidence.
 |---|---|
 | Product and appearance | [Unchanged visual baseline](product/visual-baseline/README.md) |
 | Collection and consent | [Research collection guide](product/research/collection-guide.md) |
+| Listening preparation | [Local German comparison samples](../ml/evaluation/speech/README.md) |
 | Privacy and support | [Privacy draft](product/privacy.md), [Support draft](product/support.md), [Manifest audit](releases/privacy-manifest-audit.md) |
 | Architecture | [Native architecture](architecture/overview.md), [iOS ownership](architecture/ios-layout.md), [AI providers](architecture/ai-providers.md), [Calendar protection](architecture/calendar-protection.md) |
 | Development | [Reference review](development/reference-cli.md), [dataset](development/dataset.md), [private storage](development/private-storage.md) |

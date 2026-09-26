@@ -7,6 +7,7 @@ help:
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
+	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
 	@echo 'Packaging: make verify-privacy APP_BUNDLE=<built-app>; make package'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
@@ -30,6 +31,16 @@ bindings check-bindings:
 
 test-agenda:
 	sh tooling/checks/test-agenda.sh
+
+.PHONY: prepare-listening refresh-listening
+prepare-listening:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	cargo build --locked -p reha-cli --example voice_samples --features voice
+	uv run --locked python ml/evaluation/speech/listening.py --run "$(RUN)"
+
+refresh-listening:
+	@test -n "$(RUN)" || { echo 'Set RUN to an existing listening export'; exit 2; }
+	uv run --locked python ml/evaluation/speech/listening_form.py --run "$(RUN)"
 
 restore:
 	uv sync --locked

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "human_reviewed": false,
+  "samples": [
+    {"id": "date", "category": "date", "text": "Der nächste Termin ist am Montag, dem 21. September 2026.", "question": "An welchem Wochentag und Datum ist der Termin?", "expected": "Montag, 21. September 2026"},
+    {"id": "time", "category": "time", "text": "Die Physiotherapie beginnt um 09:30 Uhr und endet um 10:15 Uhr.", "question": "Wann beginnt und wann endet die Behandlung?", "expected": "09:30 bis 10:15 Uhr"},
+    {"id": "room", "category": "room", "text": "Die Ergotherapie findet in Raum 105 statt. Der Eingang ist im Erdgeschoss.", "question": "Welche Raumnummer und welches Stockwerk wurden genannt?", "expected": "Raum 105, Erdgeschoss"},
+    {"id": "name", "category": "name", "text": "Den Termin übernimmt Frau Gruber. Danach folgt ein Gespräch mit Herrn Schmid.", "question": "Wie heißen die beiden Personen?", "expected": "Frau Gruber, Herr Schmid"},
+    {"id": "abbreviation", "category": "abbreviation", "text": "Die KG findet um 11:05 Uhr statt. Für die MTT ist noch kein Raum eingetragen.", "question": "Welche Uhrzeit und welche fehlende Angabe wurden genannt?", "expected": "KG um 11:05 Uhr; für MTT fehlt der Raum"},
+    {"id": "unknown", "category": "missing_information", "text": "Der Termin beginnt um 14:00 Uhr. Ein Raum und eine Therapeutin oder ein Therapeut sind nicht eingetragen.", "question": "Welche Angaben sind bekannt und welche fehlen?", "expected": "14:00 Uhr bekannt; Raum und behandelnde Person fehlen"},
+    {"id": "confirmation", "category": "confirmation", "text": "Der Termin soll auf Mittwoch um 10:00 Uhr verschoben werden. Bitte prüfe die Angaben auf dem Bildschirm und tippe zum Speichern auf Bestätigen.", "question": "Ist die Änderung schon gespeichert, und wann soll der Termin stattfinden?", "expected": "Noch nicht gespeichert; Mittwoch um 10:00 Uhr; sichtbare Bestätigung erforderlich"},
+    {"id": "correction", "category": "correction", "text": "Du hast die Uhrzeit korrigiert: Der Termin soll um 10:30 Uhr beginnen. Die vorher genannte Uhrzeit 09:30 Uhr wird nicht übernommen.", "question": "Welche Uhrzeit gilt nach der Korrektur?", "expected": "10:30 Uhr"},
+    {"id": "repeat", "category": "repeat", "text": "Ich wiederhole die Angaben. Die Massage beginnt um 08:45 Uhr in Raum 212.", "question": "Welche Uhrzeit und welcher Raum wurden wiederholt?", "expected": "08:45 Uhr, Raum 212"},
+    {"id": "long", "category": "long_reply", "text": "Morgen sind drei Termine eingetragen. Um 08:30 Uhr beginnt die Physiotherapie in Raum 105. Um 10:15 Uhr folgt die Ergotherapie; dafür ist kein Raum bekannt. Am Nachmittag findet um 14:00 Uhr ein Gespräch mit Frau Gruber statt. Zwischen den Terminen ist Zeit für eine Pause. Bitte prüfe Änderungen immer auf dem Bildschirm, bevor du sie bestätigst.", "question": "Wann beginnt der erste Termin, welcher Raum fehlt und mit wem findet das Gespräch statt?", "expected": "08:30 Uhr; Raum für Ergotherapie fehlt; Frau Gruber"}
+  ]
+}
