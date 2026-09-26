@@ -205,6 +205,7 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
     combined = "".join(parts).encode()
     notice_manifest[COMBINED] = sha(combined)
     inputs = [
+        ".gitattributes",
         "Cargo.toml",
         "Cargo.lock",
         "packages/rust/reha-core/Cargo.toml",

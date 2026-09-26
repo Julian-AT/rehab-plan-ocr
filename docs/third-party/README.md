@@ -23,6 +23,9 @@ notice hashes; lint and normal native builds use this inexpensive check. Add
 `APP_BUNDLE=<built-app>` to verify the actual copied inventory and complete notice
 set. Packaging rejects a stale inventory, missing/extra/altered notices or a bundle
 that differs from the reviewed sources. Generation is never part of a normal build.
+Git preserves bundled notice bytes with `-text`; upstream CRLF notices must not be
+silently normalized after their source hashes have been recorded. A clean export
+of the Git index passes inventory verification without registry or model assets.
 
 The inventory pins runtime model locks, native source identities, vendored VAD
 files and build declarations. Apple system models are recorded as OS-provided;

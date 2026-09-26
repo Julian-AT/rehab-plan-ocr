@@ -3766,6 +3766,7 @@
   "schema_version": 1,
   "selection": "cargo tree normal/build; procedural macros and their private dependencies are build scope",
   "source_inputs": {
+    ".gitattributes": "13db08dc7bcb5a011f34698c183a18136b81020f6f8a4c56d08b46edf192f307",
     "Cargo.lock": "d9c63ed15e9fdfb64a9873da9f4a0619ea78ed22b8dd59c96fd74a0ef71a8fc7",
     "Cargo.toml": "83300fddef020cf8ce03775b0e5d87873b7870bebca363b8dd7f54f5c97569b5",
     "apps/ios/project.yml": "d14fe3a5c85a65720ab5a3d1c30b7cb28da919f35d4fb1a78b0841886e409dda",
@@ -3818,7 +3819,7 @@
     "packages/rust/reha-core/Cargo.toml": "346b1be202d4f30b3c774b28444ce94151d99160ff7ec7742990d086b1799ccf",
     "packages/rust/reha-ffi/Cargo.toml": "4a7d2cd781cc7cb82dc568e161c43a25fb30a4dddd0941798b69063c0281cc90",
     "tooling/build/build-phonemizer.py": "42f7edfa523bf4005b952a704da3f33eb2992217649d4d0e39b6bc4464276da7",
-    "tooling/release/runtime_inventory.py": "862f279adaa3494e7e3af066bb78ab625f58b5923492765fe0b50dd628b9a7e3"
+    "tooling/release/runtime_inventory.py": "223fcec79e0b8f0ccd640b6a0bbde18acc2345a6c2376fc88e1ba8b0551d1612"
   },
   "system_components": {
     "bundled_by_app": false,

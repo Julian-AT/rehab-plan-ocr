@@ -109,10 +109,16 @@ the actual bundled inventory and complete notice set against reviewed source. Ei
 synthetic regressions cover selection, deduplication, stale/missing/altered notices,
 path confinement, read-only verification and old bundles. All tool tests and the
 simulator build pass. The built app contains the matching inventory
-`5b0fa8caba0f3e4ceca6f892c0dd321b4e831e35235eb7b9969cf564b5874825`,
+`8d25ce5ff9ef8439e079fbb2f97e06d6a8701d71290b80000cdd3352b6cf5758`,
 all 15 verified notice files and four verified privacy manifests. No signed archive
 or physical installation was produced. The eSpeak-NG redistribution decision and
 publisher-approved first-party rights/license notice remain open.
+
+Git's automatic CRLF normalization was detected during the first inventory commit.
+Bundled notices now use `-text`, and that attribute file is a verified input. A
+fresh export of the staged Git tree, with no registry/model assets, passes the
+read-only inventory check. Its corrected inventory identity is
+`063a8894149ba57acbbe64ed041b1b2e511f84ea11caf1ba9b820ea1876cecda`.
 
 ## Verified implementation slices — 2026-09-26
 

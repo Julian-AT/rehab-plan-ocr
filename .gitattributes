@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Preserve upstream notice bytes used by the runtime inventory's SHA-256 checks.
+docs/third-party/licenses/* -text
