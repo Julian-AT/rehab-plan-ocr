@@ -20,6 +20,7 @@ help:
 	@echo 'Native assistant trial: make build-assistant-native; make test-assistant-native TEST_ARGS="--run .local/runs/<new-run> [--simulator <disposable-id>]"'
 	@echo 'Common provider app trial: make build-assistant-trial; make test-assistant-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>"'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
+	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
 
 bootstrap doctor format lint test:
 	python3 tooling/dev/quality.py $@
@@ -184,7 +185,7 @@ verify-augmentation:
 	@test -n "$(SOURCE_DATASET)" -a -n "$(RUN)" || { echo 'Set SOURCE_DATASET and a new verification RUN directory'; exit 2; }
 	/usr/bin/env uv run --locked python ml/data/augmentation/verify.py --source "$(SOURCE_DATASET)" --output "$(RUN)" --font "$(FONT)" --limit "$(SYNTHETIC_SOURCES)"
 
-.PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data train-ocr resume-ocr export-ocr
+.PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data prepare-ocr-synthetic train-ocr resume-ocr export-ocr
 restore-ocr-assets: restore-ocr-training
 	.local/envs/ocr/bin/python ml/training/ocr/restore.py
 
@@ -195,6 +196,10 @@ prepare-ocr-smoke:
 prepare-ocr-data:
 	@test -n "$(DATASET)" -a -n "$(SOURCE_DATASET)" || { echo 'Set DATASET and SOURCE_DATASET to reviewed local references'; exit 2; }
 	.local/envs/ocr/bin/python ml/training/ocr/prepare.py --output "$(DATASET)" --references "$(SOURCE_DATASET)" --fold "$(FOLD)"
+
+prepare-ocr-synthetic:
+	@test -n "$(DATASET)" -a -n "$(SOURCE_DATASET)" || { echo 'Set DATASET and SOURCE_DATASET to local synthetic tables'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/prepare.py --output "$(DATASET)" --synthetic "$(SOURCE_DATASET)" --font "$(FONT)"
 
 train-ocr:
 	@test -n "$(RUN)" -a -n "$(DATASET)" || { echo 'Set RUN and DATASET'; exit 2; }

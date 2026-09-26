@@ -42,10 +42,15 @@ def validate_dataset(path, dictionary):
     if dataset.get("schema_version") != 1 or dataset.get("kind") not in {
         "invented-smoke-text",
         "approved-reference-crops",
+        "pixel-verified-synthetic-crops",
     }:
         raise ValueError("Unknown dataset contract")
     if dataset.get("final_holdout") is not False:
         raise ValueError("Final holdout cannot be used for training or checkpoint selection")
+    if dataset["kind"] == "pixel-verified-synthetic-crops":
+        from synthetic_data import verify
+
+        verify(dataset)
     seen, assignments, rows = set(), {}, dataset["samples"]
     allowed = set(dictionary) | {" "}
     for row in rows:

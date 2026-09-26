@@ -106,6 +106,11 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--smoke-font", type=Path)
     group.add_argument("--references", type=Path)
+    group.add_argument("--synthetic", type=Path)
+    parser.add_argument("--font", type=Path)
+    parser.add_argument("--train-limit", type=int, default=512)
+    parser.add_argument("--validation-limit", type=int, default=128)
+    parser.add_argument("--seed", type=int, default=20260918)
     parser.add_argument("--fold", type=int, default=0)
     args = parser.parse_args()
     output = args.output.resolve()
@@ -113,11 +118,20 @@ def main():
         parser.error("Prepared data must remain below .local")
     if args.fold not in range(4):
         parser.error("Development validation fold must be 0–3")
-    data = (
-        prepare_smoke(output, args.smoke_font)
-        if args.smoke_font
-        else prepare_references(output, args.references, args.fold)
-    )
+    if args.synthetic:
+        from synthetic_data import prepare
+
+        if not args.font:
+            parser.error("Synthetic pixel verification requires the original --font")
+        data = prepare(
+            output, args.synthetic, args.font, args.train_limit, args.validation_limit, args.seed
+        )
+    else:
+        data = (
+            prepare_smoke(output, args.smoke_font)
+            if args.smoke_font
+            else prepare_references(output, args.references, args.fold)
+        )
     write(output / "dataset.json", data)
     validate_dataset(
         output / "dataset.json",

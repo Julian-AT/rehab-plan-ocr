@@ -109,6 +109,29 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Synthetic tables connected to OCR training — 2026-09-26
+
+`make prepare-ocr-synthetic` now converts the pixel-verified generator's tables
+into the trainer's immutable crop contract. It validates images, labels, glyphs,
+font/generator identities, source groups and exact crops before preparation and
+again before training/resume/export. Groups are assigned before selection; identical
+training pixels are excluded from validation. Negative/unusable inputs and document
+headings cannot become positive recognition targets. No private reference approval
+is changed.
+
+The final prepared dataset `.local/datasets/ocr-synthetic-development-002` uses
+180 invented schedules plus ten non-plan and ten unusable inputs. Of 10,596
+eligible source lines, 2,435 duplicate validation crops are excluded. Selection
+retains 512 training crops from 129 groups and 91 validation crops from 42 groups.
+Validation has 56 dates, 26 endings, three starts and six therapist lines; it has
+no novel title/location/notes pixels. These gaps and the single font/generator
+prevent real-photo or complete-field quality claims. Dataset 001 remains an
+earlier preparation receipt before import formatting changed the adapter hash.
+
+Six new regressions cover reproducibility, grouping, target/source/pixel tampering,
+rehashed false labels and output preservation. All 197 tool tests and repository
+lint pass. This closes the generator-to-trainer connection, not the OCR quality gate.
+
 ### Row-level recognition regression gate — 2026-09-26
 
 The comparison formerly detected additional missing/invented appointments by total

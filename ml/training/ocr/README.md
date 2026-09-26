@@ -18,6 +18,35 @@ Training uses CPU and defaults to two numerical-library threads. There is no eig
 `OCR_EPOCHS` is the maximum epoch count (default 100); `OCR_PATIENCE` defaults to five
 validation epochs without improvement. These are recorded before training.
 
+## Synthetic table development
+
+The pixel-checked table generator can supply a larger experimental dataset:
+
+```sh
+make prepare-ocr-synthetic SOURCE_DATASET=.local/datasets/synthetic-v2-002 \
+  DATASET=.local/datasets/ocr-synthetic-development-001
+```
+
+Use the same `FONT` as the source generator. The adapter verifies every original
+image, label, rendered glyph and generator/font hash. Whole source groups receive
+deterministic development partitions before crop selection. Repeated identical
+crop pixels are excluded from validation if they occur anywhere in training;
+source groups are never moved to accommodate a score. Negatives, unusable inputs,
+headers and blank cells supply no positive text target.
+
+Selection balances the available fields using a fixed seed, with defaults of
+512 training and 128 validation crops. The `prepare.py` CLI exposes the limits
+and seed. These are maximums: exclusions may leave fewer crops or no novel text
+for a field. The receipt retains complete source group assignments, exclusions,
+source/label/crop identities and geometry. Crops have four pixels of uniform
+background padding and no unrecorded augmentation. Source pixels and labels are
+rechecked before training, resume and export; altered prepared targets, partitions
+or source evidence fail. No patient reference or crop is approved by this route.
+
+Synthetic validation measures development robustness only. Repeated text, fonts
+and generator patterns prevent any claim of unseen real-photo accuracy; real
+grouped references, separate augmentation comparisons and device gates still apply.
+
 ## Reviewed data
 
 The real-data adapter uses the existing reference exporter and crop materializer:
