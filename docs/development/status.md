@@ -71,6 +71,11 @@ data. The [collection guide](../product/research/collection-guide.md) and consen
 materials need responsible-party details and human approval before collection.
 Local intake and annotation/export tooling cannot grant that approval.
 
+Synthetic generation now validates complete text against rendered pixels and
+reproduces 200 invented inputs. Geometry-aware augmentation has 40 recipes;
+80 rendered variants repeat exactly, with unavailable targets removed and blank
+fields assessed after cropping. These checks do not approve real references.
+
 PP-OCRv6 Small has a matching trainable checkpoint, resumable frozen/full adaptation
 and an actual interruption proof matching 902 model/optimizer tensors. Frozen
 export passes 24/24 desktop parity cases; full adaptation passes 22/24 and is

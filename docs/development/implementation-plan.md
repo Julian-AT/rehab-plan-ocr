@@ -54,7 +54,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [ ] Verified references, reviewer provenance, crop approval and privacy masks.
 - [ ] Freeze source-related development groups before augmentation.
 - [ ] Collection/consent guide and local intake/label validation.
-- [ ] Geometry-aware augmentation and pixel-checked reproducible synthetic plans.
+- [x] Geometry-aware augmentation and pixel-checked reproducible synthetic plans.
 - [ ] Matching PP-OCRv6 Small training/export/runtime smoke test.
 - [ ] Frozen-backbone versus full fine-tuning, resumable lineage and validation stop.
 - [ ] Grouped critical-field/correction evaluation; ONNX parity before quantization.
@@ -171,6 +171,13 @@ device was updated. No real-device speed, energy, thermal or usability improveme
 has been claimed. Milestones 1–4 remain open until their complete exit gates pass.
 
 ## Verified implementation slices — 2026-09-26
+
+Augmentation v3 expands the 24 recipes to 40, composes transformations and shares
+privacy/crop/obstruction visibility with the labels. Cropped blank fields no longer
+retain a complete blank target; unavailable text is removed. Nine geometry and
+nine reference tests pass. All 80 variants of two invented sources repeat exactly
+in pixels, labels, matrices and encoded JPEG bytes. Real approval/grouping gates
+remain unchanged. See the [experiment](../../ml/experiments/2026-09-26-s17-augmentation-geometry.md).
 
 Synthetic table generation v2 draws each shared date/column heading once, links
 rows to day evidence and lays out actual wrapped glyphs without clipping. Lossless

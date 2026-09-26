@@ -107,11 +107,17 @@ OCR_EPOCHS ?= 100
 OCR_PATIENCE ?= 5
 FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
 SYNTHETIC_COUNT ?= 200
+SYNTHETIC_SOURCES ?= 2
 FOLD ?= 0
 .PHONY: generate-synthetic
 generate-synthetic:
 	@test -n "$(DATASET)" || { echo 'Set DATASET to a new synthetic export directory'; exit 2; }
 	uv run --locked python ml/data/synthesis/synthetic-plans.py "$(DATASET)" --font "$(FONT)" --count "$(SYNTHETIC_COUNT)"
+
+.PHONY: verify-augmentation
+verify-augmentation:
+	@test -n "$(SOURCE_DATASET)" -a -n "$(RUN)" || { echo 'Set SOURCE_DATASET and a new verification RUN directory'; exit 2; }
+	uv run --locked python ml/data/augmentation/verify.py --source "$(SOURCE_DATASET)" --output "$(RUN)" --font "$(FONT)" --limit "$(SYNTHETIC_SOURCES)"
 
 .PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data train-ocr resume-ocr export-ocr
 restore-ocr-assets: restore-ocr-training

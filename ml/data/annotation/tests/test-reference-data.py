@@ -109,6 +109,13 @@ def reference(i):
 
 
 class ReferenceDataTests(unittest.TestCase):
+    def test_materialization_rejects_old_or_altered_generator_before_loading_sources(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            refs.write(root / "variants/recipes.json", {"recipes": [], "generator_sha256": "old"})
+            with self.assertRaisesRegex(ValueError, "generator changed"):
+                refs.materialize(root, "unused", 1)
+
     def test_training_crop_review_is_separate_and_bound_to_pixels_and_text(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -141,10 +148,10 @@ class ReferenceDataTests(unittest.TestCase):
         self.assertEqual(result, refs.grouping(list(reversed(r))))
         self.assertEqual({g["fold"] for g in result["days"].values()}, set(range(4)))
 
-    def test_24_recipes_transform_all_polygons_and_mirror_is_orientation_only(self):
+    def test_40_recipes_transform_all_polygons_and_mirror_is_orientation_only(self):
         r = reference(0)
         image = Image.new("RGB", (100, 100), "black")
-        self.assertEqual(len(refs.RECIPES), 24)
+        self.assertEqual(len(refs.RECIPES), 40)
         for _, recipe in refs.RECIPES:
             output, lines, m = refs.variant(image, r, recipe)
             for original, changed in zip(r["lines"][0]["polygon"], lines[0]["polygon"]):
@@ -181,6 +188,9 @@ class ReferenceDataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = [reference(i) for i in range(4)]
+            data[0]["appointments"][0]["fields"]["notes"]["polygon"] = synthetic.rect(
+                75, 25, 10, 10
+            )
             split = refs.grouping(data)
             for r in data:
                 r["day_id"] = next(
@@ -195,7 +205,7 @@ class ReferenceDataTests(unittest.TestCase):
                 {"entries": [{"sha256": r["document_hashes"][0]} for r in data]},
             )
             refs.write(root / "split.json", split)
-            self.assertEqual(refs.export(root, root / "export", 0, 1), 96)
+            self.assertEqual(refs.export(root, root / "export", 0, 1), 160)
             records = json.loads((root / "export/manifest.json").read_text())["records"]
             by_source = {}
             for row in records:
@@ -206,6 +216,14 @@ class ReferenceDataTests(unittest.TestCase):
             ]
             self.assertEqual(rec, [], "Field approval alone cannot approve training crops")
             self.assertEqual((root / "export/detection.jsonl").read_text(), "")
+            cropped = next(
+                json.loads(line)
+                for line in (root / "export/table-assignment.jsonl").read_text().splitlines()
+                if json.loads(line)["name"] == "cut-right-column"
+                and json.loads(line)["source_hash"] == data[0]["document_hashes"][0]
+            )["rows"][0]["fields"]["notes"]
+            self.assertEqual(cropped["state"], "cropped")
+            self.assertIsNone(cropped["value"])
             refs.write(
                 root / "crop-review.json",
                 {

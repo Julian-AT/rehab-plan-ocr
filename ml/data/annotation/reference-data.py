@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pillow==12.1.0"]
+# dependencies = ["pillow==12.1.1"]
 # ///
 """Local, provenance-preserving reference exports and deterministic variants.
 
@@ -12,11 +12,27 @@ import argparse
 import hashlib
 import json
 import math
+import platform
 import sqlite3
 import struct
+import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image
+from PIL import __version__ as PILLOW_VERSION
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "augmentation"))
+from variants import (  # noqa: E402
+    AUGMENTATION_VERSION,
+    field_label,
+    inverse,
+    transform,
+    variant,
+    variant_labels,
+)
+from variants import (
+    matrix as matrix,
+)
 
 VERSION = 2
 SEED = "reha-development-folds-v2"
@@ -45,6 +61,25 @@ RECIPES = [
     ("mirror-vertical", {"mirror": "vertical"}),
     ("cut-right-column", {"cut": 0.78}),
     ("covered-characters", {"cover": True}),
+    ("shear-left", {"shear": -0.06}),
+    ("shear-right", {"shear": 0.06}),
+    ("paper-warm", {"tint": [247, 240, 217]}),
+    ("paper-cool", {"tint": [224, 236, 248]}),
+    ("noise", {"noise": 12}),
+    ("glare-vertical", {"glare": [0.38, 0, 0.52, 1]}),
+    ("glare-horizontal", {"glare": [0.1, 0.45, 0.9, 0.53]}),
+    ("crop-heading", {"crop": [0, 0.12, 0, 0]}),
+    ("crop-left", {"crop": [0.12, 0, 0, 0]}),
+    ("crop-bottom", {"crop": [0, 0, 0, 0.18]}),
+    ("crop-margins", {"crop": [0.05, 0.04, 0.05, 0.04]}),
+    ("colored-rows", {"row_tint": True}),
+    (
+        "angled-shadow-crop",
+        {"angle": 4, "scale": 0.8, "crop": [0, 0.04, 0.08, 0], "brightness": 0.85, "shadow": 1},
+    ),
+    ("small-noisy", {"scale": 0.35, "noise": 12, "contrast": 0.7}),
+    ("angled-glare", {"angle": -3, "glare": [0.4, 0.3, 0.6, 0.8], "blur": 0.8}),
+    ("covered-margin", {"crop": [0.06, 0.02, 0, 0.15], "cover": True}),
 ]
 
 
@@ -260,156 +295,6 @@ def freeze(root):
     return result
 
 
-def matrix(recipe, w, h):
-    if "turn" in recipe:
-        return [
-            ([1, 0, 0, 0, 1, 0, 0, 0, 1], (w, h)),
-            ([0, -1, h, 1, 0, 0, 0, 0, 1], (h, w)),
-            ([-1, 0, w, 0, -1, h, 0, 0, 1], (w, h)),
-            ([0, 1, 0, -1, 0, w, 0, 0, 1], (h, w)),
-        ][recipe["turn"]]
-    if recipe.get("mirror") == "horizontal":
-        return [-1, 0, w, 0, 1, 0, 0, 0, 1], (w, h)
-    if recipe.get("mirror") == "vertical":
-        return [1, 0, 0, 0, -1, h, 0, 0, 1], (w, h)
-    if "angle" in recipe:
-        angle = math.radians(recipe["angle"])
-        c, s = math.cos(angle), math.sin(angle)
-        return [
-            c,
-            -s,
-            (1 - c) * w / 2 + s * h / 2,
-            s,
-            c,
-            (1 - c) * h / 2 - s * w / 2,
-            0,
-            0,
-            1,
-        ], (w, h)
-    if "perspective" in recipe:
-        p = recipe["perspective"]
-        return [1, 0, 0, p * h / w, 1, 0, p / w, 0, 1], (w, h)
-    scale = recipe.get("scale", 1)
-    return [scale, 0, 0, 0, scale, 0, 0, 0, 1], (round(w * scale), round(h * scale))
-
-
-def inverse(m):
-    a, b, c, d, e, f, g, h, i = m
-    det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
-    return [
-        v / det
-        for v in [
-            e * i - f * h,
-            c * h - b * i,
-            b * f - c * e,
-            f * g - d * i,
-            a * i - c * g,
-            c * d - a * f,
-            d * h - e * g,
-            b * g - a * h,
-            a * e - b * d,
-        ]
-    ]
-
-
-def transform(m, polygon):
-    return [
-        {
-            "x": (m[0] * p["x"] + m[1] * p["y"] + m[2]) / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
-            "y": (m[3] * p["x"] + m[4] * p["y"] + m[5]) / (m[6] * p["x"] + m[7] * p["y"] + m[8]),
-        }
-        for p in polygon
-    ]
-
-
-def variant(image, ref, recipe):
-    # Patient/header data outside the approved table are never present in exports.
-    mask = Image.new("L", image.size, 0)
-    ImageDraw.Draw(mask).polygon(
-        [(p["x"], p["y"]) for p in ref["sources"][0]["table_polygon"]], fill=255
-    )
-    image = Image.composite(image, Image.new("RGB", image.size, "white"), mask)
-    m, size = matrix(recipe, *image.size)
-    inv = inverse(m)
-    output = image.transform(
-        size,
-        Image.Transform.PERSPECTIVE,
-        [v / inv[8] for v in inv[:8]],
-        Image.Resampling.BICUBIC,
-        fillcolor="white",
-    )
-    for key, enhancer in [
-        ("brightness", ImageEnhance.Brightness),
-        ("contrast", ImageEnhance.Contrast),
-    ]:
-        if key in recipe:
-            output = enhancer(output).enhance(recipe[key])
-    if "blur" in recipe:
-        output = output.filter(ImageFilter.GaussianBlur(recipe["blur"]))
-    if "shadow" in recipe:
-        gradient = Image.linear_gradient("L").rotate(90).resize(size)
-        if recipe["shadow"] < 0:
-            gradient = ImageOps.mirror(gradient)
-        gradient = gradient.point(lambda v: 110 + int(v * 145 / 255))
-        output = Image.composite(output, Image.new("RGB", size, "black"), gradient)
-    obstruction = None
-    if "cut" in recipe:
-        obstruction = (int(size[0] * recipe["cut"]), 0, size[0], size[1])
-    if recipe.get("cover"):
-        obstruction = (
-            int(size[0] * 0.48),
-            int(size[1] * 0.42),
-            int(size[0] * 0.56),
-            int(size[1] * 0.64),
-        )
-    if obstruction:
-        ImageDraw.Draw(output).rectangle(obstruction, fill="white")
-    return output, variant_labels(ref, recipe)[0], m
-
-
-def variant_labels(ref, recipe):
-    source = ref["sources"][0]
-    m, size = matrix(recipe, source["width"], source["height"])
-    obstruction = None
-    if "cut" in recipe:
-        obstruction = (int(size[0] * recipe["cut"]), 0, size[0], size[1])
-    if recipe.get("cover"):
-        obstruction = (
-            int(size[0] * 0.48),
-            int(size[1] * 0.42),
-            int(size[0] * 0.56),
-            int(size[1] * 0.64),
-        )
-    lines = []
-    for line in ref["lines"]:
-        p = transform(m, line["polygon"])
-        xs, ys = [v["x"] for v in p], [v["y"] for v in p]
-        cropped = min(xs) < 0 or min(ys) < 0 or max(xs) > size[0] or max(ys) > size[1]
-        covered = (
-            obstruction
-            and max(xs) > obstruction[0]
-            and min(xs) < obstruction[2]
-            and max(ys) > obstruction[1]
-            and min(ys) < obstruction[3]
-        )
-        state = (
-            "cropped"
-            if cropped or (covered and "cut" in recipe)
-            else "illegible"
-            if covered
-            else line["state"]
-        )
-        lines.append(
-            {
-                **line,
-                "polygon": p,
-                "state": state,
-                "text": line["text"] if state == "legible" else "",
-            }
-        )
-    return lines, m, size
-
-
 def bound_cache(cache, budget):
     files = sorted(
         (p for p in cache.glob("*.jpg") if p.is_file()),
@@ -430,6 +315,9 @@ def recipes(root):
         raise ValueError("Freeze confirmed development groups before augmentation.")
     manifest = {
         "schema_version": VERSION,
+        "augmentation_version": AUGMENTATION_VERSION,
+        "generator_sha256": augmentation_identity(),
+        "environment": {"python": platform.python_version(), "pillow": PILLOW_VERSION},
         "split_hash": digest(split),
         "recipes": [],
         "final_holdout": False,
@@ -439,7 +327,16 @@ def recipes(root):
             for name, recipe in RECIPES:
                 manifest["recipes"].append(
                     {
-                        "id": digest([VERSION, source, name, recipe]),
+                        "id": digest(
+                            [
+                                VERSION,
+                                AUGMENTATION_VERSION,
+                                manifest["generator_sha256"],
+                                source,
+                                name,
+                                recipe,
+                            ]
+                        ),
                         "source_hash": source,
                         "group": group_id,
                         "fold": group["fold"],
@@ -451,6 +348,17 @@ def recipes(root):
                 )
     write(root / "variants/recipes.json", manifest)
     return manifest
+
+
+def augmentation_identity():
+    return digest(
+        {
+            "exporter": file_hash(Path(__file__)),
+            "variants": file_hash(Path(variant.__code__.co_filename)),
+            "python": platform.python_version(),
+            "pillow": PILLOW_VERSION,
+        }
+    )
 
 
 def export(root, output, fold, cache_mb):
@@ -477,6 +385,8 @@ def export(root, output, fold, cache_mb):
         lines, m, size = variant_labels(ref, entry["recipe"])
         provenance = {
             **entry,
+            "augmentation_version": manifest["augmentation_version"],
+            "generator_sha256": manifest["generator_sha256"],
             "partition": "validation" if entry["fold"] == fold else "train",
             "reference_hash": reference_hash(ref),
             "original_hash": source["original_hash"],
@@ -506,12 +416,13 @@ def export(root, output, fold, cache_mb):
                 **provenance,
                 "labels": [
                     {
-                        "points": [[p["x"], p["y"]] for p in line["polygon"]],
+                        "points": [[p["x"], p["y"]] for p in line["visible_polygon"]],
                         "transcription": line["text"] if line["state"] == "legible" else "###",
                         "line_id": line["id"],
                         "state": line["state"],
                     }
                     for line in unique_lines.values()
+                    if len(line["visible_polygon"]) >= 3
                 ],
             }
         )
@@ -538,16 +449,10 @@ def export(root, output, fold, cache_mb):
                     for line in lines
                     if line["appointment_id"] == a["id"] and line["field"] == f
                 ]
-                state = assessment["state"]
-                if any(line["state"] != "legible" for line in field_lines):
-                    state = next(
-                        line["state"] for line in field_lines if line["state"] != "legible"
-                    )
+                changed = field_label(assessment, field_lines, source, entry["recipe"], m, size)
                 fields[f] = {
-                    "state": state,
-                    "polygon": transform(m, assessment["polygon"]),
-                    "frame": "variant",
-                    "value": a.get(f) if state in {"legible", "not_printed"} else None,
+                    **changed,
+                    "value": a.get(f) if changed["state"] in {"legible", "not_printed"} else None,
                     "line_ids": [line["id"] for line in field_lines],
                 }
             rows.append(
@@ -567,10 +472,15 @@ def export(root, output, fold, cache_mb):
         (output / f"{name}.jsonl").write_text(
             "".join(json.dumps(v, ensure_ascii=False) + "\n" for v in values)
         )
+    if augmentation_identity() != manifest["generator_sha256"]:
+        raise ValueError("Augmentation generator changed during export")
     write(
         output / "manifest.json",
         {
             "schema_version": VERSION,
+            "augmentation_version": AUGMENTATION_VERSION,
+            "generator_sha256": manifest["generator_sha256"],
+            "environment": manifest["environment"],
             "validation_fold": fold,
             "recipe_hash": digest(manifest),
             "reference_hashes": {h: reference_hash(r) for h, r in refs.items()},
@@ -597,7 +507,24 @@ def export(root, output, fold, cache_mb):
 
 def materialize(root, identifier, cache_mb):
     manifest = json.loads((root / "variants/recipes.json").read_text())
+    if (
+        manifest.get("augmentation_version") != AUGMENTATION_VERSION
+        or manifest.get("generator_sha256") != augmentation_identity()
+    ):
+        raise ValueError("Augmentation generator changed; export new versioned recipes")
     entry = next(r for r in manifest["recipes"] if r["id"] == identifier)
+    expected = digest(
+        [
+            VERSION,
+            AUGMENTATION_VERSION,
+            manifest["generator_sha256"],
+            entry["source_hash"],
+            entry["name"],
+            entry["recipe"],
+        ]
+    )
+    if entry["id"] != expected or dict(RECIPES).get(entry["name"]) != entry["recipe"]:
+        raise ValueError("Augmentation recipe changed after export")
     ref = json.loads((root / "labels/provisional" / f"{entry['source_hash']}.json").read_text())
     approved(ref)
     split = json.loads((root / "split.json").read_text())
@@ -620,6 +547,8 @@ def materialize(root, identifier, cache_mb):
         raise ValueError("Original checksum mismatch.")
     with Image.open(path) as original:
         raster, lines, m = variant(original.convert("RGB"), ref, entry["recipe"])
+    if augmentation_identity() != manifest["generator_sha256"]:
+        raise ValueError("Augmentation generator changed during rendering")
     key = digest([identifier, reference_hash(ref)])
     cache = root / "variants/cache"
     cache.mkdir(parents=True, exist_ok=True)
