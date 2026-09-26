@@ -33,7 +33,7 @@ struct StagedPhoto: Transferable, Sendable {
   }
   var captureSession: CaptureSession?
   private let admission = IntakeAdmission()
-  private var captureTickets: [String: IntakeAdmission.Ticket] = [:]
+  private let attempts = ScanAttemptRegistry()
   private(set) var isReady = false
   private(set) var isErasing = false
   private(set) var erasureError: String?
@@ -45,13 +45,46 @@ struct StagedPhoto: Transferable, Sendable {
   func dismissCapture(_ session: CaptureSession) {
     if captureSession?.id == session.id { captureSession = nil }
   }
-  private func accepted(_ id: String) -> Bool { admission.accepts(captureTickets[id]) }
+  private func register(
+    _ id: String, ticket: IntakeAdmission.Ticket, parent: String? = nil
+  ) -> ScanAttemptRegistry.Attempt? {
+    do { return try attempts.register(id: id, ticket: ticket, parent: parent) } catch {
+      self.error = userMessage(error)
+      return nil
+    }
+  }
+  private func canRetain(_ attempt: ScanAttemptRegistry.Attempt) -> Bool {
+    admission.accepts(attempt.ticket) && attempts.owns(attempt)
+  }
+  private func canProcess(_ attempt: ScanAttemptRegistry.Attempt) -> Bool {
+    canRetain(attempt) && attempts.permits(attempt) && !suspended
+  }
+  private func release(_ lease: ScanAttemptRegistry.Lease) {
+    if attempts.end(lease) { awaitingBytes.remove(lease.attempt.id) }
+    updateRunning()
+  }
+  private func releaseAfterRecognition(_ lease: ScanAttemptRegistry.Lease) {
+    attempts.endAfterDrain(lease) { [core] in
+      core.recognitionBusy()
+    } completion: { [self] retired in
+      if retired { awaitingBytes.remove(lease.attempt.id) }
+      updateRunning()
+    }
+  }
   private func producer(
-    _ ticket: IntakeAdmission.Ticket?, operation: @escaping @MainActor () async -> Void
+    _ attempt: ScanAttemptRegistry.Attempt, operation: @escaping @MainActor () async -> Void
   ) {
-    guard let lease = admission.begin(ticket) else { return }
+    guard let intake = admission.begin(attempt.ticket) else { return }
+    guard let owner = attempts.begin(attempt) else {
+      admission.end(intake)
+      return
+    }
+    attempts.finishInput(attempt)
     Task {
-      defer { admission.end(lease) }
+      defer {
+        admission.end(intake)
+        release(owner)
+      }
       await operation()
     }
   }
@@ -76,7 +109,6 @@ struct StagedPhoto: Transferable, Sendable {
     erasureError = nil
     admission.close()
     captureSession = nil
-    captureTickets.removeAll()
     cancel()
     let task = Task { @MainActor in
       do {
@@ -105,8 +137,6 @@ struct StagedPhoto: Transferable, Sendable {
         presentedID = nil
         currentID = nil
         sourceStored = false
-        parents.removeAll()
-        cancelled.removeAll()
         queueOrder.removeAll()
         scheduledIDs.removeAll()
         UserDefaults.standard.removeObject(forKey: "agenda.density")
@@ -127,13 +157,15 @@ struct StagedPhoto: Transferable, Sendable {
   }
   private var erasureTask: Task<Void, Error>?
   func loadPhoto(_ item: PhotosPickerItem, session: CaptureSession) {
-    guard let id = beginCapture(parent: session.parent, ticket: session.ticket) else { return }
-    producer(session.ticket) {
+    guard let id = beginCapture(parent: session.parent, ticket: session.ticket),
+      let attempt = attempts.active(id)
+    else { return }
+    producer(attempt) {
       do {
         guard let photo = try await item.loadTransferable(type: StagedPhoto.self) else {
           throw AppError.Validation(message: "Foto ist nicht lokal verfügbar.")
         }
-        guard self.accepted(id) else {
+        guard self.canRetain(attempt) else {
           try? FileManager.default.removeItem(at: photo.url)
           return
         }
@@ -146,9 +178,9 @@ struct StagedPhoto: Transferable, Sendable {
           try FileManager.default.removeItem(at: photo.url)
           return destination
         }.value
-        guard self.accepted(id) else { return }
-        self.start(retained, force: session.parent != nil, captureID: id)
-      } catch { self.fail(error, id: id) }
+        guard self.canRetain(attempt) else { return }
+        self.start(retained, force: session.parent != nil, attempt: attempt)
+      } catch { self.fail(error, attempt: attempt) }
     }
   }
   var progress: JobProgress?
@@ -167,7 +199,6 @@ struct StagedPhoto: Transferable, Sendable {
     scheduledIDs.remove(id)
     queueOrder.removeAll { $0 == id }
   }
-  private var parents: [String: String] = [:]
   private var pendingIntakes = 0
   private var documentJobs = 0
   private var documentGeneration = UUID()
@@ -183,7 +214,6 @@ struct StagedPhoto: Transferable, Sendable {
     running = !tasks.isEmpty || pendingIntakes > 0 || documentJobs > 0 || !awaitingBytes.isEmpty
   }
   private var recognitionJobs: [String: RecognitionJob] = [:]
-  private var cancelled = Set<String>()
   init(core: NativeApplication) { self.core = core }
   @discardableResult func beginCapture(parent: String? = nil, ticket: IntakeAdmission.Ticket? = nil)
     -> String?
@@ -191,9 +221,8 @@ struct StagedPhoto: Transferable, Sendable {
     guard let ticket = ticket ?? admission.ticket(), admission.accepts(ticket) else { return nil }
     if parent == nil { cancel() }
     let id = UUID().uuidString
-    captureTickets[id] = ticket
+    guard register(id, ticket: ticket, parent: parent) != nil else { return nil }
     LocalDiagnostics.shared.record(.intake, .started, correlation: id)
-    if let parent { parents[id] = parent }
     awaitingBytes.insert(id)
     currentID = id
     presentedID = parent.map { "plan:\($0)" } ?? id
@@ -205,8 +234,8 @@ struct StagedPhoto: Transferable, Sendable {
     return id
   }
   func receive(_ bytes: Data, id: String) {
-    guard accepted(id) else { return }
-    producer(captureTickets[id]) { [self] in
+    guard let attempt = attempts.active(id), canRetain(attempt) else { return }
+    producer(attempt) { [self] in
       do {
         let url = try await Task.detached {
           let folder = try AppStorage.prepare().appendingPathComponent("inbox")
@@ -215,21 +244,36 @@ struct StagedPhoto: Transferable, Sendable {
           try bytes.write(to: url, options: .atomic)
           return url
         }.value
-        start(url, captureID: id)
-      } catch { fail(error, id: id) }
+        start(url, attempt: attempt)
+      } catch { fail(error, attempt: attempt) }
     }
   }
   func fail(_ failure: Error, id: String) {
-    guard accepted(id), currentID == id else { return }
-    awaitingBytes.remove(id)
+    guard let attempt = attempts.active(id) else { return }
+    fail(failure, attempt: attempt)
+  }
+  private func fail(_ failure: Error, attempt: ScanAttemptRegistry.Attempt) {
+    guard canProcess(attempt) else { return }
+    awaitingBytes.remove(attempt.id)
+    attempts.finishInput(attempt)
     updateRunning()
-    error = userMessage(failure)
+    if currentID == attempt.id { error = userMessage(failure) }
   }
   func start(
     _ url: URL, turns: UInt8 = 0, mirrored: Bool = false, corners: [Point] = [],
     force: Bool = false, removeStaged: Bool = true, captureID: String? = nil
   ) {
-    guard let id = captureID ?? beginCapture(), accepted(id) else { return }
+    guard let id = captureID ?? beginCapture(), let attempt = attempts.active(id) else { return }
+    start(
+      url, turns: turns, mirrored: mirrored, corners: corners, force: force,
+      removeStaged: removeStaged, attempt: attempt)
+  }
+  private func start(
+    _ url: URL, turns: UInt8 = 0, mirrored: Bool = false, corners: [Point] = [],
+    force: Bool = false, removeStaged: Bool = true, attempt: ScanAttemptRegistry.Attempt
+  ) {
+    guard canRetain(attempt) else { return }
+    let id = attempt.id
     guard !scheduledIDs.contains(id) else { return }
     scheduledIDs.insert(id)
     queueOrder.append(id)
@@ -238,7 +282,7 @@ struct StagedPhoto: Transferable, Sendable {
     updateRunning()
     // Persist even a late callback from an abandoned capture, but never let it
     // change the active result, edits or navigation.
-    producer(captureTickets[id]) { [self] in
+    producer(attempt) { [self] in
       defer {
         pendingIntakes -= 1
         if tasks[id] == nil { finishQueue(id) }
@@ -247,16 +291,16 @@ struct StagedPhoto: Transferable, Sendable {
       do {
         _ = try await core.stagePhoto(id: id, path: url.path)
         if removeStaged { try? FileManager.default.removeItem(at: url) }
-        guard accepted(id) else { return }
-        guard accepted(id) else { return }
-        if let parent = parents[id] {
+        guard canProcess(attempt) else { return }
+        if let parent = attempt.parent {
           _ = try await core.appendPages(id: parent, pages: [id])
         }
-        guard accepted(id), !cancelled.contains(id), !suspended else { return }
+        guard canProcess(attempt) else { return }
         if currentID == id { sourceStored = true }
         let retained = try await core.artifactPath(id: id, artifact: "source.bin")
-        guard accepted(id) else { return }
+        guard canProcess(attempt), let worker = attempts.begin(attempt) else { return }
         tasks[id] = Task {
+          defer { releaseAfterRecognition(worker) }
           while queueOrder.first != id || processingID != nil || core.recognitionBusy() {
             do { try await Task.sleep(for: .milliseconds(100)) } catch {
               tasks[id] = nil
@@ -274,6 +318,7 @@ struct StagedPhoto: Transferable, Sendable {
           processingID = id
           let poll = Task {
             while !Task.isCancelled {
+              guard canProcess(attempt) else { return }
               if currentID == id { progress = core.jobProgress(id: id) }
               try? await Task.sleep(for: .milliseconds(100))
             }
@@ -288,7 +333,7 @@ struct StagedPhoto: Transferable, Sendable {
           }
           do {
             let preferences = try await core.preferences()
-            guard accepted(id), !Task.isCancelled else { return }
+            guard canProcess(attempt), !Task.isCancelled else { return }
             let job = try core.registerJob(id: id)
             recognitionJobs[id] = job
             defer {
@@ -303,6 +348,7 @@ struct StagedPhoto: Transferable, Sendable {
             } onCancel: {
               job.cancel()
             }
+            guard canProcess(attempt), !Task.isCancelled else { return }
             if result.duplicate && currentID == id { presentedID = result.scan.document.id }
             LocalDiagnostics.shared.record(
               .interpretation, .completed, correlation: id, count: result.scan.appointments.count)
@@ -320,30 +366,36 @@ struct StagedPhoto: Transferable, Sendable {
                   durationMs: Int(stage.durationMs))
               }
             }
-            guard !Task.isCancelled, !cancelled.contains(id) else { return }
+            guard canProcess(attempt), !Task.isCancelled else { return }
             finishedID = result.scan.document.id
           } catch {
-            guard currentID == id else { return }
+            guard canProcess(attempt), currentID == id, !Task.isCancelled else { return }
             self.error = userMessage(error)
-            if let draft = try? await core.loadScan(id: id) { finishedID = draft.document.id }
+            if let draft = try? await core.loadScan(id: id), canProcess(attempt), currentID == id {
+              finishedID = draft.document.id
+            }
           }
         }
-      } catch { fail(error, id: id) }
+      } catch { fail(error, attempt: attempt) }
     }
   }
   func retry(_ id: String) {
     guard !running, let ticket = admission.ticket() else { return }
-    captureTickets[id] = ticket
+    guard let attempt = register(id, ticket: ticket), let worker = attempts.begin(attempt) else {
+      return
+    }
+    attempts.finishInput(attempt)
     currentID = id
     running = true
     sourceStored = true
     finishedID = nil
     error = nil
-    cancelled.remove(id)
     tasks[id] = Task {
+      defer { releaseAfterRecognition(worker) }
       let poll = Task {
         while !Task.isCancelled {
-          progress = core.jobProgress(id: id)
+          guard canProcess(attempt) else { return }
+          if currentID == id { progress = core.jobProgress(id: id) }
           try? await Task.sleep(for: .milliseconds(100))
         }
       }
@@ -351,21 +403,23 @@ struct StagedPhoto: Transferable, Sendable {
         poll.cancel()
         tasks[id] = nil
         updateRunning()
-        progress = nil
+        if currentID == id { progress = nil }
       }
       do {
         let path = try await core.artifactPath(id: id, artifact: "source.bin")
+        guard canProcess(attempt), !Task.isCancelled else { return }
         let url = URL(fileURLWithPath: path)
         let pdf = try await Task.detached {
           let file = try FileHandle(forReadingFrom: url)
           defer { try? file.close() }
           return try file.read(upToCount: 5) == Data("%PDF-".utf8)
         }.value
+        guard canProcess(attempt), !Task.isCancelled else { return }
         if pdf {
-          await ingestFile(url, id: id, navigate: false)
+          await ingestFile(url, attempt: attempt, navigate: false)
           return
         }
-        guard accepted(id), !Task.isCancelled else { return }
+        guard canProcess(attempt), !Task.isCancelled else { return }
         let job = try core.registerJob(id: id)
         recognitionJobs[id] = job
         defer {
@@ -377,9 +431,13 @@ struct StagedPhoto: Transferable, Sendable {
         } onCancel: {
           job.cancel()
         }
-        guard accepted(id) else { return }
+        guard canProcess(attempt), !Task.isCancelled else { return }
         finishedID = review.document.id
-      } catch { self.error = userMessage(error) }
+      } catch {
+        if canProcess(attempt), currentID == id, !Task.isCancelled {
+          self.error = userMessage(error)
+        }
+      }
     }
   }
   func importFile(
@@ -388,8 +446,7 @@ struct StagedPhoto: Transferable, Sendable {
   ) {
     guard let ticket = ticket ?? admission.ticket(), admission.accepts(ticket) else { return }
     let id = receiptID ?? UUID().uuidString
-    captureTickets[id] = ticket
-    if let parent { parents[id] = parent }
+    guard let attempt = register(id, ticket: ticket, parent: parent) else { return }
     if navigate {
       currentID = id
       presentedID = "plan:\(parent ?? id)"
@@ -397,16 +454,19 @@ struct StagedPhoto: Transferable, Sendable {
       sourceStored = false
     }
     running = true
-    producer(ticket) { [self] in await ingestFile(url, id: id, navigate: navigate) }
+    producer(attempt) { [self] in await ingestFile(url, attempt: attempt, navigate: navigate) }
   }
-  private func ingestFile(_ url: URL, id: String, navigate: Bool) async {
-    guard let ticket = captureTickets[id], admission.accepts(ticket) else { return }
-    let generation = documentGeneration
+  private func ingestFile(
+    _ url: URL, attempt: ScanAttemptRegistry.Attempt, navigate: Bool
+  ) async {
+    guard canRetain(attempt), let owner = attempts.begin(attempt) else { return }
+    attempts.finishInput(attempt)
+    let id = attempt.id
     documentJobs += 1
     updateRunning()
     defer {
       documentJobs -= 1
-      updateRunning()
+      release(owner)
     }
     do {
       let staged = try await Task.detached {
@@ -421,23 +481,25 @@ struct StagedPhoto: Transferable, Sendable {
         }
         return destination
       }.value
-      guard accepted(id) else { return }
+      guard canRetain(attempt) else { return }
       _ = try await core.stagePhoto(id: id, path: staged.path)
       try? FileManager.default.removeItem(at: staged)
+      guard canProcess(attempt), !Task.isCancelled else { return }
       let path = try await core.artifactPath(id: id, artifact: "source.bin")
+      guard canProcess(attempt), !Task.isCancelled else { return }
       let original = URL(fileURLWithPath: path)
       let pdf = try await Task.detached {
         let file = try FileHandle(forReadingFrom: original)
         defer { try? file.close() }
         return try file.read(upToCount: 5) == Data("%PDF-".utf8)
       }.value
-      guard admission.accepts(ticket), generation == documentGeneration, !suspended,
-        !Task.isCancelled
-      else { return }
-      if navigate { sourceStored = true }
+      guard canProcess(attempt), !Task.isCancelled else { return }
+      if navigate, currentID == id { sourceStored = true }
       if !pdf {
-        if (try? await core.loadScan(id: id)) == nil {
-          start(original, removeStaged: false, captureID: id)
+        let existing = try? await core.loadScan(id: id)
+        guard canProcess(attempt), !Task.isCancelled else { return }
+        if existing == nil {
+          start(original, removeStaged: false, attempt: attempt)
         } else {
           finishedID = id
           updateRunning()
@@ -445,46 +507,51 @@ struct StagedPhoto: Transferable, Sendable {
         return
       }
       let count = try await Task.detached { try PDFIntake.pageCount(original) }.value
-      guard accepted(id), generation == documentGeneration else { return }
+      guard canProcess(attempt), !Task.isCancelled else { return }
       let pages = try await core.pdfPages(id: id, count: UInt32(count))
-      guard accepted(id) else { return }
-      if let parent = parents[id] {
+      guard canProcess(attempt), !Task.isCancelled else { return }
+      if let parent = attempt.parent {
         _ = try await core.appendPages(id: parent, pages: pages)
       }
       for (index, page) in pages.enumerated() {
-        captureTickets[page] = ticket
-        guard admission.accepts(ticket), generation == documentGeneration, !suspended,
-          !Task.isCancelled
-        else { return }
-        if (try? await core.loadScan(id: page)) != nil { continue }
-        if let existing = try? await core.artifactPath(id: page, artifact: "source.bin") {
-          start(URL(fileURLWithPath: existing), force: true, removeStaged: false, captureID: page)
+        guard canProcess(attempt), !Task.isCancelled else { return }
+        let existingReview = try? await core.loadScan(id: page)
+        guard canProcess(attempt), !Task.isCancelled else { return }
+        if existingReview != nil { continue }
+        // Another recovery may already have admitted this same PDF page. Its
+        // exact attempt, including revoked work still draining, remains owner.
+        if attempts.contains(page) { continue }
+        let child = try attempts.register(id: page, ticket: attempt.ticket)
+        guard let pageOwner = attempts.begin(child) else { return }
+        attempts.finishInput(child)
+        defer { release(pageOwner) }
+        let existing = try? await core.artifactPath(id: page, artifact: "source.bin")
+        guard canProcess(attempt), canProcess(child), !Task.isCancelled else { return }
+        if let existing {
+          start(URL(fileURLWithPath: existing), force: true, removeStaged: false, attempt: child)
           continue
         }
         let rendered = try await Task.detached { try PDFIntake.render(original, index: index) }
           .value
-        guard admission.accepts(ticket), generation == documentGeneration, !suspended,
-          !Task.isCancelled
-        else { return }
+        guard canProcess(attempt), canProcess(child), !Task.isCancelled else { return }
         let temporary = try await Task.detached {
           let folder = try AppStorage.prepare().appendingPathComponent("inbox")
           let url = folder.appendingPathComponent(page).appendingPathExtension("png")
           try rendered.png.write(to: url, options: .atomic)
           return url
         }.value
-        guard accepted(id) else { return }
+        guard canRetain(attempt), canRetain(child) else { return }
         _ = try await core.stagePhoto(id: page, path: temporary.path)
-        guard accepted(id) else { return }
+        guard canRetain(attempt), canRetain(child) else { return }
         try await core.retainPdfEvidence(pageId: page, evidenceJson: rendered.evidence)
-        guard admission.accepts(ticket), generation == documentGeneration, !suspended,
-          !Task.isCancelled
-        else { return }
-        start(temporary, force: true, captureID: page)
+        guard canProcess(attempt), canProcess(child), !Task.isCancelled else { return }
+        start(temporary, force: true, attempt: child)
       }
+      guard canProcess(attempt), !Task.isCancelled else { return }
       finishedID = id
       updateRunning()
     } catch {
-      self.error = userMessage(error)
+      if canProcess(attempt), !Task.isCancelled { self.error = userMessage(error) }
       updateRunning()
     }
   }
@@ -492,26 +559,42 @@ struct StagedPhoto: Transferable, Sendable {
     guard !recoveringShares, let ticket = admission.ticket(), let lease = admission.begin(ticket)
     else { return }
     defer { admission.end(lease) }
+    let generation = documentGeneration
     recoveringShares = true
     defer { recoveringShares = false }
     do {
       let pending = try await Task.detached { try IntakeStaging.pending() }.value
       for (receipt, url, folder) in pending.receipts {
-        guard admission.accepts(ticket) else { return }
-        captureTickets[receipt.id] = ticket
-        await ingestFile(url, id: receipt.id, navigate: false)
+        guard admission.accepts(ticket), generation == documentGeneration else { return }
+        guard !attempts.contains(receipt.id),
+          let attempt = register(receipt.id, ticket: ticket), let owner = attempts.begin(attempt)
+        else { continue }
+        attempts.finishInput(attempt)
+        defer { release(owner) }
+        await ingestFile(url, attempt: attempt, navigate: false)
         // Receipt cleanup follows shared-core persistence, even if PDF
         // decoding failed. The archive can retry the retained original.
-        if (try? await core.artifactPath(id: receipt.id, artifact: "source.bin")) != nil {
+        if canRetain(attempt),
+          (try? await core.artifactPath(id: receipt.id, artifact: "source.bin")) != nil,
+          canRetain(attempt)
+        {
           try? FileManager.default.removeItem(at: folder)
         }
       }
-      if let warning = pending.warning, admission.accepts(ticket) { self.error = warning }
-    } catch { self.error = userMessage(error) }
+      if let warning = pending.warning, admission.accepts(ticket), generation == documentGeneration
+      {
+        self.error = warning
+      }
+    } catch {
+      if admission.accepts(ticket), generation == documentGeneration {
+        self.error = userMessage(error)
+      }
+    }
   }
   func recoverInbox() async {
     guard let ticket = admission.ticket(), let lease = admission.begin(ticket) else { return }
     defer { admission.end(lease) }
+    let generation = documentGeneration
     do {
       let urls = try await Task.detached {
         let folder = try AppStorage.prepare().appendingPathComponent("inbox")
@@ -520,46 +603,59 @@ struct StagedPhoto: Transferable, Sendable {
             at: folder, includingPropertiesForKeys: [.isRegularFileKey])) ?? []
       }.value
       for url in urls {
-        guard admission.accepts(ticket) else { return }
+        guard admission.accepts(ticket), generation == documentGeneration else { return }
         guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
           continue
         }
         let name = url.deletingPathExtension().lastPathComponent
         let id = UUID(uuidString: name) == nil ? UUID().uuidString : name
+        guard !attempts.contains(id), let attempt = register(id, ticket: ticket),
+          let owner = attempts.begin(attempt)
+        else { continue }
+        attempts.finishInput(attempt)
+        defer { release(owner) }
         do {
           _ = try await core.stagePhoto(id: id, path: url.path)
           try FileManager.default.removeItem(at: url)
-        } catch { self.error = userMessage(error) }
+        } catch {
+          if admission.accepts(ticket), generation == documentGeneration {
+            self.error = userMessage(error)
+          }
+        }
       }
-      guard admission.accepts(ticket) else { return }
+      guard admission.accepts(ticket), generation == documentGeneration else { return }
       await recoverShares()
-      guard admission.accepts(ticket) else { return }
+      guard admission.accepts(ticket), generation == documentGeneration else { return }
       let history = try await core.history()
       for intake in history.intakes where intake.status == "document" {
-        guard admission.accepts(ticket) else { return }
-        captureTickets[intake.id] = ticket
+        guard admission.accepts(ticket), generation == documentGeneration else { return }
+        guard !attempts.contains(intake.id), let attempt = register(intake.id, ticket: ticket),
+          let owner = attempts.begin(attempt)
+        else { continue }
+        attempts.finishInput(attempt)
+        defer { release(owner) }
         let pages = try await core.pageGroup(id: intake.id)
+        guard canProcess(attempt), generation == documentGeneration else { return }
         if pages.contains(where: { page in
           !history.scans.contains(where: { $0.id == page && $0.retained })
         }) {
           let path = try await core.artifactPath(id: intake.id, artifact: "source.bin")
-          await ingestFile(URL(fileURLWithPath: path), id: intake.id, navigate: false)
+          guard canProcess(attempt), generation == documentGeneration else { return }
+          await ingestFile(URL(fileURLWithPath: path), attempt: attempt, navigate: false)
         }
       }
-    } catch { self.error = userMessage(error) }
+    } catch {
+      if admission.accepts(ticket), generation == documentGeneration {
+        self.error = userMessage(error)
+      }
+    }
   }
   func cancel() {
     documentGeneration = UUID()
     if let currentID { LocalDiagnostics.shared.record(.intake, .cancelled, correlation: currentID) }
-    if let currentID {
-      cancelled.insert(currentID)
-      recognitionJobs[currentID]?.cancel()
-    }
-    for (id, task) in tasks {
-      cancelled.insert(id)
-      recognitionJobs[id]?.cancel()
-      task.cancel()
-    }
+    attempts.revokeAll()
+    for job in recognitionJobs.values { job.cancel() }
+    for task in tasks.values { task.cancel() }
     awaitingBytes.removeAll()
     updateRunning()
   }
