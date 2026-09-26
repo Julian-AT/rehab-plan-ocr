@@ -121,6 +121,10 @@ wird keine vollständige Ursachen- oder Gerätespeicherabnahme abgeleitet.
   liefert genau einmal und entfernt den Lieferweg später Antworten. Cancel
   oder Deadline cancelt beide Tasks. Ein nicht kooperierender Anbieter kann
   trotzdem weiterarbeiten; diese Grenze ist kein harter nativer Arbeitsstopp.
+  Der Router behält dessen einzigen Generierungsplatz bis zur tatsächlichen
+  Rückkehr. Weitere Modellanfragen melden die vorübergehende Nichtverfügbarkeit;
+  vollständige Regeln bleiben unabhängig davon nutzbar. Der Worker gibt den Platz
+  bei Rückkehr oder Fehler frei, nicht bereits beim Ende der Aufruferfrist.
 - **Audioeingang:** `LocalSpeechRecorder` besitzt Streamconsumer und Watchdog.
   Mikrofon-, Segment- und Gesamtgeneration prüfen Recognitioncallbacks nach
   dem Hop auf MainActor. Cancel beendet Channel, Tap, Recognition, Watchdog
@@ -254,3 +258,26 @@ Der tatsächliche ShareController samt Intakequellen besteht außerdem den
 Swift-6-Typecheck mit vollständiger Nebenläufigkeitsprüfung,
 `-application-extension` und iOS-26-Simulator-SDK. Ein Appbuild oder eine
 Geräteinstallation wurde für diesen Slice nicht vorgenommen.
+
+## Begrenzung nach unkooperativem Anbieterabbruch, 26. September 2026
+
+Die neue Gegenprobe mit gehaltenen Continuations weist am bisherigen Code
+21 gleichzeitig noch ausstehende Anbieteraufrufe nach: ein abgelaufener Aufruf
+und 20 erneut zugelassene Versuche. Die erwartete Schutzassertion scheitert.
+Mit dem workergebundenen Generierungsplatz bleibt es bei einem Aufruf; alle
+20 Wiederholungen werden zurückgewiesen. Dasselbe gilt nach ausdrücklichem
+Abbruch. Kalenderregeln und „Abbrechen“ bleiben währenddessen ausführbar,
+verspätete Ergebnisse erreichen den Aufrufer nicht. Nach tatsächlicher Rückkehr
+und nach unmittelbaren Anbieterfehlern ist ein neuer Aufruf wieder möglich.
+
+Die native Swift-6-Probe besteht mit vollständiger Nebenläufigkeitsprüfung und
+Warnungen als Fehler. Der vollständige gesteuerte Gesprächsablauf besteht
+ebenfalls: Eine neue freie Frage bleibt im Gespräch erhalten, meldet den noch
+belegten Anbieter und erzeugt keinen Kalenderauftrag. „Nächster Termin“ liefert
+anschließend weiterhin belegte Kalenderdaten, während die alte Antwort nach
+ihrer Rückkehr verworfen wird. Quellen, alter/neuer Quellpatch, native Produkte,
+Befehle und positive/negative Logs liegen privat unter
+`.local/runs/interpretation-admission-20260926-s20-001/`. Die Änderung wurde im
+separaten Worktree geprüft; die laufende vollständige UI-Suite verwendet noch
+ihren ursprünglichen Quellstand. Gemeinsamer Appbuild und Simulatorintegration
+dieser Änderung bleiben ausdrücklich nachgelagerte Prüfungen.

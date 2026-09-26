@@ -330,6 +330,12 @@ import RehaCore
     let oldRequest = Task { await late.model.submitText("Erzähle mir bitte etwas Nettes") }
     await until { pending != nil }
     late.model.cancelSession()
+    let currentQuestion = "Erzähle mir bitte etwas anderes"
+    await late.model.submitText(currentQuestion)
+    precondition(late.provider.requests.count == 1, "Canceled native work was admitted again")
+    precondition(late.model.rounds.last?.user == currentQuestion, "Current request was lost")
+    precondition(late.model.response.contains("vorherige Anfrage"))
+    precondition(late.calendar.previews.isEmpty && late.calendar.confirmed.isEmpty)
     await late.model.submitText("Nächster Termin")
     let latest = late.model.response
     pending!.resume(
