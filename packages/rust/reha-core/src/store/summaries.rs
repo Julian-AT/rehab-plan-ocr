@@ -4,13 +4,14 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
 // Bump when deriving these fields changes; stale projections rebuild from run JSON.
-const SUMMARY_VERSION: u8 = 1;
+const SUMMARY_VERSION: u8 = 2;
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct ContentSummary {
     #[serde(default)]
     version: u8,
     pub item_count: usize,
+    pub included_count: usize,
     pub pending_count: usize,
     pub dates: Vec<String>,
 }
@@ -20,6 +21,7 @@ impl Default for ContentSummary {
         Self {
             version: SUMMARY_VERSION,
             item_count: 0,
+            included_count: 0,
             pending_count: 0,
             dates: Vec::new(),
         }
@@ -65,6 +67,7 @@ impl ContentSummary {
         Self {
             version: SUMMARY_VERSION,
             item_count: run.appointments.len(),
+            included_count: run.appointments.iter().filter(|a| a.included).count(),
             pending_count: run
                 .appointments
                 .iter()

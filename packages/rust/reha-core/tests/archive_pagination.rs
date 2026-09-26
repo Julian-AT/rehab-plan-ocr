@@ -211,3 +211,120 @@ fn version_ten_backfill_and_document_membership_updates_preserve_journal_bytes()
         0
     );
 }
+
+#[test]
+fn excluded_rows_do_not_make_a_saved_selection_partial_and_old_caches_rebuild() {
+    let directory = tempfile::tempdir().unwrap();
+    let store = Store::open(directory.path()).unwrap();
+    let id = scan(&store, 1, 100);
+    let mut run = store.load_run(&id).unwrap();
+    run.appointments.truncate(2);
+    run.appointments[0].included = true;
+    run.appointments[1].included = false;
+    store.save_run(&run).unwrap();
+    store.bind_schedule(&id, "schedule", "fingerprint").unwrap();
+    store
+        .connection
+        .execute_batch("INSERT INTO imports VALUES('saved-event','schedule','retained journal');")
+        .unwrap();
+    let original: String = store
+        .connection
+        .query_row("SELECT run FROM scans", [], |r| r.get(0))
+        .unwrap();
+    // Version one counted recognized rows without recording the included selection.
+    store.connection.execute_batch("UPDATE scans SET run_summary='{\"version\":1,\"item_count\":2,\"pending_count\":0,\"dates\":[]}'").unwrap();
+    drop(store);
+    let mut store = Store::open(directory.path()).unwrap();
+    let summary = store.archive_page(None, 20).unwrap().plans.remove(0);
+    assert_eq!(
+        summary.item_count, 2,
+        "Retain the recognized-row display count"
+    );
+    assert_eq!(summary.status, ArchiveStatus::Saved);
+    assert_eq!(
+        store
+            .connection
+            .query_row("SELECT run FROM scans", [], |r| r.get::<_, String>(0))
+            .unwrap(),
+        original
+    );
+    assert_eq!(
+        store
+            .connection
+            .query_row("SELECT record FROM imports", [], |r| r.get::<_, String>(0))
+            .unwrap(),
+        "retained journal"
+    );
+    run.appointments[1].included = true;
+    store.save_run(&run).unwrap();
+    assert_eq!(
+        store.archive_page(None, 20).unwrap().plans[0].status,
+        ArchiveStatus::PartiallySaved
+    );
+}
+
+#[test]
+fn equal_second_import_undo_and_reimport_follow_committed_insertion_order() {
+    let directory = tempfile::tempdir().unwrap();
+    let store = Store::open(directory.path()).unwrap();
+    let id = scan(&store, 1, 100);
+    batch(&store, "a-original", &id, None, 101, "saved");
+    batch(&store, "z-undo", &id, Some("a-original"), 101, "saved");
+    drop(store);
+    let mut store = Store::open(directory.path()).unwrap();
+    assert_eq!(
+        store.archive_page(None, 20).unwrap().plans[0].status,
+        ArchiveStatus::Undone
+    );
+    batch(&store, "m-reimport", &id, None, 101, "saved");
+    store.bind_schedule(&id, "schedule", "fingerprint").unwrap();
+    let count = store.archive_page(None, 20).unwrap().plans[0].item_count;
+    for index in 0..count {
+        store
+            .connection
+            .execute(
+                "INSERT INTO imports VALUES(?1,'schedule','retained journal')",
+                [format!("event-{index}")],
+            )
+            .unwrap();
+    }
+    drop(store);
+    let mut store = Store::open(directory.path()).unwrap();
+    assert_eq!(
+        store.archive_page(None, 20).unwrap().plans[0].status,
+        ArchiveStatus::Saved
+    );
+}
+
+#[test]
+fn saved_page_does_not_claim_an_unprocessed_group_is_complete() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut store = Store::open(directory.path()).unwrap();
+    let id = scan(&store, 1, 100);
+    let other = "11111111-1111-4111-8111-111111111111";
+    store
+        .stage_intake(
+            other,
+            "pending.png",
+            b"synthetic",
+            &PipelineConfig::default(),
+            100,
+        )
+        .unwrap();
+    store.group_pages(&id, &[id.clone(), other.into()]).unwrap();
+    store.bind_schedule(&id, "schedule", "fingerprint").unwrap();
+    let count = store.archive_page(None, 20).unwrap().plans[0].item_count;
+    for index in 0..count {
+        store
+            .connection
+            .execute(
+                "INSERT INTO imports VALUES(?1,'schedule','retained journal')",
+                [format!("event-{index}")],
+            )
+            .unwrap();
+    }
+    assert_eq!(
+        store.archive_page(None, 20).unwrap().plans[0].status,
+        ArchiveStatus::PartiallySaved
+    );
+}

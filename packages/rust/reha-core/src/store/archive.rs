@@ -120,10 +120,12 @@ fn summarize(connection: &Connection, id: String, imported_at: i64) -> Result<Pl
         status: ArchiveStatus::ReadyForReview,
     };
     let mut scan_count = 0;
+    let mut included_count = 0;
     for (page, exists, cached, raw) in pages {
         if exists {
             let content = ContentSummary::load(connection, &page, cached.as_deref(), raw)?;
             summary.item_count += content.item_count as u64;
+            included_count += content.included_count as u64;
             summary.dates.extend(content.dates);
             scan_count += 1;
         }
@@ -135,11 +137,13 @@ fn summarize(connection: &Connection, id: String, imported_at: i64) -> Result<Pl
         "SELECT EXISTS(SELECT 1 FROM plan_pages pp JOIN batch_documents d ON d.document_id=pp.scan_id
          JOIN batch_operations bo ON bo.batch_id=d.batch_id JOIN operations o ON o.id=bo.operation_id
          WHERE pp.plan_id=?1 AND o.status IN ('pending','uncertain','queued'))", [&summary.id], |r| r.get(0))?;
+    // UUIDs do not encode chronology. A same-second undo or subsequent import
+    // follows its durable insertion order, as in the event mutation history.
     let latest: Option<(String, bool)> = connection
         .query_row(
             "SELECT b.id,b.undo_of IS NOT NULL FROM import_batches b WHERE b.id IN(
          SELECT d.batch_id FROM batch_documents d JOIN plan_pages pp ON pp.scan_id=d.document_id
-         WHERE pp.plan_id=?1) ORDER BY b.created_at DESC,b.id LIMIT 1",
+         WHERE pp.plan_id=?1) ORDER BY b.created_at DESC,b.rowid DESC LIMIT 1",
             [&summary.id],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
@@ -156,7 +160,7 @@ fn summarize(connection: &Connection, id: String, imported_at: i64) -> Result<Pl
         ArchiveStatus::ReconciliationNeeded
     } else if undone {
         ArchiveStatus::Undone
-    } else if saved > 0 && saved >= summary.item_count {
+    } else if saved > 0 && saved >= included_count && scan_count == summary.page_ids.len() {
         ArchiveStatus::Saved
     } else if saved > 0 {
         ArchiveStatus::PartiallySaved
