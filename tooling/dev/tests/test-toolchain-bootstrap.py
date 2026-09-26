@@ -42,6 +42,7 @@ class ToolchainBootstrapTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as temporary,
             patch.object(quality, "BIN", Path(temporary) / "bin"),
             patch.object(quality, "space"),
+            patch.object(quality.workspace, "prepare"),
             patch.object(quality, "installed", side_effect=installed),
             patch.object(quality, "run", side_effect=run),
         ):

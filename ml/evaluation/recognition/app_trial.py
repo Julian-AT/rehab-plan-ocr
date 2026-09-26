@@ -17,6 +17,9 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 sys.path.insert(0, str(ROOT))
 from ml.evaluation.conversation.native import run, sha, write  # noqa: E402
 from ml.evaluation.device.simulator import BUNDLE, disposable, install  # noqa: E402
@@ -252,7 +255,8 @@ def main():
         if snapshot != sources():
             raise ValueError("Sources changed during the app build")
         app = (
-            ROOT / "apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+            workspace.location("ios", ROOT)
+            / "DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
         )
         report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
         container = install(app, args.simulator, run)

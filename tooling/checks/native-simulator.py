@@ -4,10 +4,14 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 CONFIG = ROOT / "config/testing/simulator.json"
 
 
@@ -58,7 +62,7 @@ def main():
     )
     result = select(json.loads(config)[args.profile], inventory, args.simulator)
     result.update(profile=args.profile, config_sha256=hashlib.sha256(config).hexdigest())
-    output = ROOT / "apps/ios/build" / f"simulator-environment-{time.time_ns()}.json"
+    output = workspace.location("ios", ROOT) / f"simulator-environment-{time.time_ns()}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("x") as stream:
         stream.write(json.dumps(result, indent=2) + "\n")

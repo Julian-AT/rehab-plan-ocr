@@ -216,6 +216,9 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "tooling/release/runtime_inventory.py",
         "tooling/release/runtime_policy.py",
         "config/toolchains/versions.json",
+        "rust-toolchain.toml",
+        "config/storage/workspace.json",
+        "tooling/dev/workspace.py",
     ]
     locks = {}
     for name in ["small", "ios-runtime"]:

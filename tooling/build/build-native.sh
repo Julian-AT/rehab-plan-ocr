@@ -2,13 +2,13 @@
 # Reproducible native build. Signing and installation are explicit modes only.
 set -eu
 cd "$(dirname "$0")/../.."
-export PATH="$HOME/.cargo/bin:$PATH"
+eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 mode=${1:-simulator}
 bindings() {
   cargo build --locked -p reha-ffi --features bindgen
   generated=$(mktemp -d)
-  target/debug/reha-bindgen generate target/debug/libreha_ffi.dylib --language swift --metadata-no-deps --no-format --out-dir "$generated"
+  "$CARGO_TARGET_DIR/debug/reha-bindgen" generate "$CARGO_TARGET_DIR/debug/libreha_ffi.dylib" --language swift --metadata-no-deps --no-format --out-dir "$generated"
   if [ "$mode" != bindings ]; then
     diff -u packages/apple/RehaCore/Sources/RehaCore/RehaCore.swift "$generated/RehaCore.swift"
     diff -u packages/apple/RehaCore/Headers/RehaCoreFFI.h "$generated/RehaCoreFFI.h"
@@ -49,7 +49,7 @@ framework() {
         device) triple=aarch64-apple-ios ;;
         simulator) triple=aarch64-apple-ios-sim ;;
       esac
-      rm -r "target/$triple/release"
+      rm -r "$CARGO_TARGET_DIR/$triple/release"
     fi
   done
 }
@@ -61,14 +61,14 @@ case "$mode" in
     framework
     xcodegen generate --spec apps/ios/project.yml --project apps/ios
     case "$mode" in
-      simulator) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build ;;
-      device) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build ;;
+      simulator) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
+      device) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
       archive)
-        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath apps/ios/build/Laßnitzhöhe.xcarchive -allowProvisioningUpdates archive
+        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath "$REHA_IOS_BUILD_DIR/Laßnitzhöhe.xcarchive" ARCHS=arm64 -allowProvisioningUpdates archive
         python3 tooling/release/package-native.py
         ;;
       test)
-        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build
+        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
         sh tooling/checks/test-native-ui.sh --built
         ;;
     esac

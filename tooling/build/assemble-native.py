@@ -19,6 +19,9 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 sys.path.insert(0, str(ROOT / "tooling/release"))
 from runtime_policy import MODELS, check_binary  # noqa: E402
 from runtime_policy import check_symbols as check_release_symbols  # noqa: E402
@@ -145,6 +148,9 @@ def assemble(root, variants):
             root / "Cargo.toml",
             root / "Cargo.lock",
             root / "config/toolchains/versions.json",
+            root / "config/storage/workspace.json",
+            root / "tooling/dev/workspace.py",
+            root / "rust-toolchain.toml",
             root / "tooling/release/runtime_policy.py",
         ]
         for package in ["reha-core", "reha-ffi"]:
@@ -170,7 +176,7 @@ def assemble(root, variants):
         libraries = {}
         for variant in sorted(variants):
             triple = VARIANTS[variant]
-            archive = root / "target" / triple / "release/libreha_ffi.a"
+            archive = workspace.cargo_directory(root) / triple / "release/libreha_ffi.a"
             runtime = root / ".local/models/runtime/runtime" / triple / "libonnxruntime.a"
             sdk = "iphonesimulator" if variant == "simulator" else "iphoneos"
             identity = common | {

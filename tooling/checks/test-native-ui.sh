@@ -2,7 +2,7 @@
 # Uses a disposable simulator and only the public synthetic plan.
 set -eu
 cd "$(dirname "$0")/../.."
-export PATH="$HOME/.cargo/bin:$PATH"
+eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 runtime=$(python3 tooling/checks/native-simulator.py --profile "${REHA_SIMULATOR_PROFILE:-local}" --simulator "${REHA_TEST_SIMULATOR:-}")
 if [ "${1:-}" = --built ]; then shift; else sh tooling/build/build-native.sh simulator; fi
@@ -10,7 +10,7 @@ if [ "${1:-}" = --built ]; then shift; else sh tooling/build/build-native.sh sim
 # reinstall the unsigned product and lose its App Group entitlements.
 xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath apps/ios/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
+  -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing
 if [ -n "${REHA_TEST_SIMULATOR:-}" ]; then
   simulator=$REHA_TEST_SIMULATOR
 else
@@ -31,7 +31,7 @@ xcrun simctl bootstatus "$simulator" -b
 app="$staging/Laßnitzhöhe.app"
 # File-provider metadata can reappear immediately under Documents. Sign a
 # disposable local copy, as the private packaging verifier does.
-cp -cRp apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app" || ditto apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
+cp -cRp "$REHA_IOS_BUILD_DIR/DerivedData"/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app" || ditto "$REHA_IOS_BUILD_DIR/DerivedData"/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
 xattr -cr "$app"
 codesign --force --sign - --entitlements apps/ios/Extensions/Widgets/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
 codesign --force --sign - --entitlements apps/ios/Extensions/NotificationContent/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
@@ -76,10 +76,10 @@ PY
   fi
 fi
 python3 - "$staging" << 'PYRUN'
-import plistlib, sys
+import os, plistlib, sys
 from pathlib import Path
 staging = Path(sys.argv[1])
-products = Path("apps/ios/build/DerivedData/Build/Products").resolve()
+products = (Path(os.environ["REHA_IOS_BUILD_DIR"]) / "DerivedData/Build/Products").resolve()
 source = next(products.glob("Termine_iphonesimulator*.xctestrun"))
 run = plistlib.loads(source.read_bytes())
 def absolute(value):

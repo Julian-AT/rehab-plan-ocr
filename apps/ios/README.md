@@ -32,7 +32,7 @@ Eine fehlende oder abweichende Laufzeit führt vor dem Build zum Fehler; es gibt
 keinen automatischen Wechsel auf die neueste installierte Version. Ein bestehender
 `REHA_TEST_SIMULATOR` muss ein eigener iPhone-17-Testsimulator derselben Laufzeit sein.
 Jeder erfolgreiche Vorabcheck schreibt eine neue `simulator-environment-*.json`
-unter `apps/ios/build`; CI bewahrt diese Identität mit dem Testergebnis auf.
+unter `.local/builds/ios`; CI bewahrt diese Identität mit dem Testergebnis auf.
 Diese beiden Profile ersetzen keine Prüfung der Mindestversion iOS 26.0.
 
 `sh tooling/build/build-native.sh archive` erzeugt ein signiertes privates Archiv und führt die

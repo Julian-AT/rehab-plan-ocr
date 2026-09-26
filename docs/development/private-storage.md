@@ -39,8 +39,8 @@ Compatibility links intentionally preserve historical absolute/relative referenc
 and the linked llama.cpp worktree. They must remain while saved references still use
 the old names. Active dataset, model restoration, evaluation and app-resource paths
 now use `.local/` directly. Experimental phonemizer caches live in `.local/builds/phonemizer`;
-the old cache contents remain preserved with the migrated collection. Moving other
-toolchains/build caches and removing obsolete previews are separate follow-up work.
+the old cache contents remain preserved with the migrated collection. The [workspace migration](build-reproducibility.md) separately covers toolchains and
+build products, with retained compatibility paths.
 Private inventories, backups, sources and model weights remain excluded from Git.
 The release setup no longer requires those phonemizer caches or Victoria weights;
 explicit `restore-experimental-speech` / `convert-experimental-speech` targets

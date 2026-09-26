@@ -8,13 +8,17 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from icalendar import Calendar
 
 ROOT = Path(__file__).resolve().parents[4]
-binary = Path(os.environ.get("REHA_BINARY", ROOT / "target/release/reha"))
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
+binary = Path(os.environ.get("REHA_BINARY", workspace.cargo_directory(ROOT) / "release/reha"))
 with tempfile.TemporaryDirectory() as temporary:
     folder = Path(temporary)
     run = json.loads((ROOT / "ml/evaluation/fixtures/sample-run.json").read_text())

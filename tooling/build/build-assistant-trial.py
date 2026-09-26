@@ -185,6 +185,7 @@ def main():
             "generic/platform=iOS Simulator",
             "-derivedDataPath",
             str(BASE / "DerivedData"),
+            "ARCHS=arm64",
             "CODE_SIGNING_ALLOWED=NO",
             "build",
         )

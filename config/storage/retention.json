@@ -9,13 +9,13 @@
     ".local/upstream",
     ".local/envs",
     "docs/product/visual-baseline",
-    "apps/ios/build/Laßnitzhöhe.xcarchive",
+    ".local/builds/ios/Laßnitzhöhe.xcarchive",
     "external originals and simulators",
     ".local/objects"
   ],
   "rebuildable": [
     {
-      "path": "apps/ios/build/DerivedData/Build/Intermediates.noindex",
+      "path": ".local/builds/ios/DerivedData/Build/Intermediates.noindex",
       "consumers": [
         "tooling/build/build-native.sh",
         "apps/ios/project.yml"
@@ -24,7 +24,7 @@
       "rebuild": "make build TARGET=simulator"
     },
     {
-      "path": "apps/ios/build/DerivedData/ModuleCache.noindex",
+      "path": ".local/builds/ios/DerivedData/ModuleCache.noindex",
       "consumers": [
         "tooling/build/build-native.sh"
       ],
@@ -32,7 +32,7 @@
       "rebuild": "make build TARGET=simulator"
     },
     {
-      "path": "apps/ios/build/EventTests/Index.noindex",
+      "path": ".local/builds/ios/EventTests/Index.noindex",
       "consumers": [
         "tooling/checks/test-calendar-events.sh"
       ],
@@ -56,7 +56,7 @@
       "rebuild": "make build-assistant-trial"
     },
     {
-      "path": "target/debug/incremental",
+      "path": ".local/builds/rust/debug/incremental",
       "consumers": [
         "tooling/dev/quality.py"
       ],

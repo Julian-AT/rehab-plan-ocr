@@ -90,6 +90,61 @@ class WorkspacePathTests(unittest.TestCase):
             Path(json.loads(result.stdout)["target_directory"]),
         )
 
+    def test_native_generator_uses_alternate_cargo_outputs_not_stale_default(self):
+        for name in ["tooling/dev/workspace.py", "tooling/build/build-native.sh"]:
+            target = self.root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(workspace.ROOT / name, target)
+        tools = self.root / ".local/tools/bin"
+        tools.mkdir(parents=True)
+        (tools / "cargo").write_text("#!/bin/sh\nexit 0\n")
+        (tools / "cargo").chmod(0o755)
+        (tools / "python3").symlink_to(sys.executable)
+        # The bootstrap Python must also be on the incoming path before the resolver runs.
+        alternative = self.root / "alternate cargo/debug"
+        alternative.mkdir(parents=True)
+        stale = self.root / "target/debug"
+        stale.mkdir(parents=True)
+        (stale / "reha-bindgen").write_text("#!/bin/sh\nexit 99\n")
+        (stale / "reha-bindgen").chmod(0o755)
+        generated = {
+            "RehaCore.swift": "binding fixture\n",
+            "RehaCoreFFI.h": "header fixture\n",
+            "RehaCoreFFI.modulemap": "module fixture\n",
+        }
+        script = alternative / "reha-bindgen"
+        script.write_text(
+            f"#!{sys.executable}\nimport os,sys\nfrom pathlib import Path\n"
+            "assert Path(sys.argv[2]) == Path(os.environ['CARGO_TARGET_DIR']) / 'debug/libreha_ffi.dylib'\n"
+            f"for name, value in {generated!r}.items():\n"
+            "    (Path(sys.argv[-1]) / name).write_text(value)\n"
+        )
+        script.chmod(0o755)
+        for name, content in generated.items():
+            relative = (
+                "Sources/RehaCore/RehaCore.swift"
+                if name.endswith(".swift")
+                else "Headers/module.modulemap"
+                if name.endswith(".modulemap")
+                else "Headers/RehaCoreFFI.h"
+            )
+            target = self.root / "packages/apple/RehaCore" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        completed = subprocess.run(
+            ["/bin/sh", "tooling/build/build-native.sh", "check-bindings"],
+            cwd=self.root,
+            env=dict(
+                os.environ,
+                PATH=f"{tools}:/usr/bin:/bin",
+                CARGO_TARGET_DIR=str(alternative.parent),
+            ),
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

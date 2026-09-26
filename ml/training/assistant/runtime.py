@@ -2,19 +2,24 @@
 
 import argparse
 import json
-import os
 import subprocess
+import sys
 
 from restore import REGISTRY, ROOT, sha
 
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 SOURCE = ROOT / ".local/upstream/llama.cpp"
 BUILD = ROOT / ".local/builds/assistant-runtime-41fc758"
-UV = ROOT / ".tools/bin/uv"
+UV = "uv"
 CMAKE = [str(UV), "run", "--locked", "--with", "cmake==3.31.6", "cmake"]
 
 
 def run(command, *, capture=False, offline=False):
-    env = dict(os.environ, UV_OFFLINE="1") if offline else None
+    env = workspace.environment(ROOT)
+    if offline:
+        env["UV_OFFLINE"] = "1"
     result = subprocess.run(
         command,
         cwd=ROOT,

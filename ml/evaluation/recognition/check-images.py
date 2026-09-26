@@ -14,12 +14,15 @@ import platform
 import re
 import statistics
 import subprocess
+import sys
 import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
 
 
 def digest(path):
@@ -145,7 +148,9 @@ def main():
     parser.add_argument("conversion", type=Path, help="Private conversion manifest")
     parser.add_argument("output", type=Path, help="New private results directory")
     parser.add_argument("--models", type=Path, default=ROOT / ".local/models/runtime/small")
-    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/reha")
+    parser.add_argument(
+        "--binary", type=Path, default=workspace.cargo_directory(ROOT) / "release/reha"
+    )
     parser.add_argument("--config", type=Path)
     args = parser.parse_args()
     conversion = json.loads(args.conversion.read_text())

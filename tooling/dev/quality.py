@@ -5,7 +5,6 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import platform
 import re
 import shutil
@@ -16,12 +15,13 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import workspace
+
 ROOT = Path(__file__).resolve().parents[2]
 LOCK = json.loads((ROOT / "config/toolchains/versions.json").read_text())
 VERSIONS = LOCK["versions"]
-BIN = ROOT / ".tools/bin"
-ENV = dict(os.environ)
-ENV["PATH"] = os.pathsep.join([str(BIN), str(Path.home() / ".cargo/bin"), ENV.get("PATH", "")])
+BIN = workspace.location("tools", ROOT) / "bin"
+ENV = workspace.environment(ROOT)
 ENV.update(CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0", RUSTUP_TOOLCHAIN=VERSIONS["rust"])
 APPLE = sys.platform == "darwin"
 XCODEGEN_PRESETS = {
@@ -152,6 +152,7 @@ def space(gib, *, working_reserve=False):
 
 def bootstrap():
     space(1)
+    workspace.prepare(ROOT)
     system = "darwin" if APPLE else "linux"
     arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64"}[platform.machine()]
     BIN.mkdir(parents=True, exist_ok=True)
@@ -307,7 +308,7 @@ def tests(portable):
         "--locked",
         "python",
         "packages/rust/reha-cli/tests/verify-ics.py",
-        env=dict(ENV, REHA_BINARY=str(ROOT / "target/debug/reha")),
+        env=dict(ENV, REHA_BINARY=str(workspace.cargo_directory(ROOT, ENV) / "debug/reha")),
     )
     run("sh", "tooling/checks/test-vad.sh")
     if APPLE and not portable:
@@ -329,13 +330,17 @@ def tests(portable):
             "custom-assistant-provider",
             "interpretation-evaluation",
             "input-audio",
-            "output-audio",
+            "system-speech",
             "capture-preparation",
+            "native-photo",
             "speech-input",
             "ordered-settings",
             "service-request",
+            "notification-deadline",
             "diagnostics",
             "intake-erasure",
+            "temporary-privacy",
+            "intake-recovery",
             "intake-size",
             "pdf-text-evidence",
             "native-bindings",

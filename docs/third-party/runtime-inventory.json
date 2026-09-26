@@ -3658,6 +3658,7 @@
     "Cargo.lock": "d9c63ed15e9fdfb64a9873da9f4a0619ea78ed22b8dd59c96fd74a0ef71a8fc7",
     "Cargo.toml": "83300fddef020cf8ce03775b0e5d87873b7870bebca363b8dd7f54f5c97569b5",
     "apps/ios/project.yml": "43e8cebe6699b050d12ed202bc0ecf8db5ea933bd368fbb5cd3d794ea10f25bc",
+    "config/storage/workspace.json": "d254a25be67f0ba0c3e548547aaca38b0d0600823761fa6304e1a189359dc862",
     "config/toolchains/versions.json": "c0d6e4b63695455f7c852794b98315b1ac20e5031a6a6f5b5ac5bd2caee62014",
     "docs/third-party/licenses/apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "docs/third-party/licenses/libfvad-AUTHORS": "cd9bea3aacbdb2a25763835e029f0ea34198dfc35687616a6ce29e7db1b6114a",
@@ -3701,10 +3702,12 @@
     "packages/rust/reha-core/Cargo.toml": "346b1be202d4f30b3c774b28444ce94151d99160ff7ec7742990d086b1799ccf",
     "packages/rust/reha-core/build.rs": "20cffe11d39ac9efbbef09b1b70ae19ebce59cbd757da8e29e48cecb98de052d",
     "packages/rust/reha-ffi/Cargo.toml": "56bc3fa650fa7dff6dfa47a0662a172ba8618595784c135de15bf49b9d81f53e",
-    "tooling/build/assemble-native.py": "0a3b69a25a41b2f13c6e87a5097eec833c24413a8eb5accf6ef261fdb789f1c4",
-    "tooling/build/build-native.sh": "c997ae51025bac1ebf3f8c13d41783b4b2b8cc1bc1c8323ff1357514e365c5ea",
+    "rust-toolchain.toml": "09d61e489c122ee1374fc258ed39367f8a34a60be0f38db55fe081d3e1c69f24",
+    "tooling/build/assemble-native.py": "aea3d47197f94acb1448aa0d1dc6b68fe8f4a3e35be336bd7be0501a036d1608",
+    "tooling/build/build-native.sh": "fa55c09c43e36e53030135a51f220bf3aa7b3733734c96f7a338432eabd73648",
     "tooling/build/verify-native-assets.py": "8e1ff5a15286f69a35cb97ad53dfc6a2e85fb8df6282e5f1d7cede9326fc006d",
-    "tooling/release/runtime_inventory.py": "d5d0d2d0c55a9222e5b77e5f848b7816751fa46b042ac844d074db01120a0404",
+    "tooling/dev/workspace.py": "e10e418ac6b4a36e8a84c9f21313a8d409cd3bad133558de8395acc775dc6034",
+    "tooling/release/runtime_inventory.py": "00805bf6544ba805b4bd3b9294dcd05bafb217faa3eb8cc8157beb6ae607a676",
     "tooling/release/runtime_policy.py": "51c318ec5b3ea62c36ed92e3f820de82b34e889695442f878fbac5f7aa39adcd"
   },
   "system_components": {

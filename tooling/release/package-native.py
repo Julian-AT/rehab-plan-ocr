@@ -7,12 +7,17 @@ import json
 import pathlib
 import plistlib
 import subprocess
+import sys
 import tempfile
 
 from bundle import require, verify
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-ARCHIVE_ROOT = ROOT / "apps/ios/build/Laßnitzhöhe.xcarchive"
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
+BUILD_ROOT = workspace.location("ios", ROOT)
+ARCHIVE_ROOT = BUILD_ROOT / "Laßnitzhöhe.xcarchive"
 ARCHIVE_INFO = plistlib.loads((ARCHIVE_ROOT / "Info.plist").read_bytes())
 ARCHIVE = ARCHIVE_ROOT / "Products" / ARCHIVE_INFO["ApplicationProperties"]["ApplicationPath"]
 BUNDLE = "at.rehakalender.personal"
@@ -93,7 +98,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         )
     require(len(profiles) == 4, "Missing signed app or extension")
     require(common_devices, "App and extensions must authorize at least one common device")
-    output = ROOT / "apps/ios/build/Laßnitzhöhe.ipa"
+    output = BUILD_ROOT / "Laßnitzhöhe.ipa"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(payload), str(output))
     report = {
         **contents,
@@ -106,7 +111,5 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         "commonly_authorized_devices": len(common_devices),
         "physical_acceptance": "pending",
     }
-    (ROOT / "apps/ios/build/package-verification.json").write_text(
-        json.dumps(report, indent=2) + "\n"
-    )
+    (BUILD_ROOT / "package-verification.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))

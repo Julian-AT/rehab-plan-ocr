@@ -48,6 +48,30 @@ herausführende relative Links benötigen weiterhin eine gesonderte Zuordnung.
 
 `CARGO_TARGET_DIR` bleibt als ausdrücklich gewählter abweichender Ausgabeort
 unterstützt. Generator, Linker, Assembler und CLI-Prüfungen verwenden denselben
-aufgelösten Wert. Fünf Pfadtests vergleichen dies auch mit tatsächlichen
-Cargo-Metadaten; sieben Migrationstests prüfen Datenerhalt, konkurrierende
+aufgelösten Wert. Sechs Pfadtests vergleichen dies mit tatsächlichen Cargo-Metadaten und prüfen
+den FFI-Generator bei gleichzeitig vorhandenem veraltetem Standardartefakt; sieben Migrationstests prüfen Datenerhalt, konkurrierende
 Änderungen, externe Linkziele und Wiederanlauf.
+
+Die CI lädt weiterhin ausschließlich die ausdrücklich benannten synthetischen
+Testnachweise hoch, mit 14 Tagen Aufbewahrung. Wegen des `.local`-Verzeichnisses
+ist dafür `include-hidden-files` aktiviert; die [Action-Dokumentation](https://github.com/actions/upload-artifact#uploading-hidden-files)
+behandelt auch Dateien unter Punkt-Verzeichnissen als verborgen. Nach erfolgreichen
+Prüfschritten erkennt `git diff --exit-code` Änderungen an versionierten Dateien.
+Die beiden Action-Commits wurden erneut durch `ci_monitor.cjs check-actions`
+gegen GitHub geprüft; dies ersetzt keinen vollständigen CI-Lauf.
+
+Am 26.09.2026 wurden alle vier lokalen Bestände mit unveränderten Datei-Hashes,
+Modi und Linkzielen verschoben: 45 Werkzeug-, 1.280 Python-, 10.803 Rust- und
+13.207 Xcode-Einträge. Das private Inventar liegt unter
+`.local/migrations/workspace-20260926-s18-001.json` (SHA-256
+`5116a98c54fc6967e6d9e67e0c0a631e73a2011e9b7a62c1a7730a2d21ef478b`).
+Alle vier Journalzustände sind `verified`; der wiederholte Aufruf erkennt die
+bereits abgeschlossene Verschiebung. `check --canonical`, `make doctor` und die
+sechs Pfadtests bestehen anschließend. Es wurden keine Dateien gelöscht und
+deshalb kein Speichergewinn ausgewiesen. Originale, Modelle und Gerätesicherungen
+waren nicht Teil dieses Inventars.
+
+Unterstützte Xcode-Buildbefehle übergeben `ARCHS=arm64` ausdrücklich auch an
+Paketabhängigkeiten. Der erste gemeinsame Build hatte trotz arm64-App-Einstellung
+zusätzliche x86_64-Paketkompilierungen begonnen. Die bereits unterstützten
+Apple-Silicon-Simulatoren, Gerätearchitektur und iOS-Mindestversion bleiben erhalten.

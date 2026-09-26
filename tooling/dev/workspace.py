@@ -66,6 +66,8 @@ def environment(root=ROOT, source=None):
     )
     versions = json.loads((root / "config/toolchains/versions.json").read_text())["versions"]
     env["RUSTUP_TOOLCHAIN"] = versions["rust"]
+    env["CARGO_INCREMENTAL"] = "0"
+    env["CARGO_PROFILE_DEV_DEBUG"] = "0"
     env["CARGO_TARGET_DIR"] = str(cargo_directory(root, env))
     env.setdefault("UV_PROJECT_ENVIRONMENT", str(location("python", root)))
     env["REHA_IOS_BUILD_DIR"] = str(location("ios", root))
@@ -128,6 +130,8 @@ def main():
             "PATH",
             "RUSTUP_TOOLCHAIN",
             "CARGO_TARGET_DIR",
+            "CARGO_INCREMENTAL",
+            "CARGO_PROFILE_DEV_DEBUG",
             "UV_PROJECT_ENVIRONMENT",
             "REHA_IOS_BUILD_DIR",
         ]:

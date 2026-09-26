@@ -17,6 +17,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 sys.path.insert(0, str(ROOT))
 from tooling.utils.xcresult import command, preserved_result  # noqa: E402
 
@@ -230,7 +233,10 @@ def main():
     report["xcresult"] = str(result_bundle.resolve())
     report["source_result_receipt_sha256"] = sha(output / "source-result.json")
     report["result_reader_sha256"] = sha(ROOT / "tooling/utils/xcresult.py")
-    app = ROOT / "apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+    app = (
+        workspace.location("ios", ROOT)
+        / "DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+    )
     if args.capture and (app / "Termine.debug.dylib").is_file():
         report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
     (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")

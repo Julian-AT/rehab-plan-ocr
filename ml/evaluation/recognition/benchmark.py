@@ -10,10 +10,14 @@ import json
 import platform
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 PRIVATE = ROOT / ".local/datasets/private"
 
 
@@ -250,7 +254,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--models", required=True, type=Path)
     parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/reha")
+    parser.add_argument(
+        "--binary", type=Path, default=workspace.cargo_directory(ROOT) / "release/reha"
+    )
     parser.add_argument(
         "--evaluator",
         type=Path,

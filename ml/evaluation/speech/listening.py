@@ -14,6 +14,9 @@ import wave
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("listening_form", HERE / "listening_form.py")
 _form = importlib.util.module_from_spec(_spec)
@@ -166,7 +169,11 @@ def prepare(output, binary, include_victoria=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
-    parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/examples/voice_samples")
+    parser.add_argument(
+        "--binary",
+        type=Path,
+        default=workspace.cargo_directory(ROOT) / "debug/examples/voice_samples",
+    )
     parser.add_argument("--include-victoria", action="store_true")
     args = parser.parse_args()
     prepare(args.run, args.binary.resolve(), args.include_victoria)

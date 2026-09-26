@@ -27,8 +27,9 @@ Web- und Tauri-Oberflächen sind entfernt. Die [lokale Referenzprüfung](docs/de
 
 Ein arm64-Mac mit Xcode, Rustup, Python 3 und curl wird vorausgesetzt. Die geprüften
 Werkzeugversionen und Download-Prüfsummen stehen in `config/toolchains/versions.json`. Lokale Werkzeuge
-werden bei Bedarf unter `.tools/` installiert; Python-Abhängigkeiten sind mit `uv.lock` gesperrt.
-Die gesonderten Modellkonvertierungs-Pins, insbesondere Victoria, bleiben unverändert.
+werden unter `.local/tools/` installiert; Python-Abhängigkeiten sind mit `uv.lock` gesperrt.
+Die gesonderten Modellkonvertierungs-Pins bleiben unverändert. Die [Arbeitsverzeichnisse und
+Kompatibilitätspfade](docs/development/build-reproducibility.md) werden zentral geprüft.
 
 ```sh
 make bootstrap

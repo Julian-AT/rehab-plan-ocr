@@ -8,19 +8,22 @@ import argparse
 import fcntl
 import importlib.util
 import json
-import os
 import plistlib
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
+
 PACKAGE = ROOT / "packages/apple/LocalAssistant"
 SOURCE = ROOT / ".local/upstream/llama.cpp"
 BASE = ROOT / ".local/builds/assistant-native"
 REGISTRY = ROOT / "ml/registry/assistant-base.json"
-CMAKE = [str(ROOT / ".tools/bin/uv"), "run", "--locked", "--with", "cmake==3.31.6", "cmake"]
+CMAKE = ["uv", "run", "--locked", "--with", "cmake==3.31.6", "cmake"]
 VARIANTS = {"host": "macosx", "simulator": "iphonesimulator", "device": "iphoneos"}
 spec = importlib.util.spec_from_file_location(
     "native_assembly", Path(__file__).with_name("assemble-native.py")
@@ -33,7 +36,7 @@ def run(*args, capture=False):
     result = subprocess.run(
         args,
         cwd=ROOT,
-        env=dict(os.environ, UV_OFFLINE="1"),
+        env=dict(workspace.environment(ROOT), UV_OFFLINE="1"),
         check=True,
         text=True,
         stdout=subprocess.PIPE if capture else None,

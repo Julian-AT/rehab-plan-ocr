@@ -1,9 +1,43 @@
 .PHONY: help bootstrap doctor format lint test test-tools test-ios build verify bindings check-bindings test-agenda restore convert verify-assets package restore-ocr-training restore-assistant-training restore-assistant-export
-export PATH := $(CURDIR)/.tools/bin:$(HOME)/.cargo/bin:$(PATH)
+WORKSPACE_TOOLS := $(shell python3 tooling/dev/workspace.py path tools)
+export PATH := $(WORKSPACE_TOOLS)/bin:$(HOME)/.cargo/bin:$(PATH)
+export RUSTUP_TOOLCHAIN := $(shell python3 tooling/dev/workspace.py toolchain)
+export CARGO_INCREMENTAL := 0
+export CARGO_PROFILE_DEV_DEBUG := 0
+ifndef CARGO_TARGET_DIR
+export CARGO_TARGET_DIR := $(shell python3 tooling/dev/workspace.py path cargo)
+endif
+ifndef UV_PROJECT_ENVIRONMENT
+export UV_PROJECT_ENVIRONMENT := $(shell python3 tooling/dev/workspace.py path python)
+endif
+export REHA_IOS_BUILD_DIR := $(shell python3 tooling/dev/workspace.py path ios)
+ifeq ($(strip $(WORKSPACE_TOOLS)),)
+$(error Workspace tools path is unresolved; run python3 tooling/dev/workspace.py check)
+endif
+ifeq ($(strip $(CARGO_TARGET_DIR)),)
+$(error Workspace Cargo path is unresolved; run python3 tooling/dev/workspace.py check)
+endif
+ifeq ($(strip $(UV_PROJECT_ENVIRONMENT)),)
+$(error Workspace Python path is unresolved; run python3 tooling/dev/workspace.py check)
+endif
+ifeq ($(strip $(REHA_IOS_BUILD_DIR)),)
+$(error Workspace iOS path is unresolved; run python3 tooling/dev/workspace.py check)
+endif
 # Apple Make resolves bare executables before applying this exported PATH.
 # env performs lookup in the recipe environment, including bootstrapped tools.
 TARGET ?= simulator
 .DEFAULT_GOAL := help
+
+WORKSPACE_MANIFEST ?= .local/migrations/workspace.json
+.PHONY: check-workspace inventory-workspace migrate-workspace
+check-workspace:
+	python3 tooling/dev/workspace.py check --canonical
+
+inventory-workspace:
+	python3 tooling/dev/workspace.py plan --manifest "$(WORKSPACE_MANIFEST)"
+
+migrate-workspace:
+	python3 tooling/dev/workspace.py apply --manifest "$(WORKSPACE_MANIFEST)"
 
 .PHONY: inventory-repository
 inventory-repository:
@@ -55,6 +89,7 @@ build test-ios build-assistant-native build-assistant-runtime build-assistant-tr
 train-ocr resume-ocr train-assistant resume-assistant export-ocr export-assistant assistant-smoke: check-storage
 
 help:
+	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
@@ -335,3 +370,10 @@ export-assistant:
 verify-assistant-interruption:
 	@test -n "$(RUN)" -a -n "$(SOURCE_RUN)" -a -n "$(CONTINUOUS_RUN)" || { echo 'Set RUN, SOURCE_RUN and CONTINUOUS_RUN to local proof runs'; exit 2; }
 	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/verify_interruption.py --source "$(SOURCE_RUN)" --continuous "$(CONTINUOUS_RUN)" --run "$(RUN)"
+
+OCR_TRACE_BATCH ?= 32
+.PHONY: diagnose-ocr-operation-parity
+diagnose-ocr-operation-parity: PEAK_GIB = 8
+diagnose-ocr-operation-parity: check-storage
+	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" || { echo 'Set RUN and a new DIAGNOSTIC_RUN below .local/runs'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/operation_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)" --batch-size "$(OCR_TRACE_BATCH)" $(if $(ALL_FAILURES),--all-failures)

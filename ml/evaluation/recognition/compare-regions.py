@@ -8,10 +8,13 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tooling/dev"))
+import workspace  # noqa: E402
 
 
 def sha(path):
@@ -23,7 +26,12 @@ def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None
     output.mkdir(parents=True, exist_ok=False)
     run = json.loads(run_path.read_text())
     subprocess.run(
-        [str(ROOT / "target/release/reha"), "experiment-crop", str(run_path), str(output)],
+        [
+            str(workspace.cargo_directory(ROOT) / "release/reha"),
+            "experiment-crop",
+            str(run_path),
+            str(output),
+        ],
         check=True,
     )
     crop = json.loads((output / "crop.json").read_text())
@@ -37,7 +45,7 @@ def compare(run_path, output, manifest_path, candidate_id=None, cancel_file=None
         "adapter_sha256": manifest["binary_sha256"],
         "runtime_revision": manifest["runtime_revision"],
         "run_sha256": sha(run_path),
-        "crop_tool_sha256": sha(ROOT / "target/release/reha"),
+        "crop_tool_sha256": sha(workspace.cargo_directory(ROOT) / "release/reha"),
         "runner_sha256": sha(Path(__file__)),
         "platform": __import__("platform").platform(),
         "schema_version": 1,
