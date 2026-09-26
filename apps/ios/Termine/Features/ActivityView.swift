@@ -197,11 +197,6 @@ struct CalendarStatusView: View {
           if status.unavailableCount > 0 {
             LabeledContent(
               "Kalender mit nicht lesbaren Daten", value: String(status.unavailableCount))
-            AppSectionHeader(
-              title: "Kalenderverfügbarkeit",
-              help:
-                "Behält Zuordnungen bei, bis der Kalender wieder zugänglich ist."
-            )
           }
         }
         Section {
