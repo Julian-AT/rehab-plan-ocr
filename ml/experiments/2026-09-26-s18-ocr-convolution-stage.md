@@ -29,3 +29,30 @@ Use `make prepare-ocr-convolution-stage DIAGNOSTIC_RUN=.local/runs/<new-run>` an
 separately, `make diagnose-ocr-convolution-stage DIAGNOSTIC_RUN=<prepared-run>`.
 Execution preserves the protocol and refuses to reuse an already started directory.
 The execution entry requires 20 GiB working reserve plus 2 GiB temporary capacity.
+
+## Result: failed at the first case
+
+Protocol/tool commit before execution: `22344a7`. Private run:
+`.local/runs/ocr-convolution-stage-20260926-s18-001/`.
+
+The original control reproduced its previous result. On the first frozen case,
+`plan-020:day-20-0-date-0` at width 320, the candidate still fails one of 748,400
+values. CTC tokens agree. Maximum absolute error is 0.0000680088996887207;
+original deployment error is 0.00007063150405883789. The unmodified unfused
+control passes this case with maximum error 0.00004106760025024414.
+
+Execution stopped after this one case, as predeclared. The remaining eleven cases
+and the full-model/full-corpus gates were **not run**. All original source hashes
+are unchanged. A smaller maximum error is not a pass. The successful isolated
+operation therefore does not establish complete-model equivalence; the copied
+candidate is retained solely as a reproducible failed experiment. No deployment
+artifact, threshold, selected model or historical report has been replaced.
+
+Four construction/geometry tests pass, including dynamic batch/odd-width integer
+runtime oracles. Further work must first identify the earliest remaining operation
+or optimization difference in this retained full-graph failure. It must not tune
+or relax the existing numerical gate on this observed output.
+
+Protocol SHA-256: `c11b79035e610c11260d46c52b973f60ea611ab8ce55a867feb54aa0f311add0`.
+
+Report SHA-256: `e59c054bd2817c40b315f3bb3243e0fd6aee39325e0c6e9c23b45f36e3d8c04b`.
