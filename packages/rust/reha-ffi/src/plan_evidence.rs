@@ -64,6 +64,7 @@ pub(crate) fn project(
             break;
         }
         bytes += item.text.len();
+        truncated |= item.region_ids.len() > 16;
         excerpts.push(PlanEvidenceExcerpt {
             id: item.id.clone(),
             text: item.text.clone(),
@@ -74,21 +75,18 @@ pub(crate) fn project(
                 || !item.alternatives.is_empty(),
         });
     }
-    let fields = run
-        .appointments
-        .iter()
-        .flat_map(|appointment| {
-            appointment
-                .fields
-                .iter()
-                .map(|(name, field)| PlanEvidenceField {
-                    appointment_id: appointment.id.clone(),
-                    field: name.clone(),
-                    state: field.state.clone().into(),
-                })
-        })
-        .take(64)
-        .collect();
+    let mut field_source = run.appointments.iter().flat_map(|appointment| {
+        appointment
+            .fields
+            .iter()
+            .map(|(name, field)| PlanEvidenceField {
+                appointment_id: appointment.id.clone(),
+                field: name.clone(),
+                state: field.state.clone().into(),
+            })
+    });
+    let fields = field_source.by_ref().take(64).collect();
+    truncated |= field_source.next().is_some();
     Ok(PlanEvidenceResponse {
         document_id: run.document.id.clone(),
         revision: version,
@@ -148,5 +146,25 @@ mod tests {
         assert!(project(&run, &request).unwrap().excerpts.is_empty());
         request.search = "x".repeat(161);
         assert!(project(&run, &request).is_err());
+
+        request.search.clear();
+        run.observations.truncate(1);
+        assert!(!project(&run, &request).unwrap().truncated);
+        run.observations[0].region_ids = (0..17).map(|i| format!("r{i}")).collect();
+        let response = project(&run, &request).unwrap();
+        assert!(response.truncated);
+        assert_eq!(response.excerpts[0].region_ids.len(), 16);
+        run.observations.clear();
+        let mut appointment = reha_core::contracts::Appointment::empty("a".into());
+        for i in 0..65 {
+            appointment.fields.insert(
+                format!("f{i}"),
+                reha_core::contracts::FieldAssessment::default(),
+            );
+        }
+        run.appointments.push(appointment);
+        let response = project(&run, &request).unwrap();
+        assert!(response.truncated);
+        assert_eq!(response.fields.len(), 64);
     }
 }
