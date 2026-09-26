@@ -3,9 +3,28 @@ export PATH := $(CURDIR)/.tools/bin:$(HOME)/.cargo/bin:$(PATH)
 # Apple Make resolves bare executables before applying this exported PATH.
 # env performs lookup in the recipe environment, including bootstrapped tools.
 TARGET ?= simulator
+.DEFAULT_GOAL := help
+
+.PHONY: inventory-repository
+inventory-repository:
+	python3 tooling/dev/repository_inventory.py $(if $(INVENTORY),--output "$(INVENTORY)")
 
 CLEANUP_MANIFEST ?= .local/maintenance/cleanup.json
 PEAK_GIB ?= 0
+.PHONY: probe-document probe-speech-availability benchmark-voice-rules
+PROBE_MODE ?= text
+probe-document:
+	@test -n "$(RUN)" -a -n "$(INPUT)" || { echo 'Set RUN below .local/runs and INPUT to a local image'; exit 2; }
+	python3 tooling/dev/probes.py document --run "$(RUN)" --mode "$(PROBE_MODE)" --input "$(INPUT)"
+
+probe-speech-availability:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	python3 tooling/dev/probes.py speech-availability --run "$(RUN)"
+
+benchmark-voice-rules:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	python3 tooling/dev/probes.py voice-rules --run "$(RUN)"
+
 .PHONY: inventory-artifacts clean-artifacts check-storage
 inventory-artifacts:
 	python3 tooling/dev/artifacts.py plan --manifest "$(CLEANUP_MANIFEST)"
@@ -16,7 +35,10 @@ clean-artifacts:
 check-storage:
 	python3 tooling/dev/artifacts.py space --peak-gib "$(PEAK_GIB)"
 
+
 help:
+	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
+	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'

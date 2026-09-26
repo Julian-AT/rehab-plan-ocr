@@ -50,8 +50,11 @@ und benötigen einen bestätigten Prüfablauf. Aktualisieren liest ausschließli
 Aktuelle Kalenderwerte werden vor einer Änderung erneut mit dem Vorschlag verglichen.
 Fremde Notizen, Kalenderalarme, Serien und Einladungen bleiben geschützt.
 
-Schema 8 führt gemeinsame Zuordnungen für Importe, manuelle und sprachlich erstellte
-Termine. Historische Importbelege bleiben unabhängig. Löschungen behalten Herkunft
+Das aktuelle SQLite-Schema ist 11. Schema 8 führte gemeinsame Zuordnungen für
+Importe, manuelle und sprachlich erstellte Termine ein; Schema 9 ergänzte das
+wiederaufnehmbare Löschen von Quellen, Schema 10/11 die indizierten Archivübersichten.
+Das JSON-Dokumentformat hat davon unabhängig Schema 3. Historische Importbelege
+bleiben unabhängig. Löschungen behalten Herkunft
 und Rücknahmebezug. Ein Terminlink löst die aktuelle Kalenderinstanz auf und
 unterscheidet fehlende Zuordnung, fehlenden Zugriff und gelöschten Termin.
 
@@ -67,7 +70,7 @@ unterschiedliche Zustände.
 
 Der Bytehash des Originals und die Abbildung zwischen Original, korrigierter Seite
 und Ausschnitt bleiben erhalten. Jeder Feldwert behält seine Quelle; fehlend,
-unlesbar und widersprüchlich sind getrennte Zustände. Extraktionsversion 7 verwirft
+unlesbar und widersprüchlich sind getrennte Zustände. Extraktionsversion 10 verwirft
 veraltete Parser-Caches. Bestätigte und manuell bearbeitete Werte sind vor automatischer
 Nachprüfung geschützt; Konflikte werden nicht allein nach Konfidenz entschieden.
 
@@ -91,3 +94,14 @@ begrenzte Dateigröße, bereinigter Export. Standardprotokolle enthalten keine
 Termininhalte, Audioaufnahmen oder Gesprächstranskripte. Modelle sind gebündelt;
 Downloadwerkzeuge dienen ausschließlich der Entwicklung. Private Originale,
 Referenzen, Modelle, Sicherungen und Buildprodukte bleiben aus Git ausgeschlossen.
+
+## Verbleibende Serialisierung
+
+UniFFI erzeugt die Swift-Bindings ausschließlich über `make bindings`; normale
+Builds vergleichen sie mit dem Generator. `NativeBridge` reicht noch einige
+Plattformaufträge als String mit JSON-Nutzlast an `NativeServices.perform` weiter.
+Kalenderoperationen und Schreibergebnisse sind auf der Rust/UniFFI-Seite typisiert,
+werden in dieser Brücke jedoch weiterhin in Dictionaries übersetzt. Diese
+Plattformgrenze ist noch umzubauen und darf nicht als vollständig typisiert gelten.
+Gespeicherte Dokumente, Wiederherstellungsjournale, Diagnoseexporte und
+Modell-Evaluationsdateien behalten ihre eigenständigen Serialisierungsverträge.
