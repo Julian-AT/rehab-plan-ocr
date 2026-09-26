@@ -98,12 +98,15 @@ struct AppointmentEditor: View {
         if !draft.suggestions.filter({ $0.status == "pending" }).isEmpty {
           Section("Ergänzungsvorschläge") {
             ForEach(draft.suggestions.filter { $0.status == "pending" }, id: \.id) { suggestion in
+              let description = suggestionDescription(suggestion)
               VStack(alignment: .leading) {
-                Text("\(suggestion.field): \(fieldDescription(suggestion.value))")
+                Text(description)
                 Text(suggestion.source).font(.subheadline).foregroundStyle(.secondary)
                 HStack {
                   Button("Übernehmen") { suggestionAction(suggestion, true) }
+                    .accessibilityLabel("Vorschlag übernehmen: \(description)")
                   Button("Verwerfen") { suggestionAction(suggestion, false) }
+                    .accessibilityLabel("Vorschlag verwerfen: \(description)")
                 }.buttonStyle(.bordered)
               }
             }
@@ -121,10 +124,12 @@ struct AppointmentEditor: View {
         }
         if let error = review.error { Text(error).foregroundStyle(AppPalette.destructive) }
       }
+      .disabled(review.saving)
       .pageTitle("Termin bearbeiten")
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Abbrechen") { if dirty { discard = true } else { dismiss() } }
+            .disabled(review.saving)
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Speichern") { Task { await save() } }.disabled(review.saving)
@@ -143,6 +148,17 @@ struct AppointmentEditor: View {
           polygons: draft.fields.values.map(\.polygon).filter { !$0.isEmpty })
       }
     }
+  }
+  private func suggestionDescription(_ suggestion: CompletionSuggestion) -> String {
+    let field =
+      switch suggestion.field {
+      case "duration_minutes": "Dauer in Minuten"
+      case "location": "Raum"
+      case "therapist": "Therapeut:in"
+      case "preparation": "Vorbereitung"
+      default: suggestion.field
+      }
+    return "\(field): \(fieldDescription(suggestion.value))"
   }
   private func suggestionAction(_ suggestion: CompletionSuggestion, _ accept: Bool) {
     do {

@@ -184,6 +184,52 @@ import XCTest
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
     app.buttons["Abbrechen"].tap()
   }
+  func testLargestTypeArchiveReviewRetainsDraftAndOriginal() throws {
+    launch(dark: true, large: true)
+    app.tabBars.buttons["Archiv"].tap()
+    // The public UI fixture is also used by NativeFlowTests. No calendar write
+    // is needed to exercise the editor and the retained document at large type.
+    let plan = app.buttons["plan-11111111-1111-4111-8111-111111111111"]
+    XCTAssertTrue(plan.waitForExistence(timeout: 10))
+    show(plan)
+    capture("large-type-archive")
+    plan.tap()
+    let actions = app.buttons["plan-actions"]
+    XCTAssertTrue(actions.waitForExistence(timeout: 10))
+    actions.tap()
+    app.buttons["Termin ergänzen"].tap()
+    let title = app.textFields["Bezeichnung"]
+    XCTAssertTrue(title.waitForExistence(timeout: 5))
+    try app.performAccessibilityAudit(for: [.sufficientElementDescription, .trait])
+    title.tap()
+    title.typeText("Entwurf bei größter Schrift")
+    let room = app.textFields["Raum"]
+    show(room)
+    room.tap()
+    room.typeText("Langer Flur 2")
+    show(app.switches["In diesen Plan aufnehmen"].firstMatch)
+    capture("large-type-review-lower-fields")
+    app.buttons["Abbrechen"].tap()
+    XCTAssertTrue(app.buttons["Weiter bearbeiten"].waitForExistence(timeout: 5))
+    app.buttons["Weiter bearbeiten"].tap()
+    for _ in 0..<10 where !title.isHittable { app.swipeDown() }
+    XCTAssertTrue(title.isHittable)
+    XCTAssertEqual(title.value as? String, "Entwurf bei größter Schrift")
+    show(room)
+    XCTAssertEqual(room.value as? String, "Langer Flur 2")
+    app.buttons["Abbrechen"].tap()
+    XCTAssertTrue(app.buttons["Änderungen verwerfen"].waitForExistence(timeout: 5))
+    app.buttons["Änderungen verwerfen"].tap()
+    XCTAssertTrue(actions.waitForExistence(timeout: 5))
+    actions.tap()
+    app.buttons["Originale"].tap()
+    let original = app.buttons["Originaldatei"]
+    XCTAssertTrue(original.waitForExistence(timeout: 5))
+    show(original)
+    original.tap()
+    XCTAssertTrue(app.navigationBars["Quellfoto"].waitForExistence(timeout: 5))
+    capture("large-type-retained-original")
+  }
   func testSimpleDestinationPersistsAndCanBeCancelled() {
     launch()
     app.tabBars.buttons["Mehr"].tap()
