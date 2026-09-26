@@ -117,6 +117,7 @@ class WorkspacePathTests(unittest.TestCase):
         for name in [
             "tooling/dev/workspace.py",
             "tooling/dev/artifacts.py",
+            "tooling/dev/llvm_references.py",
             "tooling/build/build-native.sh",
             "tooling/build/product_generation.py",
         ]:

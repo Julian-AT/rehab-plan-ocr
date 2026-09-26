@@ -20,6 +20,8 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
+import llvm_references
+
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = "config/storage/retention.json"
 GIB = 1024**3
@@ -258,7 +260,7 @@ def compiler_family(name):
 
 
 def binary_consumers(root):
-    """Inspect retained Mach-O files, including non-executable images and dSYMs."""
+    """Inspect Mach-O and pinned LLVM inputs, then follow retained consumers."""
     if sys.platform != "darwin":
         raise ValueError("Cleanup consumer inspection supports Darwin/Mach-O only")
     generations = generation_locations(root)
@@ -269,6 +271,9 @@ def binary_consumers(root):
     family_members = {}
     retained_families = {}
     by_basename = {}
+    llvm_modules = {}
+    retained_llvm = {}
+    llvm_reader = None
 
     def unreadable(error):
         raise ValueError("Cannot inventory every local binary consumer") from error
@@ -296,12 +301,24 @@ def binary_consumers(root):
             # Ordinary !<arch> archives embed their members; thin archives do not.
             if header.startswith(b"!<thin>\n"):
                 raise ValueError(f"Unsupported retained thin archive: {path.relative_to(root)}")
-            if header.startswith(
-                (b"\x7fELF", b"BC\xc0\xde", b"\xde\xc0\x17\x0b")
-            ) or path.name.endswith((".dwo", ".dwp", ".thinlto.bc", ".imports")):
+            if header.startswith(b"\x7fELF") or path.name.endswith(
+                (".dwo", ".dwp", ".thinlto.bc", ".imports")
+            ):
                 raise ValueError(
                     f"Unsupported retained ELF/LLVM or debug/LTO sidecar: {path.relative_to(root)}"
                 )
+            if header.startswith(llvm_references.MAGICS):
+                try:
+                    if llvm_reader is None:
+                        llvm_reader = llvm_references.Reader(root)
+                    # Validate every encountered module; no header-only exemption.
+                    llvm_modules[relative] = llvm_reader.read(path)
+                except (OSError, ValueError, subprocess.SubprocessError) as error:
+                    raise ValueError(f"Unsupported retained LLVM: {relative}: {error}") from error
+                available.add(relative)
+                if authorized_file(relative, policy):
+                    compiler_objects.add(relative)
+                continue
             magic = header[:4]
             if magic not in {
                 b"\xcf\xfa\xed\xfe",
@@ -373,8 +390,19 @@ def binary_consumers(root):
         names, pending = pending[:32], pending[32:]
         for name in names:
             binaries[name] = fingerprint(root / name)
-        batch = [str(root / n) for n in names]
+            if name in llvm_modules:
+                retained_llvm[name] = llvm_modules[name]
+                for edge in llvm_modules[name]["references"]:
+                    target = Path(edge["path"])
+                    if target.is_relative_to(root):
+                        local = local_path(root, str(target.relative_to(root)))
+                        if not local.is_file():
+                            raise ValueError("Missing local LLVM reference target")
+                    reference(edge["path"])
+        batch = [str(root / n) for n in names if n not in llvm_modules]
         for tool, args in (("nm", ["-ap"]), ("otool", ["-L"])):
+            if not batch:
+                break
             try:
                 result = subprocess.run(
                     [tool, *args, *batch],
@@ -411,10 +439,22 @@ def binary_consumers(root):
     # A byte change during symbol inspection must not produce a mixed snapshot.
     if any(fingerprint(root / n) != value for n, value in binaries.items()):
         raise ValueError("Retained binary changed during consumer inspection")
+    if llvm_reader is not None:
+        llvm_reader.verify()
+        for name, value in llvm_modules.items():
+            if llvm_references.fingerprint(root / name) != value["input"]:
+                raise ValueError("LLVM input changed during consumer inspection")
     return {
         "files": binaries,
         "references": sorted(references),
         "compiler_families": retained_families,
+        # Candidate modules can disappear; only retained consumers bind the
+        # before/after snapshot. Their targets still participate in family closure.
+        "llvm": {
+            "implementation_sha256": sha(Path(llvm_references.__file__)),
+            "reader": llvm_reader.qualification() if retained_llvm else None,
+            "files": retained_llvm,
+        },
     }
 
 

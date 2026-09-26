@@ -316,10 +316,11 @@ und APFS-Teilung wird kein zurechenbarer physischer Speichergewinn behauptet.
 
 ## Symbolbewusste Compilerbereinigung
 
-Die Verbraucherprüfung ist ausdrücklich auf Darwin/Mach-O begrenzt. Andere
+Die Verbraucherprüfung ist ausdrücklich auf Darwin/Mach-O und vollständig
+gelesene LLVM-Module mit Apple-Ziel bzw. LLVM-Indexdateien begrenzt. Andere
 Hostplattformen verweigern neue Pläne und jede noch offene Entfernung.
-Auch auf macOS verhindern vorhandene ELF-Dateien, rohe LLVM-Bitcode-Dateien
-(einschließlich Wrapper), Split-Debug-Dateien (`.dwo`, `.dwp`), ThinLTO-Sidecars
+Auch auf macOS verhindern vorhandene ELF-Dateien,
+Split-Debug-Dateien (`.dwo`, `.dwp`), ThinLTO-Sidecars
 (`.thinlto.bc`, `.imports`) und Thin-Archive (`!<thin>`) die gesamte Planung bzw.
 Fortsetzung vor einem Unlink. Ihre möglichen externen Referenzen sind nicht
 implementiert; sie dürfen weder als unreferenziert gelten noch zum Umgehen des
@@ -351,6 +352,72 @@ Aliasziele, Archivmitglieder und die ursprünglichen Pfade abgeschlossener
 Produktgenerationen werden berücksichtigt; unauflösbare Rpath-Verweise erhalten
 vorsorglich alle lokalen Dateien desselben Namens. Fehler der Verbraucherprüfung
 verhindern die Planung. Ein alter Plan ohne diese Bindung muss neu erstellt werden.
+
+### Separater LLVM-Reader
+
+`make artifact-reader-setup` richtet ausschließlich den offiziellen `llvm-dis`
+aus Rust 1.98.1 (LLVM 22.1.8), README und Lizenz unter
+`.local/tools/llvm-reader/22.1.8-rust1.98.1` ein. Die bereits durch das kanonische
+Setup installierte Rust-1.98.1-Toolchain für `aarch64-apple-darwin` ist Voraussetzung;
+eine fehlende oder abweichende `libLLVM.dylib` führt zum Fehler. Es gibt keine
+systemweite Installation, keinen Werkzeug-Fallback und keinen Download während
+Planung oder Entfernung. Mit
+`make artifact-reader-setup LLVM_READER_ARCHIVE=/absoluter/pfad/llvm-tools.tar.xz`
+arbeitet das Setup vollständig offline. Eine bestehende Installation wird geprüft,
+niemals still ersetzt; eine unterbrochene, unvollständige Einrichtung wird abgewiesen.
+
+Der gepinnte [offizielle Archivdownload](https://static.rust-lang.org/dist/2026-09-26/llvm-tools-1.98.1-aarch64-apple-darwin.tar.xz)
+umfasst 25.713.200 Bytes, SHA256
+`9b68ac31be7c6d25a08ce34dbd2c1d026b8006905e74415b6d9576678379ecbc`.
+Das Setup prüft Archivinventar, reguläre ausgewählte Mitglieder und deren Hashes.
+Die vorhandene Bibliothek wird zusätzlich mit dem Archivmitglied verglichen und
+über einen einzigen expliziten absoluten Link gebunden. Vor einer Inspektion werden
+Reader, Bibliothek und Beleg gehasht sowie die tatsächlich geladene Bibliothek
+mit dem Loader-Protokoll qualifiziert. Die Pins stehen in
+`tooling/dev/llvm_references.py`; die Lizenz ist Apache-2.0 WITH LLVM-exception.
+Das Setup reserviert höchstens 300 MiB zusätzlich und verlangt 20 GiB freien Rest.
+
+Jedes erkannte rohe oder umhüllte Bitcode-Modul wird vollständig mit `llvm-dis`
+einschließlich seines ursprünglichen Module-Summary-Index gelesen. Es gibt keine
+Freigabeliste von Eingabehashes. Normale Linkersymbole, `DIFile`-Quellorte und
+importierte Namensräume sind keine externen Objektdateien. Summary-Modulpfade und
+externe Debug-/AST-Dateinamen erzeugen dagegen Erhaltungskanten; Selbstverweise
+erzeugen keine. Relative oder mehrdeutige Pfade, unbekannte relevante Metadaten,
+AST-Modulsuche und nicht auflösbare lokale Ziele verhindern die Planung.
+Assembly wird nach LLVM-Stringsyntax von Attributtext unterschieden. Ausschließlich
+die exakt leere `sideeffect`-Speicherbarriere mit `~{memory}` und ohne Operanden ist
+zugelassen; tatsächliche oder undurchsichtige Assembly bleibt ein Ablehnungsgrund.
+Erhaltene LLVM-Kanten werden transitiv verfolgt und schützen dieselben vollständigen
+Cargo-Ausgabefamilien wie Mach-O-Verweise. Gelöschte, unreferenzierte Module werden
+nicht nachträglich als erhaltene Verbraucher verlangt.
+
+Pro Eingabe gelten 16 MiB Eingabe, 64 MiB Textausgabe, 512 KiB Diagnosen und 30 Sekunden.
+Die Eingabe wird an einen offenen regulären Dateideskriptor gebunden; Inhalt und
+Dateiidentität werden vor und nach dem Lesen verglichen. Symlinks einschließlich
+Elternpfaden werden abgewiesen. Mehrmodul-Nebendateien, leere Ausgabe, Diagnosen,
+Mutation und Readerfehler verhindern eine Freigabe. Temporäre Ausgaben leben nur
+im exklusiven Prüfverzeichnis; die gesamte Prozessgruppe wird nach Erfolg oder
+Fehler beendet. Der Prozess-RSS wird während des Lesens und zusätzlich anhand des
+vom Betriebssystem gemeldeten Spitzenwerts gegen 256 MiB geprüft. Darwin akzeptiert
+hier kein endliches `RLIMIT_RSS`; dies ist daher eine überwachte Grenze, keine
+garantierte Speicherreservierung. Die 20-GiB-Reserve wird vor jeder Eingabe geprüft.
+Reader-/Bibliotheksidentität und alle Module werden am Ende nochmals geprüft;
+das abgestimmte Schreibruhefenster bleibt notwendig.
+
+Die Python-Tests prüfen Parser-, Prozess-, Format-, Zeit-, Speicher-, Mutations- und
+Erhaltungsgates ohne Projektbuild. Echte bereits archivierte synthetische Bitcodes
+werden nur bei explizit gesetzten `LLVM_READER_TEST_ARCHIVE` und
+`LLVM_READER_TEST_FIXTURES` temporär extrahiert und anschließend entfernt:
+`python3 -B tooling/dev/tests/test-llvm-references.py`.
+Der Fixturearchiv-Pin lautet
+`9f6b7d748059ea603a1f06d9a1afe1d224273a227c6e14318540d0325ff2c290`.
+Daneben liegt das positive `empty-barrier-fixture-v2.tar.gz`, SHA256
+`d91a1aa8024709c0973763276867c50b886f3196b79a95d1de1ab1851b14a367`;
+ohne die beiden Archive weist der Test die echten Readerfälle ausdrücklich als
+übersprungen aus. Absichtlich defekte oder extern referenzierende Gegenproben
+bleiben nicht als lose Produkte im global geprüften Projektbestand liegen.
+
+### Selektive Compilerdateien
 
 Die Rust-Auswahl gilt ausschließlich für unmittelbare reguläre `.rlib`, `.rmeta`
 und `.o` unter `.local/builds/rust/debug/deps`, mit erkanntem Compilerformat und
@@ -400,9 +467,16 @@ danach neu geschriebene OSO-Zeitstempel wegen entfernter Familienmetadaten.
 Dieser kleine Pfadabhängigkeits-Test ist keine vollständige Projektbereinigung.
 Das lesende Headerinventar über 401.197 reguläre Dateien fand 1.615 LLVM-Wrapper
 in Rust-Inkrementalständen und vier erhaltenen CPython-Objekten. Deren mögliche
-Referenzen sind noch nicht vollständig unterstützt; die echte Projektplanung
-bleibt deshalb vor jedem Löschen gesperrt. Die bestandenen 142 Werkzeugtests und
-der Kontrolllauf ersetzen diesen ausstehenden Verbraucherbeleg nicht.
+Referenzen verhinderten zunächst die echte Projektplanung. Der getrennte
+vollständige Readerlauf `.local/maintenance/llvm-reader-inventory-20260926-s21-002`
+las anschließend alle 1.615 Wrapper mit dem gepinnten Reader: keine externen
+Dateikanten, einschließlich 17 gesondert geprüfter leerer Speicherbarrieren.
+Der Inhaltsbeleg hat SHA256
+`f20e299cb6fb0950245933f3414a46cb4030baa86a3988e42da040556b105365`.
+Dies ist ein lesender Formatbeleg, keine Bereinigungsfreigabe. Nach Integration
+bleiben ein neuer vollständiger Projektplan im Schreibruhefenster, dessen Review,
+die tatsächliche Entfernung und die Offline-Wiederanlaufprüfung erforderlich.
+Der kleine Kontrolllauf und frühere Werkzeugtests ersetzen diese Schritte nicht.
 
 ### Vier abgeschlossene eigene Simulatoren
 

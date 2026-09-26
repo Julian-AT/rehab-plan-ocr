@@ -1,11 +1,14 @@
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 spec = importlib.util.spec_from_file_location(
     "artifacts", os.environ.get("ARTIFACTS_TEST_MODULE", Path(__file__).parents[1] / "artifacts.py")
@@ -492,6 +495,41 @@ class CompilerCleanupTests(ConsumerCleanupTests):
         self.assertTrue(self.archive.exists())
         self.assertTrue(self.metadata.exists())
 
+    def test_retained_llvm_archive_edge_preserves_complete_cargo_family(self):
+        module = self.protected.parent / "index.bc"
+        module.write_bytes(b"BC\xc0\xdecombined index fixture")
+        target = self.archive
+
+        class FakeReader:
+            def __init__(self, root):
+                pass
+
+            def read(self, path):
+                return {
+                    "input": artifacts.llvm_references.fingerprint(path),
+                    "references": [{"kind": "thinlto_module", "path": str(target)}],
+                }
+
+            def verify(self):
+                pass
+
+            def qualification(self):
+                return {"identity": "pinned test reader"}
+
+        paths = [self.archive, self.metadata, self.object]
+        before = {path: artifacts.fingerprint(path) for path in paths}
+        with patch.object(artifacts.llvm_references, "Reader", FakeReader):
+            plan = self.plan()
+            for path in paths:
+                self.assertNotIn(str(path.relative_to(self.root)), plan["files"])
+            self.assertEqual(
+                plan["binary_consumers"]["compiler_families"]["tiny-abcd"],
+                sorted(str(path.relative_to(self.root)) for path in paths),
+            )
+            artifacts.apply(self.root, self.manifest)
+        for path in paths:
+            self.assertEqual(artifacts.fingerprint(path), before[path])
+
     def test_changed_retained_family_metadata_refuses_before_unlink(self):
         self.references = [str(self.archive) + "(tiny.member.o)"]
         self.plan()
@@ -659,6 +697,91 @@ class FormatBoundaryTests(CleanupTests):
         self.assertIn(self.name + "/object", self.plan()["files"])
         artifacts.apply(self.root, self.manifest)
         self.assertEqual(archive.read_bytes(), content)
+
+
+class LLVMConsumerTests(CleanupTests):
+    def setUp(self):
+        super().setUp()
+        self.module = self.protected.parent / "consumer.bc"
+        self.module.write_bytes(b"BC\xc0\xdeverified fixture")
+        self.edges = {}
+        self.tool_identity = "pinned-reader"
+        owner = self
+
+        class FakeReader:
+            def __init__(self, root):
+                self.root = root
+
+            def read(self, path):
+                return {
+                    "input": artifacts.llvm_references.fingerprint(path),
+                    "references": [
+                        {"kind": "thinlto_module", "path": str(target)}
+                        for target in owner.edges.get(path, [])
+                    ],
+                }
+
+            def verify(self):
+                pass
+
+            def qualification(self):
+                return {"identity": owner.tool_identity}
+
+        self.reader = patch.object(artifacts.llvm_references, "Reader", FakeReader)
+        self.reader.start()
+        self.addCleanup(self.reader.stop)
+
+    def test_retained_llvm_references_protect_candidate_bytes(self):
+        target = self.cache / "object"
+        self.edges[self.module] = [target]
+        plan = self.plan()
+        self.assertNotIn(str(target.relative_to(self.root)), plan["files"])
+        self.assertIn(
+            str(self.module.relative_to(self.root)),
+            plan["binary_consumers"]["llvm"]["files"],
+        )
+        artifacts.apply(self.root, self.manifest)
+        self.assertEqual(target.read_bytes(), b"rebuildable")
+
+    def test_unretained_candidate_module_may_disappear_without_snapshot_drift(self):
+        candidate = self.cache / "candidate.bc"
+        candidate.write_bytes(b"BC\xc0\xdecompiler cache")
+        self.expected_deletions = 2
+        self.module.unlink()  # No retained LLVM roots in this specific case.
+        plan = self.plan()
+        self.assertEqual(plan["binary_consumers"]["llvm"]["files"], {})
+        self.assertIsNone(plan["binary_consumers"]["llvm"]["reader"])
+        artifacts.apply(self.root, self.manifest)
+        self.assertFalse(candidate.exists())
+
+    def test_retained_llvm_edges_follow_other_modules_transitively(self):
+        second = self.cache / "second.bc"
+        second.write_bytes(b"BC\xc0\xdecompiler cache")
+        self.edges[self.module] = [second]
+        self.edges[second] = [self.cache / "object"]
+        plan = self.plan()
+        self.assertEqual(plan["files"], {})
+        artifacts.apply(self.root, self.manifest)
+        self.assertTrue(second.exists())
+
+    def test_changed_reader_or_retained_module_refuses_before_unlink(self):
+        self.plan()
+        self.tool_identity = "changed"
+        with self.assertRaisesRegex(ValueError, "consumers changed"):
+            artifacts.apply(self.root, self.manifest)
+        self.assertTrue((self.cache / "object").exists())
+        self.assertFalse(self.manifest.with_suffix(".journal.jsonl").exists())
+
+    def test_missing_local_reference_and_symlink_target_refuse(self):
+        self.edges[self.module] = [self.cache / "missing"]
+        with self.assertRaisesRegex(ValueError, "Missing local LLVM"):
+            self.plan()
+        alias = self.cache / "alias"
+        alias.symlink_to(self.cache / "object")
+        self.edges[self.module] = [alias]
+        with self.assertRaisesRegex(ValueError, "Symbolic link"):
+            self.plan()
+        self.assertFalse(self.manifest.exists())
 
 
 class CompilerFormatBoundaryTests(CompilerCleanupTests):

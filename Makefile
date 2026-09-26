@@ -114,7 +114,10 @@ build-vlm: check-storage
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
 	python3 ml/experiments/vlm/build.py build --run "$(RUN)"
 
-.PHONY: inventory-artifacts clean-artifacts check-storage
+.PHONY: artifact-reader-setup inventory-artifacts clean-artifacts check-storage
+artifact-reader-setup:
+	python3 tooling/dev/llvm_references.py setup $(if $(LLVM_READER_ARCHIVE),--archive "$(LLVM_READER_ARCHIVE)")
+
 inventory-artifacts:
 	python3 tooling/dev/artifacts.py plan --manifest "$(CLEANUP_MANIFEST)"
 
@@ -143,7 +146,7 @@ train-ocr resume-ocr train-assistant resume-assistant export-ocr export-assistan
 help:
 	@echo 'Isolated VLM experiment: make restore-vlm-runtime; make build-vlm RUN=<new-local-run>; model download is separate: make restore-vlm-models'
 	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
-	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
+	@echo 'Inventory: make inventory-repository; make artifact-reader-setup [LLVM_READER_ARCHIVE=<verified-archive>]; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Retained static archives: make inventory-archive-objects ARCHIVE_REVIEW=<review> ARCHIVE_OBJECT_MANIFEST=<new-plan>; make coalesce-archive-objects ARCHIVE_OBJECT_MANIFEST=<same-plan>'
 	@echo 'Reviewed smoke exports: make inventory-smoke-a-objects SMOKE_A_MANIFEST=<new-plan>; make coalesce-smoke-a-objects SMOKE_A_MANIFEST=<same-plan>; see docs/development/model-coalescence.md'
 	@echo 'Checkpoints: make inventory-checkpoints RUN=<training-run>; plan-checkpoints/clean-checkpoints CHECKPOINT_MANIFEST=<new-plan>'
