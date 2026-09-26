@@ -1,27 +1,43 @@
 import Foundation
 
-/// A callback that never arrives cannot retain the reconciliation state forever.
-/// Cancellation is advisory: late results are handled separately on the owner queue.
+/// The owner queue serializes all job state. Cancellation is advisory: expired
+/// operations retain their bounded slot until the adapter actually returns.
+/// Repeated retries cannot accumulate an unbounded number of suspended tasks.
 final class NotificationDeadline: @unchecked Sendable {
   private struct Job {
     let task: Task<Void, Never>
     let timeout: DispatchWorkItem
+    var expired = false
   }
   private let queue: DispatchQueue
   private let seconds: TimeInterval
+  private let maximumOperations: Int
   private var jobs: [UUID: Job] = [:]
-  init(queue: DispatchQueue, seconds: TimeInterval) {
+  init(queue: DispatchQueue, seconds: TimeInterval, maximumOperations: Int = 4) {
+    precondition(maximumOperations > 0 && seconds > 0 && seconds.isFinite)
     self.queue = queue
     self.seconds = seconds
+    self.maximumOperations = maximumOperations
   }
   func run<Value: Sendable>(
     operation: @escaping @Sendable () async throws -> Value,
     late: (@Sendable (Result<Value, Error>) -> Void)? = nil,
     completion: @escaping @Sendable (Result<Value, Error>) -> Void
   ) {
+    dispatchPrecondition(condition: .onQueue(queue))
+    guard jobs.count < maximumOperations else {
+      completion(
+        .failure(
+          AgendaError.message(
+            "Der Mitteilungsdienst bearbeitet noch frühere Aufträge. Die Kalenderreserve bleibt erhalten. Bitte später erneut versuchen."
+          )))
+      return
+    }
     let id = UUID()
     let timeout = DispatchWorkItem { [weak self] in
-      guard let self, let job = self.jobs.removeValue(forKey: id) else { return }
+      guard let self, var job = self.jobs[id], !job.expired else { return }
+      job.expired = true
+      self.jobs[id] = job
       job.task.cancel()
       completion(
         .failure(
@@ -33,7 +49,8 @@ final class NotificationDeadline: @unchecked Sendable {
       let result: Result<Value, Error>
       do { result = .success(try await operation()) } catch { result = .failure(error) }
       self.queue.async {
-        guard let job = self.jobs.removeValue(forKey: id) else {
+        guard let job = self.jobs.removeValue(forKey: id) else { return }
+        if job.expired {
           late?(result)
           return
         }
