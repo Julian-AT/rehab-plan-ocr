@@ -63,7 +63,7 @@ swiftc -swift-version 6 -strict-concurrency=complete -O \
   experiments/voice-rules/RulesBenchmark.swift \
   -o /tmp/reha-voice-rules-benchmark
 /tmp/reha-voice-rules-benchmark > /tmp/reha-voice-rules-result.json
-sh scripts/test-voice-rules.sh
+sh tooling/checks/test-voice-rules.sh
 ```
 
 ## OCR: Fehler und Aufwand gezielt zuordnen

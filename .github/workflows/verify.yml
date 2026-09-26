@@ -17,9 +17,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: python3 scripts/quality.py bootstrap
-      - run: python3 scripts/quality.py lint --portable
-      - run: python3 scripts/quality.py test --portable
+      - run: python3 tooling/dev/quality.py bootstrap
+      - run: python3 tooling/dev/quality.py lint --portable
+      - run: python3 tooling/dev/quality.py test --portable
   apple:
     runs-on: macos-26
     timeout-minutes: 90
@@ -29,9 +29,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: python3 scripts/quality.py bootstrap
-      - run: python3 scripts/quality.py lint
-      - run: python3 scripts/quality.py test
-      - run: python3 scripts/quality.py build check-bindings
-      - run: python3 scripts/quality.py test-ios
-      - run: python3 scripts/quality.py build device
+      - run: python3 tooling/dev/quality.py bootstrap
+      - run: python3 tooling/dev/quality.py lint
+      - run: python3 tooling/dev/quality.py test
+      - run: python3 tooling/dev/quality.py build check-bindings
+      - run: python3 tooling/dev/quality.py test-ios
+      - run: python3 tooling/dev/quality.py build device

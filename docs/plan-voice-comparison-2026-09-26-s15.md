@@ -219,7 +219,7 @@ Die Vergleichsdatei enthält für jeden Kandidaten `name`, `binary`, `models` un
 `config`; die fünf vorab festgelegten Quellhashes stehen unter `canary_hashes`.
 
 ```sh
-.venv/bin/python scripts/compare-recognition.py \
+.venv/bin/python ml/evaluation/recognition/compare-recognition.py \
   --root artifacts/private/plan-voice-20260926-s15/references \
   --suite artifacts/private/plan-voice-20260926-s15/suite-final.json \
   --destination artifacts/private/plan-voice-20260926-s15/neuer-vergleich \

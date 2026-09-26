@@ -260,8 +260,10 @@ fn reference_commands_wait_for_the_shared_writer_lock() {
 fn archive_preserves_declared_nested_evidence_and_excludes_models() {
     let (root, _) = dataset();
     let source = tempfile::tempdir().unwrap();
-    let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+    let mut run: PipelineRun = serde_json::from_str(include_str!(
+        "../../../../ml/evaluation/fixtures/sample-run.json"
+    ))
+    .unwrap();
     run.document.id = uuid::Uuid::new_v4().to_string();
     run.stages[0].artifacts = vec!["refinement/crop.png".into(), "model.onnx".into()];
     std::fs::create_dir(source.path().join("refinement")).unwrap();

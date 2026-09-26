@@ -256,8 +256,10 @@ async fn calendar_change_after_undo_preview_invalidates_write() {
 #[tokio::test]
 async fn overlap_added_after_preview_blocks_import_without_recording_intent() {
     let (_dir, app, calendar, _) = setup(vec![], false);
-    let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+    let mut run: PipelineRun = serde_json::from_str(include_str!(
+        "../../../../ml/evaluation/fixtures/sample-run.json"
+    ))
+    .unwrap();
     reha_core::review::migrate(&mut run).unwrap();
     run.appointments.truncate(1);
     let appointment = &mut run.appointments[0];
@@ -323,8 +325,10 @@ async fn uncertain_undo_survives_reopen_and_prevents_a_second_attempt() {
 fn pages_preserve_serialized_reviews_multiplicity_and_order_across_reopen() {
     let dir = tempfile::tempdir().unwrap();
     let mut store = Store::open(dir.path()).unwrap();
-    let mut a: PipelineRun =
-        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+    let mut a: PipelineRun = serde_json::from_str(include_str!(
+        "../../../../ml/evaluation/fixtures/sample-run.json"
+    ))
+    .unwrap();
     let mut b = a.clone();
     b.document.id = uuid::Uuid::new_v4().to_string();
     b.appointments[0].date = Some("2027-01-01".into());

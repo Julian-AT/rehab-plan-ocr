@@ -32,6 +32,6 @@ Bild-/JSON-Artefakte unter `experiments/` auf. Modellgewichte und fremde Dateien
 nicht kopiert. `archiver_binary_sha256` bezeichnet ausschließlich das Archivierungsprogramm;
 eine unbekannte Erzeugerversion wird nicht behauptet. Vorhandene Archive werden nicht überschrieben.
 
-Rust und `scripts/reference-data.py` verwenden denselben begrenzten Prozesslock.
+Rust und `ml/data/annotation/reference-data.py` verwenden denselben begrenzten Prozesslock.
 Symbolische Verknüpfungen innerhalb der verwalteten Datensatzpfade sind ausgeschlossen.
 Originale, Annotationen, Bilder und Versuchsarchive bleiben aus Git ausgeschlossen.

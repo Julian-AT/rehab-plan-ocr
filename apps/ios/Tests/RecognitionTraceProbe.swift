@@ -4,7 +4,7 @@ import Foundation
   static func main() throws {
     // The public fixture predates optional refinement/field evidence. Supply
     // the defaults that the Rust serde reader emits when loading it today.
-    let data = try Data(contentsOf: URL(fileURLWithPath: "tests/fixtures/sample-run.json"))
+    let data = try Data(contentsOf: URL(fileURLWithPath: "ml/evaluation/fixtures/sample-run.json"))
     var json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
     json["refinement_attempts"] = []
     var appointments = json["appointments"] as! [[String: Any]]

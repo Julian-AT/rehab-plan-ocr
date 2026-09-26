@@ -13,8 +13,9 @@ benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiter
 | `packages/rust/reha-core` | Fachlogik, Speicherung und Erkennung |
 | `packages/rust/reha-cli` | Lokale Prüf-CLI `reha` |
 | `packages/rust/reha-ffi` | Native Schnittstelle und Prüfdatenerzeugung |
-| `scripts` | Gemeinsame Qualitäts-, Build-, Auslieferungs- und Erkennungswerkzeuge |
-| `tests/fixtures` | Ausschließlich synthetische Prüfdaten |
+| `tooling` | Qualitätsprüfung, Build, Auslieferung und Teststarter |
+| `ml` | Datenaufbereitung, Training, Evaluation und Modellregister |
+| `ml/evaluation/fixtures` | Ausschließlich synthetische Prüfdaten |
 
 Die [native Architektur](docs/architecture.md) beschreibt Zuständigkeiten, Datenhaltung und Abbruchgrenzen.
 
@@ -39,11 +40,11 @@ make test-ios
 
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus
-`scripts/quality.py`; auf Linux entfällt ausschließlich die Apple-spezifische Prüfung.
+`tooling/dev/quality.py`; auf Linux entfällt ausschließlich die Apple-spezifische Prüfung.
 Für einen vollständigen kalten Build werden mindestens 8 GB freier Speicher empfohlen.
 Build-Schritte prüfen vorab ihre Mindestreserve und entfernen keine privaten Dateien.
 
-`make build` erzeugt eine Simulator-App. `python3 scripts/quality.py build device` prüft den
+`make build` erzeugt eine Simulator-App. `python3 tooling/dev/quality.py build device` prüft den
 unsignierten Gerätebuild. Beide laden erforderliche, festgelegte Modelle über prüfsummengesicherte
 Werkzeuge. `make test-ios` verwendet Wegwerfsimulatoren und erfundene Termine.
 

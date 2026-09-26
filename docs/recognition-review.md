@@ -151,7 +151,7 @@ A retained 24 MP clinic HEIC completed a full local CLI scan in 5.401 seconds wi
 ten appointments; upright dimensions, original bytes and source hash were checked.
 This measurement ran alongside frontend build work and is not a latency benchmark.
 Evidence is under ignored `artifacts/private/heic-import/`; committed fixtures in
-`tests/fixtures/heic/` contain only invented colored quadrants and a generator.
+`ml/evaluation/fixtures/heic/` contain only invented colored quadrants and a generator.
 
 ## Calendar corrections
 

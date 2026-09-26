@@ -277,8 +277,10 @@ mod tests {
     }
     #[test]
     fn appointment_roundtrip_keeps_approval_hashes_and_geometry() {
-        let mut run: reha_core::contracts::PipelineRun =
-            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+        let mut run: reha_core::contracts::PipelineRun = serde_json::from_str(include_str!(
+            "../../../../ml/evaluation/fixtures/sample-run.json"
+        ))
+        .unwrap();
         reha_core::review::migrate(&mut run).unwrap();
         let mut original = run.appointments.remove(0);
         original.duration_minutes = Some(30);

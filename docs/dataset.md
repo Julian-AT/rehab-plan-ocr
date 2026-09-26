@@ -64,8 +64,8 @@ After source relationships are confirmed, the desktop action or the CLI can free
 and describe variants:
 
 ```sh
-uv run scripts/reference-data.py --root data/private freeze
-uv run scripts/reference-data.py --root data/private recipes
+uv run ml/data/annotation/reference-data.py --root data/private freeze
+uv run ml/data/annotation/reference-data.py --root data/private recipes
 ```
 
 There are exactly 24 recipes per original: unchanged, three quarter turns, four
@@ -78,9 +78,9 @@ outside the confirmed table boundary are masked before any variant is generated.
 Approved references are required for export and raster materialization:
 
 ```sh
-uv run scripts/reference-data.py --root data/private export artifacts/private/fold-0 --fold 0
-uv run scripts/reference-data.py --root data/private materialize RECIPE_ID
-uv run scripts/reference-data.py --root data/private materialize-line RECIPE_ID LINE_ID
+uv run ml/data/annotation/reference-data.py --root data/private export artifacts/private/fold-0 --fold 0
+uv run ml/data/annotation/reference-data.py --root data/private materialize RECIPE_ID
+uv run ml/data/annotation/reference-data.py --root data/private materialize-line RECIPE_ID LINE_ID
 ```
 
 Exports contain separate `detection.jsonl`, `recognition.jsonl`,
@@ -92,7 +92,7 @@ cropped/occluded labels and mirrored writing. Table labels remove full values wh
 the variant destroys their evidence. Mirrored images support orientation tests
 only. Maximum label lengths are exported, never silently truncated.
 
-`uv run scripts/synthetic-plans.py NEW_OUTPUT_DIRECTORY` generates 200 reproducible
+`uv run ml/data/synthesis/synthetic-plans.py NEW_OUTPUT_DIRECTORY` generates 200 reproducible
 invented tables, images and exact text polygons. A generated set is available in
 `data/private/synthetic-200`. Names, rooms and treatments are sampled independently;
 examples include similar room numbers, long names/degrees, two therapists, blank
@@ -107,8 +107,8 @@ and medium models with the same dataset and configuration choices:
 
 ```sh
 cargo build --release -p reha-cli --features onnx-download
-python3 scripts/benchmark.py --models models/private/small --config data/private/config-small.json
-python3 scripts/benchmark.py --models models/private/medium --config data/private/config-medium.json
+python3 ml/evaluation/recognition/benchmark.py --models models/private/small --config data/private/config-small.json
+python3 ml/evaluation/recognition/benchmark.py --models models/private/medium --config data/private/config-medium.json
 ```
 
 The runner evaluates original photos separately, aggregates raw counts by group
@@ -160,7 +160,7 @@ threshold tuning, activity rules, dual-reader acceptance, model replacement or
 fine-tuning is enabled for this release without the approved evaluation set.
 The training notes above are historical research directions, outside this release.
 
-`uv run scripts/reference-data.py --root data/private readiness` reports counts
+`uv run ml/data/annotation/reference-data.py --root data/private readiness` reports counts
 without publishing patient data or granting approval. References may explicitly
 label `input_class` as `rehabilitation_plan`, `non_plan` or `unusable`; the optional
 field preserves old reference hashes when absent. Non-plan references must have

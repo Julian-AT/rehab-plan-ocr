@@ -10,8 +10,8 @@ Alle Befehle laufen vom Repository-Stamm:
 make bootstrap
 make build
 make test-ios
-python3 scripts/quality.py build check-bindings
-python3 scripts/quality.py build device
+python3 tooling/dev/quality.py build check-bindings
+python3 tooling/dev/quality.py build device
 ```
 
 `build-native.sh framework` erzeugt getrennte arm64-iOS- und Simulatorvarianten des
@@ -20,7 +20,7 @@ vergleicht generierte UniFFI-Bindings mit den versionierten Dateien. `test-nativ
 prüft echte Rust/Swift-Aufrufe, Revisionen, Bestätigung, Kalenderidentitäten und Abbruch.
 Die vollständige UI-Prüfung erzeugt einen Simulator ausschließlich mit synthetischen Daten.
 
-`sh scripts/build-native.sh archive` erzeugt ein signiertes privates Archiv und führt die
+`sh tooling/build/build-native.sh archive` erzeugt ein signiertes privates Archiv und führt die
 Paketprüfung aus. Das ist keine Geräteinstallation. Für Installation gilt die Freigabegrenze
 in AGENTS.md: neue Vorschau und Hörproben, ausdrückliche Freigabe, frische Sicherung, Update
 ohne Deinstallation und Vergleich dauerhafter Daten.

@@ -24,7 +24,7 @@ Build 2026092606 überarbeitet die native iPhone-Oberfläche nach der Geräte-R�
 
 [Supertonic 3 von Supertone](https://huggingface.co/Supertone/supertonic-3) unterstützt Deutsch und lokale ONNX-Inferenz. Die beiden enthaltenen Stimmen F1 und M1 sind als weibliche und männliche Stimme auswählbar. Standard ist F1 mit Geschwindigkeit 0,95×; einstellbar sind 0,75–1,25×. Zehn Entrauschungsschritte werden verwendet.
 
-Die neun benötigten Dateien (398.960.003 Byte) sind mit Modellrevision und SHA-256 in `models/supertonic.lock.json` festgehalten und im iPhone-Paket enthalten. `scripts/fetch-speech-model.py` lädt nur diese öffentlichen Dateien. Laufende Sprachwiedergabe hat keinen Netzwerkpfad. OpenRAIL-M-Modelllizenz und MIT-Lizenz der Referenzimplementierung werden mitgeliefert.
+Die neun benötigten Dateien (398.960.003 Byte) sind mit Modellrevision und SHA-256 in `models/supertonic.lock.json` festgehalten und im iPhone-Paket enthalten. `tooling/build/fetch-speech-model.py` lädt nur diese öffentlichen Dateien. Laufende Sprachwiedergabe hat keinen Netzwerkpfad. OpenRAIL-M-Modelllizenz und MIT-Lizenz der Referenzimplementierung werden mitgeliefert.
 
 Der Rust-Renderer verwendet den bereits vorhandenen ONNX Runtime 1.22.0. Swift steuert Speicherpuffer, Audio-Session, Player und Abbruch. Texte und erzeugtes Audio werden nicht auf Datenträger geschrieben. Längere Texte werden in begrenzten Abschnitten vorgelesen; der nächste Abschnitt wird während der Wiedergabe vorbereitet. Bei VoiceOver wird konkurrierende App-Wiedergabe vermieden.
 

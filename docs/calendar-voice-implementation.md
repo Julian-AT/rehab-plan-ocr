@@ -53,9 +53,9 @@ Temporäre Buildlogs liegen unter `/tmp/reha-*.log`; native Prüfbilder und das 
 | Prüfung | Letztes Ergebnis |
 | --- | --- |
 | Rust-Kern und FFI | Vollständiger Lauf: 117 bestanden; abschließender Mutationslauf: 9 bestanden |
-| Deutsche Sprachregeln | 23 Prüfungen bestanden (`sh scripts/test-voice-rules.sh`) |
+| Deutsche Sprachregeln | 23 Prüfungen bestanden (`sh tooling/checks/test-voice-rules.sh`) |
 | Swift 6 / UniFFI | Integrationsprobe und `check-bindings` bestanden |
-| Echtes EventKit im Simulator | 3 Tests bestanden; darunter Serienvorkommen mit Metadaten und Rückgängig (`sh scripts/test-calendar-events.sh`) |
+| Echtes EventKit im Simulator | 3 Tests bestanden; darunter Serienvorkommen mit Metadaten und Rückgängig (`sh tooling/checks/test-calendar-events.sh`) |
 | Native SwiftUI | 7 bestehende Abläufe bestanden; neue Kalender-/Spracheinstellungen zusätzlich bestanden |
 | Maximale Schrift / Dunkelmodus | Nach Anpassung der Speicheraktion erneut bestanden; Bildschirmbild visuell geprüft. Bei Bedienungshilfen-Schriftgrößen steht die Aktion im scrollbaren Inhalt und verdeckt keine Termine. |
 | Bestehende Web-/Tauri-Oberfläche | TypeScript, Produktionsbuild, 13 Web-Tests und `cargo check -p rehab-plan-ocr` bestanden |

@@ -27,11 +27,11 @@ Die Implementierung ist in `2ab2f7b` gesichert. 28 unterschiedliche UI-Testfäll
 Die konkreten Ergebnisse und Artefakte stehen in der [Simulatorvorschau](preview/2026-09-26-s12-native/README.md). Reproduzierbare Einzelprüfungen:
 
 ```sh
-sh scripts/test-agenda-projection.sh
-sh scripts/test-ordered-settings.sh
-sh scripts/test-voice-rules.sh
-sh scripts/test-agenda.sh
-sh scripts/test-native-bindings.sh
+sh tooling/checks/test-agenda-projection.sh
+sh tooling/checks/test-ordered-settings.sh
+sh tooling/checks/test-voice-rules.sh
+sh tooling/checks/test-agenda.sh
+sh tooling/checks/test-native-bindings.sh
 ```
 
 Die neuen Swift-Proben prüfen Wochen- und Tageswechsel, den zeitlichen Tagesabschluss, kurze und überlappende Trefferflächen, ganztägige und mehrtägige Termine, Mitternacht und Zeitumstellung. Die Speicherprobe prüft schnelle Änderungen, Fehler, spätere Änderungen vor Wiederholung, einen unklaren Schreibausgang und erneutes Laden von Disk. Der Swift/Rust-Integrationstest prüft zusätzlich echte Präferenzen nach erneutem Öffnen des lokalen Anwendungskerns.

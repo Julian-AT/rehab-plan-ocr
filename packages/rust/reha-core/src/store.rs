@@ -362,8 +362,10 @@ mod tests {
     fn expired_identical_photo_inherits_calendar_identity() {
         let temp = tempfile::tempdir().unwrap();
         let store = Store::open(temp.path()).unwrap();
-        let mut run: PipelineRun =
-            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+        let mut run: PipelineRun = serde_json::from_str(include_str!(
+            "../../../../ml/evaluation/fixtures/sample-run.json"
+        ))
+        .unwrap();
         run.document.id = uuid::Uuid::new_v4().to_string();
         run.document.imported_at = 100;
         store.save_run(&run).unwrap();
@@ -386,8 +388,10 @@ mod tests {
     fn partial_and_uncertain_writes_do_not_replace_approved_snapshot() {
         let temp = tempfile::tempdir().unwrap();
         let mut store = Store::open(temp.path()).unwrap();
-        let run: PipelineRun =
-            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+        let run: PipelineRun = serde_json::from_str(include_str!(
+            "../../../../ml/evaluation/fixtures/sample-run.json"
+        ))
+        .unwrap();
         let approved =
             crate::calendar::event_values(&run.appointments[0], "Europe/Vienna", None).unwrap();
         let mut op = CalendarOperation {

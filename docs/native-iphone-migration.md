@@ -34,13 +34,13 @@ The following checks are reproducible from the repository root:
 | --- | --- |
 | Shared core and FFI | `cargo test --locked -p reha-core -p reha-ffi`; includes retained data, stale approvals, journal reopen, numeric/hash compatibility and active-scan deletion protection |
 | Existing frontend | `npm run verify`; lint, production build, frontend tests and core tests |
-| Swift agenda policy | `sh scripts/test-agenda.sh`; 56 checks including completed events today, next-day appointments and DST boundaries |
-| Swift/Rust integration | `sh scripts/build-native.sh integration`; real appointments/geometry, typed errors, revisions, partial approval, stable ICS identities, cancellation and uncertain-write reconciliation |
-| Binding consistency | `sh scripts/build-native.sh check-bindings` |
-| Native simulator UI | `sh scripts/build-native.sh test`; disposable simulator with public synthetic fixture, tabs/settings/cold launch, dirty draft preservation, source viewer and native ONNX recognition while changing tabs |
-| Native unsigned linking | `sh scripts/build-native.sh device` |
+| Swift agenda policy | `sh tooling/checks/test-agenda.sh`; 56 checks including completed events today, next-day appointments and DST boundaries |
+| Swift/Rust integration | `sh tooling/build/build-native.sh integration`; real appointments/geometry, typed errors, revisions, partial approval, stable ICS identities, cancellation and uncertain-write reconciliation |
+| Binding consistency | `sh tooling/build/build-native.sh check-bindings` |
+| Native simulator UI | `sh tooling/build/build-native.sh test`; disposable simulator with public synthetic fixture, tabs/settings/cold launch, dirty draft preservation, source viewer and native ONNX recognition while changing tabs |
+| Native unsigned linking | `sh tooling/build/build-native.sh device` |
 | Legacy shell | `cargo check --locked -p rehab-plan-ocr`, `sh scripts/build-ios.sh simulator`, `sh scripts/build-ios.sh device` |
-| Signed archive/package | `sh scripts/build-native.sh archive`; all app/extension signatures, identities, App Group, expiry, model and licence hashes checked by `scripts/package-native.py` |
+| Signed archive/package | `sh tooling/build/build-native.sh archive`; all app/extension signatures, identities, App Group, expiry, model and licence hashes checked by `tooling/release/package-native.py` |
 
 Local results: **77 Rust tests, 13 frontend unit tests, 56 Swift policy checks, 12 agenda browser tests and 3 native simulator UI flows passed**. The strict Swift 6/Rust integration probe and binding consistency check passed. Native unsigned device linking and both legacy Tauri iOS build variants passed. The simulator recognition flow completed with the bundled ONNX model.
 

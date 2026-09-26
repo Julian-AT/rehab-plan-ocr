@@ -87,7 +87,7 @@ npm run typecheck
 npm test
 npm run test:e2e
 cargo test -p reha-core
-sh scripts/test-agenda.sh
+sh tooling/checks/test-agenda.sh
 sh scripts/build-ios.sh simulator
 xcodegen generate --spec apps/ios/IntegrationTests/project.yml
 ```

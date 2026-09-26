@@ -63,16 +63,16 @@ Use `PATH="$HOME/.cargo/bin:$PATH"`, `CARGO_PROFILE_DEV_DEBUG=0` and
 cargo test --locked -p reha-core -p reha-ffi
 npm run lint && npm run build && npm test
 npx playwright test
-uv run --with pillow==12.1.0 python tests/test-reference-data.py
-uv run --with pillow==12.1.0 python tests/test-dataset.py
-sh scripts/test-agenda.sh
-sh scripts/build-native.sh integration
-sh scripts/build-native.sh check-bindings
-sh scripts/build-native.sh test
+uv run --with pillow==12.1.0 python ml/data/annotation/tests/test-reference-data.py
+uv run --with pillow==12.1.0 python ml/data/annotation/tests/test-dataset.py
+sh tooling/checks/test-agenda.sh
+sh tooling/build/build-native.sh integration
+sh tooling/build/build-native.sh check-bindings
+sh tooling/build/build-native.sh test
 cargo check --locked -p rehab-plan-ocr
 sh scripts/build-ios.sh simulator
 sh scripts/build-ios.sh device
-sh scripts/build-native.sh archive
+sh tooling/build/build-native.sh archive
 ```
 
 ## Local verification results

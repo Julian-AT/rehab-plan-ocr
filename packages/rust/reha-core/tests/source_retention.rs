@@ -23,8 +23,10 @@ fn document(store: &mut Store) -> (String, Vec<String>) {
                 100,
             )
             .unwrap();
-        let mut run: PipelineRun =
-            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+        let mut run: PipelineRun = serde_json::from_str(include_str!(
+            "../../../../ml/evaluation/fixtures/sample-run.json"
+        ))
+        .unwrap();
         run.document.id = id.clone();
         run.document.imported_at = 100;
         run.document.source_hash = id.clone();

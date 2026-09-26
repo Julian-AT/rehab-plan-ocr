@@ -26,7 +26,7 @@ Normale Kalenderdialoge erzeugen keine automatische Sprachausgabe. Stimme, Gesch
 
 Deutsche Normalisierung behandelt numerische und ausgeschriebene Datumsangaben, Uhrzeiten, Dezimalzahlen, Raumnummern und häufige Abkürzungen. eSpeak-NG 1.52.0 erzeugt ausschließlich IPA-Phoneme. Kokoro erzeugt das hörbare Audio. Die globale eSpeak-Schnittstelle ist über alle Renderer serialisiert. Lange Texte werden nach Phonemen begrenzt, ohne Tokens abzuschneiden. Laufende ONNX-Aufrufe sind über RunOptions abbrechbar.
 
-`models/kokoro.lock.json` pinnt 15 Modell-, Stimmen-, Vokabular-, Aussprache- und Hinweisdateien mit SHA-256. `scripts/build-phonemizer.py` pinnt eSpeak-Quellen und CMake, deaktiviert Audioausgabe und unnötige Abhängigkeiten und baut getrennte Apple-Architekturen. Zwei dokumentierte Quellkorrekturen verhindern den unnötigen Sonic-Download und verwenden Apples Byte-Reihenfolge-Funktionen. `N_PATH_HOME=1024` berücksichtigt lange Simulator-Bundlepfade. `scripts/fetch-speech-model.py` lädt nur die festgelegte Modellrevision und extrahiert die Martin-Stimmenmatrix ohne NumPy-Buildabhängigkeit. Build und Laufzeit prüfen die gebündelten Daten; Modellgewichte bleiben außerhalb von Git.
+`models/kokoro.lock.json` pinnt 15 Modell-, Stimmen-, Vokabular-, Aussprache- und Hinweisdateien mit SHA-256. `tooling/build/build-phonemizer.py` pinnt eSpeak-Quellen und CMake, deaktiviert Audioausgabe und unnötige Abhängigkeiten und baut getrennte Apple-Architekturen. Zwei dokumentierte Quellkorrekturen verhindern den unnötigen Sonic-Download und verwenden Apples Byte-Reihenfolge-Funktionen. `N_PATH_HOME=1024` berücksichtigt lange Simulator-Bundlepfade. `tooling/build/fetch-speech-model.py` lädt nur die festgelegte Modellrevision und extrahiert die Martin-Stimmenmatrix ohne NumPy-Buildabhängigkeit. Build und Laufzeit prüfen die gebündelten Daten; Modellgewichte bleiben außerhalb von Git.
 
 Die Hinweise in `licenses/kokoro-source.txt` dokumentieren Apache-2.0 für das Modell, MIT für das Tokenizer-Vokabular und GPL-3.0-or-later für eSpeak-NG. Bei Weitergabe der verbundenen Anwendung müssen auch die entsprechenden Quellen und Buildskripte GPL-kompatibel bereitgestellt werden. Die private Simulatorvorschau ersetzt keine Veröffentlichungsentscheidung.
 
@@ -88,4 +88,4 @@ xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration De
   CODE_SIGNING_ALLOWED=NO test
 ```
 
-Für einen neuen Wegwerfsimulator initialisiert `sh scripts/test-native-ui.sh --built` App, öffentliche Fixtures sowie Foto- und Dateiauswahl. Die native Debug-App muss dafür zuvor mit `sh scripts/build-native.sh simulator` gebaut sein.
+Für einen neuen Wegwerfsimulator initialisiert `sh tooling/checks/test-native-ui.sh --built` App, öffentliche Fixtures sowie Foto- und Dateiauswahl. Die native Debug-App muss dafür zuvor mit `sh tooling/build/build-native.sh simulator` gebaut sein.

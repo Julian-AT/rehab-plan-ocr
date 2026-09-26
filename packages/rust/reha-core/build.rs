@@ -13,7 +13,7 @@ fn main() {
             });
         assert!(
             path.join("libonnxruntime.a").exists(),
-            "Pinned iOS runtime missing. Run uv run scripts/fetch-ios-runtime.py first."
+            "Pinned iOS runtime missing. Run uv run tooling/build/fetch-ios-runtime.py first."
         );
         println!("cargo:rustc-link-search=native={}", path.display());
         println!("cargo:rustc-link-lib=static=onnxruntime");
@@ -30,7 +30,8 @@ fn phonemizer() {
         return;
     }
     let target = std::env::var("TARGET").unwrap();
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../models/private/espeak");
+    let root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../models/private/espeak");
     let directory = std::env::var_os("REHA_ESPEAK_LIB_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
@@ -43,7 +44,7 @@ fn phonemizer() {
         });
     assert!(
         directory.join("libespeak-ng.a").exists(),
-        "Build pinned eSpeak first: python3 scripts/build-phonemizer.py"
+        "Build pinned eSpeak first: python3 tooling/build/build-phonemizer.py"
     );
     println!("cargo:rustc-link-search=native={}", directory.display());
     println!("cargo:rustc-link-lib=static=espeak-ng");

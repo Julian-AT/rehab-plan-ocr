@@ -17,7 +17,7 @@ Build from a clean checkout at the lock's revision:
 cmake -S experiments/vlm -B models/private/experiments/build \
   -DLLAMA_SOURCE="$PWD/models/private/llama.cpp" -DCMAKE_BUILD_TYPE=Release
 cmake --build models/private/experiments/build --parallel 4
-python3 scripts/fetch-vlm.py
+python3 ml/experiments/vlm/fetch-vlm.py
 ```
 
 Convert the pinned Paddle checkpoint with that checkout's
@@ -50,8 +50,8 @@ Prepare a compatibility manifest using the pinned converter environment:
 uv run --python 3.12 --with torch==2.11.0 --with numpy==2.2.6 \
   --with transformers==4.57.6 --with sentencepiece==0.2.1 \
   --with protobuf==4.25.8 --with pillow==12.1.1 \
-  python scripts/qualify-vlm.py
-python3 scripts/compare-regions.py /path/to/retained/run.json \
+  python ml/experiments/vlm/qualify-vlm.py
+python3 ml/evaluation/recognition/compare-regions.py /path/to/retained/run.json \
   artifacts/private/my-comparison
 ```
 
@@ -78,4 +78,4 @@ The 20-photo exploratory run is recorded in `docs/simple-app-delivery.md`. No
 verified appointment-level accuracy scores or physical-device qualification are
 available, so neither additional model is shipped.
 
-For an offline side-by-side report, run `python3 scripts/report-regions.py artifacts/private/my-batch artifacts/private/refinement-v3-baseline`. The generated `review.html` escapes readings and uses only local images.
+For an offline side-by-side report, run `python3 ml/evaluation/recognition/report-regions.py artifacts/private/my-batch artifacts/private/refinement-v3-baseline`. The generated `review.html` escapes readings and uses only local images.

@@ -71,8 +71,10 @@ fn fixture(
     PipelineRun,
 ) {
     let dir = tempfile::tempdir().unwrap();
-    let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
+    let mut run: PipelineRun = serde_json::from_str(include_str!(
+        "../../../../ml/evaluation/fixtures/sample-run.json"
+    ))
+    .unwrap();
     run.schema_version = SCHEMA_VERSION;
     run.document.schema_version = SCHEMA_VERSION;
     run.appointments = (0..3)
