@@ -24,3 +24,5 @@ Das [Video der Sprachkugel](sprechen-audio.mp4) zeigt 3,35 Sekunden tatsächlich
 Zehn unterschiedliche UI-Prüfungen, 60 Kerntests und die unabhängige Kalenderprobe bestanden. [Prüfergebnisse](verification-results.json), [Modellkonvertierung](model-export.json), [Videoherkunft](video-origin.json) und [Dateiprüfsummen](preview-manifest.json).
 
 Die Bilder enthalten ausschließlich synthetische Termine. Die lokale Spracherkennung ist im Simulator nicht verfügbar; ihr nativer Hinweis und Abbrechen sind geprüft. Mikrofoneingabe und Telefonunterbrechungen auf dem persönlichen Gerät wurden nicht erneut getestet. Eine Klangbewertung bleibt beim Nutzer.
+
+Das [Geräteupdate auf Build 2026092609](../../victoria-calendar-update.md#geräteupdate) ist abgeschlossen: frische Sicherung, Installation ohne Deinstallation, erfolgreicher App-Start und vollständiger Datenerhalt sind geprüft.

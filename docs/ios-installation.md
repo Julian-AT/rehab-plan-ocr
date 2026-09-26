@@ -2,7 +2,7 @@
 
 # iPhone installation and calendar setup
 
-Current native release: **Laßnitzhöhe 0.3.0, build 2026092608**, installed in place on the iPhone 17 on 12 September 2026. See [the native interface and verified update with retained data](native-minimal-device-update.md). The instructions below describe the earlier Tauri release; do not use its older binary for a binary-only rollback after schema migration.
+Current native release: **Laßnitzhöhe 0.3.0, build 2026092609**, installed in place on the iPhone 17 on 12 September 2026. See [Victoria, the green calendar and the verified update with retained data](victoria-calendar-update.md). The instructions below describe the earlier Tauri release; do not use its older binary for a binary-only rollback after schema migration.
 
 The development app is **Termine 0.2.0**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
 

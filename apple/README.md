@@ -57,4 +57,4 @@ Build 2026092607 adds the monochrome native interface with a dedicated Sprechen 
 
 Build 2026092608 adds the native weekly day timeline, quiet voice surface and ordered immediate settings persistence. See [implementation and verification](../docs/native-minimal-iphone.md). It is installed on the iPhone 17 after explicit approval, a fresh backup and a successful [retained-data comparison](../docs/native-minimal-device-update.md).
 
-Build 2026092609 adds the requested offline Victoria voice, green appointment blocks and a 06:00–18:00 timeline. Ten UI tests, the calendar projection probe and 60 core tests passed. [Preview and implementation](../docs/victoria-calendar-update.md). The signed device package is ready; the iPhone disconnected before installation.
+Build 2026092609 adds the requested offline Victoria voice, green appointment blocks and a 06:00–18:00 timeline. Ten UI tests, the calendar projection probe and 60 core tests passed. [Preview and implementation](../docs/victoria-calendar-update.md). Build 2026092609 is installed on the iPhone 17 without uninstalling; a fresh backup, successful launch and full retained-data comparison are verified.

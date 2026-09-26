@@ -25,8 +25,22 @@ Die tatsächliche Stimmdatei enthält 510 × 1 × 256 Werte. Konfiguration und A
 
 [Simulatorbilder, Hörproben und abschließende Prüfergebnisse](preview/2026-09-26-s12-victoria/README.md).
 
-## Gerätepaket
+## Geräteupdate
 
-Das geprüfte Release-Paket 2026092609 ist bereit. Alle vier Komponenten sind für das bekannte iPhone signiert; 15 Sprachdateien und vier Erkennungsdateien sind geprüft. Paket-SHA-256: `71ec9952a7c1c711559d8bbce4690e45e6d10c0a11e85a3ecc9ff739bcfc256d`.
+Am 26. September 2026 wurde **Laßnitzhöhe 0.3.0, Build 2026092609**, auf dem verbundenen iPhone 17 installiert und geöffnet. Das Update erfolgte nach der bereitgestellten Vorschau und dem erneuten Anschluss ohne Deinstallation unter der bestehenden App-Kennung `at.rehakalender.personal`. Die installierte Version und der tatsächliche App-Start wurden geprüft; eine direkte Bildschirmaufnahme zeigt die native Termine-Seite mit dem abgeschlossenen Tageszustand.
 
-Vor der Installation wurden App und beide App-Gruppen frisch gesichert: 97 Dateien, 524.128.489 Byte, Schema 7 mit intakter Datenbank; 17 Pläne und 14 Originalaufnahmen. Die Sicherung und die bisherige signierte Version 2026092608 sind erhalten. Beim abschließenden Gerätecheck war das iPhone nicht mehr per USB oder CoreDevice erreichbar; es wurde daher noch kein Update installiert. Paket, Sicherung und Protokolle bleiben ausschließlich unter `artifacts/private/victoria-device-20260926-s12/`.
+Unmittelbar vor der Installation wurden App und beide App-Gruppen erneut gesichert: **103 Dateien, 534.520.109 Byte**. Nach dem ersten Start wurde die App regulär beendet, der Datenstand erneut ausgelesen und mit dieser Sicherung verglichen. Anschließend wurde die App wieder geöffnet.
+
+| Vergleich | Ergebnis |
+| --- | --- |
+| SQLite-Integrität und Schema | `ok`, Schema 7 unverändert |
+| Datenbanktabellen | Alle 14 vollständig unverändert |
+| Pläne / Importdatensätze | 17 / 36 erhalten |
+| Originalaufnahmen | Alle 14 bytegleich erhalten |
+| Dauerhafte Dateien | 68 bytegleich; ein Agenda-JSON semantisch identisch |
+| Einstellungen | Alle vorhandenen Schlüssel und Werte unverändert |
+| Sicherung | Nach Abschluss erneut gegen alle SHA-256-Werte geprüft |
+
+Alle vier Paketkomponenten sind für das iPhone signiert; 15 Sprachdateien und vier Erkennungsdateien sind geprüft. Paketgröße: 339.917.135 Byte. Paket-SHA-256: `71ec9952a7c1c711559d8bbce4690e45e6d10c0a11e85a3ecc9ff739bcfc256d`.
+
+Die frühere Sicherung und die bisherige signierte Version 2026092608 bleiben erhalten. Paket und Protokolle liegen ausschließlich unter `artifacts/private/victoria-device-20260926-s12/`; die frische Sicherung, Vergleichsdaten, Installationsnachweise und private Bildschirmaufnahme unter `delivery/`. Es wurden während der Installation keine Kalenderänderungen ausgelöst. Mikrofoneingabe, Hörbewertung und Telefonunterbrechungen auf dem persönlichen Gerät wurden bei diesem Update nicht erneut getestet.

@@ -1,7 +1,7 @@
 {
   "README.md": {
-    "bytes": 2303,
-    "sha256": "4f2edd47863e9375b89ff221372ac3a6230b640d091bd1f4d108e17373638581"
+    "bytes": 2536,
+    "sha256": "8fde54961130d4f85aca4ae38eabf45c393fc8b2924ba5a60be91d6126a2960f"
   },
   "abgebrochene-wiedergabe.png": {
     "bytes": 363238,
@@ -96,8 +96,8 @@
     "sha256": "f3f2766c083ba0bd7a9e4a37a1697b34704fbc6a2f0668f0fb00dbf02d276d02"
   },
   "verification-results.json": {
-    "bytes": 1466,
-    "sha256": "f8e07de19adcc7f0165d1bd79ac264925ffba8f2ec11cae7db45ecead95a2a60"
+    "bytes": 1568,
+    "sha256": "9819f4423e2da57578ab0cafb6f4da34c910ec45b01ca76225b1df92b9f01557"
   },
   "victoria-kalender.wav": {
     "bytes": 705644,
@@ -112,8 +112,8 @@
     "sha256": "d9373ff176d74c472e89d98ac8279e2aef337ecdc01fea7e594622494e18c6b1"
   },
   "video-origin.json": {
-    "bytes": 252,
-    "sha256": "009b46605b37f9b7ca254dae847665800238b0168d5f37fd503b172c238d73e2"
+    "bytes": 354,
+    "sha256": "5df63bdfec00b8da2f3344a30a8e1b3f17ac0b68e668dd825221184d309b4a2f"
   },
   "record_kind": "historical-technical-record",
   "original_attestation": "external-private-archive"
