@@ -159,7 +159,7 @@ struct ReviewView: View {
                 Section("Offene Angaben") {
                     ForEach(assessment.questions, id: \.id) { item in
                         Button { question = QuestionItem(id: item.id, question: item) } label: {
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: AppSpacing.small) {
                                 Text(questionTitle(item.field) + (item.appointmentIds.count > 1 ? " · \(item.appointmentIds.count) Termine" : "")).foregroundStyle(.tint)
                                 if item.appointmentIds.count == 1, let appointment = model.appointments.first(where: { item.appointmentIds.contains($0.id) }) {
                                     Text([appointment.start ?? "", appointment.title].filter { !$0.isEmpty }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -174,7 +174,7 @@ struct ReviewView: View {
                 if !conflicts.isEmpty {
                     Section("Kalenderkonflikte") {
                         ForEach(conflicts, id: \.id) { op in
-                            VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: AppSpacing.medium) {
                                 Text(op.after?.title ?? op.before?.title ?? "Termin")
                                 Text(op.reason).font(.subheadline).foregroundStyle(.secondary)
                                 if let before = op.before { Text("Kalender: \(before.startUtc) · \(before.location)").font(.subheadline) }
@@ -218,7 +218,7 @@ struct ReviewView: View {
             }
             if typeSize.isAccessibilitySize { Section { saveControls } }
         }
-        .navigationTitle("Plan")
+        .pageTitle("Plan")
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button("Originale", systemImage: "photo") { originals = true }
@@ -258,8 +258,8 @@ struct ReviewView: View {
     }
     @ViewBuilder private var saveControls: some View {
             if !processing && model.total > 0 && (model.needsCalendar || model.hasWrites || model.loading || model.saving) {
-                VStack(spacing: 8) {
-                    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+                VStack(spacing: AppSpacing.small) {
+                    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: AppSpacing.small)) : AnyLayout(HStackLayout(spacing: AppSpacing.small))
                     layout {
                         Text("Speichern in: \(model.calendarName)").fixedSize(horizontal: false, vertical: true)
                         if !model.targetLocked { Button("Ändern") { setup = true }.controlHeight().disabled(model.saving || model.loading) }
@@ -294,17 +294,17 @@ private struct PlanAppointmentRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric private var timeWidth = 62.0
     var body: some View {
-        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: AppSpacing.small)) : AnyLayout(HStackLayout(alignment: .top, spacing: AppSpacing.section))
         layout {
             Text(appointment.start ?? "–").monospacedDigit().frame(minWidth: timeWidth, alignment: .leading)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text(appointment.title.isEmpty ? "Bezeichnung fehlt" : appointment.title).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
                 let metadata = [appointment.end.map { "bis \($0)" } ?? appointment.durationMinutes.map { "\($0) Min." } ?? "", appointment.location, appointment.therapist].filter { !$0.isEmpty }
                 if !metadata.isEmpty { Text(metadata.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                 if !appointment.included { Text("Für später").font(.subheadline).foregroundStyle(.secondary) }
                 else if attention { Label("Angabe offen", systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.orange) }
             }
-        }.font(.body).foregroundStyle(.primary).frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect).padding(.vertical, 8).accessibilityElement(children: .combine)
+        }.font(.body).foregroundStyle(.primary).frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect).padding(.vertical, AppSpacing.small).accessibilityElement(children: .combine)
     }
 }
 func questionTitle(_ field: String) -> String {

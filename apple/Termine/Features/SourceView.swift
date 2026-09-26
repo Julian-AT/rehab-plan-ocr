@@ -34,7 +34,7 @@ struct SourceView: View {
                 else if let error { ContentUnavailableView(error, systemImage: "photo.badge.exclamationmark") }
                 else { ProgressView("Foto laden …") }
             }
-            .navigationTitle("Quellfoto")
+            .pageTitle("Quellfoto")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
             .task {
                 do {
@@ -121,7 +121,7 @@ struct CorrectionView: View {
     private let labels = ["Oben links", "Oben rechts", "Unten rechts", "Unten links"]
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 if let image {
                     Image(uiImage: image).resizable().scaledToFit()
                         .overlay {
@@ -167,7 +167,7 @@ struct CorrectionView: View {
                 } header: { Text("Seitenecken im Originalfoto") } footer: { Text("Die Korrektur startet eine neue Erkennung. Das bisherige Foto und deine Prüfdaten bleiben erhalten.") }
                 if let error { Text(error).foregroundStyle(.red) }
             }
-            .navigationTitle("Foto korrigieren")
+            .pageTitle("Foto korrigieren")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -204,7 +204,7 @@ struct DiagnosticsView: View {
                 if let capabilities {
                     Section("Verfügbarkeit") {
                         Text(capabilities.recognitionAvailable ? "Lokale Erkennung verfügbar" : "Modelldateien oder Laufzeit fehlen")
-                        Text(capabilities.runtime).font(.caption)
+                        Text(capabilities.runtime).font(.subheadline)
                     }
                 }
                 if let history {
@@ -217,12 +217,12 @@ struct DiagnosticsView: View {
                     Section("Erkennung") { Text(diagnostics.engine); Text("Dauer: \(diagnostics.totalMs) ms"); Text(diagnostics.sourceHash).font(.caption.monospaced()).textSelection(.enabled) }
                     Section("Verarbeitungsschritte") {
                         ForEach(Array(diagnostics.stages.enumerated()), id: \.offset) { _, stage in
-                            VStack(alignment: .leading) { Text("\(stage.name) · \(stage.status)").font(.headline); Text(stage.detail); Text("\(stage.durationMs) ms").font(.caption) }
+                            VStack(alignment: .leading) { Text("\(stage.name) · \(stage.status)").font(.headline); Text(stage.detail); Text("\(stage.durationMs) ms").font(.subheadline) }
                         }
                     }
                     Section("Modellidentität") { Text(diagnostics.manifestJson).font(.caption.monospaced()).textSelection(.enabled) }
                 }
-            }.navigationTitle("Diagnose")
+            }.pageTitle("Diagnose")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
                 .task { do { capabilities = try await core.capabilities(); if let id { diagnostics = try await core.diagnostics(id: id) } else { history = try await core.history() } } catch { self.error = userMessage(error) } }
         }

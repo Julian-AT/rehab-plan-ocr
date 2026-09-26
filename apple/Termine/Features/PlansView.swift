@@ -291,7 +291,7 @@ struct PlansView: View {
                 }
             } else if model.error == nil { ProcessingRow(text: "Archiv laden …") }
         }
-        .navigationTitle("Archiv")
+        .pageTitle("Archiv")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Menu { CaptureActions(scanner: scanner, context: "archive-menu") } label: { Label("Plan hinzufügen", systemImage: "plus") } } }
         .task(id: refreshID) { await model.refresh(core) }
         .refreshable { await model.refresh(core) }
@@ -317,16 +317,16 @@ private struct ArchiveRow: View {
         return "Bereit zum Prüfen"
     }
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: AppSpacing.section) {
             if !typeSize.isAccessibilitySize { Group {
                 if let thumbnail { Image(uiImage: thumbnail).resizable().scaledToFill() }
                 else { Image(systemName: "doc.text").font(.title2).foregroundStyle(.secondary) }
             }.frame(width: 48, height: 64).clipped().clipShape(.rect(cornerRadius: 6)).accessibilityHidden(true) }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text(planDateRange(scans.flatMap(\.dates), fallback: plan.importedAt)).font(.body).fixedSize(horizontal: false, vertical: true)
                 Text("\(scans.reduce(0) { $0 + Int($1.itemCount) }) Termine · \(status)").font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-        }.padding(.vertical, 8).accessibilityElement(children: .combine)
+        }.padding(.vertical, AppSpacing.small).accessibilityElement(children: .combine)
         .task(id: plan.id) {
             guard let page = plan.pageIds.first,
                   let path = try? await core.artifactPath(id: page, artifact: "page.png") else { return }

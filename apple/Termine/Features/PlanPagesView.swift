@@ -89,7 +89,7 @@ struct PlanPagesView: View {
                             NavigationLink(value: "page:\(page)") {
                                 VStack(alignment: .leading) {
                                     Text(appointment.title)
-                                    Text("\(appointment.date ?? "Datum offen") · \(appointment.start ?? "Beginn offen")").font(.caption)
+                                    Text("\(appointment.date ?? "Datum offen") · \(appointment.start ?? "Beginn offen")").font(.subheadline)
                                 }
                             }
                         }
@@ -104,7 +104,7 @@ struct PlanPagesView: View {
             }
             if let error { Text(error).foregroundStyle(.red) }
         }
-        .navigationTitle("Seiten")
+        .pageTitle("Seiten")
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
         .task { await load() }
         .onChange(of: scanner.finishedID) { _, _ in Task { await load() } }

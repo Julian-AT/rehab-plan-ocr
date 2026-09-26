@@ -21,9 +21,9 @@ struct ImportHistoryView: View {
                 if let proposal {
                     Section("Rücknahme prüfen") {
                         ForEach(proposal.operations, id: \.id) { op in
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: AppSpacing.small) {
                                 Text(op.after?.title ?? op.before?.title ?? "Termin").font(.headline)
-                                Text(operationTitle(op.kind)); Text(op.reason).font(.caption)
+                                Text(operationTitle(op.kind)); Text(op.reason).font(.subheadline)
                                 if op.requiresResolution {
                                     Button("Aktuellen Kalenderstand behalten") {
                                         Task { do { self.proposal = try await core.resolveProposal(token: proposal.token, eventId: op.id, choice: "keep") } catch { self.error = userMessage(error) } }
@@ -51,18 +51,18 @@ struct ImportHistoryView: View {
                             ForEach(batch.operations, id: \.attemptId) { item in
                                 VStack(alignment: .leading) {
                                     Text(item.operation.after?.title ?? item.operation.before?.title ?? "Termin")
-                                    Text("\(operationTitle(item.operation.kind)) · \(status(item.status))").font(.caption).foregroundStyle(.secondary)
+                                    Text("\(operationTitle(item.operation.kind)) · \(status(item.status))").font(.subheadline).foregroundStyle(.secondary)
                                 }
                             }
                             if batch.undoOf == nil && (batch.undoneBy == nil || history.batches.contains(where: { $0.id == batch.undoneBy && $0.operations.contains(where: { ["failed","conflict"].contains($0.status) }) })) && batch.operations.contains(where: { $0.status == "saved" }) {
                                 Button("Import rückgängig machen", systemImage: "arrow.uturn.backward") { Task { await prepare(batch.id) } }.disabled(busy)
-                            } else if batch.undoneBy != nil { Text("Rücknahme im Importverlauf erfasst.").font(.caption) }
+                            } else if batch.undoneBy != nil { Text("Rücknahme im Importverlauf erfasst.").font(.subheadline) }
                         } header: { Text(batch.undoOf == nil ? "Kalenderimport" : "Rücknahme") }
                     }
                 }
 
             }
-            .navigationTitle("Importverlauf")
+            .pageTitle("Importverlauf")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.disabled(busy) } }
             .task {
                 if let documentID { pageIDs = (try? await core.pageGroup(id: documentID)) ?? [documentID] }

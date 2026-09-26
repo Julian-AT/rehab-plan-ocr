@@ -35,7 +35,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                 let models = FileManager.default.fileExists(atPath: bundled.appendingPathComponent("manifest.json").path) ? bundled.path : resources.appendingPathComponent("small").path
                 return (root, models)
             }.value
-            core = try await openApplication(root: locations.0, models: locations.1, host: NativeBridge())
+            let application = try await openApplication(root: locations.0, models: locations.1, host: NativeBridge())
+            #if DEBUG && targetEnvironment(simulator)
+            try await PreviewFixtures.prepare(application)
+            #endif
+            core = application
         } catch { self.error = userMessage(error) }
     }
 }
@@ -50,10 +54,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     @State private var appearance = "system"
     @State private var refreshID = 0
     @State private var scanner: ScanModel
+    @State private var voice: VoiceModel
     @State private var openError: String?
     init(core: NativeApplication) {
         self.core = core
         _scanner = State(initialValue: ScanModel(core: core))
+        _voice = State(initialValue: VoiceModel(core: core))
     }
     var body: some View {
         TabView(selection: $tab) {
@@ -63,13 +69,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             Tab("Archiv", systemImage: "doc.on.doc", value: 1) {
                 archiveTab
             }
-            Tab("Mehr", systemImage: "ellipsis", value: 2) {
+            Tab("Sprechen", systemImage: "waveform", value: 2) {
+                NavigationStack { VoiceView(core: core, model: voice) }
+            }
+            Tab("Mehr", systemImage: "ellipsis", value: 3) {
                 NavigationStack {
                     MoreView(core: core, showSettings: $showSettings, changed: refresh)
                 }
             }
         }
-        
+        .onChange(of: tab) { old, _ in if old == 2 { voice.cancelSession() }; refreshID += 1 }
         .modifier(CapturePresentation(scanner: scanner))
         .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
         .sheet(isPresented: $showSettings) {
@@ -96,17 +105,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             refreshID += 1
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { SpeechOutput.shared.stop() }
+            if phase != .active { voice.cancelSession() }
             if phase == .background { scanner.suspend() }
             if phase == .active { scanner.resume(); refreshID += 1; Task { await scanner.recoverShares(); await pendingOpen() } }
         }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { notification in
             if let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-               type == AVAudioSession.InterruptionType.began.rawValue { SpeechOutput.shared.stop() }
+               type == AVAudioSession.InterruptionType.began.rawValue { voice.cancelSession() }
         }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) { notification in
             if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-               reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { SpeechOutput.shared.stop() }
+               reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { voice.cancelSession() }
         }
         .task {
             appearance = (try? await core.preferences().appearance) ?? "system"
@@ -179,11 +188,10 @@ private struct MoreView: View {
         List {
             Section {
                 NavigationLink { CalendarPreferencesView(core: core) } label: { MoreRow(title: "Kalender", icon: "calendar") }
-                NavigationLink { VoiceSettingsView() } label: { MoreRow(title: "Sprachhilfe", icon: "waveform") }
                 NavigationLink { EventHistoryView(core: core) } label: { MoreRow(title: "Kalenderänderungen", icon: "clock.arrow.circlepath") }
             }
             Section {
-                Button { showSettings = true } label: { MoreRow(title: "Einstellungen", icon: "slider.horizontal.3", chevron: true) }.accessibilityIdentifier("settings")
+                Button { showSettings = true } label: { MoreRow(title: "Einstellungen", icon: "gearshape", chevron: true) }.accessibilityIdentifier("settings")
                 Button { recognition = true } label: { MoreRow(title: "Erkennung", icon: "text.viewfinder", chevron: true) }
                 NavigationLink { HelpView() } label: { MoreRow(title: "Hilfe", icon: "questionmark.circle") }
             }
@@ -196,7 +204,7 @@ private struct MoreView: View {
                     Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · Deine Daten bleiben auf dem Gerät.")
                 }.padding(.top, 8)
             }
-        }.buttonStyle(.plain).navigationTitle("Mehr")
+        }.buttonStyle(.plain).pageTitle("Mehr")
             .sheet(isPresented: $recognition) { SettingsView(core: core, changed: { _ in changed() }, recognitionOnly: true) }
             .sheet(isPresented: $diagnostics) { DiagnosticsView(core: core) }
     }
@@ -206,6 +214,6 @@ private struct HelpView: View {
         List {
             Section("Plan speichern") { Text("Fotografiere deinen Plan. Prüfe offene Angaben und tippe auf Termine speichern. Du kannst den Import danach rückgängig machen.") }
             Section("Fotos und Kalender") { Text("Originale bleiben im Archiv. Das Löschen eines Originals entfernt keine Kalendertermine. Rückgängig findest du beim Plan im Importverlauf.") }
-        }.navigationTitle("Hilfe")
+        }.pageTitle("Hilfe")
     }
 }

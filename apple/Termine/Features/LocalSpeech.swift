@@ -87,10 +87,32 @@ private final class AudioInputConverter: @unchecked Sendable {
         if output.frameLength > 0, case .dropped = continuation.yield(AnalyzerInput(buffer: output)) { failed() }
     }
 }
+/// Confined to the serial input tap; publishes at most 25 scalar levels/second.
+private final class InputLevelMeter: @unchecked Sendable {
+    private var lastTime = 0.0
+    private var smoothed = 0.0
+    private let publish: @Sendable (Double) -> Void
+    init(publish: @escaping @Sendable (Double) -> Void) { self.publish = publish }
+    func append(_ buffer: AVAudioPCMBuffer) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastTime >= 0.04 else { return }
+        lastTime = now
+        guard let channels = buffer.floatChannelData, buffer.frameLength > 0 else { return }
+        var sum = 0.0
+        for channel in 0..<Int(buffer.format.channelCount) {
+            for frame in 0..<Int(buffer.frameLength) { let value = Double(channels[channel][frame]); sum += value * value }
+        }
+        let rms = sqrt(sum / Double(buffer.frameLength) / Double(buffer.format.channelCount))
+        let level = min(1, pow(rms, 0.65))
+        smoothed += (level - smoothed) * 0.4
+        publish(smoothed)
+    }
+}
 @MainActor @Observable final class LocalSpeechRecorder {
     enum State { case idle, preparing, recording, finishing }
     var state: State = .idle
     var transcript = ""
+    private(set) var level = 0.0
     var failure: String?
     private var committed = ""
     private var generation = UUID()
@@ -105,13 +127,14 @@ private final class AudioInputConverter: @unchecked Sendable {
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw LocalSpeechError.message("Mikrofonzugriff fehlt. Erlaube ihn in den Einstellungen.") }
             let module = try await LocalSpeechAssets.transcriber()
-            guard await AssetInventory.status(forModules: [module]) == .installed else { throw LocalSpeechError.message("Sprachdateien fehlen. Bitte unter Mehr → Sprachhilfe einrichten.") }
+            guard await AssetInventory.status(forModules: [module]) == .installed else { throw LocalSpeechError.message("Sprachdateien fehlen. Bitte unter Sprechen → Einstellungen einrichten.") }
             guard self.generation == generation else { throw CancellationError() }
             let audio = AVAudioSession.sharedInstance()
             try audio.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP]); try audio.setActive(true)
             let engine = AVAudioEngine(); let source = engine.inputNode.outputFormat(forBus: 0)
             guard source.sampleRate > 0, source.channelCount > 0,
               let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module], considering: source) else { throw LocalSpeechError.message("Mikrofon ist nicht bereit.") }
+            guard self.generation == generation else { throw CancellationError() }
             let stream = AsyncStream<AnalyzerInput>.makeStream(bufferingPolicy: .bufferingNewest(256))
             let analyzer = SpeechAnalyzer(modules: [module])
             self.analyzer = analyzer; self.continuation = stream.continuation; self.engine = engine
@@ -132,15 +155,23 @@ private final class AudioInputConverter: @unchecked Sendable {
                     self.cancelTurn(); self.failure = "Audio wurde unterbrochen. Bitte noch einmal sprechen oder antippen."
                 }
             }
-            engine.inputNode.installTap(onBus: 0, bufferSize: 2048, format: source) { buffer, _ in converter.append(buffer) }
+            let meter = InputLevelMeter { [weak self] value in
+                Task { @MainActor in
+                    guard let self, self.generation == generation, self.state == .recording else { return }
+                    self.level = value
+                }
+            }
+            engine.inputNode.installTap(onBus: 0, bufferSize: 2048, format: source) { buffer, _ in
+                meter.append(buffer); converter.append(buffer)
+            }
             engine.prepare(); try engine.start()
-            guard self.generation == generation else { cancelTurn(); throw CancellationError() }
+            guard self.generation == generation else { throw CancellationError() }
             state = .recording
-        } catch { cancelTurn(); throw error }
+        } catch { if self.generation == generation { cancelTurn() }; throw error }
     }
     func endTurn() async throws -> String {
         guard state == .recording, let analyzer else { return "" }
-        state = .finishing; let generation = generation
+        state = .finishing; level = 0; let generation = generation
         engine?.stop(); engine?.inputNode.removeTap(onBus: 0); engine = nil; continuation?.finish(); continuation = nil
         do {
             try await analyzer.finalizeAndFinishThroughEndOfInput(); try await results?.value
@@ -149,35 +180,32 @@ private final class AudioInputConverter: @unchecked Sendable {
             self.analyzer = nil; results = nil; state = .idle
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             return text
-        } catch { cancelTurn(); throw error }
+        } catch { if self.generation == generation { cancelTurn() }; throw error }
     }
     func cancelTurn() {
         generation = UUID(); engine?.stop()
         if engine != nil { engine?.inputNode.removeTap(onBus: 0) }
         engine = nil; continuation?.finish(); continuation = nil; results?.cancel(); results = nil
         if let analyzer { Task { await analyzer.cancelAndFinishNow() } }; analyzer = nil
-        state = .idle; transcript = ""; committed = ""
+        state = .idle; level = 0; transcript = ""; committed = ""; failure = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
 struct VoiceSettingsView: View {
     @State private var assets = LocalSpeechAssets()
     @State private var rate = SpeechOutput.shared.rate
-    @State private var voice = SpeechOutput.shared.voiceID
+    @Environment(\.dismiss) private var dismiss
     var body: some View {
-        Form {
+        List {
             Section {
-                Picker("Stimme", selection: $voice) {
-                    Text("Stimme 1 · weiblich").tag("F1")
-                    Text("Stimme 2 · männlich").tag("M1")
-                }
-                VStack(alignment: .leading, spacing: 8) {
+                LabeledContent("Stimme", value: "Martin · Deutsch")
+                VStack(alignment: .leading, spacing: AppSpacing.small) {
                     HStack { Text("Geschwindigkeit"); Spacer(); Text(rate.formatted(.number.precision(.fractionLength(2))) + "×").foregroundStyle(.secondary) }
                     Slider(value: $rate, in: 0.75...1.25, step: 0.05) { Text("Vorlesegeschwindigkeit") }
                 }
-                Text("Dein nächster Termin ist morgen um neun Uhr im Raum eins.").font(.subheadline).foregroundStyle(.secondary)
-                SpeechControls(text: "Dein nächster Termin ist morgen um neun Uhr im Raum eins.")
-            } header: { Text("Stimme ausprobieren") } footer: { Text("Supertonic 3 · Deutsch · vollständig auf diesem Gerät. Die Stimme ist bereits enthalten.") }
+                Text("Am 14.09.2026 um 09:15 Uhr: Physiotherapie, Raum 2.14 in Laßnitzhöhe.").font(.subheadline).foregroundStyle(.secondary)
+                SpeechControls(text: "Am 14.09.2026 um 09:15 Uhr: Physiotherapie, Raum 2.14 in Laßnitzhöhe.")
+            } header: { Text("Stimme ausprobieren") } footer: { Text("Kokoro · Deutsch · vollständig auf diesem Gerät. Die Stimme ist bereits enthalten.") }
             Section {
                 Label(assets.ready ? "Bereit zum Sprechen" : "Spracherkennung", systemImage: assets.ready ? "checkmark.circle" : "mic").font(.headline)
                 Text(assets.status).font(.subheadline).foregroundStyle(.secondary)
@@ -186,10 +214,10 @@ struct VoiceSettingsView: View {
             } header: { Text("Sprechen") } footer: { Text("Die Erkennung braucht eventuell einmalig einen Download. Aufnahme und Gespräch werden nicht gespeichert.") }
             Section {
                 Text(SystemLanguageModel.default.isAvailable ? "Apple Intelligence unterstützt unterschiedliche Formulierungen auf diesem Gerät." : "Sprachbefehle und sichtbare Auswahl funktionieren auch ohne Apple Intelligence.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
-        }.navigationTitle("Sprachhilfe").task { await assets.check() }
-            .onChange(of: voice) { SpeechOutput.shared.stop(); SpeechOutput.shared.voiceID = voice }
+        }.pageTitle("Spracheinstellungen")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }.task { await assets.check() }
             .onChange(of: rate) { SpeechOutput.shared.stop(); SpeechOutput.shared.rate = rate }
             .onDisappear { assets.cancel(); SpeechOutput.shared.stop() }
     }

@@ -141,9 +141,9 @@ struct SpeechControls: View {
     let text: String
     @State private var output = SpeechOutput.shared
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 16) { buttons }
+                HStack(spacing: AppSpacing.section) { buttons }
                 VStack(alignment: .leading, spacing: 0) { buttons }
             }
             if output.lastText == text {

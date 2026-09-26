@@ -33,7 +33,7 @@ private struct SettingsForm: View {
     }
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 if !recognitionOnly {
                 Section("Darstellung") {
                     AppearanceControls()
@@ -58,7 +58,7 @@ private struct SettingsForm: View {
                     }
                     Toggle("Ton", isOn: $preferences.reminderSound)
                     Toggle("Termindetails in Vorschau", isOn: $preferences.reminderPreview)
-                    if !reminders.isEmpty { Text(reminders).font(.caption).foregroundStyle(.secondary) }
+                    if !reminders.isEmpty { Text(reminders).font(.subheadline).foregroundStyle(.secondary) }
                     Button("Testerinnerung senden") { Task { do { _ = try await NativeBridge.request("testReminder") } catch { self.error = userMessage(error) } } }
                 }
                 }
@@ -96,7 +96,7 @@ private struct SettingsForm: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 if busy { ProgressView("Wird gespeichert …") }
             }
-            .navigationTitle(recognitionOnly ? "Erkennung" : "Einstellungen")
+            .pageTitle(recognitionOnly ? "Erkennung" : "Einstellungen")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { if preferences != initial { discard = true } else { dismiss() } } }
                 ToolbarItem(placement: .confirmationAction) { Button("Speichern") { Task { await save() } }.disabled(busy) }

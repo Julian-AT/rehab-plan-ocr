@@ -43,7 +43,7 @@ struct AppointmentEditor: View {
     }
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 Section {
                     TextField("Bezeichnung", text: $draft.title)
                     TextField("Datum (JJJJ-MM-TT)", text: optional(\.date)).keyboardType(.numbersAndPunctuation)
@@ -71,7 +71,7 @@ struct AppointmentEditor: View {
                         ForEach(draft.suggestions.filter { $0.status == "pending" }, id: \.id) { suggestion in
                             VStack(alignment: .leading) {
                                 Text("\(suggestion.field): \(fieldDescription(suggestion.value))")
-                                Text(suggestion.source).font(.caption).foregroundStyle(.secondary)
+                                Text(suggestion.source).font(.subheadline).foregroundStyle(.secondary)
                                 HStack {
                                     Button("Übernehmen") { suggestionAction(suggestion, true) }
                                     Button("Verwerfen") { suggestionAction(suggestion, false) }
@@ -88,7 +88,7 @@ struct AppointmentEditor: View {
                 }
                 if let error = review.error { Text(error).foregroundStyle(.red) }
             }
-            .navigationTitle("Termin bearbeiten")
+            .pageTitle("Termin bearbeiten")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { if dirty { discard = true } else { dismiss() } } }
                 ToolbarItem(placement: .confirmationAction) {

@@ -39,7 +39,7 @@ struct CalendarSetupView: View {
                 if busy { ProcessingRow(text: "Kalender laden …") }
                 Button { Task { await save() } } label: { Text("Diesen Kalender verwenden").frame(maxWidth: .infinity).controlHeight() }
                     .buttonStyle(PrimaryActionStyle()).disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
-            }.navigationTitle("Speicherziel")
+            }.pageTitle("Speicherziel")
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() }.disabled(busy) } }
                 .task { await load(requestAccess: false) }
         }
@@ -78,11 +78,11 @@ struct CalendarChoiceRow: View {
     let calendar: CalendarDestinations.Destination
     let selected: Bool
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: AppSpacing.section) {
             if let color = calendar.color_components, color.count == 3 {
                 Circle().fill(Color(red: color[0], green: color[1], blue: color[2])).frame(width: 16, height: 16).accessibilityHidden(true)
             }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text(calendar.title).font(.headline)
                 Text(calendar.source).foregroundStyle(.secondary)
                 if !calendar.writable { Text("Nur anzeigen und vorlesen").foregroundStyle(.secondary) }
@@ -128,7 +128,7 @@ struct CalendarPreferencesView: View {
             }
             if let error { Text(error).foregroundStyle(.red) }
             Button("Kalender neu laden") { Task { await load() } }.controlHeight()
-        }.navigationTitle("Kalender")
+        }.pageTitle("Kalender")
             .task { await load() }
             .sheet(isPresented: $setup, onDismiss: { Task { await load() } }) { CalendarSetupView(core: core) }
     }

@@ -1,34 +1,6 @@
 import SwiftUI
 import RehaCore
 
-indirect enum JSONValue: Codable, Equatable, Sendable {
-    case string(String), number(Double), bool(Bool), object([String: JSONValue]), array([JSONValue]), null
-    init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() { self = .null }
-        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
-        else if let v = try? c.decode(String.self) { self = .string(v) }
-        else if let v = try? c.decode(Double.self) { self = .number(v) }
-        else if let v = try? c.decode([String: JSONValue].self) { self = .object(v) }
-        else { self = .array(try c.decode([JSONValue].self)) }
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.singleValueContainer()
-        switch self { case .string(let v): try c.encode(v); case .number(let v): try c.encode(v); case .bool(let v): try c.encode(v); case .object(let v): try c.encode(v); case .array(let v): try c.encode(v); case .null: try c.encodeNil() }
-    }
-}
-struct CalendarEventValues: Codable, Equatable, Sendable {
-    var title: String; var start_utc: String; var end_utc: String; var timezone: String; var location: String; var reminder_minutes: Int?
-    var start: Date { ISO8601DateFormatter().date(from: start_utc) ?? .distantPast }
-    var end: Date { ISO8601DateFormatter().date(from: end_utc) ?? .distantPast }
-    var spoken: String { "\(title), \(eventDate(start)), bis \(eventTime(end)). \(location.isEmpty ? "Kein Ort angegeben." : location)." }
-}
-struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
-    let id: String; let external_id: String; let calendar_id: String; let calendar_title: String; let source: String
-    let occurrence: String; let recurring: Bool; let system_only: Bool; let writable: Bool
-    let values: CalendarEventValues; let metadata: JSONValue; let fingerprint: String; var import_id: String?
-    var spoken: String { "\(values.spoken) Kalender \(calendar_title), \(source)." }
-}
 struct EventProposalView: Codable, Identifiable, Sendable {
     let token: String; let session: String; let revision: UInt64; let kind: String; let calendar_id: String; let calendar_title: String
     let before: CalendarEvent?; let patch: [String: JSONValue]; let undo_of: String?
@@ -58,8 +30,6 @@ struct EventProposalView: Codable, Identifiable, Sendable {
 }
 struct EventResponse: Decodable { var proposal: EventProposalView?; var system_editor: CalendarEvent?; var status: String?; var message: String? }
 struct EventHistoryItem: Decodable, Identifiable { let id: String; let created_at: Double; let proposal: EventProposalView; let status: String; let undone_by: String? }
-func eventTime(_ date: Date) -> String { date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "de_AT"))) }
-func eventDate(_ date: Date) -> String { date.formatted(.dateTime.weekday(.wide).day().month(.wide).year().hour().minute().locale(Locale(identifier: "de_AT"))) }
 @MainActor func jsonObject<T: Encodable>(_ value: T) throws -> Any { try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) }
 extension NativeApplication {
     @MainActor func eventRequest<T: Decodable>(_ command: String, _ args: [String: Any] = [:], as type: T.Type = T.self) async throws -> T {
@@ -79,42 +49,49 @@ extension NativeApplication {
     var result: String?
     init(core: NativeApplication) { self.core = core }
     func preview(kind: String, calendar: String, event: CalendarEvent?, patch: [String: JSONValue]) async {
-        guard !busy else { return }; busy = true; defer { busy = false }
+        guard !busy else { return }; busy = true
         revision += 1; let revision = revision; let session = session; proposal = nil; result = nil
+        defer { if self.session == session { busy = false } }
         do {
             let response: EventResponse = try await core.eventRequest("previewEventMutation", ["kind": kind, "calendar_id": calendar, "event": try event.map(jsonObject) ?? NSNull(), "patch": try jsonObject(patch), "session": session, "revision": revision])
             guard self.session == session, self.revision == revision else { return }
             proposal = response.proposal; systemEvent = response.system_editor; error = nil
-            if let proposal { SpeechOutput.shared.speak(proposal.spoken) }
         } catch { if self.session == session { self.error = userMessage(error) } }
     }
     func confirm() async {
-        guard let proposal, !busy else { return }; busy = true; self.proposal = nil; SpeechOutput.shared.stop(); defer { busy = false }
+        guard let proposal, !busy else { return }; busy = true; self.proposal = nil
         let current = session
+        defer { if session == current { busy = false } }
         do {
             let response: EventResponse = try await core.eventRequest("confirmProposal", ["token": proposal.token, "session": session, "revision": revision, "confirmation": "button"])
+            guard session == current else { return }
             result = response.status == "saved" ? "\(proposal.kind == "remove" ? "Kalendereintrag gelöscht" : "Gespeichert") in \(proposal.calendar_title)." : response.message ?? "Schreibstatus unklar. Kalender abgleichen."
-            if session == current && UIApplication.shared.applicationState == .active { SpeechOutput.shared.speak(result!) }; error = nil
-        } catch { self.error = userMessage(error) }
+            error = nil
+        } catch { if session == current { self.error = userMessage(error) } }
     }
     func undo(_ id: String) async {
-        guard !busy else { return }; busy = true; defer { busy = false }; revision += 1
+        guard !busy else { return }; busy = true; revision += 1
         let current = session
+        defer { if session == current { busy = false } }
         do {
             let response: EventResponse = try await core.eventRequest("previewEventUndo", ["id": id, "session": session, "revision": revision])
             guard session == current else { return }
             proposal = response.proposal; error = nil
-            if let proposal { SpeechOutput.shared.speak(proposal.spoken) }
-        } catch { self.error = userMessage(error) }
+        } catch { if session == current { self.error = userMessage(error) } }
     }
     func interrupt() {
-        let old = session; session = UUID().uuidString; revision += 1; proposal = nil; systemEvent = nil; SpeechOutput.shared.stop()
+        let old = session; session = UUID().uuidString; revision += 1; proposal = nil; systemEvent = nil
+        busy = false; error = nil; result = nil
         Task { let _: [String: JSONValue]? = try? await core.eventRequest("invalidateEventSession", ["session": old]) }
     }
     func openSystem(_ event: CalendarEvent) async {
         interrupt()
-        do { _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)]); result = "Kalenderbearbeitung beendet. Termine neu laden. Diese Änderung steht nicht im App-Rückgängig zur Verfügung." }
-        catch { self.error = "\(userMessage(error)) Suche nach \(event.values.title), \(eventDate(event.values.start))." }
+        let current = session
+        do {
+            _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)])
+            guard session == current else { return }
+            result = "Kalenderbearbeitung beendet. Termine neu laden. Diese Änderung steht nicht im App-Rückgängig zur Verfügung."
+        } catch { if session == current { self.error = "\(userMessage(error)) Suche nach \(event.values.title), \(eventDate(event.values.start))." } }
     }
 }
 struct ProposalCard: View {
@@ -138,7 +115,6 @@ struct ProposalCard: View {
             if proposal.undo_of != nil && proposal.kind == "create" { Text("Wiederherstellung als neuer Eintrag. Versendete Einladungen oder Benachrichtigungen werden nicht zurückgenommen.") }
             Button(action: confirm) { Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true) }.buttonStyle(PrimaryActionStyle()).disabled(busy).accessibilityIdentifier("confirm-event")
             Button("Angaben korrigieren", action: cancel).controlHeight().disabled(busy)
-            SpeechControls(text: proposal.spoken)
         }
     }
 }
@@ -169,7 +145,7 @@ struct EventEditorView: View {
     }
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 if let proposal = model.proposal { ProposalCard(proposal: proposal, busy: model.busy, confirm: { Task { await model.confirm(); changed() } }, cancel: { model.interrupt() }) }
                 else if let result = model.result {
                     Text(result)
@@ -203,7 +179,7 @@ struct EventEditorView: View {
                 }
                 if model.busy { ProcessingRow(text: "Kalender prüfen …") }
                 if let error = model.error { Text(error).foregroundStyle(.red) }
-            }.navigationTitle(original == nil ? "Neuer Termin" : "Termin bearbeiten")
+            }.pageTitle(original == nil ? "Neuer Termin" : "Termin bearbeiten")
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() }.disabled(model.busy) } }
                 .task { await loadCalendar() }
                 .onChange(of: scenePhase) { _, phase in if phase != .active { model.interrupt() } }
@@ -246,7 +222,7 @@ struct EventHistoryView: View {
             if let error = model.error { Text(error).foregroundStyle(.red) }
             Button("Schreibstatus abgleichen") { Task { do { let _: [String: JSONValue] = try await core.eventRequest("reconcileEventMutations"); await load() } catch { model.error = userMessage(error) } } }.controlHeight()
             ForEach(history) { item in
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: AppSpacing.medium) {
                     Text(item.proposal.after?.title ?? item.proposal.before?.values.title ?? "Termin").font(.headline)
                     Text(item.proposal.calendar_title)
                     Text(eventDate(Date(timeIntervalSince1970: item.created_at)))
@@ -263,7 +239,7 @@ struct EventHistoryView: View {
                     if item.status == "saved" && item.undone_by == nil { Button("Rückgängig") { Task { await model.undo(item.id) } }.controlHeight().disabled(model.busy) }
                 }
             }
-        }.navigationTitle("Kalenderänderungen").task { await load() }
+        }.pageTitle("Kalenderänderungen").task { await load() }
             .onChange(of: scenePhase) { _, phase in if phase != .active { model.interrupt() } }
             .onDisappear { model.interrupt() }
     }

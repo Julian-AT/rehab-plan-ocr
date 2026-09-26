@@ -24,7 +24,7 @@ struct CalendarView: View {
     }
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 Section("Kalenderdatei") {
                     Button("\(assessment?.readyIds.count ?? 0) Termine als ICS exportieren", systemImage: "square.and.arrow.up") { Task { await export() } }
                         .disabled(busy || assessment?.readyIds.isEmpty != false)
@@ -44,7 +44,7 @@ struct CalendarView: View {
                 if let proposal {
                     Section("Ersetzung") {
                         ForEach(proposal.operations, id: \.id) { op in
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: AppSpacing.small) {
                                 Text(op.after?.title ?? op.before?.title ?? "Termin")
                                 Text(operationTitle(op.kind)).foregroundStyle(.secondary)
                                 if let before = op.before { Text("Bisher: \(before.startUtc)").font(.subheadline) }
@@ -73,7 +73,7 @@ struct CalendarView: View {
                 }
                 if let error { Text(error).foregroundStyle(.red) }
                 if busy { ProcessingRow(text: "Wird vorbereitet …") }
-            }.navigationTitle("Export und Ersetzen")
+            }.pageTitle("Export und Ersetzen")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.disabled(busy) } }
                 .task { await load() }
                 .onChange(of: complete) { proposal = nil; approveRemovals = false }
@@ -158,7 +158,7 @@ struct RecoveryView: View {
                 }
                 if pending.isEmpty { Text("Keine unklaren Schreibvorgänge.") }
             }
-            .navigationTitle("Kalenderabgleich")
+            .pageTitle("Kalenderabgleich")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
             .task { await load() }
             .confirmationDialog("Ergebnis im Kalender geprüft?", isPresented: Binding(get: { resolution != nil }, set: { if !$0 { resolution = nil } }), titleVisibility: .visible) {

@@ -22,6 +22,7 @@ struct VoiceSnapshot {
     private(set) var sequence: UInt64 = 0
     private(set) var revision: UInt64 = 0
     var response = "Was möchtest du tun?"
+    var failure: String?
     var question: Question = .action
     var failures = 0
     var busy = false
@@ -41,10 +42,11 @@ struct VoiceSnapshot {
         SpeechOutput.shared.speak(text)
     }
     func beginTurn() async {
+        failure = nil
         guard !busy, failures < 2, edits.proposal == nil else { return }
-        turn += 1; sequence += 1
+        turn += 1; sequence += 1; let current = session
         do { try await recorder.beginTurn() }
-        catch { say(error.localizedDescription) }
+        catch { if session == current { failure = error.localizedDescription; response = error.localizedDescription } }
     }
     func endTurn() async {
         guard !busy else { return }; busy = true; let current = session
@@ -104,7 +106,11 @@ struct VoiceSnapshot {
         }
     }
     func submitAction(_ action: VoiceIntent.Action) async {
-        recorder.cancelTurn(); edits.interrupt(); failures = 0; intent = VoiceIntent(); intent.action = action; question = .action; selected = nil; candidates = []; suggested = nil
+        guard !busy && !edits.busy else { return }
+        session = UUID().uuidString; let current = session
+        busy = true; failure = nil; SpeechOutput.shared.stop()
+        defer { if session == current { busy = false } }
+        recorder.cancelTurn(); edits.interrupt(); failures = 0; intent = VoiceIntent(); intent.action = action; if action == .list { intent.date = Calendar.current.startOfDay(for: .now) }; question = .action; selected = nil; candidates = []; suggested = nil
         if action == .create { title = ""; await advanceCreation() } else { await findEvents() }
     }
     private func findEvents() async {
@@ -195,83 +201,22 @@ struct VoiceSnapshot {
     }
     private func presentProposal() {
         recorder.cancelTurn()
-        if let proposal = edits.proposal { response = proposal.spoken; question = .confirmation; revision += 1 }
+        if let proposal = edits.proposal { say(proposal.spoken, question: .confirmation) }
         else if edits.systemEvent != nil { say("Einladungen und ganze Serien bitte im Systemkalender bearbeiten.", question: .action) }
         else { say(edits.error ?? "Bitte die Angaben auf dem Bildschirm prüfen.", question: .action) }
     }
     func confirmProposal() async {
-        recorder.cancelTurn(); await edits.confirm(); response = edits.result ?? edits.error ?? "Bitte Kalender abgleichen."; question = .action; candidates = []; selected = nil; revision += 1
+        guard !busy else { return }
+        let current = session
+        recorder.cancelTurn(); SpeechOutput.shared.stop(); await edits.confirm()
+        guard session == current else { return }
+        candidates = []; selected = nil
+        say(edits.result ?? edits.error ?? "Bitte Kalender abgleichen.", question: .action)
     }
-    func cancelSession() {
+    func cancelSession(preserveResponse: Bool = false) {
+        let previousResponse = response
         recorder.cancelTurn(); edits.interrupt(); busy = false; session = UUID().uuidString; revision += 1; sequence += 1
-        question = .action; candidates = []; selected = nil; intent = VoiceIntent(); title = ""; failures = 0; suggested = nil
-        response = "Unterbrochen. Du kannst eine neue Frage starten."; SpeechOutput.shared.stop()
-    }
-}
-struct VoiceView: View {
-    let core: NativeApplication
-    @State private var model: VoiceModel
-    @State private var settings = false
-    @State private var editor = false
-    @State private var history = false
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var scenePhase
-    init(core: NativeApplication) { self.core = core; _model = State(initialValue: VoiceModel(core: core)) }
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text(model.recorder.state == .recording ? "Ich höre zu" : model.recorder.state == .preparing ? "Mikrofon vorbereiten …" : model.recorder.state == .finishing || model.busy ? "Wird verstanden …" : model.response).font(.title3).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("voice-response")
-                    if let failure = model.recorder.failure { Text(failure).foregroundStyle(.red) }
-                    if !model.recorder.transcript.isEmpty { Text(model.recorder.transcript).foregroundStyle(.secondary) }
-                    if model.edits.proposal == nil {
-                        if model.recorder.state == .recording {
-                            Button { Task { await model.endTurn() } } label: { Text("Fertig").frame(maxWidth: .infinity).controlHeight() }.buttonStyle(PrimaryActionStyle())
-                        } else {
-                            Button { Task { await model.beginTurn() } } label: { Label("Sprechen", systemImage: "mic.fill").frame(maxWidth: .infinity).controlHeight() }.buttonStyle(PrimaryActionStyle()).disabled(model.busy || model.failures >= 2 || model.recorder.state != .idle)
-                        }
-                    }
-                    Button("Abbrechen") { model.cancelSession() }.controlHeight()
-                    if model.recorder.state == .idle { SpeechControls(text: model.response) }
-                }
-                if let proposal = model.edits.proposal {
-                    ProposalCard(proposal: proposal, busy: model.edits.busy, confirm: { Task { await model.confirmProposal() } }, cancel: { model.cancelSession() })
-                } else {
-                    Section("Du kannst auch antippen") {
-                        if model.question == .title { TextField("Bezeichnung", text: $model.title); Button("Bezeichnung übernehmen") { Task { await model.editSlots() } }.controlHeight() }
-                        if model.question == .date { DatePicker("Datum", selection: $model.date, displayedComponents: .date); Button("Datum übernehmen") { Task { await model.editSlots() } }.controlHeight() }
-                        if model.question == .time { DatePicker("Uhrzeit", selection: $model.time, displayedComponents: .hourAndMinute); Button("Uhrzeit übernehmen") { Task { await model.editSlots() } }.controlHeight() }
-                        if model.question == .duration { TextField("Dauer in Minuten", value: $model.duration, format: .number).keyboardType(.numberPad); Button("Dauer übernehmen") { Task { await model.editSlots() } }.controlHeight() }
-                        if let suggested = model.suggested { Text("Mögliche Aktion: \(suggestionTitle(suggested)). Bitte unten auswählen.") }
-                        ForEach(model.candidates) { event in
-                            Button { Task { await model.choose(event) } } label: { CalendarAgendaRow(event: event, now: .now) }.buttonStyle(.plain).disabled(model.busy)
-                        }
-                        Button("Nächsten Termin vorlesen") { Task { await model.submitAction(.next) } }.controlHeight()
-                        Button("Termin hinzufügen") { Task { await model.submitAction(.create) } }.controlHeight()
-                        Button("Termin ändern") { Task { await model.submitAction(.update) } }.controlHeight()
-                        Button("Kalendereintrag löschen") { Task { await model.submitAction(.remove) } }.controlHeight()
-                        Button("Angaben direkt bearbeiten") { model.recorder.cancelTurn(); editor = true }.controlHeight()
-                    }.disabled(model.busy)
-                }
-                if let event = model.edits.systemEvent { Button("Im Systemkalender öffnen") { Task { await model.edits.openSystem(event) } }.controlHeight() }
-                if let error = model.edits.error { Text(error).foregroundStyle(.red) }
-                Button("Verlauf und Rückgängig") { model.cancelSession(); history = true }.controlHeight()
-                Button("Sprachhilfe einrichten") { model.cancelSession(); settings = true }.controlHeight()
-            }.navigationTitle("Sprachhilfe")
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Schließen") { model.cancelSession(); dismiss() } } }
-                .task { await model.beginTurn() }
-                .onChange(of: scenePhase) { _, phase in if phase != .active { model.cancelSession() } }
-                .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { _ in model.cancelSession() }
-                .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) { notification in
-                    if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt, reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { model.cancelSession() }
-                }
-                .onDisappear { model.cancelSession() }
-                .sheet(isPresented: $settings) { NavigationStack { VoiceSettingsView() } }
-                .sheet(isPresented: $editor) { EventEditorView(core: core, original: model.selected) {} }
-                .sheet(isPresented: $history) { NavigationStack { EventHistoryView(core: core) } }
-        }
-    }
-    private func suggestionTitle(_ action: SuggestedCalendarAction) -> String {
-        switch action { case .find: "Termin finden"; case .create: "Termin hinzufügen"; case .change: "Termin ändern"; case .delete: "Kalendereintrag löschen"; case .unsupported: "Bitte Kalenderfunktion auswählen" }
+        question = .action; candidates = []; selected = nil; intent = VoiceIntent(); title = ""; failures = 0; suggested = nil; failure = nil
+        response = preserveResponse ? previousResponse : "Was möchtest du tun?"; SpeechOutput.shared.stop()
     }
 }

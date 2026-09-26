@@ -18,7 +18,7 @@ struct DraftQuestionView: View {
     private var rowQuestion: Bool { question.field.hasPrefix("issue:") }
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 Section {
                     SourceCropView(core: core, id: question.documentId, polygon: question.polygon)
                     Text(question.message).fixedSize(horizontal: false, vertical: true)
@@ -39,7 +39,7 @@ struct DraftQuestionView: View {
                 Button("Für später lassen") { dismiss() }.disabled(busy)
                 if let error { Text(error).foregroundStyle(.red) }
             }
-            .navigationTitle(questionTitle(question.field))
+            .pageTitle(questionTitle(question.field))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Schließen") { dismiss() }.disabled(busy) } }
             .task {
                 let loaded = ReviewModel(core: core, id: question.documentId)
@@ -113,7 +113,7 @@ struct OriginalPagesView: View {
             List {
                 NavigationLink("Originaldatei") { SourceView(core: core, id: id, polygons: []) }
                 ForEach(ids, id: \.self) { page in NavigationLink("Seite \((ids.firstIndex(of: page) ?? 0) + 1)") { SourceView(core: core, id: page, polygons: []) } }
-            }.navigationTitle("Originale")
+            }.pageTitle("Originale")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
                 .task { ids = (try? await core.pageGroup(id: id)) ?? [] }
         }
