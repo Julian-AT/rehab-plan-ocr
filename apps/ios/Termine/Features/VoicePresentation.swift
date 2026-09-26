@@ -84,7 +84,8 @@ private struct VoiceOrbSurface: View {
       Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5)
     }
     .scaleEffect(1 + energy * 0.045)
-    .shadow(color: AppPalette.tint.opacity(0.10 + energy * 0.05), radius: 18 + energy * 10, y: 6)
+    .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 12)
+    .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 3)
   }
 }
 

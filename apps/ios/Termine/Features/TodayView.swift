@@ -474,6 +474,7 @@ private struct TimelineGutter: View {
 private struct TimelineAppointment: View {
   let event: CalendarEvent
   let now: Date
+  @Environment(\.colorScheme) private var colorScheme
   private var category: EventCategory { EventCategory.classify(event.values.title) }
   let width: Double
   let height: Double
@@ -499,13 +500,13 @@ private struct TimelineAppointment: View {
           time.font(.caption2).fixedSize()
         }
       }
-      .foregroundStyle(category.text)
+      .foregroundStyle(.primary)
       .padding(.horizontal, 8).padding(.vertical, 4)
       .frame(width: max(0, width), height: height, alignment: .topLeading)
       .clipped()
-      .background(category.surface, in: .rect(cornerRadius: 10))
+      .background(category.surface(in: colorScheme), in: .rect(cornerRadius: 10))
       .overlay(alignment: .leading) {
-        RoundedRectangle(cornerRadius: 2).fill(category.text.opacity(0.25))
+        RoundedRectangle(cornerRadius: 2).fill(category.color)
           .frame(width: 3).padding(.vertical, 8)
       }
       .contentShape(.rect)
@@ -518,17 +519,19 @@ private struct TimelineAppointment: View {
   }
   private var time: some View {
     Text("\(eventTime(event.values.start))–\(eventTime(event.values.end))")
-      .monospacedDigit().foregroundStyle(category.text).lineLimit(1)
+      .monospacedDigit().foregroundStyle(category.secondaryText(in: colorScheme)).lineLimit(1)
   }
   private func appointmentLabel(details: Int, titleLines: Int) -> some View {
     VStack(alignment: .leading, spacing: 2) {
       Text(event.values.title).font(.subheadline.weight(.semibold)).lineLimit(titleLines)
       time.font(.caption)
       if let room, details > 0 {
-        Text(room).font(.caption).foregroundStyle(category.text).lineLimit(1)
+        Text(room).font(.caption).foregroundStyle(category.secondaryText(in: colorScheme))
+          .lineLimit(1)
       }
       if let therapist = event.therapist, details > (room == nil ? 0 : 1) {
-        Text(therapist).font(.caption).foregroundStyle(category.text).lineLimit(1)
+        Text(therapist).font(.caption).foregroundStyle(category.secondaryText(in: colorScheme))
+          .lineLimit(1)
       }
     }
     .frame(width: max(0, width - 16), alignment: .leading)
@@ -540,6 +543,7 @@ private struct TimelineAppointment: View {
 struct CalendarAgendaRow: View {
   let event: CalendarEvent
   let now: Date
+  @Environment(\.colorScheme) private var colorScheme
   private var category: EventCategory { EventCategory.classify(event.values.title) }
   var marker: String? = nil
   @ScaledMetric(relativeTo: .body) private var timeWidth = 76
@@ -556,7 +560,7 @@ struct CalendarAgendaRow: View {
         } else {
           Text(eventTime(event.values.start)).font(.body.weight(.semibold)).monospacedDigit()
           Text(eventTime(event.values.end)).font(.subheadline).monospacedDigit().foregroundStyle(
-            category.text)
+            category.secondaryText(in: colorScheme))
         }
       }.frame(width: timeWidth, alignment: .leading)
       VStack(alignment: .leading, spacing: AppSpacing.small) {
@@ -564,28 +568,28 @@ struct CalendarAgendaRow: View {
         Text(event.values.title).font(.body.weight(.medium))
         Text(event.placeDescription).font(.subheadline)
         Text(event.therapistDescription).font(.subheadline).foregroundStyle(
-          category.text)
+          category.secondaryText(in: colorScheme))
         if !Calendar.current.isDate(
           event.values.start, inSameDayAs: event.values.end.addingTimeInterval(-1))
         {
-          Text(span).font(.subheadline).foregroundStyle(category.text)
+          Text(span).font(.subheadline).foregroundStyle(category.secondaryText(in: colorScheme))
         }
         Text(
           event.source.isEmpty ? event.calendar_title : "\(event.calendar_title) · \(event.source)"
         )
-        .font(.subheadline).foregroundStyle(category.text)
+        .font(.subheadline).foregroundStyle(category.secondaryText(in: colorScheme))
         if event.values.end <= now {
-          Text("Vorbei").font(.subheadline).foregroundStyle(category.text)
+          Text("Vorbei").font(.subheadline).foregroundStyle(category.secondaryText(in: colorScheme))
         }
       }.frame(maxWidth: .infinity, alignment: .leading)
     }.padding(8).background(
-      category.surface, in: .rect(cornerRadius: 8)
+      category.surface(in: colorScheme), in: .rect(cornerRadius: 8)
     )
     .overlay(alignment: .leading) {
-      Capsule().fill(category.text.opacity(0.25)).frame(width: 3).padding(
+      Capsule().fill(category.color).frame(width: 3).padding(
         .vertical, 6)
     }
-    .fixedSize(horizontal: false, vertical: true).foregroundStyle(category.text).contentShape(.rect)
+    .fixedSize(horizontal: false, vertical: true).foregroundStyle(.primary).contentShape(.rect)
     .accessibilityElement(children: .combine)
   }
   private var span: String {

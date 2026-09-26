@@ -2,15 +2,16 @@ import Foundation
 
 enum EventCategory: String, CaseIterable {
   case therapy, medical, meal, organization, other
-  // Exact Greens-7 swatches supplied by the user, in category order.
-  // Keep these surfaces in both appearances; text contrast follows the swatch.
-  var palette: (surface: UInt32, text: UInt32) {
+  // Original Greens-7 swatches remain visible in the narrow accents and legend.
+  // Card fills use transparency so the native background stays visible.
+  static let surfaceOpacity = (light: 0.18, dark: 0.22)
+  var rgb: UInt32 {
     switch self {
-    case .therapy: (0xA1D99B, 0x000000)
-    case .medical: (0x74C476, 0x000000)
-    case .meal: (0x41AB5D, 0x000000)
-    case .organization: (0x238B45, 0x000000)
-    case .other: (0x005A32, 0xFFFFFF)
+    case .therapy: 0xA1D99B
+    case .medical: 0x74C476
+    case .meal: 0x41AB5D
+    case .organization: 0x238B45
+    case .other: 0x005A32
     }
   }
   var title: String {
@@ -54,8 +55,13 @@ enum EventCategory: String, CaseIterable {
         green: Double((rgb >> 8) & 255) / 255,
         blue: Double(rgb & 255) / 255, opacity: 1)
     }
-    var color: Color { color(palette.surface) }
-    var surface: Color { color }
-    var text: Color { color(palette.text) }
+    var color: Color { color(rgb) }
+    func surface(in scheme: ColorScheme) -> Color {
+      color.opacity(scheme == .dark ? Self.surfaceOpacity.dark : Self.surfaceOpacity.light)
+    }
+    func secondaryText(in scheme: ColorScheme) -> Color {
+      // Includes elevated grouped backgrounds used by sheets and the day list.
+      Color(.sRGB, white: scheme == .dark ? 0.78 : 0.30, opacity: 1)
+    }
   }
 #endif
