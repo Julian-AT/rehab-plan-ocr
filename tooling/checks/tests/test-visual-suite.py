@@ -145,6 +145,11 @@ class VisualSuiteTests(unittest.TestCase):
             patch.object(
                 suite, "source_snapshot", side_effect=AssertionError("Not the tested source")
             ),
+            patch.object(
+                suite.workspace,
+                "location",
+                side_effect=AssertionError("Current build storage is unrelated to old results"),
+            ),
             patch.object(suite.subprocess, "check_output", return_value="b" * 40),
             patch(
                 "sys.argv",

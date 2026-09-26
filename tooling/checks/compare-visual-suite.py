@@ -233,12 +233,13 @@ def main():
     report["xcresult"] = str(result_bundle.resolve())
     report["source_result_receipt_sha256"] = sha(output / "source-result.json")
     report["result_reader_sha256"] = sha(ROOT / "tooling/utils/xcresult.py")
-    app = (
-        workspace.location("ios", ROOT)
-        / "DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
-    )
-    if args.capture and (app / "Termine.debug.dylib").is_file():
-        report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
+    if args.capture:
+        app = (
+            workspace.location("ios", ROOT)
+            / "DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
+        )
+        if (app / "Termine.debug.dylib").is_file():
+            report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
     (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     write_review(report, BASELINE, output)
     print(json.dumps({k: v for k, v in report.items() if k not in {"images", "sources"}}, indent=2))
