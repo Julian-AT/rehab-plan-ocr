@@ -1,0 +1,1 @@
+Calendar tools: integration checks passed; no calendar writes from proposals.

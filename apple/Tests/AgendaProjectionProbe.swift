@@ -99,18 +99,22 @@ import Foundation
         precondition(window.scrollMinute >= 0 && window.scrollMinute <= 720)
         // The requested swipe direction, vertical scroll rejection, week and DST boundaries.
         let sunday = monday.days[6]
-        precondition(AgendaNavigation.swipedDate(sunday, horizontal: 90, vertical: 4, calendar: calendar) == monday.end)
-        precondition(AgendaNavigation.swipedDate(monday.end, horizontal: -90, vertical: 4, calendar: calendar) == sunday)
+        precondition(AgendaNavigation.swipedDate(sunday, horizontal: -90, vertical: 4, calendar: calendar) == monday.end)
+        precondition(AgendaNavigation.swipedDate(monday.end, horizontal: 90, vertical: 4, calendar: calendar) == sunday)
         precondition(AgendaNavigation.swipedDate(now, horizontal: 60, vertical: 100, calendar: calendar) == nil)
         precondition(AgendaNavigation.swipedDate(now, horizontal: 12, vertical: 0, calendar: calendar) == nil)
         for date in [springDate, dstNow] {
-            let next = AgendaNavigation.swipedDate(date, horizontal: 100, vertical: 0, calendar: calendar)!
+            let next = AgendaNavigation.swipedDate(date, horizontal: -100, vertical: 0, calendar: calendar)!
             precondition(calendar.component(.hour, from: next) == 0)
-            precondition(AgendaNavigation.swipedDate(next, horizontal: -100, vertical: 0, calendar: calendar) == calendar.startOfDay(for: date))
+            precondition(AgendaNavigation.swipedDate(next, horizontal: 100, vertical: 0, calendar: calendar) == calendar.startOfDay(for: date))
         }
+        let lastOfYear = iso.date(from: "2026-12-31T11:00:00Z")!
+        let firstOfYear = AgendaNavigation.swipedDate(lastOfYear, horizontal: -80, vertical: 0, calendar: calendar)!
+        precondition(calendar.component(.year, from: firstOfYear) == 2027 && calendar.component(.day, from: firstOfYear) == 1)
         for density in AgendaDensity.allCases {
             let segments = DayAgenda(events: [short, adjacent, next, overlap, after], date: now, now: now, calendar: calendar).timed
             let readable = ReadableAgendaLayout(segments, minutes: 1440, pointsPerHour: density.pointsPerHour, heights: ["short": 180])
+            for minute in stride(from: 0.0, through: 1440.0, by: 15) { precondition(abs(readable.minute(at: readable.y(minute)) - minute) < 0.01) }
             precondition(readable.items.first { $0.id == "short" }!.height >= 180)
             precondition(readable.items.allSatisfy { $0.height >= 100 })
             precondition(zip(readable.positions, readable.positions.dropFirst()).allSatisfy { $0 <= $1 })

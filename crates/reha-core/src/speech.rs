@@ -87,6 +87,19 @@ fn phonemize(root: &Path, text: &str) -> Result<String> {
     Ok(output)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SpeechMark {
+    pub text: String,
+    pub start: f64,
+    pub end: f64,
+}
+#[derive(Debug, Clone)]
+pub struct TimedSpeech {
+    pub audio: Vec<u8>,
+    pub marks: Vec<SpeechMark>,
+    pub duration: f64,
+}
+
 pub struct SpeechEngine {
     root: PathBuf,
     vocab: HashMap<char, i64>,
@@ -138,11 +151,23 @@ impl SpeechEngine {
     pub fn render(
         &mut self,
         text: &str,
-        _voice: &str,
+        voice: &str,
         speed: f32,
         request: u64,
         latest: &AtomicU64,
     ) -> Result<Vec<u8>> {
+        Ok(self
+            .render_timed(text, voice, speed, request, latest)?
+            .audio)
+    }
+    pub fn render_timed(
+        &mut self,
+        text: &str,
+        _voice: &str,
+        speed: f32,
+        request: u64,
+        latest: &AtomicU64,
+    ) -> Result<TimedSpeech> {
         let check = || {
             if latest.load(Ordering::Acquire) == request {
                 Ok(())
@@ -159,16 +184,47 @@ impl SpeechEngine {
             return Err(err("Ungültiger Vorlesetext oder Geschwindigkeit"));
         }
         let normalized = crate::speech_text::normalize(text);
-        let phonemes = phonemize(&self.root, &normalized)?;
+        // Keep word ownership through phonemization. If eSpeak joins/splits a
+        // group, expose that small group instead of inventing individual timing.
+        let words: Vec<_> = normalized.split_whitespace().collect();
+        let mut filtered = String::new();
+        let mut owners: Vec<(String, usize, usize)> = Vec::new();
+        let mut token_offset = 0;
+        for group in words.chunks(3) {
+            check()?;
+            let phonemes = phonemize(&self.root, &group.join(" "))?;
+            let parts: Vec<String> = phonemes
+                .split_whitespace()
+                .map(|part| {
+                    part.chars()
+                        .filter(|c| self.vocab.contains_key(c))
+                        .collect()
+                })
+                .filter(|p: &String| !p.is_empty())
+                .collect();
+            if parts.len() == group.len() {
+                for (word, part) in group.iter().zip(parts) {
+                    let count = part.chars().count();
+                    owners.push((word.to_string(), token_offset, token_offset + count));
+                    filtered.push_str(&part);
+                    filtered.push(' ');
+                    token_offset += count + 1;
+                }
+            } else {
+                let part = parts.join(" ");
+                let count = part.chars().count();
+                owners.push((group.join(" "), token_offset, token_offset + count));
+                filtered.push_str(&part);
+                filtered.push(' ');
+                token_offset += count + 1;
+            }
+        }
         check()?;
-        let filtered: String = phonemes
-            .chars()
-            .filter(|c| self.vocab.contains_key(c))
-            .collect();
         if filtered.trim().is_empty() {
             return Err(err("Kein aussprechbarer Text"));
         }
         let mut audio = Vec::new();
+        let mut token_times: Vec<(f64, f64)> = Vec::new();
         // Bound each graph invocation by phonemes, not written characters. Long
         // words also split, and no token is dropped at a chunk boundary.
         for chunk in chunks(&filtered, 400) {
@@ -207,13 +263,16 @@ impl SpeechEngine {
                         let (_, samples) = output["waveform"]
                             .try_extract_tensor::<f32>()
                             .map_err(err)?;
-                        Ok(samples.to_vec())
+                        let (_, duration) = output["duration"]
+                            .try_extract_tensor::<i64>()
+                            .map_err(err)?;
+                        Ok((samples.to_vec(), duration.to_vec()))
                     });
                 finished.store(true, Ordering::Release);
                 result
             });
             check()?;
-            let samples = result?;
+            let (samples, durations) = result?;
             if samples.is_empty()
                 || samples.len() > 24_000 * 120
                 || samples.iter().any(|v| !v.is_finite())
@@ -221,11 +280,60 @@ impl SpeechEngine {
             {
                 return Err(err("Die erzeugte Sprachausgabe ist leer oder ungültig"));
             }
+            token_times.extend(duration_marks(
+                &durations,
+                length,
+                samples.len(),
+                audio.len(),
+            )?);
             audio.extend(samples);
         }
         check()?;
-        Ok(wav(&audio))
+        let duration = audio.len() as f64 / 24_000.0;
+        let marks = owners
+            .into_iter()
+            .filter_map(|(text, start, end)| {
+                if start >= end {
+                    return None;
+                }
+                Some(SpeechMark {
+                    text,
+                    start: token_times.get(start)?.0,
+                    end: token_times.get(end - 1)?.1,
+                })
+            })
+            .collect();
+        Ok(TimedSpeech {
+            audio: wav(&audio),
+            marks,
+            duration,
+        })
     }
+}
+/// The pinned Victoria graph produces exactly 600 samples per duration unit.
+/// BOS/EOS consume audio too, but never receive a visible word label.
+fn duration_marks(
+    durations: &[i64],
+    tokens: usize,
+    samples: usize,
+    offset: usize,
+) -> Result<Vec<(f64, f64)>> {
+    if durations.len() != tokens + 2 || durations.iter().any(|v| *v < 0 || *v > 4800) {
+        return Err(err("Ungültige Wortdauern"));
+    }
+    let total: usize = durations.iter().map(|v| *v as usize * 600).sum();
+    if total != samples {
+        return Err(err("Wortdauern passen nicht zum Audio"));
+    }
+    let mut cursor = offset + durations[0] as usize * 600;
+    Ok(durations[1..=tokens]
+        .iter()
+        .map(|value| {
+            let start = cursor;
+            cursor += *value as usize * 600;
+            (start as f64 / 24_000.0, cursor as f64 / 24_000.0)
+        })
+        .collect())
 }
 fn chunks(text: &str, max: usize) -> Vec<String> {
     let mut result = Vec::new();
@@ -275,6 +383,16 @@ mod tests {
         let parts = chunks(&text, 400);
         assert!(parts.iter().all(|p| p.chars().count() <= 400));
         assert_eq!(parts.concat(), text);
+    }
+    #[test]
+    fn word_marks_include_padding_and_reject_bad_durations() {
+        assert_eq!(
+            duration_marks(&[2, 3, 4, 1], 2, 6000, 24000).unwrap(),
+            vec![(1.05, 1.125), (1.125, 1.225)]
+        );
+        assert!(duration_marks(&[2, -3, 4, 1], 2, 2400, 0).is_err());
+        assert!(duration_marks(&[2, 3, 4, 1], 2, 6001, 0).is_err());
+        assert!(duration_marks(&[2, 3], 2, 3000, 0).is_err());
     }
     #[test]
     fn wav_is_24khz_mono_pcm16() {

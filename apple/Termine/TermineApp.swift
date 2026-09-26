@@ -75,7 +75,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
             }
         }
         .environment(preferences)
-        .onChange(of: tab) { old, _ in if old == .voice { voice.cancelSession() }; refreshID += 1 }
+        .onChange(of: tab) { old, _ in if old == .voice { voice.cancelSession(reason: "tab") }; refreshID += 1 }
         .modifier(CapturePresentation(scanner: scanner))
         .preferredColorScheme(preferences.value?.appearance == "dark" ? .dark : preferences.value?.appearance == "light" ? .light : nil)
         .onOpenURL { url in Task { await openEvent(url) } }
@@ -99,17 +99,19 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
             refreshID += 1
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { voice.cancelSession() }
+            if phase == .background { voice.cancelSession(reason: "background") }
             if phase == .background { scanner.suspend() }
             if phase == .active { scanner.resume(); refreshID += 1; Task { await scanner.recoverShares(); await pendingOpen() } }
         }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { notification in
             if let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-               type == AVAudioSession.InterruptionType.began.rawValue { voice.cancelSession() }
+               type == AVAudioSession.InterruptionType.began.rawValue { voice.cancelSession(reason: "interruption") }
         }
+        .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereResetNotification)) { _ in voice.cancelSession() }
+        .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereLostNotification)) { _ in voice.cancelSession() }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) { notification in
             if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-               reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { voice.cancelSession() }
+               (reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue || reason == AVAudioSession.RouteChangeReason.newDeviceAvailable.rawValue) { voice.cancelSession(reason: "route-\(reason)") }
         }
         .task {
             await preferences.load()

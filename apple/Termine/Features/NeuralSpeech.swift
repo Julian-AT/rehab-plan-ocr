@@ -2,25 +2,19 @@ import SwiftUI
 import AVFoundation
 import RehaCore
 
-@MainActor @Observable final class SpeechOutput: NSObject, AVAudioPlayerDelegate {
+struct PlaybackWord: Identifiable { let id: Int; let text: String }
+@MainActor @Observable final class SpeechOutput {
     enum Phase: String { case idle, preparing, playing, failed }
     static let shared = SpeechOutput()
     var phase: Phase = .idle
     var status = "Bereit zum Vorlesen"
     var lastText = ""
     private(set) var level = 0.0
-    private var meterTask: Task<Void, Never>?
-    #if DEBUG && targetEnvironment(simulator)
-    private var measuredFrames = 0
-    private var peakLevel = 0.0
-    private func saveAudioEvidence() {
-        guard ProcessInfo.processInfo.arguments.contains("--audio-evidence") else { return }
-        let data: [String: Any] = ["playing_frames": measuredFrames, "peak_level": peakLevel, "time": Date().timeIntervalSince1970]
-        if let encoded = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys) {
-            try? encoded.write(to: URL.documentsDirectory.appendingPathComponent("preview-audio-meter.json"), options: .atomic)
-        }
-    }
-    #endif
+    private(set) var words: [PlaybackWord] = []
+    private(set) var spokenText = ""
+    private(set) var lineVisible = false
+    var onFinished: (() -> Void)?
+    var onFailure: ((String) -> Void)?
     var speaking: Bool { phase == .playing || phase == .preparing }
     var voiceID: String {
         get { "victoria" }
@@ -31,129 +25,133 @@ import RehaCore
         set { UserDefaults.standard.set(newValue, forKey: "voice.neural.rate") }
     }
     private let renderer = NativeSpeech(modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-german").path)
-    private var player: AVAudioPlayer?
     private var generation: UInt64 = 0
     private var task: Task<Void, Never>?
-    private var playback: CheckedContinuation<Bool, Never>?
-    private var cachedKey = ""
-    private var cachedAudio: [Data] = []
-    func speak(_ text: String) {
-        stop(); lastText = text
-        voiceID = "victoria"
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { status = "Kein Text zum Vorlesen"; return }
-        if UIAccessibility.isVoiceOverRunning {
-            status = "VoiceOver liest den Text vor"
-            UIAccessibility.post(notification: .announcement, argument: text)
-            return
+    private var meterTask: Task<Void, Never>?
+    private var fadeTask: Task<Void, Never>?
+    private var queue: [String] = []
+    private var inputEnded = false
+    private var wordIndex = 0
+    private var currentMarks: [SpeechWordMark] = []
+    private var revealed = 0
+    private var committed = 0
+    private var announced = false
+    #if DEBUG && targetEnvironment(simulator)
+    private var measuredFrames = 0
+    private var peakLevel = 0.0
+    private func saveAudioEvidence() {
+        guard ProcessInfo.processInfo.arguments.contains("--audio-evidence") else { return }
+        let data: [String: Any] = ["playing_frames": measuredFrames, "peak_level": peakLevel, "spoken_text": spokenText, "visible_words": words.count]
+        if let encoded = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys) {
+            try? encoded.write(to: URL.documentsDirectory.appendingPathComponent("preview-audio-meter.json"), options: .atomic)
         }
-        let id = generation, voice = voiceID, speed = Float(rate)
-        let key = "\(voice)|\(speed)|\(text)"
-        let cached = cachedKey == key ? cachedAudio : []
-        phase = .preparing; status = "Stimme wird vorbereitet …"
+    }
+    #endif
+    func speak(_ text: String) {
+        beginResponse()
+        for phrase in Self.phrases(text) { appendPhrase(phrase) }
+        finishResponse()
+    }
+    func beginResponse() {
+        stop(); words = []; spokenText = ""; lastText = ""; wordIndex = 0
+        announced = UIAccessibility.isVoiceOverRunning
+        phase = .preparing; status = "Stimme wird vorbereitet …"; inputEnded = false
+        guard !announced else { return }
+        let id = generation, speed = Float(rate), renderer = renderer
         task = Task {
             do {
-                let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-                try session.setActive(true)
-                let phrases = Self.phrases(text)
-                var rendered: [Data] = []
-                var pending: Task<Data, Error>?
-                defer { pending?.cancel() }
-                for (index, phrase) in phrases.enumerated() {
+                var prepared: Task<SpeechRender, Error>?
+                defer { prepared?.cancel() }
+                while !Task.isCancelled && generation == id {
+                    if queue.isEmpty && prepared == nil {
+                        if inputEnded { break }
+                        try await Task.sleep(for: .milliseconds(25)); continue
+                    }
+                    let audio: SpeechRender
+                    if let next = prepared { audio = try await next.value; prepared = nil }
+                    else { let text = queue.removeFirst(); audio = try await renderer.renderTimed(text: text, voice: "victoria", speed: speed, request: id) }
+                    guard generation == id else { return }
                     try Task.checkCancellation()
+                    ConversationAudio.shared.stopPlayback()
+                    currentMarks = audio.marks; revealed = 0; committed = 0
+                    phase = .playing; status = "Wird vorgelesen"; lineVisible = true
+                    if !queue.isEmpty {
+                        let text = queue.removeFirst()
+                        prepared = Task { try await renderer.renderTimed(text: text, voice: "victoria", speed: speed, request: id) }
+                    }
+                    meterTask = Task { [weak self] in
+                        while !Task.isCancelled {
+                            guard let self, self.generation == id else { return }
+                            self.updateWords(at: ConversationAudio.shared.playbackTime)
+                            self.level += (ConversationAudio.shared.level - self.level) * 0.4
+                            #if DEBUG && targetEnvironment(simulator)
+                            self.measuredFrames += 1; self.peakLevel = max(self.peakLevel, self.level)
+                            #endif
+                            try? await Task.sleep(for: .milliseconds(30))
+                        }
+                    }
+                    let finished = try await ConversationAudio.shared.play(wav: Data(audio.audio))
+                    meterTask?.cancel(); meterTask = nil
+                    guard generation == id else { return }
+                    guard finished else { throw CancellationError() }
+                    updateWords(at: audio.duration); currentMarks = []
                     phase = .preparing; level = 0
-                    let data: Data
-                    if index < cached.count { data = cached[index] }
-                    else if let prepared = pending { data = try await prepared.value; pending = nil }
-                    else { data = Data(try await renderer.render(text: phrase, voice: voice, speed: speed, request: id)) }
-                    guard generation == id else { return }
-                    try Task.checkCancellation()
-                    let player = try AVAudioPlayer(data: data)
-                    self.player = player; player.delegate = self; player.isMeteringEnabled = true
-                    player.prepareToPlay()
-                    // Prepare the next phrase while this one plays, without saving audio.
-                    if index + 1 < phrases.count && cached.isEmpty {
-                        let next = phrases[index + 1], renderer = self.renderer
-                        pending = Task { Data(try await renderer.render(text: next, voice: voice, speed: speed, request: id)) }
-                    }
-                    phase = .playing; status = "Wird vorgelesen"
-                    startMetering(player, generation: id)
-                    let finished = await withCheckedContinuation { continuation in
-                        playback = continuation
-                        if !player.play() { playback = nil; continuation.resume(returning: false) }
-                    }
-                    meterTask?.cancel(); meterTask = nil; level = 0
-                    guard generation == id else { return }
-                    guard finished else { throw LocalSpeechError.message("Audio konnte nicht abgespielt werden. Bitte erneut versuchen.") }
-                    rendered.append(data)
                 }
-                guard generation == id else { return }
-                cachedKey = key; cachedAudio = rendered
-                phase = .idle; status = "Zu Ende vorgelesen"; player = nil
-                try? session.setActive(false, options: .notifyOthersOnDeactivation)
+                guard generation == id, !Task.isCancelled else { return }
+                complete()
             } catch {
                 guard generation == id, !Task.isCancelled else { return }
-                meterTask?.cancel(); meterTask = nil; level = 0
-                player?.stop(); player = nil; phase = .failed
-                status = "Vorlesen fehlgeschlagen: \(userMessage(error))"
-                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                meterTask?.cancel(); meterTask = nil; level = 0; lineVisible = false
+                ConversationAudio.shared.stopPlayback(); ConversationAudio.shared.releasePlayback()
+                phase = .failed; status = "Vorlesen fehlgeschlagen: \(userMessage(error))"; onFailure?(status)
             }
         }
     }
-    private func startMetering(_ player: AVAudioPlayer, generation id: UInt64) {
-        meterTask?.cancel()
-        meterTask = Task { [weak self, weak player] in
-            while !Task.isCancelled {
-                guard let self, let player, self.generation == id else { return }
-                player.updateMeters()
-                let measured = player.isPlaying ? pow(10, Double(player.averagePower(forChannel: 0)) / 30) : 0
-                self.level += (min(1, measured) - self.level) * 0.4
-                #if DEBUG && targetEnvironment(simulator)
-                if player.isPlaying {
-                    self.measuredFrames += 1; self.peakLevel = max(self.peakLevel, self.level)
-                }
-                #endif
-                try? await Task.sleep(for: .milliseconds(40))
-            }
+    func appendPhrase(_ phrase: String) {
+        guard !inputEnded, !phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        queue.append(phrase); lastText = joined(lastText, phrase)
+    }
+    func finishResponse() {
+        inputEnded = true
+        if announced {
+            UIAccessibility.post(notification: .announcement, argument: lastText)
+            phase = .idle; status = "VoiceOver liest den Text vor"; onFinished?()
         }
     }
-    func stop() {
+    private func updateWords(at time: Double) {
+        while revealed < currentMarks.count && currentMarks[revealed].start <= time {
+            words.append(PlaybackWord(id: wordIndex, text: currentMarks[revealed].text)); wordIndex += 1; revealed += 1
+            if words.count > 36 { words.removeFirst(words.count - 36) }
+        }
+        while committed < currentMarks.count && currentMarks[committed].end <= time {
+            spokenText = joined(spokenText, currentMarks[committed].text); committed += 1
+        }
+    }
+    private func joined(_ a: String, _ b: String) -> String { a.isEmpty ? b : a + " " + b }
+    private func complete() {
+        phase = .idle; level = 0; status = "Zu Ende vorgelesen"
+        ConversationAudio.shared.releasePlayback()
         #if DEBUG && targetEnvironment(simulator)
         saveAudioEvidence()
         #endif
-        meterTask?.cancel(); meterTask = nil; level = 0
+        onFinished?()
+        fadeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled else { return }; self?.lineVisible = false
+        }
+    }
+    func stop() {
+        updateWords(at: ConversationAudio.shared.playbackTime)
         generation &+= 1; renderer.setRequest(request: generation)
-        task?.cancel(); task = nil; player?.stop(); player = nil
-        playback?.resume(returning: false); playback = nil
+        task?.cancel(); task = nil; meterTask?.cancel(); meterTask = nil; fadeTask?.cancel(); fadeTask = nil
+        ConversationAudio.shared.stopPlayback(); ConversationAudio.shared.releasePlayback()
+        currentMarks = []; queue = []; inputEnded = true; lineVisible = false; level = 0
         phase = .idle; status = "Vorlesen beendet"
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #if DEBUG && targetEnvironment(simulator)
+        saveAudioEvidence()
+        #endif
     }
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        let identifier = ObjectIdentifier(player)
-        Task { @MainActor in
-            guard let current = self.player, ObjectIdentifier(current) == identifier else { return }
-            self.playback?.resume(returning: flag); self.playback = nil
-        }
-    }
-    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        let identifier = ObjectIdentifier(player)
-        Task { @MainActor in
-            guard let current = self.player, ObjectIdentifier(current) == identifier else { return }
-            self.playback?.resume(returning: false); self.playback = nil
-        }
-    }
-    static func phrases(_ text: String) -> [String] {
-        var chunks: [String] = [], current = ""
-        for word in text.split(whereSeparator: \.isWhitespace) {
-            if current.count + word.count > 220 && !current.isEmpty { chunks.append(current); current = "" }
-            if !current.isEmpty { current += " " }; current += word
-            if current.count > 40 && (word.hasSuffix("!") || word.hasSuffix("?") || (word.hasSuffix(".") && word.dropLast().last?.isNumber == false)) {
-                chunks.append(current); current = ""
-            }
-        }
-        if !current.isEmpty { chunks.append(current) }
-        return chunks
-    }
+    nonisolated static func phrases(_ text: String) -> [String] { SpeechPhrasing.phrases(text) }
 }
 
 struct SpeechControls: View {

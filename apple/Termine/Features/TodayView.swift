@@ -3,33 +3,85 @@ import RehaCore
 import AppleServices
 import EventKit
 
+/// Cache keys are civil Mondays. A new refresh epoch rejects all older loads.
 @MainActor @Observable final class TodayModel {
     enum Availability { case loading, ready, noAccess, noSelection, failed }
-    var events: [CalendarEvent] = []
+    private var cache: [Date: [CalendarEvent]] = [:]
     var availability: Availability = .loading
     var error: String?
-    private var revision = 0
-    func refresh(_ core: NativeApplication, week: AgendaWeek) async {
-        revision += 1; let request = revision
-        availability = .loading; events = []; error = nil
+    private var epoch = UUID()
+    private var refreshKey = ""
+    func events(on date: Date) -> [CalendarEvent]? { cache[AgendaWeek(containing: date).start] }
+    func refresh(_ core: NativeApplication, week: AgendaWeek, visibleWeek: Date, key: String) async {
+        if key != refreshKey { refreshKey = key; epoch = UUID(); cache = [:] }
+        let request = epoch
+        let weeks = [week.start, visibleWeek].flatMap { center in
+            [-7, 0, 7].map { AgendaWeek(containing: Calendar.current.date(byAdding: .day, value: $0, to: center)!) }
+        }
+        let keep = Set(weeks.map(\.start))
+        cache = cache.filter { keep.contains($0.key) }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-            availability = .noAccess; return
+            cache = [:]; availability = .noAccess; return
         }
         struct Response: Decodable { let events: [CalendarEvent] }
         do {
             let history = try await core.history(); let preferences = try await core.preferences()
-            guard request == revision, !Task.isCancelled else { return }
+            guard request == epoch, !Task.isCancelled else { return }
             guard !preferences.displayCalendarIds.isEmpty || !history.imports.isEmpty else {
-                availability = .noSelection; return
+                cache = [:]; availability = .noSelection; return
             }
             _ = try await NativeBridge.request("agenda", ["records": history.imports.map(NativeBridge.record), "preferences": NativeBridge.preferences(preferences)])
             let iso = ISO8601DateFormatter()
-            let result = try await core.eventRequest("queryCalendarEvents", ["start_utc": iso.string(from: week.start), "end_utc": iso.string(from: week.end)], as: Response.self)
-            guard request == revision, !Task.isCancelled else { return }
-            events = result.events; availability = .ready
+            // Selected week first; a cancelled prefetch never publishes stale data.
+            for item in [week] + weeks where cache[item.start] == nil {
+                try Task.checkCancellation()
+                let result = try await core.eventRequest("queryCalendarEvents", ["start_utc": iso.string(from: item.start), "end_utc": iso.string(from: item.end)], as: Response.self)
+                guard request == epoch, !Task.isCancelled else { return }
+                cache[item.start] = result.events; availability = .ready; error = nil
+            }
         } catch {
-            guard request == revision, !Task.isCancelled else { return }
+            guard request == epoch, !Task.isCancelled else { return }
             self.error = userMessage(error); availability = .failed
+        }
+    }
+}
+
+/// Native paging tracks the finger, exposes neighbours and cancels naturally.
+/// Dates retain identity when the bounded window is extended at rest.
+private struct CalendarPager<Content: View>: View {
+    @Binding var selection: Date
+    let step: Int
+    @ViewBuilder let content: (Date) -> Content
+    @State private var center: Date
+    @State private var position: Date?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    init(selection: Binding<Date>, step: Int, @ViewBuilder content: @escaping (Date) -> Content) {
+        _selection = selection; self.step = step; self.content = content
+        _center = State(initialValue: selection.wrappedValue)
+        _position = State(initialValue: selection.wrappedValue)
+    }
+    private var dates: [Date] { (-14...14).map { Calendar.current.date(byAdding: .day, value: $0 * step, to: center)! } }
+    var body: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(dates, id: \.self) { date in
+                    content(date).containerRelativeFrame(.horizontal).id(date)
+                }
+            }.scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden).scrollTargetBehavior(.paging)
+        .scrollPosition(id: $position)
+        .onChange(of: position) { _, date in if let date, selection != date { selection = date } }
+        .onChange(of: selection) { _, date in
+            guard position != date else { return }
+            if !dates.contains(date) { center = date }
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { position = date }
+        }
+        .onScrollPhaseChange { _, phase in
+            if phase == .idle, abs(selection.timeIntervalSince(center)) > Double(step * 7) * 86400 {
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { center = selection; position = selection }
+            }
         }
     }
 }
@@ -41,6 +93,9 @@ struct TodayView: View {
     @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
     @SwiftUI.AppStorage("agenda.list") private var listView = false
     @State private var model = TodayModel()
+    @State private var visibleWeek = AgendaWeek(containing: .now).start
+    @State private var scrollMinute: Double?
+    @State private var scrollReset = 0
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
     @State private var observedToday = Calendar.current.startOfDay(for: .now)
     @State private var setup = false
@@ -55,21 +110,20 @@ struct TodayView: View {
         self.core = core; self.scanner = scanner; self.refreshID = refreshID
     }
     private var week: AgendaWeek { AgendaWeek(containing: selectedDate) }
-    private var requestID: String { "\(week.start.timeIntervalSince1970)-\(refreshID)-\(reloadID)" }
+    private var requestID: String { "\(week.start)-\(visibleWeek)-\(refreshID)-\(reloadID)" }
 
     var body: some View {
         VStack(spacing: 0) {
-            WeekSelector(selection: $selectedDate)
+            WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
             Divider()
-            TimelineView(.periodic(from: .now, by: 15)) { context in
-                let agenda = DayAgenda(events: model.events, date: selectedDate, now: context.date)
-                day(agenda, now: context.date)
-                .onChange(of: Calendar.current.startOfDay(for: context.date)) { _, today in followToday(today) }
-            }
-            .contentShape(.rect)
-            .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { value in
-                if let date = AgendaNavigation.swipedDate(selectedDate, horizontal: value.translation.width, vertical: value.translation.height) { selectedDate = date }
-            })
+            CalendarPager(selection: $selectedDate, step: 1) { date in
+                TimelineView(.periodic(from: .now, by: 15)) { context in
+                    let agenda = DayAgenda(events: model.events(on: date) ?? [], date: date, now: context.date)
+                    day(agenda, now: context.date)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onChange(of: Calendar.current.startOfDay(for: context.date)) { _, today in followToday(today) }
+                }
+            }.accessibilityIdentifier("agenda-days")
         }
         .contentShape(.rect)
         .accessibilityAction(named: "Nächster Tag") { selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)! }
@@ -78,7 +132,7 @@ struct TodayView: View {
         .pageTitle("Termine")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Heute") { selectedDate = Calendar.current.startOfDay(for: .now); showPast = false; reload() }
+                Button("Heute") { selectedDate = Calendar.current.startOfDay(for: .now); visibleWeek = week.start; showPast = false; scrollMinute = nil; scrollReset += 1; reload() }
                     .accessibilityIdentifier("agenda-today")
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -90,9 +144,9 @@ struct TodayView: View {
                     .accessibilityIdentifier("add-plan")
             }
         }
-        .refreshable { await model.refresh(core, week: week) }
-        .task(id: requestID) { await model.refresh(core, week: week) }
-        .onChange(of: selectedDate) { showPast = false }
+        .refreshable { reload(); await load() }
+        .task(id: requestID) { await load() }
+        .onChange(of: selectedDate) { showPast = false; visibleWeek = week.start }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { followToday(Calendar.current.startOfDay(for: .now)); reload() }
         }
@@ -109,10 +163,12 @@ struct TodayView: View {
     }
     @ViewBuilder private func day(_ agenda: DayAgenda, now: Date) -> some View {
         Group {
-            if model.availability != .ready { unavailable }
+            if model.events(on: agenda.date) == nil {
+                if model.availability == .ready { ProgressView("Kalender laden …") } else { unavailable }
+            }
             else if agenda.events.isEmpty {
                 ContentUnavailableView {
-                    Label(Calendar.current.isDateInToday(selectedDate) ? "Heute keine Termine" : "Keine Termine", systemImage: "calendar")
+                    Label(Calendar.current.isDateInToday(agenda.date) ? "Heute keine Termine" : "Keine Termine", systemImage: "calendar")
                 } description: { Text("Für diesen Tag sind keine Termine eingetragen.") }
             } else if agenda.isComplete && !showPast {
                 ContentUnavailableView {
@@ -128,10 +184,12 @@ struct TodayView: View {
                     }
                 }.accessibilityIdentifier("agenda-accessible-list")
             } else {
-                DayTimeline(agenda: agenda, now: now, density: AgendaDensity(rawValue: density) ?? .overview) { editor = $0 }
-                    .id(selectedDate)
+                DayTimeline(agenda: agenda, now: now, density: AgendaDensity(rawValue: density) ?? .overview, selected: agenda.date == selectedDate, scrollMinute: $scrollMinute, reset: scrollReset) { editor = $0 }
             }
         }
+    }
+    private func load() async {
+        await model.refresh(core, week: week, visibleWeek: visibleWeek, key: "\(refreshID)-\(reloadID)-\(Calendar.current.timeZone.identifier)")
     }
     private func reload() { reloadID += 1 }
     private func followToday(_ today: Date) {
@@ -168,6 +226,7 @@ struct TodayView: View {
 
 private struct WeekSelector: View {
     @Binding var selection: Date
+    @Binding var visibleWeek: Date
     @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         VStack(spacing: 8) {
@@ -175,7 +234,7 @@ private struct WeekSelector: View {
                 Button("Vorherige Woche", systemImage: "chevron.left") { move(-7) }
                     .labelStyle(.iconOnly).controlHeight().accessibilityIdentifier("previous-week")
                 Spacer()
-                Text(selection.formatted(.dateTime.month(.wide).year())).font(.headline)
+                Text(visibleWeek.formatted(.dateTime.month(.wide).year())).font(.headline)
                 Spacer()
                 Button("Nächste Woche", systemImage: "chevron.right") { move(7) }
                     .labelStyle(.iconOnly).controlHeight().accessibilityIdentifier("next-week")
@@ -185,8 +244,9 @@ private struct WeekSelector: View {
                     .labelsHidden().accessibilityLabel("Tag")
                     .accessibilityIdentifier("agenda-date")
             } else {
-                HStack(spacing: 0) {
-                    ForEach(AgendaWeek(containing: selection).days, id: \.self) { date in
+                CalendarPager(selection: $visibleWeek, step: 7) { monday in
+                  HStack(spacing: 0) {
+                    ForEach(AgendaWeek(containing: monday).days, id: \.self) { date in
                         let selected = Calendar.current.isDate(date, inSameDayAs: selection)
                         Button { selection = date } label: {
                             VStack(spacing: 6) {
@@ -201,22 +261,23 @@ private struct WeekSelector: View {
                             .accessibilityAddTraits(selected ? .isSelected : [])
                             .accessibilityIdentifier("weekday-\(Calendar.current.component(.weekday, from: date))")
                     }
-                }
+                  }
+                }.frame(height: 78)
             }
         }.padding(.horizontal).padding(.vertical, 6)
             .contentShape(.rect)
-            .highPriorityGesture(DragGesture(minimumDistance: 30).onEnded { value in
-                if let date = AgendaNavigation.swipedDate(selection, horizontal: value.translation.width, vertical: value.translation.height) { selection = date }
-            })
             .accessibilityElement(children: .contain).accessibilityIdentifier("agenda-week")
     }
-    private func move(_ days: Int) { selection = Calendar.current.date(byAdding: .day, value: days, to: selection)! }
+    private func move(_ days: Int) { visibleWeek = Calendar.current.date(byAdding: .day, value: days, to: visibleWeek)! }
 }
 
 private struct DayTimeline: View {
     let agenda: DayAgenda
     let now: Date
     let density: AgendaDensity
+    let selected: Bool
+    @Binding var scrollMinute: Double?
+    let reset: Int
     let select: (CalendarEvent) -> Void
     @State private var heights: [String: Double] = [:]
     private var hourHeight: Double { density.pointsPerHour }
@@ -246,8 +307,19 @@ private struct DayTimeline: View {
             }.accessibilityIdentifier("day-timeline")
                 .scrollPosition($position)
                 .onScrollGeometryChange(for: Bool.self) { $0.containerSize.height > 0 && $0.contentSize.height > 0 } action: { _, ready in
-                    if ready && !positioned { positioned = true; position.scrollTo(y: layout.y(window.scrollMinute)) }
+                    if ready && !positioned {
+                        positioned = true
+                        if selected && scrollMinute == nil { scrollMinute = window.scrollMinute }
+                        position.scrollTo(y: layout.y(scrollMinute ?? window.scrollMinute))
+                    }
                 }
+                .onScrollGeometryChange(for: Double.self) { max(0, Double($0.contentOffset.y + $0.contentInsets.top)) } action: { _, y in
+                    if selected && positioned && position.isPositionedByUser { scrollMinute = layout.minute(at: y) }
+                }
+                .onChange(of: selected) { _, active in
+                    if active { position.scrollTo(y: layout.y(scrollMinute ?? window.scrollMinute)) }
+                }
+                .onChange(of: reset) { position.scrollTo(y: layout.y(window.scrollMinute)) }
             if !window.outside.isEmpty {
                 DisclosureGroup("Außerhalb von 06:00–18:00") {
                     ScrollView {
@@ -315,7 +387,8 @@ private struct TimelineAppointment: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: Double.self) { Double($0.size.height) } action: { measured($0) }
                 .frame(height: height, alignment: .topLeading)
-                .background(AppPalette.tint.opacity(0.16), in: .rect(cornerRadius: 10))
+                .background(EventCategory.classify(event.values.title).color.opacity(0.12), in: .rect(cornerRadius: 10))
+                .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(EventCategory.classify(event.values.title).color).frame(width: 3).padding(.vertical, 8) }
                 .contentShape(.rect)
         }.buttonStyle(.plain)
             .accessibilityLabel(event.spoken + " " + event.placeDescription + (event.values.end <= now ? " Vorbei." : ""))
@@ -352,7 +425,9 @@ struct CalendarAgendaRow: View {
                     .font(.subheadline).foregroundStyle(.secondary)
                 if event.values.end <= now { Text("Vorbei").font(.subheadline).foregroundStyle(.secondary) }
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.fixedSize(horizontal: false, vertical: true).foregroundStyle(.primary).contentShape(.rect).accessibilityElement(children: .combine)
+        }.padding(8).background(EventCategory.classify(event.values.title).color.opacity(0.10), in: .rect(cornerRadius: 8))
+            .overlay(alignment: .leading) { Capsule().fill(EventCategory.classify(event.values.title).color).frame(width: 3).padding(.vertical, 6) }
+            .fixedSize(horizontal: false, vertical: true).foregroundStyle(.primary).contentShape(.rect).accessibilityElement(children: .combine)
     }
     private var span: String {
         let start = event.values.start.formatted(.dateTime.day().month(.abbreviated))

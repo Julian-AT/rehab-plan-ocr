@@ -1,0 +1,74 @@
+[
+  {
+    "file": "sprechen-grosse-schrift.png",
+    "test": "AgendaPreviewTests/testLargestTypeUsesDayListAndNativeSettings()",
+    "attachment": "04546FDE-01C1-4A28-9F85-1879462F092C.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "kalender-grosse-schrift.png",
+    "test": "AgendaPreviewTests/testLargestTypeUsesDayListAndNativeSettings()",
+    "attachment": "FABCCC37-9135-4E0E-B72E-FF2D08E987A2.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "farblegende.png",
+    "test": "ContinuousCalendarTests/testColoursDarkAndLegend()",
+    "attachment": "E9C6AC9D-8342-4742-A183-6BD126BD5E35.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "kalender-dunkel.png",
+    "test": "ContinuousCalendarTests/testColoursDarkAndLegend()",
+    "attachment": "0794BC8B-5591-436B-9E78-4A02532AA2BD.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "wochengrenze.png",
+    "test": "ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag()",
+    "attachment": "43BB8CAF-9930-4953-B19B-A8C7E982CDED.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "wochenblaettern.png",
+    "test": "ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag()",
+    "attachment": "97EC2623-8BB0-450A-9025-223EB49BC7BD.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "kalender-hell.png",
+    "test": "ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag()",
+    "attachment": "96052D41-AD5B-43ED-94D1-1BB18A49EAD1.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "text-folgt-audio.png",
+    "test": "ContinuousCalendarTests/testTimedRealPlaybackAndCancel()",
+    "attachment": "8C7ACB2E-9E26-41B0-9725-8A2A5EEBCB46.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "text-waehrend-victoria.png",
+    "test": "ContinuousCalendarTests/testTimedRealPlaybackAndCancel()",
+    "attachment": "649CB837-2B45-478C-A6CF-FBC2F17BB006.png",
+    "result_bundle": "reha-continuous-final.xcresult"
+  },
+  {
+    "file": "bewegung-reduziert.png",
+    "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable()",
+    "attachment": "094837ED-CBF5-4086-BAC3-A692935ED43D.png",
+    "result_bundle": "reha-continuous-verified.xcresult"
+  },
+  {
+    "file": "vorschlag-gespeichert.png",
+    "test": "AgendaPreviewTests/testVoiceCreationRequiresExplicitConfirmation()",
+    "attachment": "6CC7C40C-889B-4647-A77A-F40206E25A49.png",
+    "result_bundle": "reha-continuous-verified.xcresult"
+  },
+  {
+    "file": "vorschlag-bestaetigen.png",
+    "test": "AgendaPreviewTests/testVoiceCreationRequiresExplicitConfirmation()",
+    "attachment": "818722EB-8691-459C-A648-E60CBFE8B0CE.png",
+    "result_bundle": "reha-continuous-verified.xcresult"
+  }
+]

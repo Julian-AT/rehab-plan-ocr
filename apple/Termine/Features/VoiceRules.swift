@@ -3,6 +3,7 @@ import Foundation
 /// Only the current turn is held in memory. Reference time and requested new time
 /// are deliberately separate; a model suggestion never becomes a calendar ID.
 struct VoiceIntent: Equatable {
+    var negatedChange = false
     enum Origin: String { case spoken, corrected, context, choice }
     var origins: [String: Origin] = [:]
     enum Action: String { case next, list, create, update, remove, cancel, unsupported }
@@ -75,14 +76,16 @@ enum VoiceRules {
     }
     static func referenceWords(_ input: String) -> [String] {
         let clean = normalized(input).replacingOccurrences(of: "(?:im|in|aus|vom) kalender .+?(?= am | um | heute| morgen|$)", with: "", options: .regularExpression)
-        let ignored = Set("verschiebe verschieben ändere ändern lösche löschen entferne entfernen den der die das dem meinen mein meine meiner mir bitte termin termine behandlung um am auf von nach vor bis uhr heute morgen übermorgen nächste nächsten nächster ist wann zeige finde habe ich mich dienstag montag mittwoch donnerstag freitag samstag sonntag halb viertel dreiviertel nein neun zehn eins ein zwei drei vier fünf sechs sieben acht elf zwölf".split(separator: " ").map(String.init))
+        let ignored = Set("verschiebe verschieben ändere ändern lösche löschen entferne entfernen den der die das dem meinen mein meine meiner mir bitte termin termine behandlung um am auf von nach vor bis uhr heute morgen übermorgen nächste nächsten nächster ist wann zeige finde habe ich mich dienstag montag mittwoch donnerstag freitag samstag sonntag halb viertel dreiviertel nein keine keinen kein nicht neun zehn eins ein zwei drei vier fünf sechs sieben acht elf zwölf".split(separator: " ").map(String.init))
         return matches("[a-zäöü]+", clean).map { $0[0] }.filter { !ignored.contains($0) }
     }
     static func parse(_ input: String, now: Date = .now, calendar: Calendar = .current) -> VoiceIntent {
         let text = normalized(input); var result = VoiceIntent(); result.corrected = text.contains("nein")
         if let named = matches("(?:im|in|aus|vom) kalender (.+?)(?: am | um | auf | heute| morgen|$)", text).last { result.calendarName = named[1] }
         if !matches("\\b(medikamente|medikament|dosis|diagnose|schmerzen)\\b", text).isEmpty { return result }
-        if text == "stopp" || text == "abbrechen" || text == "nein" || matches("\\b(nicht|keine|keinen|kein)\\b", text).count > 0 { result.action = .cancel; return result }
+        if ["stopp", "abbrechen", "gespräch beenden", "gesprach beenden", "gespräch abbrechen"].contains(text.trimmingCharacters(in: .punctuationCharacters)) { result.action = .cancel; return result }
+        if matches("\\b(nicht|keine|keinen|kein)\\b", text).count > 0 && ["lösch", "entfern", "verschieb", "änder", "erstell", "eintragen"].contains(where: text.contains) { result.negatedChange = true; return result }
+
         if text.contains("lösch") || text.contains("entfern") { result.action = .remove }
         else if text.contains("verschieb") || text.contains("änder") { result.action = .update }
         else if text.contains("erstell") || text.contains("eintragen") || text.contains("neuen termin") || text.contains("neuer termin") || text.contains("hinzufügen") { result.action = .create }

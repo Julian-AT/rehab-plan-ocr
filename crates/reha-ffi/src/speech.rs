@@ -11,6 +11,19 @@ use std::{
     },
 };
 
+#[derive(uniffi::Record)]
+pub struct SpeechWordMark {
+    pub text: String,
+    pub start: f64,
+    pub end: f64,
+}
+#[derive(uniffi::Record)]
+pub struct SpeechRender {
+    pub audio: Vec<u8>,
+    pub marks: Vec<SpeechWordMark>,
+    pub duration: f64,
+}
+
 #[derive(uniffi::Object)]
 pub struct NativeSpeech {
     root: PathBuf,
@@ -39,6 +52,15 @@ impl NativeSpeech {
         speed: f32,
         request: u64,
     ) -> Result<Vec<u8>, AppError> {
+        Ok(self.render_timed(text, voice, speed, request).await?.audio)
+    }
+    pub async fn render_timed(
+        self: Arc<Self>,
+        text: String,
+        voice: String,
+        speed: f32,
+        request: u64,
+    ) -> Result<SpeechRender, AppError> {
         #[cfg(feature = "onnx")]
         return runtime()
             .spawn_blocking(move || {
@@ -55,7 +77,20 @@ impl NativeSpeech {
                 cache
                     .as_mut()
                     .unwrap()
-                    .render(&text, &voice, speed, request, &self.latest)
+                    .render_timed(&text, &voice, speed, request, &self.latest)
+                    .map(|render| SpeechRender {
+                        audio: render.audio,
+                        duration: render.duration,
+                        marks: render
+                            .marks
+                            .into_iter()
+                            .map(|mark| SpeechWordMark {
+                                text: mark.text,
+                                start: mark.start,
+                                end: mark.end,
+                            })
+                            .collect(),
+                    })
                     .map_err(map)
             })
             .await

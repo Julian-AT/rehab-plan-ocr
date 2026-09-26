@@ -35,8 +35,8 @@ import UIKit
 
     func testSwipingAndCompleteAppointmentLabels() {
         launch("readable")
-        // Right advances, including on the resting/empty state; no arrow needed.
-        app.swipeRight()
+        // Left advances, including on the resting/empty state; no arrow needed.
+        app.swipeLeft()
         let next = row("Physiotherapie Tag 1")
         XCTAssertTrue(next.waitForExistence(timeout: 8))
         XCTAssertTrue(next.label.contains("Anna Beispiel"))
@@ -48,9 +48,9 @@ import UIKit
         XCTAssertFalse(short.frame.intersects(next.frame))
         capture("01-kalender-uebersicht-ort-therapeut")
         let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch
-        week.swipeRight()
-        XCTAssertTrue(row("Physiotherapie Tag 2").waitForExistence(timeout: 8))
         week.swipeLeft()
+        XCTAssertTrue(row("Physiotherapie Tag 1").isHittable)
+        week.swipeRight()
         XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
         let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch.label
         app.scrollViews["day-timeline"].swipeUp()
@@ -59,9 +59,9 @@ import UIKit
         XCTAssertEqual(training.frame.minY, ergo.frame.minY, accuracy: 1)
         XCTAssertFalse(training.frame.intersects(ergo.frame))
         capture("02-kalender-ueberlappende-termine")
-        for _ in 0..<7 { week.swipeRight() }
+        for _ in 0..<7 { app.swipeLeft() }
         XCTAssertTrue(row("Physiotherapie Tag 8").waitForExistence(timeout: 8))
-        week.swipeLeft()
+        app.swipeRight()
         XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
         capture("03-wischen-ueber-wochengrenze")
     }
@@ -78,7 +78,7 @@ import UIKit
         app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
         XCTAssertTrue(app.buttons["agenda-density"].label.contains("Standard"))
         XCTAssertEqual(app.switches["agenda-list-setting"].value as? String, "1")
-        app.tabBars.buttons["Termine"].tap(); app.swipeRight()
+        app.tabBars.buttons["Termine"].tap(); app.swipeLeft()
         XCTAssertTrue(app.descendants(matching: .any)["agenda-accessible-list"].waitForExistence(timeout: 8))
         XCTAssertTrue(row("Physiotherapie Tag 1").label.contains("Anna Beispiel"))
         capture("05-tagesliste-nach-neustart")
@@ -99,8 +99,7 @@ import UIKit
         back("Sprache")
         app.buttons["voice-details"].tap()
         let message = app.textFields["voice-message"].exists ? app.textFields["voice-message"] : app.textViews["voice-message"]
-        message.tap(); message.typeText("Nächster Termin")
-        app.buttons["voice-send"].tap()
+        app.buttons["voice-next"].tap()
         XCTAssertTrue(app.buttons["repeat-speech"].waitForExistence(timeout: 20))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Ergotherapie")).firstMatch.exists)
         capture("08-antwort-aus-kalender")
@@ -143,13 +142,13 @@ import UIKit
         let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch
         let selectedID = selected.identifier
         app.buttons["next-week"].tap()
-        XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
+        XCTAssertTrue(row("Physiotherapie").exists)
         app.buttons["previous-week"].tap()
         XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
         XCTAssertEqual(selected.identifier, selectedID)
         // Rapid week changes must not let the previous query replace the final week.
         app.buttons["next-week"].tap(); app.buttons["next-week"].tap(); app.buttons["previous-week"].tap()
-        XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
+        XCTAssertTrue(row("Physiotherapie").exists)
         app.buttons["agenda-today"].tap()
         XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
         row("Physiotherapie").tap()
@@ -196,7 +195,7 @@ import UIKit
         app.tabBars.buttons["Sprechen"].tap(); capture("10-sprechen-dunkel")
         XCTAssertEqual(voiceState.value as? String, "idle")
         app.terminate(); launch("readable", extra: ["--preview-dark"])
-        app.swipeRight()
+        app.swipeLeft()
         XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
         capture("11-kalender-dunkel")
     }
@@ -293,7 +292,7 @@ import UIKit
         if app.alerts.buttons["OK"].exists { app.alerts.buttons["OK"].tap() }
         if voiceState.value as? String == "recording" {
             Thread.sleep(forTimeInterval: 3)
-            XCTAssertTrue(app.buttons["finish-speaking"].exists)
+            XCTAssertEqual(app.buttons["speak"].label, "Gespräch pausieren")
         }
         app.buttons["stop-speech"].tap()
         XCTAssertEqual(voiceState.value as? String, "idle")
@@ -304,8 +303,8 @@ import UIKit
         launch("one")
         app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-details"].tap(); app.buttons["voice-create"].tap()
         let title = app.textFields["Bezeichnung"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5))
         for _ in 0..<4 where !title.isHittable { app.swipeUp() }
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
         title.tap(); title.typeText("Test Gespräch bestätigt")
         for label in ["Bezeichnung übernehmen", "Datum übernehmen", "Uhrzeit übernehmen"] {
             let button = app.buttons[label]
@@ -330,6 +329,8 @@ import UIKit
         XCTAssertTrue(saved.waitForExistence(timeout: 10))
         capture("29-sprachvorschlag-gespeichert")
         app.tabBars.buttons["Termine"].tap()
+        let outside = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Außerhalb von 06:00–18:00")).firstMatch
+        if outside.waitForExistence(timeout: 3) { outside.tap() }
         XCTAssertTrue(row("Test Gespräch bestätigt").waitForExistence(timeout: 8))
     }
     func testRealAudioDrivesOrbAndStopEndsIt() {

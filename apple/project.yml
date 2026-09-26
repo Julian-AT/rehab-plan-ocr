@@ -9,6 +9,8 @@ packages:
     path: Packages/RehaCore
   AppleServices:
     path: Packages/AppleServices
+  VoiceActivity:
+    path: Packages/VoiceActivity
 settings:
   base:
     DEVELOPMENT_TEAM: ZP2PFF43D2
@@ -18,7 +20,7 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.3.0"
-    CURRENT_PROJECT_VERSION: "2026092611"
+    CURRENT_PROJECT_VERSION: "2026092612"
     CODE_SIGN_STYLE: Automatic
 targets:
   Termine:
@@ -40,6 +42,8 @@ targets:
     dependencies:
       - package: RehaCore
       - package: AppleServices
+      - package: VoiceActivity
+        product: CFvad
       - target: RehaWidgets
         embed: true
       - target: RehaNotificationContent

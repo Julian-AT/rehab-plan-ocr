@@ -151,11 +151,11 @@ enum AgendaLayout {
     }
 }
 
-/// A deliberate right swipe advances the selected civil day, including DST.
+/// A deliberate left swipe advances the selected civil day, including DST.
 enum AgendaNavigation {
     static func swipedDate(_ date: Date, horizontal: Double, vertical: Double, calendar: Calendar = .current) -> Date? {
         guard abs(horizontal) >= 40, abs(horizontal) > abs(vertical) * 1.5 else { return nil }
-        return calendar.date(byAdding: .day, value: horizontal > 0 ? 1 : -1, to: calendar.startOfDay(for: date))
+        return calendar.date(byAdding: .day, value: horizontal < 0 ? 1 : -1, to: calendar.startOfDay(for: date))
     }
 }
 
@@ -179,6 +179,12 @@ struct ReadableAgendaLayout {
     let knots: [Double]
     let positions: [Double]
     var height: Double { positions.last ?? 0 }
+    func minute(at y: Double) -> Double {
+        guard let upper = positions.firstIndex(where: { $0 >= y }) else { return knots.last ?? 720 }
+        guard upper > 0 else { return 0 }
+        let fraction = (y - positions[upper - 1]) / max(1, positions[upper] - positions[upper - 1])
+        return knots[upper - 1] + fraction * (knots[upper] - knots[upper - 1])
+    }
     func y(_ minute: Double) -> Double {
         guard let upper = knots.firstIndex(where: { $0 >= minute }) else { return height }
         guard upper > 0 else { return 0 }

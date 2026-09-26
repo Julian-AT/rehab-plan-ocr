@@ -1437,6 +1437,8 @@ public protocol NativeSpeechProtocol: AnyObject, Sendable {
     
     func render(text: String, voice: String, speed: Float, request: UInt64) async throws  -> Data
     
+    func renderTimed(text: String, voice: String, speed: Float, request: UInt64) async throws  -> SpeechRender
+    
     func setRequest(request: UInt64) 
     
 }
@@ -1514,6 +1516,22 @@ open func render(text: String, voice: String, speed: Float, request: UInt64)asyn
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterData.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func renderTimed(text: String, voice: String, speed: Float, request: UInt64)async throws  -> SpeechRender  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativespeech_render_timed(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(text),FfiConverterString.lower(voice),FfiConverterFloat.lower(speed),FfiConverterUInt64.lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeSpeechRender_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -4261,6 +4279,122 @@ public func FfiConverterTypeScanSummary_lower(_ value: ScanSummary) -> RustBuffe
 }
 
 
+public struct SpeechRender: Equatable, Hashable {
+    public var audio: Data
+    public var marks: [SpeechWordMark]
+    public var duration: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(audio: Data, marks: [SpeechWordMark], duration: Double) {
+        self.audio = audio
+        self.marks = marks
+        self.duration = duration
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SpeechRender: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSpeechRender: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SpeechRender {
+        return
+            try SpeechRender(
+                audio: FfiConverterData.read(from: &buf), 
+                marks: FfiConverterSequenceTypeSpeechWordMark.read(from: &buf), 
+                duration: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SpeechRender, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.audio, into: &buf)
+        FfiConverterSequenceTypeSpeechWordMark.write(value.marks, into: &buf)
+        FfiConverterDouble.write(value.duration, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSpeechRender_lift(_ buf: RustBuffer) throws -> SpeechRender {
+    return try FfiConverterTypeSpeechRender.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSpeechRender_lower(_ value: SpeechRender) -> RustBuffer {
+    return FfiConverterTypeSpeechRender.lower(value)
+}
+
+
+public struct SpeechWordMark: Equatable, Hashable {
+    public var text: String
+    public var start: Double
+    public var end: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(text: String, start: Double, end: Double) {
+        self.text = text
+        self.start = start
+        self.end = end
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SpeechWordMark: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSpeechWordMark: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SpeechWordMark {
+        return
+            try SpeechWordMark(
+                text: FfiConverterString.read(from: &buf), 
+                start: FfiConverterDouble.read(from: &buf), 
+                end: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SpeechWordMark, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterDouble.write(value.start, into: &buf)
+        FfiConverterDouble.write(value.end, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSpeechWordMark_lift(_ buf: RustBuffer) throws -> SpeechWordMark {
+    return try FfiConverterTypeSpeechWordMark.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSpeechWordMark_lower(_ value: SpeechWordMark) -> RustBuffer {
+    return FfiConverterTypeSpeechWordMark.lower(value)
+}
+
+
 public struct Stage: Equatable, Hashable {
     public var name: String
     public var status: String
@@ -6018,6 +6152,31 @@ fileprivate struct FfiConverterSequenceTypeScanSummary: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeSpeechWordMark: FfiConverterRustBuffer {
+    typealias SwiftType = [SpeechWordMark]
+
+    public static func write(_ value: [SpeechWordMark], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSpeechWordMark.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SpeechWordMark] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SpeechWordMark]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSpeechWordMark.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeStage: FfiConverterRustBuffer {
     typealias SwiftType = [Stage]
 
@@ -6409,6 +6568,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativespeech_render() != 36515) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativespeech_render_timed() != 18274) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativespeech_set_request() != 351) {

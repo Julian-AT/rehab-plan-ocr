@@ -58,6 +58,18 @@ import RehaCore
             event.notes = "Therapeut: Anna Beispiel\nKlinik: Laßnitzhöhe\nAbteilung: Therapiezentrum\nHinweise: Öffentliche synthetische Simulatorvorschau."
             try store.save(event, span: .thisEvent, commit: true)
         }
+        if mode == "tool-probe" {
+            for index in 1...12 {
+                try add("Prüftermin \(index)", start: day.addingTimeInterval(Double(6 * 3600 + index * 1800)), end: day.addingTimeInterval(Double(6 * 3600 + index * 1800 + 900)))
+            }
+            try await CalendarToolProbe.run(core, day: day)
+        }
+        if mode == "colors" {
+            let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+            for (index, title) in ["Frühstück I", "Ärztliches Gespräch", "Physiotherapie", "Anmeldung", "Freier Termin"].enumerated() {
+                try add(title, start: next.addingTimeInterval(Double(7 + index) * 3600), end: next.addingTimeInterval(Double(7 + index) * 3600 + 1800))
+            }
+        }
         if mode == "readable" {
             for offset in 0...8 {
                 let date = Calendar.current.date(byAdding: .day, value: offset, to: day)!

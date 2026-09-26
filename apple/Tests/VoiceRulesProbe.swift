@@ -11,8 +11,8 @@ import Foundation
         let correction = parse("Erstelle einen neuen Termin Dienstag, nein Mittwoch um halb zehn")
         precondition(correction.corrected && calendar.component(.weekday, from: correction.newDate!) == 4)
         precondition(correction.newTime == 570 && correction.duration == nil)
-        precondition(parse("Lösche den Termin nicht").action == .cancel)
-        precondition(parse("Nein").action == .cancel)
+        precondition(parse("Lösche den Termin nicht").negatedChange)
+        precondition(parse("Nein").action != .cancel)
         precondition(parse("ja").action == .unsupported)
         precondition(parse("Morgen Termine vorlesen").action == .list)
         precondition(parse("Wann ist mein nächster Termin").action == .next)
@@ -25,6 +25,9 @@ import Foundation
         precondition(VoiceRules.referenceWords("Lösche meine Physiotherapie morgen") == ["physiotherapie"])
         precondition(parse("Termine im Kalender Privat morgen").calendarName == "privat")
         precondition(calendar.component(.day, from: parse("Termine übermorgen").date!) == 14)
-        print("Voice rules: 23 checks passed")
+        precondition(parse("Habe ich keine Termine?").action == .list)
+        precondition(parse("Nicht am Dienstag, am Mittwoch").action != .cancel)
+        precondition(parse("Gespräch beenden").action == .cancel)
+        print("Voice rules: dates, times, corrections, negations and explicit cancellation passed")
     }
 }

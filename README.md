@@ -2,6 +2,8 @@
 
 Private rehabilitation-plan app with on-device recognition. Current implementation and remaining release gates: [Laßnitzhöhe release](docs/lassnitzhoehe-release.md).
 
+**Build 2026092612** ergänzt native Tages- und Wochenseiten, dezente Terminfarben, fortlaufende lokale Gespräche mit Pausenerkennung und Hineinsprechen sowie Victorias Aussprache „Frühstück eins“ und mitlaufenden Text. [Umsetzung und Prüfgrenzen](docs/continuous-calendar-voice.md) · [Simulatorvorschau und neue Hörproben](docs/preview/2026-09-26-s12-continuous/README.md). Noch nicht auf dem iPhone installiert; Geräteabnahme nach ausdrücklicher Freigabe.
+
 **Build 2026092611** überarbeitet den Gesprächsbildschirm mit einer glatten, runden grünen Kugel, sanft auf Audio reagierenden Verläufen, dem nativen Knopf „Gespräch starten“ und Gesprächsdetails oben. [Umsetzung](docs/smooth-voice.md) · [Simulatorvorschau](docs/preview/2026-09-26-s12-smooth-voice/README.md). Nach Freigabe auf dem iPhone 17 installiert; [frische Sicherung, App-Start und Datenvergleich](docs/smooth-voice-device-update.md) sind dokumentiert.
 
 **Build 2026092610** ergänzt Wischgesten, vollständige Orts-/Therapeutenangaben und einstellbare Kalendergrößen, direkte iOS-Spracherkennung ohne zusätzliche Sprachdatei-Einrichtung sowie Apples native Kamera. [Umsetzung und Abnahme](docs/fluid-calendar-voice.md) · [Bisherige Simulatorvorschau](docs/preview/2026-09-26-s12-fluid/README.md). Der Gesprächsbildschirm wurde mit Build 2026092611 überarbeitet.

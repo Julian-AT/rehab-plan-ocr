@@ -10,10 +10,10 @@ struct VoicePresentation {
     @MainActor init(model: VoiceModel, output: SpeechOutput) {
         if model.recorder.state == .recording {
             phase = .recording; title = "Ich höre zu"; level = model.recorder.level
-        } else if model.recorder.state != .idle || model.busy || model.edits.busy {
-            phase = .processing; title = "Wird vorbereitet …"; level = 0
         } else if output.phase == .playing {
             phase = .playback; title = "Antwort wird vorgelesen"; level = output.level
+        } else if model.recorder.state != .idle || model.busy || model.edits.busy {
+            phase = .processing; title = "Wird vorbereitet …"; level = 0
         } else if output.phase == .preparing {
             phase = .processing; title = "Stimme wird vorbereitet …"; level = 0
         } else if model.recorder.failure != nil || model.failure != nil || output.phase == .failed || model.edits.error != nil {
@@ -21,7 +21,7 @@ struct VoicePresentation {
         } else if model.edits.proposal != nil {
             phase = .confirmation; title = "Bitte Angaben bestätigen"; level = 0
         } else {
-            phase = .idle; title = "Bereit zum Sprechen"; level = 0
+            phase = .idle; title = model.sessionState == .paused ? "Gespräch pausiert" : "Bereit zum Sprechen"; level = 0
         }
     }
 }
@@ -102,23 +102,21 @@ struct VoiceView: View {
             Spacer(minLength: 12)
             VoiceOrb(state: presentation)
             Spacer(minLength: 12)
-            if !model.response.isEmpty && model.edits.proposal == nil {
-                Text(model.response).font(.body).multilineTextAlignment(.center)
-                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 3).padding(.horizontal)
-                    .accessibilityIdentifier("voice-response")
+            if !model.response.isEmpty {
+                SpokenResponseLine(output: output, fullText: model.response)
+                    .padding(.horizontal).padding(.bottom, 12)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
         .safeAreaInset(edge: .bottom) {
-            Button(model.recorder.state == .recording ? "Fertig" : "Gespräch starten",
-                   systemImage: model.recorder.state == .recording ? "checkmark" : "mic") {
-                Task { if model.recorder.state == .recording { await model.endTurn() } else { await model.beginTurn() } }
+            Button(model.mainButtonTitle, systemImage: model.sessionState == .paused ? "play" : model.sessionState == .stopped ? "mic" : "pause") {
+                Task { await model.toggleSession() }
             }
             .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.extraLarge)
-            .accessibilityIdentifier(model.recorder.state == .recording ? "finish-speaking" : "speak")
-            .accessibilityHint(model.recorder.state == .recording ? "Aufnahme beenden und auswerten" : "Aufnahme starten")
-            .disabled(model.busy || model.edits.busy || (model.recorder.state != .idle && model.recorder.state != .recording) || model.edits.proposal != nil)
+            .accessibilityIdentifier("speak")
+            .accessibilityHint("Einmal starten, automatisch antworten und weiter zuhören. Hineinsprechen unterbricht die Antwort.")
+            .disabled(model.edits.busy || model.edits.proposal != nil)
             .padding(.horizontal).padding(.bottom, 24).padding(.top, 20)
         }
         .toolbar {
@@ -127,7 +125,7 @@ struct VoiceView: View {
                     .accessibilityIdentifier("stop-speech")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Gesprächsdetails", systemImage: "text.bubble") { details = true }
+                Button("Gesprächsdetails", systemImage: "text.bubble") { model.pauseSession(); details = true }
                     .accessibilityIdentifier("voice-details")
                 Button("Spracheinstellungen", systemImage: "slider.horizontal.3") { model.cancelSession(); settings = true }
                     .accessibilityIdentifier("voice-settings")
@@ -214,8 +212,55 @@ private struct VoiceDetailsView: View {
                 if let event = model.edits.systemEvent { Button("Im Systemkalender öffnen") { Task { await model.edits.openSystem(event) } } }
                 NavigationLink("Verlauf und Rückgängig") { EventHistoryView(core: core) }
             }.disabled(model.busy || model.edits.busy)
+            if !model.rounds.isEmpty {
+                Section {
+                    DisclosureGroup("Gesprächsverlauf") {
+                        ForEach(model.rounds) { round in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(round.user).fontWeight(.medium)
+                                if !round.answer.isEmpty { Text(round.answer) }
+                            }.textSelection(.enabled)
+                        }
+                    }
+                }
+            }
             Section { Button("Gespräch abbrechen", role: .cancel) { model.cancelSession() } }
         }.pageTitle("Gesprächsdetails")
             .sheet(isPresented: $editor) { EventEditorView(core: core, original: editingEvent) {} }
+    }
+}
+
+/// Word appearance is driven exclusively by rendered player sample position.
+private struct SpokenResponseLine: View {
+    let output: SpeechOutput
+    let fullText: String
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        Group {
+            if typeSize.isAccessibilitySize || reduceMotion {
+                Text(output.words.suffix(18).map(\.text).joined(separator: " "))
+                    .font(.body).fixedSize(horizontal: false, vertical: true)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 6) {
+                            ForEach(output.words) { word in
+                                Text(word.text).font(.body).transition(.opacity).id(word.id)
+                            }
+                        }.padding(.leading, 24).padding(.trailing, 8)
+                    }.scrollIndicators(.hidden).scrollDisabled(true)
+                        .mask { LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.12), .init(color: .black, location: 1)], startPoint: .leading, endPoint: .trailing) }
+                        .onChange(of: output.words.last?.id) { _, id in
+                            if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .trailing) } }
+                        }
+                }.frame(height: 44)
+            }
+        }
+        .opacity(output.lineVisible ? 1 : 0)
+        .animation(.easeOut(duration: 0.15), value: output.words.last?.id)
+        .animation(.easeOut(duration: 0.3), value: output.lineVisible)
+        .accessibilityElement(children: .ignore).accessibilityLabel(fullText)
+        .accessibilityIdentifier("voice-response")
     }
 }

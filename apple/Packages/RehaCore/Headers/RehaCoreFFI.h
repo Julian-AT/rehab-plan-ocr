@@ -522,6 +522,11 @@ uint64_t uniffi_reha_ffi_fn_constructor_nativespeech_new(RustBuffer model_direct
 uint64_t uniffi_reha_ffi_fn_method_nativespeech_render(uint64_t ptr, RustBuffer text, RustBuffer voice, float speed, uint64_t request
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_RENDER_TIMED
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_RENDER_TIMED
+uint64_t uniffi_reha_ffi_fn_method_nativespeech_render_timed(uint64_t ptr, RustBuffer text, RustBuffer voice, float speed, uint64_t request
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_SET_REQUEST
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_SET_REQUEST
 void uniffi_reha_ffi_fn_method_nativespeech_set_request(uint64_t ptr, uint64_t request, RustCallStatus *_Nonnull out_status
@@ -1072,6 +1077,12 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_stage_photo(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER
 uint16_t uniffi_reha_ffi_checksum_method_nativespeech_render(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER_TIMED
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER_TIMED
+uint16_t uniffi_reha_ffi_checksum_method_nativespeech_render_timed(void
     
 );
 #endif

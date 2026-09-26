@@ -68,7 +68,12 @@ struct SettingsView: View {
                             ForEach(AgendaDensity.allCases, id: \.rawValue) { Text($0.title).tag($0.rawValue) }
                         }.accessibilityIdentifier("agenda-density")
                         Toggle("Tagesliste", isOn: $listView).accessibilityIdentifier("agenda-list-setting")
-                    } header: { Text("Kalender") } footer: { Text("Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach rechts wischen: nächster Tag. Nach links: vorheriger Tag.") }
+                    } header: { Text("Kalender") } footer: { Text("Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach links wischen: nächster Tag. Nach rechts: vorheriger Tag.") }
+                    Section("Terminfarben") {
+                        ForEach(EventCategory.allCases, id: \.rawValue) { category in
+                            Label { Text(category.title) } icon: { Circle().fill(category.color).frame(width: 12, height: 12) }
+                        }
+                    }
                 case .reminders:
                     Section {
                         Picker("Kalendererinnerung", selection: store.binding(\.reminder, fallback: nil)) { minuteOptions }

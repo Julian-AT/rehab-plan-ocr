@@ -87,6 +87,30 @@ pub fn normalize(text: &str) -> String {
         .replace(['–', '—', '‑'], " bis ")
         .replace(['“', '”', '„', '"'], " ")
         .replace(['[', ']', '{', '}', '<', '>'], " ");
+    // A roman suffix at a title boundary is a cardinal: Frühstück I → eins.
+    // Never replace roman-looking substrings inside words or arbitrary prose.
+    text = replace(
+        &text,
+        r"(\p{L}+)\s+(XII|XI|IX|VIII|VII|VI|IV|III|II|X|V|I)([,.;:!?]|$)",
+        |c| {
+            let value = match &c[2] {
+                "I" => 1,
+                "II" => 2,
+                "III" => 3,
+                "IV" => 4,
+                "V" => 5,
+                "VI" => 6,
+                "VII" => 7,
+                "VIII" => 8,
+                "IX" => 9,
+                "X" => 10,
+                "XI" => 11,
+                "XII" => 12,
+                _ => unreachable!(),
+            };
+            format!("{} {}{}", &c[1], number(value), &c[3])
+        },
+    );
     text = replace(&text, r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b", |c| {
         let day: u32 = c[1].parse().unwrap();
         let month: u32 = c[2].parse().unwrap();
@@ -203,6 +227,17 @@ mod tests {
         assert_eq!(
             normalize("1,05 und z. B. Dr. Muster"),
             "1 Komma null fünf und zum Beispiel Doktor Muster"
+        );
+    }
+    #[test]
+    fn roman_title_suffixes_are_cardinals() {
+        assert_eq!(
+            normalize("Frühstück I, Frühstück II. Behandlung XII"),
+            "Frühstück eins, Frühstück zwei. Behandlung zwölf"
+        );
+        assert_eq!(
+            normalize("Vitamin IV im Text, MIX und XIV"),
+            "Vitamin IV im Text, MIX und XIV"
         );
     }
     #[test]

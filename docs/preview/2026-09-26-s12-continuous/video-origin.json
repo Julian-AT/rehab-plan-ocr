@@ -1,0 +1,23 @@
+{
+  "result_bundle": "reha-continuous-final.xcresult",
+  "device": "iPhone 17 / iOS Simulator 26.4",
+  "clips": [
+    {
+      "file": "kalender-seiten.mp4",
+      "source": "C32E5EDF-9D5B-43E5-A9FB-66D2317AAF1E.mp4",
+      "test": "ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag",
+      "start_seconds": 4,
+      "duration_seconds": 19
+    },
+    {
+      "file": "victoria-text.mp4",
+      "source": "20FE8044-C76A-44DD-83EF-96425187B159.mp4",
+      "test": "ContinuousCalendarTests/testTimedRealPlaybackAndCancel",
+      "start_seconds": 9,
+      "duration_seconds": 11
+    }
+  ],
+  "processing": "Trim and resize to 604 px width; no audio track.",
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

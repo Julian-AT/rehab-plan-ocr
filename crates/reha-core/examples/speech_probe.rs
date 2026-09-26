@@ -13,12 +13,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Model loaded in {:.2}s", started.elapsed().as_secs_f32());
     let latest = AtomicU64::new(1);
     for (name, text, speed) in [
+        ("victoria-fruehstueck", "Frühstück I, um 07:00 Uhr im Speisesaal. Frühstück II, um 07:30 Uhr. Danach Behandlung XII, bei Dr. Muster in Raum 2.14.", 0.95),
         ("victoria-kalender", "Am 14.09.2026 um 09:15 Uhr beginnt deine Physiotherapie in Laßnitzhöhe. Bitte komm in Raum 2.14. Der Termin endet um 09:45 Uhr.", 0.95),
         ("victoria-langsam", "Am Dienstag, 15. September 2026, hast du um 13:05 Uhr Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.", 0.75),
         ("victoria-lange-antwort", "Heute stehen mehrere Termine an. Um 08:30 Uhr beginnt die Physiotherapie im Raum 2.14 in Laßnitzhöhe. Sie dauert 30 Min. Um 10:15 Uhr folgt Ergotherapie in Raum 105. Dieser Termin endet um 11:00 Uhr. Am Nachmittag, um 13:05 Uhr, beginnt die Rückengymnastik im Turnsaal. Bitte prüfe die Angaben auf dem Bildschirm. Kalenderänderungen speichere ich erst, wenn du die Bestätigungsschaltfläche antippst.", 1.0),
     ] {
         let started = Instant::now();
-        let wav = engine.render(text, "victoria", speed, 1, &latest)?;
+        let timed = engine.render_timed(text, "victoria", speed, 1, &latest)?;
+        assert!(!timed.marks.is_empty());
+        assert!(timed.marks.iter().all(|mark| mark.start >= 0.0 && mark.end >= mark.start && mark.end <= timed.duration));
+        assert!(timed.marks.windows(2).all(|pair| pair[0].end <= pair[1].start));
+        std::fs::write(out.join(format!("{name}-marks.json")), serde_json::to_vec_pretty(&timed.marks)?)?;
+        let wav = timed.audio;
         assert!(wav.starts_with(b"RIFF") && wav.len() > 48000);
         assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 24_000);
         println!("{name}: {} bytes, {:.2}s audio, {:.2}s render", wav.len(), (wav.len() - 44) as f32 / 48_000.0, started.elapsed().as_secs_f32());
