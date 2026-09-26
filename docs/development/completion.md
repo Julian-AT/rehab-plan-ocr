@@ -42,7 +42,7 @@ Die Zustände **offen**, **implementiert**, **verifiziert**, **fehlgeschlagen** 
 | F Kalender und Speicherung | Gemeinsame Schutzregeln, sichtbare Auswahl, dauerhafte Ergebnisse trotz Wartungsfehlern, Migration-/Erasure-/Wiederanlaufregressionen **implementiert** und in den unten benannten Umgebungen **verifiziert**. | Vollständige gemeinsame Geräte-/Betriebsabnahme einschließlich Zeit-/Berechtigungswechsel, Einladungen/Serien, Hintergrund, Widerruf, Audio und langer Sitzungen; [Umsetzungsvertrag](implementation-plan.md). |
 | G UI, Bedienbarkeit, Leistung | Große Schrift, reduzierte Bewegung, Navigation, Archivkorrektur und reale Simulatorwiedergabe in UI-Fällen **verifiziert**. Vollständige UI-Suite an `01fbafe`: **70/70**, keine Fehler/Skips. Strenger Kalenderbildvergleich **fehlgeschlagen: 17/22**. Feste Archivreferenz an `d670608` pixelgleich. | Vier Scrollindikatorabweichungen und eine dunkle Tagesabschluss-Rasterabweichung bleiben offen. Gemeinsame Geräteabnahme, VoiceOver/Fokus/Querformat vollständig prüfen; gepaarte physische Latenz-, Speicher-, Energie- und Thermikmessung offen. [Aufnahmevertrag](../product/visual-baseline/capture-contract.md). |
 | H Datenbasis | Herkunft, Maskierungs-/Freigabegates, Gruppierung und synthetischer Pixelreplay **verifiziert**. 20 reale Originale/188 vorläufige Zeilenvorkommen; **null** freigegebene Referenzen/Crops, kein unabhängiger finaler Testsatz. | Menschliche Feld-/Geometrie-/Datenschutzprüfung und eingewilligte ungesehene Pläne/Aufnahmen **extern blockiert**. Bestehendes Material bleibt Entwicklung; [Datenvertrag](dataset.md), [privates Prüfpaket](reference-review-packet.md). |
-| I OCR | PP-OCRv6-Small-Training, Wiederaufnahme und Exporte vorhanden; numerische Exportparität **fehlgeschlagen**. Erste BatchNorm bytegenau korrigierbar. Gesamtgraphvergleich: zwölf Originalkontrollen und 48 Wiederladeprüfungen bestanden, beide Varianten numerisch fehlgeschlagen; alle Textausgaben und zuvor bestandenen Fälle erhalten. | Kontrollierter Trace lokalisiert die nächste Byteabweichung bei Conv.3. Isolierter Vergleich reproduziert sie mit identischen Eingaben/Gewichten; alternative strided-MatMul-Umsetzung verfehlt das vorab festgelegte Byte-Gate und wird nicht übernommen. Gültige Korrektur weiterhin offen; anschließend vollständiger Korpus einschließlich alter Erfolge. Danach qualifiziertes Training, Modellkarte und echte App-/Planabnahme. [Aktuelle Diagnose](../../ml/experiments/2026-09-26-s20-ocr-strided-convolution.md). |
+| I OCR | PP-OCRv6-Small-Training, Wiederaufnahme und Exporte vorhanden; numerische Exportparität **fehlgeschlagen**. Erste BatchNorm bytegenau korrigierbar. Gesamtgraphvergleich: zwölf Originalkontrollen und 48 Wiederladeprüfungen bestanden, beide Varianten numerisch fehlgeschlagen; alle Textausgaben und zuvor bestandenen Fälle erhalten. | Kontrollierter Trace lokalisiert die nächste Byteabweichung bei Conv.3. Isolierter Vergleich reproduziert sie mit identischen Eingaben/Gewichten; alternative strided-MatMul-Umsetzung verfehlt das vorab festgelegte Byte-Gate und wird nicht übernommen. Der nachfolgende feste Tile16-Versuch besteht alle isolierten Byte-/Wiederladevergleiche; seine Gesamtgraphprüfung und anschließend der vollständige Korpus einschließlich alter Erfolge bleiben offen. Danach qualifiziertes Training, Modellkarte und echte App-/Planabnahme. [Aktuelle Diagnose](../../ml/experiments/2026-09-26-s20-ocr-strided-convolution.md). |
 | J Assistent | Neuer Qwen3-LoRA-Stand mit 272 Trainingsbeispielen fertig. Dieselben bekannten 40 Entwicklungsfälle: **30 statt 17** exakte MLX-Antworten, **vier statt zehn** unsichere Rohvorschläge; Schemaerfüllung 36 statt 38. Erstmals **40/40 vollständige Antworten** zwischen Adapter, Fusion und nativem Export identisch: Exportparität dieses Korpus **verifiziert**. Frühere Fehler bleiben historisch erhalten. | Aktueller Host-Routervergleich mit denselben Regeln: **40/40** exakt neu, **37/40** bisher trainiert, **28/40** untrainiert; null unsichere Routervorschläge in diesen bekannten Fällen. Vier zusätzliche Treffer je Variante stammen aus der gesonderten Umbenennungsregel, drei weitere aus dem neuen Modell. Tatsächliche Gesamtgespräche mit Lesen, Bestätigung, Ausführung und Audio, unabhängige geprüfte Dialoge und Geräteabnahme bleiben offen. Noch keine Modellfreigabe. [Neuer Trainings-/Exportnachweis](../../ml/experiments/2026-09-26-s21-assistant-development-v2-results.md), [Assistentenschutz](assistant-safety.md). |
 | K Sprache | Systemanbieter mit Identität, PCM-/Wortfortschritt, Stop/Wiederholung **implementiert**; neun Stimmen/90 Hostproben/1.782 Marker **verifiziert**. Öffentlicher Pfad ohne Kokoro/eSpeak technisch geprüft. | Aktuelle iPhone-Aufnahmen, menschliche Verständlichkeit/Stimmenwahl, tatsächliche Sprecher/Pausen und Offline-/Routen-/Neustartprüfung **extern blockiert**; [Sprachvertrag](system-speech.md). |
 | Veröffentlichung | Werkzeuge für Paket-, Lizenz-, Symbol-, Signatur-, Backup- und Datenvergleich **implementiert**; historische Pakete separat belegt. | Endgültiges signiertes Paket, interne Abnahme, TestFlight-Pilot und Veröffentlichung **offen/extern blockiert**. Herausgeber-/Kontakt-/Brandingangaben und aktuelle Provisionierung erforderlich. |
@@ -87,9 +87,18 @@ Exportprüfung umfasst alle 640 Crops in zwei Breiten: **1.266/1.280** numerisch
 Erfolge, 1.280 gleiche Tokenfolgen. Die unveränderte numerische Freigabeschranke
 ist damit nicht bestanden. Es handelt sich um bekannte synthetische
 Entwicklungsdaten; weder Verbesserung noch Auslieferung ist qualifiziert.
-Der Vergleichslauf mit vollständig trainiertem Backbone ist noch nicht
-abgeschlossen. Unveränderte Nachweise: `ocr-v3-frozen-001` und
-`ocr-v3-training-20260926-s21-001-evidence`.
+Auch die vollständige Anpassung ist abgeschlossen: fünf Epochen, ausgewählte
+Epoche zwei, **111/128** exakte Crops, ein neuer kritischer Fehler im
+Therapeutenfeld und 16 Notizfehler. Ihr Export besteht **1.261/1.280** numerische
+Fälle bei 1.280 gleichen Tokenfolgen. Beide Kandidaten verfehlen die Freigabe;
+die [registrierten Ergebnisse](../../ml/experiments/2026-09-26-s21-ocr-field-coverage-results.md)
+enthalten auch die bisherigen Modelle auf demselben Validierungsbestand.
+
+Der danach getrennt ausgeführte feste Conv.3-Tile16-Versuch besteht zehn
+isolierte Bytevergleiche und zehn Wiederladevergleiche, einschließlich aller
+92.160 gespeicherten Paddle-Ausgabewerte. Der Original-Conv-Kontrollpfad und alle
+Quell-/Laufzeitbindungen bestehen. Das ist ein Fortschritt der Exportdiagnose;
+Gesamtgraph und vollständiger Korpus bleiben gesondert zu prüfen.
 
 Der neue reproduzierbare Python-Abhängigkeitsaudit ist vollständig ausgeführt,
 bleibt aber mit **sieben betroffenen Paketversionen / 24 Advisorygruppen** negativ.
@@ -165,8 +174,8 @@ sind [vorbereitet](../product/research/usability-rounds.md); keine Durchführung
 oder Freigabe wird angenommen. Herausgeber-, Kontakt- und Brandingangaben fehlen.
 
 Diese Voraussetzungen blockieren nur abhängige Arbeiten. Als Nächstes verbleiben
-intern insbesondere lokale Artefaktaufbewahrung, visuelle Stabilisierung, typisierte
-Restgrenzen, laufender OCR-Vergleich/Export und weitere gemeinsame Plattformabnahme
+intern insbesondere lokale Artefaktaufbewahrung, visuelle Stabilisierung, abschließende
+Architekturabnahme, weitere OCR-Exportdiagnose und weitere gemeinsame Plattformabnahme
 einschließlich des neuen Assistenten in der tatsächlichen App.
 Nach vollständiger Kandidatenprüfung: Vorschauen/Hörproben zur ausdrücklichen
 Freigabe, gesichertes Geräteupdate, interne Abnahme, kleiner Pilot und endgültige
