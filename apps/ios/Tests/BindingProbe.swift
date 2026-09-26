@@ -21,6 +21,9 @@ final class TestHost: AppleHost, @unchecked Sendable {
 }
 @main struct BindingProbe {
   static func main() async throws {
+    precondition(
+      normalizeSpeech(text: "Frühstück II beginnt um 09:15 Uhr in Raum 105.")
+        == "Frühstück zwei beginnt um neun Uhr fünfzehn in Raum einhundertfünf.")
     let root = CommandLine.arguments[1]
     let draftRoot = root + "-draft"
     try FileManager.default.copyItem(atPath: root, toPath: draftRoot)

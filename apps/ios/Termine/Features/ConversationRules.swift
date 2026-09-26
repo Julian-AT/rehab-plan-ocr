@@ -1,5 +1,17 @@
 import Foundation
 
+struct HeardSpeech {
+  private var order: [UUID] = []
+  private var passages: [UUID: String] = [:]
+  var text: String {
+    order.compactMap { passages[$0] }.filter { !$0.isEmpty }.joined(separator: " ")
+  }
+  mutating func capture(playback: UUID, completedWords: String) {
+    if passages[playback] == nil { order.append(playback) }
+    passages[playback] = completedWords
+  }
+}
+
 /// Pure endpoint policy, fed exactly one 20 ms VAD decision at a time.
 struct SpeechEndpoint {
   private(set) var voicedFrames = 0
@@ -47,7 +59,10 @@ struct StableSpeechPhrases {
       let prefix = rest[..<range.lowerBound]
       let word = prefix.split(separator: " ").last.map(String.init) ?? ""
       guard prefix.last?.isNumber != true,
-        !["Dr", "Prof", "Min", "Std", "ca", "bzw", "z", "B"].contains(word)
+        ![
+          "Dr", "Prof", "Min", "Std", "ca", "bzw", "z", "B", "d", "h", "u", "a", "ev", "evtl",
+          "Tel",
+        ].contains(word)
       else { continue }
       boundary = range.upperBound
     }
@@ -63,16 +78,15 @@ enum SpeechPhrasing {
     var chunks: [String] = []
     var current = ""
     for word in text.split(whereSeparator: \.isWhitespace) {
-      if current.count + word.count > 220 && !current.isEmpty {
-        chunks.append(current)
-        current = ""
-      }
       if !current.isEmpty { current += " " }
       current += word
       if current.count > 40
         && (word.hasSuffix("!") || word.hasSuffix("?")
           || (word.hasSuffix(".") && word.dropLast().last?.isNumber == false
-            && !["Dr.", "Prof.", "Min.", "Std.", "ca.", "bzw.", "z.", "B."].contains(String(word))))
+            && ![
+              "Dr.", "Prof.", "Min.", "Std.", "ca.", "bzw.", "z.", "B.", "d.", "h.", "u.", "a.",
+              "ev.", "evtl.", "Tel.",
+            ].contains(String(word))))
       {
         chunks.append(current)
         current = ""

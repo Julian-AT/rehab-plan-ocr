@@ -2,57 +2,6 @@ import AppleServices
 import RehaCore
 import SwiftUI
 
-struct EventProposalView: Codable, Identifiable, Sendable {
-  let token: String
-  let session: String
-  let revision: UInt64
-  let kind: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let calendar_id: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let calendar_title: String
-  let before: CalendarEvent?
-  let patch: [String: JSONValue]
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let undo_of: String?
-  var id: String { token }
-  var button: String {
-    kind == "create"
-      ? "Termin speichern"
-      : kind == "remove" ? "Diesen Kalendereintrag löschen" : "Änderung speichern"
-  }
-  var after: CalendarEventValues? {
-    guard kind != "remove" else { return nil }
-    var values =
-      before?.values
-      ?? CalendarEventValues(
-        title: "", start_utc: "", end_utc: "", timezone: "Europe/Vienna", location: "",
-        reminder_minutes: nil)
-    for (key, value) in patch {
-      switch (key, value) {
-      case ("title", .string(let v)): values.title = v
-      case ("start_utc", .string(let v)): values.start_utc = v
-      case ("end_utc", .string(let v)): values.end_utc = v
-      case ("timezone", .string(let v)): values.timezone = v
-      case ("location", .string(let v)): values.location = v
-      case ("reminder_minutes", .number(let v)): values.reminder_minutes = Int(v)
-      case ("reminder_minutes", .null): values.reminder_minutes = nil
-      default: break
-      }
-    }
-    return values
-  }
-  var spoken: String {
-    let action =
-      kind == "remove"
-      ? "Diesen Kalendereintrag löschen: \(before?.values.spoken ?? "")"
-      : kind == "update"
-        ? "Bisher: \(before?.values.spoken ?? "") Neu: \(after?.spoken ?? "")"
-        : "Neuer Termin: \(after?.spoken ?? "")"
-    return
-      "\(action) Kalender \(calendar_title). \(before?.recurring == true ? "Nur dieses Serienvorkommen." : "") Zum Bestätigen bitte die große Schaltfläche antippen."
-  }
-}
 struct EventResponse: Decodable {
   var proposal: EventProposalView?
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -91,6 +40,7 @@ extension NativeApplication {
   var systemEvent: CalendarEvent?
   var busy = false
   var error: String?
+  var conversationResult: String?
   var result: String?
   init(core: NativeApplication, origin: String = "manual") {
     self.core = core
@@ -106,6 +56,7 @@ extension NativeApplication {
     let session = session
     proposal = nil
     result = nil
+    conversationResult = nil
     defer { if self.session == session { busy = false } }
     do {
       let response: EventResponse = try await core.eventRequest(
@@ -125,6 +76,7 @@ extension NativeApplication {
     guard let proposal, !busy else { return }
     busy = true
     self.proposal = nil
+    conversationResult = nil
     let current = session
     LocalDiagnostics.shared.record(.confirmation, .started, correlation: proposal.token)
     defer { if session == current { busy = false } }
@@ -136,6 +88,11 @@ extension NativeApplication {
           "confirmation": "button",
         ])
       guard session == current else { return }
+      conversationResult =
+        response.status == "saved"
+        ? (proposal.kind == "remove"
+          ? "Der Kalendereintrag ist gelöscht." : "Der Termin ist gespeichert.")
+        : response.message ?? "Der Schreibstatus ist unklar. Bitte den Kalender abgleichen."
       result =
         response.status == "saved"
         ? "\(proposal.kind == "remove" ? "Kalendereintrag gelöscht" : "Gespeichert") in \(proposal.calendar_title)."
@@ -166,6 +123,7 @@ extension NativeApplication {
     busy = false
     error = nil
     result = nil
+    conversationResult = nil
     Task {
       let _: [String: JSONValue]? = try? await core.eventRequest(
         "invalidateEventSession", ["session": old])

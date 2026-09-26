@@ -703,7 +703,7 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
      * Same pipeline as a regular import, with retained detector crops for tracing.
      */
     func importTracePhoto(request: PhotoRequest) async throws  -> ScanOutcome
-
+    
     func jobProgress(id: String)  -> JobProgress?
     
     func loadScan(id: String) async throws  -> ReviewSnapshot
@@ -730,7 +730,7 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
      * Full, local recognition evidence for the explicitly opened tracing workspace.
      */
     func recognitionTrace(id: String) async throws  -> String
-
+    
     func reconcileCalendar() async throws  -> [CalendarResult]
     
     func resolvePending(attemptId: String, removalApplied: Bool) async throws 
@@ -755,7 +755,7 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     func stagePhoto(id: String, path: String) async throws  -> IntakeSummary
     
     func traceArtifactPath(id: String, artifact: String) async throws  -> String
-
+    
 }
 open class NativeApplication: NativeApplicationProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -1087,7 +1087,7 @@ open func importTracePhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
-
+    
 open func jobProgress(id: String) -> JobProgress?  {
     return try!  FfiConverterOptionTypeJobProgress.lift(try! rustCall() {
         uniffiCallStatus in
@@ -1269,7 +1269,7 @@ open func recognitionTrace(id: String)async throws  -> String  {
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
-
+    
 open func reconcileCalendar()async throws  -> [CalendarResult]  {
     return
         try  await uniffiRustCallAsync(
@@ -1448,7 +1448,7 @@ open func traceArtifactPath(id: String, artifact: String)async throws  -> String
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
-
+    
 
     
 }
@@ -6491,6 +6491,17 @@ public func openApplication(root: String, models: String, host: AppleHost)async 
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
+/**
+ * Same preparation as the renderer, without loading model weights.
+ */
+public func normalizeSpeech(text: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_func_normalize_speech(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -6520,6 +6531,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_func_open_application() != 49466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_func_normalize_speech() != 54361) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_accept_and_save() != 28991) {

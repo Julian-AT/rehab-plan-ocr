@@ -81,17 +81,27 @@ fn ordinal(n: u32) -> String {
         _ => format!("{}{}", number(n), if n < 20 { "ten" } else { "sten" }),
     }
 }
+fn room_number(value: &str) -> String {
+    if value.starts_with('0') && value.len() > 1 {
+        value
+            .chars()
+            .map(|d| number(d.to_digit(10).unwrap()))
+            .collect::<Vec<_>>()
+            .join(" ")
+    } else {
+        number(value.parse().unwrap())
+    }
+}
 pub fn normalize(text: &str) -> String {
     let mut text = text
         .replace(['\n', '\r', '\t', '\u{a0}'], " ")
-        .replace(['–', '—', '‑'], " bis ")
         .replace(['“', '”', '„', '"'], " ")
         .replace(['[', ']', '{', '}', '<', '>'], " ");
-    // A roman suffix at a title boundary is a cardinal: Frühstück I → eins.
-    // Never replace roman-looking substrings inside words or arbitrary prose.
+    // Only known appointment nouns admit numbered groups, including in a sentence.
+    // Names (Karl I), medical grades (NYHA II) and Vitamin IV remain untouched.
     text = replace(
         &text,
-        r"(\p{L}+)\s+(XII|XI|IX|VIII|VII|VI|IV|III|II|X|V|I)([,.;:!?]|$)",
+        r"\b(Frühstück|Mittagessen|Abendessen|Jause|Behandlung|Therapie|Physiotherapie|Ergotherapie|Gruppe|Gymnastik|Rückengymnastik|Heilgymnastik|Massage|Visite)\s+(XII|XI|IX|VIII|VII|VI|IV|III|II|X|V|I)\b",
         |c| {
             let value = match &c[2] {
                 "I" => 1,
@@ -108,9 +118,13 @@ pub fn normalize(text: &str) -> String {
                 "XII" => 12,
                 _ => unreachable!(),
             };
-            format!("{} {}{}", &c[1], number(value), &c[3])
+            format!("{} {}", &c[1], number(value))
         },
     );
+    // Range punctuation only between numbers; never rewrite names or prose dashes.
+    text = replace(&text, r"(\d)(?:\s*Uhr)?\s*[-–—]\s*(\d)", |c| {
+        format!("{} bis {}", &c[1], &c[2])
+    });
     text = replace(&text, r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b", |c| {
         let day: u32 = c[1].parse().unwrap();
         let month: u32 = c[2].parse().unwrap();
@@ -176,13 +190,48 @@ pub fn normalize(text: &str) -> String {
     });
     text = replace(
         &text,
+        r"\b([01]?\d|2[0-3])\s+Uhr(?:\s+([0-5]?\d)\b)?",
+        |c| {
+            let hour = c[1].parse().unwrap();
+            format!(
+                "{} Uhr{}",
+                if hour == 1 {
+                    "ein".into()
+                } else {
+                    number(hour)
+                },
+                c.get(2)
+                    .filter(|m| m.as_str() != "00" && m.as_str() != "0")
+                    .map(|m| format!(" {}", number(m.as_str().parse().unwrap())))
+                    .unwrap_or_default()
+            )
+        },
+    );
+    text = replace(
+        &text,
         r"(?i)\b(Raum|Zimmer)\s+(\d{1,3})[.](\d{1,3})\b",
         |c| {
             format!(
                 "{} {} Punkt {}",
                 &c[1],
                 number(c[2].parse().unwrap()),
-                number(c[3].parse().unwrap())
+                room_number(&c[3])
+            )
+        },
+    );
+    text = replace(
+        &text,
+        r"(?i)\b(Raum|Zimmer)\s+(\d{1,4})([A-Za-z]?)\b",
+        |c| {
+            format!(
+                "{} {}{}",
+                &c[1],
+                room_number(&c[2]),
+                if c[3].is_empty() {
+                    String::new()
+                } else {
+                    format!(" {}", &c[3])
+                }
             )
         },
     );
@@ -204,12 +253,31 @@ pub fn normalize(text: &str) -> String {
         (r"\bca\.", "circa"),
         (r"\bbzw\.", "beziehungsweise"),
         (r"\bz\.\s*B\.", "zum Beispiel"),
+        (r"\bd\.\s*h\.", "das heißt"),
+        (r"\bu\.\s*a\.", "unter anderem"),
+        (r"\bev(?:tl)?\.", "eventuell"),
+        (r"\bTel\.", "Telefon"),
     ] {
         text = Regex::new(from)
             .unwrap()
             .replace_all(&text, to)
             .into_owned();
     }
+    text = replace(
+        &text,
+        r"\b(\d{1,4}) bis (\d{1,4}) (Minuten|Stunden)\b",
+        |c| {
+            format!(
+                "{} bis {} {}",
+                number(c[1].parse().unwrap()),
+                number(c[2].parse().unwrap()),
+                &c[3]
+            )
+        },
+    );
+    text = replace(&text, r"\b(\d{1,4})\s+(Minuten|Stunden)\b", |c| {
+        format!("{} {}", number(c[1].parse().unwrap()), &c[2])
+    });
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -222,7 +290,7 @@ mod tests {
             "Am vierzehnten September zweitausendsechsundzwanzig um neun Uhr fünfzehn, Raum zwei Punkt vierzehn in Laßnitzhöhe.");
         assert_eq!(
             normalize("01:00 Uhr – 13:05, 30 Min."),
-            "ein Uhr bis dreizehn Uhr fünf, 30 Minuten"
+            "ein Uhr bis dreizehn Uhr fünf, dreißig Minuten"
         );
         assert_eq!(
             normalize("1,05 und z. B. Dr. Muster"),
@@ -239,6 +307,47 @@ mod tests {
             normalize("Vitamin IV im Text, MIX und XIV"),
             "Vitamin IV im Text, MIX und XIV"
         );
+    }
+    #[test]
+    fn numbering_is_contextual_and_preparation_is_repeatable() {
+        for (input, expected) in [
+            (
+                "Frühstück I beginnt um 07:15 Uhr.",
+                "Frühstück eins beginnt um sieben Uhr fünfzehn.",
+            ),
+            (
+                "Frühstück II beginnt um 9 Uhr 15 in Raum 105.",
+                "Frühstück zwei beginnt um neun Uhr fünfzehn in Raum einhundertfünf.",
+            ),
+            (
+                "Vitamin IV. NYHA II, Karl I. und MIX.",
+                "Vitamin IV. NYHA II, Karl I. und MIX.",
+            ),
+            (
+                "Anna-Maria – die Therapeutin",
+                "Anna-Maria – die Therapeutin",
+            ),
+            (
+                "09:15–09:45 Uhr, 20-30 Min.",
+                "neun Uhr fünfzehn bis neun Uhr fünfundvierzig, zwanzig bis dreißig Minuten",
+            ),
+            (
+                "Raum 2.014 und Zimmer 007",
+                "Raum zwei Punkt null eins vier und Zimmer null null sieben",
+            ),
+            (
+                "Dr. Muster kommt ca. 10 Min. später, d. h. um 10:00.",
+                "Doktor Muster kommt circa zehn Minuten später, das heißt um zehn Uhr.",
+            ),
+        ] {
+            let prepared = normalize(input);
+            assert_eq!(prepared, expected, "{input}");
+            assert_eq!(
+                normalize(&prepared),
+                prepared,
+                "Repeat must preserve preparation"
+            );
+        }
     }
     #[test]
     fn invalid_dates_are_not_silently_changed() {

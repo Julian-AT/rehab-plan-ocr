@@ -577,6 +577,11 @@ RustBuffer uniffi_reha_ffi_fn_func_new_appointment(RustBuffer date, RustCallStat
 uint64_t uniffi_reha_ffi_fn_func_open_application(RustBuffer root, RustBuffer models, uint64_t host
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_NORMALIZE_SPEECH
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_NORMALIZE_SPEECH
+RustBuffer uniffi_reha_ffi_fn_func_normalize_speech(RustBuffer text, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_FFI_REHA_FFI_RUSTBUFFER_ALLOC
 #define UNIFFI_FFIDEF_FFI_REHA_FFI_RUSTBUFFER_ALLOC
 RustBuffer ffi_reha_ffi_rustbuffer_alloc(uint64_t size, RustCallStatus *_Nonnull out_status
@@ -867,6 +872,12 @@ uint16_t uniffi_reha_ffi_checksum_func_open_application(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_NORMALIZE_SPEECH
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_NORMALIZE_SPEECH
+uint16_t uniffi_reha_ffi_checksum_func_normalize_speech(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_ACCEPT_AND_SAVE
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_ACCEPT_AND_SAVE
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_accept_and_save(void
@@ -966,7 +977,7 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_import_photo(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_IMPORT_TRACE_PHOTO
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_IMPORT_TRACE_PHOTO
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_import_trace_photo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_JOB_PROGRESS
@@ -1038,7 +1049,7 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_recognition_busy(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECOGNITION_TRACE
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECOGNITION_TRACE
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_recognition_trace(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_RECONCILE_CALENDAR
@@ -1104,7 +1115,7 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_stage_photo(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER

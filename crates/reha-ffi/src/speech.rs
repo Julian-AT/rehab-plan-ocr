@@ -106,3 +106,9 @@ impl NativeSpeech {
         }
     }
 }
+
+/// Same preparation as the renderer, without loading model weights.
+#[uniffi::export]
+pub fn normalize_speech(text: String) -> String {
+    reha_core::speech_text::normalize(&text)
+}

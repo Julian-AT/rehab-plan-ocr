@@ -2,6 +2,15 @@ import Foundation
 
 @main struct ConversationRulesProbe {
   static func main() {
+    var heard = HeardSpeech()
+    let firstPlayback = UUID()
+    heard.capture(playback: firstPlayback, completedWords: "Frühstück eins")
+    heard.capture(playback: firstPlayback, completedWords: "Frühstück eins beginnt")
+    precondition(heard.text == "Frühstück eins beginnt")
+    heard.capture(playback: UUID(), completedWords: "")
+    precondition(!heard.text.contains("sieben Uhr"), "Unplayed remainder must not enter history")
+    heard.capture(playback: UUID(), completedWords: "Bitte prüfe die Angaben.")
+    precondition(heard.text == "Frühstück eins beginnt Bitte prüfe die Angaben.")
     var endpoint = SpeechEndpoint()
     for _ in 0..<300 { precondition(!endpoint.append(voice: false, transcript: "")) }
     endpoint = SpeechEndpoint(confirmedPreRoll: true)

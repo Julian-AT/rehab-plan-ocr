@@ -13,6 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Model loaded in {:.2}s", started.elapsed().as_secs_f32());
     let latest = AtomicU64::new(1);
     for (name, text, speed) in [
+        ("victoria-du", "Dein nächster Termin ist am 14. September um 09:15 Uhr. Die Physiotherapie findet in Raum 2.14 statt. Bitte prüfe die Angaben und tippe zum Bestätigen auf die Schaltfläche.", 0.95),
+        ("victoria-sie", "Ihr nächster Termin ist am 14. September um 09:15 Uhr. Die Physiotherapie findet in Raum 2.14 statt. Bitte prüfen Sie die Angaben und tippen Sie zum Bestätigen auf die Schaltfläche.", 0.95),
+        ("victoria-kontext", "Frühstück I beginnt um 07:00 Uhr. Frühstück II beginnt um 07:30 Uhr. Danach folgt die Behandlung bei Dr. Muster in Raum 105. Sie dauert ca. 30 Min. Für diesen Termin ist mir kein Therapeut bekannt.", 0.95),
         ("victoria-fruehstueck", "Frühstück I, um 07:00 Uhr im Speisesaal. Frühstück II, um 07:30 Uhr. Danach Behandlung XII, bei Dr. Muster in Raum 2.14.", 0.95),
         ("victoria-kalender", "Am 14.09.2026 um 09:15 Uhr beginnt die Physiotherapie in Laßnitzhöhe, in Raum 2.14. Der Termin endet um 09:45 Uhr.", 0.95),
         ("victoria-langsam", "Am Dienstag, 15. September 2026, beginnt um 13:05 Uhr die Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.", 0.75),

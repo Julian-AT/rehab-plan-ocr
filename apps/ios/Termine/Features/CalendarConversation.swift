@@ -85,8 +85,8 @@ actor CalendarConversation {
       "date": Self.day(event.values.start),
       "start": eventTime(event.values.start), "end": eventDate(event.values.end),
       "all_day": event.isAllDay,
-      "timezone": event.values.timezone, "location": String(event.placeDescription.prefix(200)),
-      "therapist": String(event.therapistDescription.prefix(160)),
+      "timezone": event.values.timezone, "location": String(event.knownPlace.prefix(200)),
+      "therapist": String((event.therapist ?? "").prefix(160)),
     ]
   }
   func context(compact: Bool = false) throws -> String {

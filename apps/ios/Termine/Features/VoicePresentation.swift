@@ -279,7 +279,7 @@ private struct VoiceDetailsView: View {
           Text(model.response).textSelection(.enabled).accessibilityIdentifier(
             "voice-response-details")
           AppFormAction(title: "Wiederholen", systemImage: "arrow.counterclockwise") {
-            output.speak(model.response)
+            model.repeatResponse()
           }
           .disabled(model.recorder.state != .idle || model.busy || model.edits.busy)
           .accessibilityIdentifier("repeat-speech")

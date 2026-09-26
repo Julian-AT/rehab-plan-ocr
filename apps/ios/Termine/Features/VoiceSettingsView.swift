@@ -2,11 +2,15 @@ import SwiftUI
 
 struct VoiceSettingsView: View {
 
+  @AppStorage(VoiceAddress.key) private var address: VoiceAddress = .du
   @State private var rate = SpeechOutput.shared.rate
   @State private var output = SpeechOutput.shared
   var body: some View {
     Form {
       Section {
+        Picker("Anrede", selection: $address) {
+          ForEach(VoiceAddress.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        }.accessibilityIdentifier("voice-address").accessibilityValue(address.rawValue)
         LabeledContent("Stimme", value: "Victoria · Deutsch")
         VStack(alignment: .leading) {
           LabeledContent(
@@ -20,7 +24,11 @@ struct VoiceSettingsView: View {
           if output.speaking {
             output.stop()
           } else {
-            output.speak("Am 14. September um 9 Uhr 15: Physiotherapie, Raum 2.14 in Laßnitzhöhe.")
+            output.speak(
+              address.choose(
+                "Dein nächster Termin ist am 14. September um 09:15 Uhr. Die Physiotherapie findet in Raum 2.14 statt.",
+                "Ihr nächster Termin ist am 14. September um 09:15 Uhr. Die Physiotherapie findet in Raum 2.14 statt."
+              ))
           }
         }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
         if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }

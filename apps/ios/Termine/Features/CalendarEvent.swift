@@ -63,7 +63,9 @@ struct CalendarEventValues: Codable, Equatable, Sendable {
   var spoken: String {
     let until = Calendar.current.isDate(start, inSameDayAs: end) ? eventTime(end) : eventDate(end)
     return
-      "\(title), \(eventDate(start)), bis \(until). \(location.isEmpty ? "Kein Ort angegeben" : location)."
+      "\(title) beginnt am \(eventDay(start)) um \(eventTime(start)) und endet \(Calendar.current.isDate(start, inSameDayAs: end) ? "um" : "am") \(until)."
+      + (location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        ? "" : " Ort: \(location).")
   }
 }
 struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
@@ -122,7 +124,7 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
   var therapistDescription: String {
     therapist.map { "Therapeut: \($0)" } ?? "Therapeut nicht angegeben"
   }
-  var placeDescription: String {
+  var knownPlace: String {
     var parts = [values.location.trimmingCharacters(in: .whitespacesAndNewlines)]
     for label in ["Raum", "Klinik", "Abteilung"] {
       if let value = note([label]),
@@ -132,7 +134,27 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
       }
     }
     let text = parts.filter { !$0.isEmpty }.joined(separator: " · ")
-    return text.isEmpty ? "Ort nicht angegeben" : text
+    return text
+  }
+  var placeDescription: String { knownPlace.isEmpty ? "Ort nicht angegeben" : knownPlace }
+  func detailAnswer(to question: String) -> String? {
+    let query = question.lowercased()
+    if query.range(of: #"\b(therapeut|therapeutin|wer)\b"#, options: .regularExpression) != nil {
+      return therapist.map { "Die Behandlung übernimmt \($0)." }
+        ?? "Für diesen Termin ist mir kein Therapeut bekannt."
+    }
+    if query.range(of: #"\b(raum|zimmer|ort|wo)\b"#, options: .regularExpression) != nil {
+      if query.contains("raum") || query.contains("zimmer") {
+        let room =
+          note(["Raum", "Zimmer"])
+          ?? (values.location.range(of: #"(?i)\b(raum|zimmer)\b"#, options: .regularExpression)
+            != nil ? values.location : nil)
+        return room.map { "Der Raum ist \($0)." } ?? "Für diesen Termin ist mir kein Raum bekannt."
+      }
+      return knownPlace.isEmpty
+        ? "Für diesen Termin ist mir kein Ort bekannt." : "Ort: \(knownPlace)."
+    }
+    return nil
   }
   var spoken: String {
     let summary: String
@@ -143,10 +165,13 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
       summary =
         "\(values.title), ganztägig am \(eventDay(values.start))\(span).\(values.location.isEmpty ? "" : " " + values.location + ".")"
     } else {
-      summary = values.spoken
+      var summaryValues = values
+      summaryValues.location = knownPlace
+      summary = summaryValues.spoken
     }
     return
-      "\(summary) \(therapistDescription). Kalender \(calendar_title)\(source.isEmpty ? "" : ", " + source)."
+      summary
+      + (therapist.map { " Die Behandlung übernimmt \($0)." } ?? "")
   }
 }
 

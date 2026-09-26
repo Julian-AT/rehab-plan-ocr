@@ -12,8 +12,10 @@ struct PlaybackWord: Identifiable {
   var phase: Phase = .idle
   var status = "Bereit zum Vorlesen"
   var lastText = ""
+  private(set) var preparedReply = ConversationReply()
   private(set) var level = 0.0
   private(set) var words: [PlaybackWord] = []
+  private(set) var responseID = UUID()
   private(set) var spokenText = ""
   private(set) var lineVisible = false
   var onFinished: (() -> Void)?
@@ -60,15 +62,20 @@ struct PlaybackWord: Identifiable {
     }
   #endif
   func speak(_ text: String) {
+    speak(ConversationReply(text))
+  }
+  func speak(_ reply: ConversationReply) {
     beginResponse()
-    for phrase in Self.phrases(text) { appendPhrase(phrase) }
+    for phrase in reply.phrases { appendPrepared(phrase) }
     finishResponse()
   }
   func beginResponse() {
     stop()
+    responseID = UUID()
     words = []
     spokenText = ""
     lastText = ""
+    preparedReply = ConversationReply()
     wordIndex = 0
     announced = UIAccessibility.isVoiceOverRunning
     phase = .preparing
@@ -155,13 +162,19 @@ struct PlaybackWord: Identifiable {
     guard !inputEnded, !phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       return
     }
-    queue.append(phrase)
-    lastText = joined(lastText, phrase)
+    var reply = ConversationReply()
+    reply.append(phrase)
+    for item in reply.phrases { appendPrepared(item) }
+  }
+  private func appendPrepared(_ phrase: ConversationReply.Phrase) {
+    queue.append(phrase.speech)
+    preparedReply.appendPrepared(phrase)
+    lastText = preparedReply.text
   }
   func finishResponse() {
     inputEnded = true
     if announced {
-      UIAccessibility.post(notification: .announcement, argument: lastText)
+      UIAccessibility.post(notification: .announcement, argument: preparedReply.speech)
       phase = .idle
       status = "VoiceOver liest den Text vor"
       onFinished?()
@@ -223,12 +236,14 @@ struct PlaybackWord: Identifiable {
     words = []
     spokenText = ""
     lastText = ""
+    preparedReply = ConversationReply()
     wordIndex = 0
     status = "Bereit zum Vorlesen"
     onFinished = nil
     onFailure = nil
     UserDefaults.standard.removeObject(forKey: "voice.neural.id")
     UserDefaults.standard.removeObject(forKey: "voice.neural.rate")
+    UserDefaults.standard.removeObject(forKey: VoiceAddress.key)
   }
   nonisolated static func phrases(_ text: String) -> [String] { SpeechPhrasing.phrases(text) }
 }
