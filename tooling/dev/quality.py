@@ -38,7 +38,7 @@ def xcodegen_resources_ready(binary):
     resources = Path(binary).resolve().parent.parent / "share/xcodegen"
     if not all((resources / "SettingPresets" / name).is_file() for name in XCODEGEN_PRESETS):
         return False
-    if Path(binary).absolute() == (BIN / "xcodegen").absolute():
+    if Path(binary).resolve() == (BIN / "xcodegen").resolve():
         try:
             manifest = json.loads((resources / "installation.json").read_text())
             expected = LOCK["downloads"]["xcodegen"]["darwin-arm64"]["sha256"]
@@ -121,6 +121,33 @@ def run(*command, capture=False, env=None):
     return result.stdout.strip() if capture else None
 
 
+def tool_artifact(tool):
+    system = "darwin" if APPLE else "linux"
+    arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64"}[platform.machine()]
+    return LOCK["downloads"][tool][f"{system}-{arch}"]
+
+
+def file_sha256(path):
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def tool_installation_ready(tool):
+    binary = BIN / tool
+    try:
+        receipt = json.loads((BIN.parent / "receipts" / f"{tool}.json").read_text())
+        return (
+            receipt["schema_version"] == 1
+            and receipt["version"] == VERSIONS[tool]
+            and receipt["archive_sha256"] == tool_artifact(tool)["sha256"]
+            and binary.is_file()
+            and binary.stat().st_size == receipt["binary_bytes"]
+            and file_sha256(binary) == receipt["binary_sha256"]
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def installed(tool, *, local=False):
     binary = (
         str(BIN / tool)
@@ -129,10 +156,86 @@ def installed(tool, *, local=False):
     )
     if binary is None:
         return False
+    if Path(binary).resolve() == (BIN / tool).resolve() and not tool_installation_ready(tool):
+        return False
     output = run(binary, "--version", capture=True)
     return re.search(
         r"(?<![\d.])" + re.escape(VERSIONS[tool]) + r"(?![\d.])", output
     ) is not None and (tool != "xcodegen" or xcodegen_resources_ready(binary))
+
+
+def install_tool(tool):
+    """Repair from verified archives; legacy binaries earn receipts only by comparison."""
+    artifact = tool_artifact(tool)
+    cache = BIN.parent / "downloads"
+    cache.mkdir(parents=True, exist_ok=True)
+    archive_path = cache / artifact["sha256"]
+    BIN.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".install-", dir=cache) as temporary:
+        staging = Path(temporary)
+        if not archive_path.is_file() or file_sha256(archive_path) != artifact["sha256"]:
+            download = staging / "download"
+            run(
+                "curl",
+                "--fail",
+                "--location",
+                "--silent",
+                "--show-error",
+                "--max-time",
+                "60",
+                artifact["url"],
+                "--output",
+                download,
+            )
+            if file_sha256(download) != artifact["sha256"]:
+                raise RuntimeError(f"Prüfsumme für {tool} stimmt nicht.")
+            download.replace(archive_path)
+        if artifact["url"].endswith(".zip"):
+            with zipfile.ZipFile(archive_path) as archive:
+                names = [
+                    n for n in archive.namelist() if Path(n).name == tool and not n.endswith("/")
+                ]
+                if len(names) != 1:
+                    raise RuntimeError(f"Werkzeugarchiv {tool} ist nicht eindeutig.")
+                data = archive.read(names[0])
+                if tool == "xcodegen" and not xcodegen_resources_ready(BIN / tool):
+                    install_xcodegen_resources(archive, artifact["sha256"], BIN.parent)
+        elif artifact["url"].endswith(".tar.gz"):
+            with tarfile.open(archive_path) as archive:
+                members = [
+                    m for m in archive.getmembers() if m.isfile() and Path(m.name).name == tool
+                ]
+                if len(members) != 1:
+                    raise RuntimeError(f"Werkzeugarchiv {tool} ist nicht eindeutig.")
+                data = archive.extractfile(members[0]).read()
+        else:
+            data = archive_path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        target = BIN / tool
+        if not target.is_file() or file_sha256(target) != digest:
+            binary = staging / tool
+            binary.write_bytes(data)
+            binary.chmod(0o755)
+            binary.replace(target)
+        elif target.stat().st_mode & 0o111 != 0o111:
+            target.chmod(0o755)
+        receipt = staging / "receipt.json"
+        receipt.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "version": VERSIONS[tool],
+                    "archive_sha256": artifact["sha256"],
+                    "binary_sha256": digest,
+                    "binary_bytes": len(data),
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+        receipts = BIN.parent / "receipts"
+        receipts.mkdir(exist_ok=True)
+        receipt.replace(receipts / f"{tool}.json")
 
 
 def space(gib, *, working_reserve=False):
@@ -153,56 +256,11 @@ def space(gib, *, working_reserve=False):
 def bootstrap():
     space(1)
     workspace.prepare(ROOT)
-    system = "darwin" if APPLE else "linux"
-    arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64"}[platform.machine()]
     BIN.mkdir(parents=True, exist_ok=True)
     for tool in ["uv", "shellcheck", "shfmt"] + (["xcodegen"] if APPLE else []):
         if installed(tool, local=True):
             continue
-        artifact = LOCK["downloads"][tool][f"{system}-{arch}"]
-        with tempfile.TemporaryDirectory(prefix="reha-tool-") as temporary:
-            path = Path(temporary) / "download"
-            run(
-                "curl",
-                "--fail",
-                "--location",
-                "--silent",
-                "--show-error",
-                "--max-time",
-                "60",
-                artifact["url"],
-                "--output",
-                path,
-            )
-            if hashlib.sha256(path.read_bytes()).hexdigest() != artifact["sha256"]:
-                raise RuntimeError(f"Prüfsumme für {tool} stimmt nicht.")
-            if artifact["url"].endswith(".zip"):
-                with zipfile.ZipFile(path) as archive:
-                    names = [
-                        n
-                        for n in archive.namelist()
-                        if Path(n).name == tool and not n.endswith("/")
-                    ]
-                    if len(names) != 1:
-                        raise RuntimeError(f"Werkzeugarchiv {tool} ist nicht eindeutig.")
-                    data = archive.read(names[0])
-                    if tool == "xcodegen":
-                        install_xcodegen_resources(archive, artifact["sha256"], BIN.parent)
-            elif artifact["url"].endswith(".tar.gz"):
-                with tarfile.open(path) as archive:
-                    members = [
-                        m for m in archive.getmembers() if m.isfile() and Path(m.name).name == tool
-                    ]
-                    if len(members) != 1:
-                        raise RuntimeError(f"Werkzeugarchiv {tool} ist nicht eindeutig.")
-                    data = archive.extractfile(members[0]).read()
-            else:
-                data = path.read_bytes()
-            target = BIN / tool
-            temporary_binary = target.with_suffix(".partial")
-            temporary_binary.write_bytes(data)
-            temporary_binary.chmod(0o755)
-            temporary_binary.replace(target)
+        install_tool(tool)
         if not installed(tool, local=True):
             raise RuntimeError(f"Version von {tool} stimmt nicht.")
     run("uv", "python", "install", VERSIONS["python"])

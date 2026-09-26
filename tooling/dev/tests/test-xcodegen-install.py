@@ -80,15 +80,19 @@ class XcodeGenInstallTests(unittest.TestCase):
             binary = prefix / "bin/xcodegen"
             binary.parent.mkdir()
             binary.write_text("fixture executable")
+            alias = prefix / "compat-bin"
+            alias.symlink_to(binary.parent, target_is_directory=True)
             digest = quality.LOCK["downloads"]["xcodegen"]["darwin-arm64"]["sha256"]
             with patch.object(quality, "BIN", binary.parent):
                 self.assertFalse(quality.xcodegen_resources_ready(binary))
                 with archive() as zipped:
                     quality.install_xcodegen_resources(zipped, digest, prefix)
                 self.assertTrue(quality.xcodegen_resources_ready(binary))
+                self.assertTrue(quality.xcodegen_resources_ready(alias / "xcodegen"))
                 base = prefix / "share/xcodegen/SettingPresets/base.yml"
                 base.write_text("changed")
                 self.assertFalse(quality.xcodegen_resources_ready(binary))
+                self.assertFalse(quality.xcodegen_resources_ready(alias / "xcodegen"))
                 with archive() as zipped:
                     quality.install_xcodegen_resources(zipped, digest, prefix)
                 self.assertTrue(quality.xcodegen_resources_ready(binary))
