@@ -10,8 +10,9 @@ import math
 from collections import Counter
 from pathlib import Path
 
-from contract import CRITICAL, sha, validate_dataset
-from train import DICTIONARY, ROOT, current_review, lineage, summary
+from contract import CRITICAL, sha
+from run_identity import validate_inputs
+from train import ROOT, summary
 
 
 def read(path):
@@ -188,20 +189,14 @@ def main():
         run = run.resolve(strict=True)
         config = read(run / "settings.json")
         path = Path(config["dataset"])
-        if read(run / "identity.json") != {
-            "settings_sha256": sha(run / "settings.json"),
-            "lineage": lineage(path),
-        }:
-            raise ValueError("Run lineage changed since training")
-        dataset = validate_dataset(path, DICTIONARY.read_text().splitlines())
-        current_review(dataset, path)
+        dataset, identity_verification = validate_inputs(run)
         comparable = {k: v for k, v in config.items() if k not in {"mode", "learning_rate"}}
         if dataset_identity is not None and (
             dataset_identity != sha(path) or settings != comparable
         ):
             raise ValueError("Compared runs must share dataset, seed, width and validation policy")
         dataset_identity, settings = sha(path), comparable
-        variants.append(describe(run, dataset))
+        variants.append(describe(run, dataset) | {"identity_verification": identity_verification})
     if len({v["mode"] for v in variants}) != len(variants):
         raise ValueError("Do not register duplicate adaptation modes in one comparison")
     partitions = {}

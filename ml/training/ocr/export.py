@@ -8,8 +8,9 @@ import sys
 import time
 from pathlib import Path
 
-from contract import sha, validate_dataset, write
-from train import DICTIONARY, ROOT, UPSTREAM, current_review, lineage
+from contract import sha, write
+from run_identity import validate_inputs
+from train import ROOT, UPSTREAM
 
 
 def main():
@@ -21,13 +22,7 @@ def main():
     output = (args.output or run / "deployment").resolve()
     if not output.is_relative_to(ROOT / ".local"):
         parser.error("Exported artifacts must remain below .local")
-    config = json.loads((run / "settings.json").read_text())
-    data = Path(config["dataset"])
-    identity = json.loads((run / "identity.json").read_text())
-    if identity != {"settings_sha256": sha(run / "settings.json"), "lineage": lineage(data)}:
-        raise ValueError("Run lineage changed; preserve the recorded candidate")
-    dataset = validate_dataset(data, DICTIONARY.read_text().splitlines())
-    current_review(dataset, data)
+    _, identity_verification = validate_inputs(run)
     selection = json.loads((run / "selection.json").read_text())
     if selection["sha256"] != sha(run / "selected.pdparams"):
         raise ValueError("Selected weights changed")
@@ -43,6 +38,7 @@ def main():
         "qualified": False,
         "selection_sha256": sha(run / "selection.json"),
         "run_identity_sha256": sha(run / "identity.json"),
+        "identity_verification": identity_verification,
         "source_sha256": sha(Path(__file__)),
         "parity_source_sha256": sha(ROOT / "ml/evaluation/recognition/export_parity.py"),
         "stages": [],

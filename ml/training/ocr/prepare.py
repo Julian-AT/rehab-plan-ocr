@@ -69,6 +69,8 @@ def prepare_references(output, root, fold):
         if (
             metadata["text"] != record["text"]
             or metadata["reference_hash"] != record["reference_hash"]
+            or metadata.get("privacy_review_sha256") != record.get("privacy_review_sha256")
+            or not metadata.get("privacy_review_sha256")
         ):
             raise ValueError("Reviewed reference changed during materialization")
         image_hash = sha(crop)
@@ -88,6 +90,7 @@ def prepare_references(output, root, fold):
                 "field": field_name(metadata["lines"][0]["field"]),
                 "reference_hash": record["reference_hash"],
                 "crop_review_hash": sha(root / "crop-review.json"),
+                "privacy_review_sha256": record["privacy_review_sha256"],
             }
         )
     return {

@@ -225,9 +225,8 @@ def main():
     from export_parity import normalized_image
 
     sys.path.insert(0, str(ROOT / "ml/training/ocr"))
-    from contract import validate_dataset
     from model_card import describe
-    from train import DICTIONARY, current_review, lineage
+    from run_identity import validate_inputs
 
     run, output = args.run.resolve(strict=True), args.output.resolve()
     if not output.is_relative_to(ROOT / ".local/runs") or output.exists():
@@ -236,13 +235,7 @@ def main():
         raise ValueError("Operation tracing requires pinned Paddle 3.3.1 / ORT 1.22.0")
     settings = json.loads((run / "settings.json").read_text())
     dataset_path = Path(settings["dataset"])
-    if json.loads((run / "identity.json").read_text()) != {
-        "settings_sha256": digest(run / "settings.json"),
-        "lineage": lineage(dataset_path),
-    }:
-        raise ValueError("Training lineage changed")
-    dataset = validate_dataset(dataset_path, DICTIONARY.read_text().splitlines())
-    current_review(dataset, dataset_path)
+    dataset, identity_verification = validate_inputs(run)
     describe(run, dataset)
     print(
         f"Validated {len(dataset['samples'])} dataset records and training lineage; "
@@ -313,6 +306,7 @@ def main():
             "kind": dataset["kind"],
             "dataset_sha256": digest(dataset_path),
             "training_lineage_verified": True,
+            "identity_verification": identity_verification,
         },
         "aligned_outputs": len(aligned),
         "unmapped_float_outputs": missing,

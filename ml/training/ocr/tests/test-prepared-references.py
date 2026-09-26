@@ -1,6 +1,7 @@
 """Exercise export/materialization/revocation with isolated invented reference records."""
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -72,6 +73,7 @@ class PreparedReferenceTests(unittest.TestCase):
             },
         )
         self.patcher = patch.object(prepare, "reference_module", return_value=self.refs)
+        fixture.approve_privacy(self.root, self.data)
         self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
@@ -115,6 +117,52 @@ class PreparedReferenceTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Crop review changed"):
             train.current_review(dataset, path)
+
+    def test_changed_masks_and_sample_privacy_hash_block_prepared_reuse(self):
+        dataset, path = self.prepare()
+        original = dataset["samples"][0]["privacy_review_sha256"]
+        dataset["samples"][0]["privacy_review_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "Privacy or purpose review changed"):
+            train.current_review(dataset, path)
+        dataset["samples"][0]["privacy_review_sha256"] = original
+        source = self.data[0]["sources"][0]["source_hash"]
+        fixture.approve_privacy(
+            self.root,
+            self.data,
+            {source: [{"rect": [85, 85, 95, 95], "reason": "patient_identity"}]},
+        )
+        with self.assertRaisesRegex(ValueError, "Privacy or purpose review changed"):
+            train.current_review(dataset, path)
+
+    def test_revoked_or_expired_consent_and_removed_purpose_block_training(self):
+        dataset, path = self.prepare()
+        intake_path = self.root / "invented-intake.json"
+        original = json.loads(intake_path.read_text())
+        for alteration in [{"status": "revoked"}, {"retain_until": "2000-01-01"}, {"purposes": []}]:
+            intake = json.loads(json.dumps(original))
+            intake["consents"][0].update(alteration)
+            self.refs.write(intake_path, intake)
+            review = json.loads((self.root / "privacy-review.json").read_text())
+            for source in review["sources"].values():
+                source["authorization"]["intake_sha256"] = contract.sha(intake_path)
+                source["approval_hash"] = self.refs.privacy.approval_hash(source)
+            self.refs.write(self.root / "privacy-review.json", review)
+            with self.subTest(alteration=alteration), self.assertRaisesRegex(ValueError, "consent"):
+                train.current_review(dataset, path)
+
+    def test_privacy_change_during_materialization_cannot_enter_dataset(self):
+        materialize = self.refs.materialize_line
+
+        def changed(*args):
+            path = materialize(*args)
+            metadata = json.loads(path.with_suffix(".json").read_text())
+            metadata["privacy_review_sha256"] = "0" * 64
+            self.refs.write(path.with_suffix(".json"), metadata)
+            return path
+
+        with patch.object(self.refs, "materialize_line", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "changed during materialization"):
+                prepare.prepare_references(self.output, self.root, 0)
 
 
 if __name__ == "__main__":

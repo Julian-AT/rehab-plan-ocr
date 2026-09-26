@@ -53,10 +53,14 @@ def main():
     report_path = args.report or run / "parity.json"
     if report_path.exists():
         raise ValueError("Preserve prior parity evidence; select a new report path")
+    identity_verification = None
     if (run / "settings.json").exists():
         settings = json.loads((run / "settings.json").read_text())
         dataset_path = Path(settings["dataset"])
-        dataset = json.loads(dataset_path.read_text())
+        sys.path.insert(0, str(ROOT / "ml/training/ocr"))
+        from run_identity import validate_inputs
+
+        dataset, identity_verification = validate_inputs(run)
         records = [dict(row, path=dataset_path.parent / row["image"]) for row in dataset["samples"]]
         checkpoint = run / "selected.pdparams"
         selected = json.loads((run / "selection.json").read_text())
@@ -157,6 +161,7 @@ def main():
                 )
     passed = bool(rows) and all(row["allclose"] and row["same_tokens"] for row in rows)
     report = {
+        "identity_verification": identity_verification,
         "schema_version": 1,
         "kind": "paddle-onnx-export-parity",
         "passed": passed,

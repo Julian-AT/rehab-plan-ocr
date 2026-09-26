@@ -82,17 +82,35 @@ make prepare-ocr-data SOURCE_DATASET=.local/datasets/private \
 ```
 
 It requires human-approved references, separately reviewed complete text crops and
+an independent privacy/purpose review bound to active OCR-training consent and
 frozen source-related development groups. It fails on the current unapproved photo
 collection. It never changes approval or assigns a final holdout. Each prepared
-crop retains source/reference/review hashes, its group, field, variant and partition.
+crop retains source/reference/crop/privacy-review hashes, its group, field, variant
+and partition. Materialization must retain the exact privacy-review hash exported
+with that crop; changed masks cannot silently reuse an earlier export.
 Time fields `start` and `end` become canonical `start_time` and `end_time`.
 
-Before training, resume and export, the adapter checks the live references, crop
-review and grouping against the prepared snapshot. Altered text, removed examples,
-changed partitions, revoked approval and changed pixels stop the run. Data from new
+Before training, resume, export, model registration and prepared-run parity
+diagnosis, the shared input gate checks live references, crop review, privacy,
+permitted use and grouping against the prepared snapshot. Altered text, removed
+examples, changed partitions, revoked/expired consent, changed masks, revoked
+approval and changed pixels stop the run. Data from new
 collections also requires the human privacy and permitted-use review described in
 the [collection guide](../../../docs/product/research/collection-guide.md); no
 automatic consent-to-reference merge or withdrawal service is implemented.
+Operators must keep the private intake/consent receipt current for these checks
+to observe a withdrawal.
+
+The [compatibility contract](compat/README.md) preserves only the original
+synthetic training identities, with byte-identical source archives and current
+validation guards. Historical real-data runs cannot use this exception. Resuming
+an original synthetic run loads its actual archived training implementation and
+records current guards separately; it never rewrites the original identity.
+The complete 603-record v2 dataset and both existing adaptation runs were replayed
+with the current guards on 2026-09-26, including checkpoint, selection and export
+evidence. Historical JSON receipts remained unchanged and no training was started.
+Local proof: `.local/runs/ocr-privacy-lineage-20260926-s18-001/report.json`
+(SHA-256 `14a24d3d2f48a1aa8ef946f2839a252f88c4e66cb2a76820b5d3619ac21d2a08`).
 
 Unusable, unreadable, blank, cropped and contradictory evidence cannot become full
 recognition targets. Such cases remain part of schedule evaluation, not positive

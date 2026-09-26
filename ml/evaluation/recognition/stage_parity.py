@@ -15,9 +15,9 @@ from export_parity import digest, normalized_image
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ml/training/ocr"))
-from contract import validate_dataset  # noqa: E402
 from model_card import describe  # noqa: E402
-from train import DICTIONARY, UPSTREAM, current_review, lineage  # noqa: E402
+from run_identity import validate_inputs  # noqa: E402
+from train import UPSTREAM  # noqa: E402
 
 
 def export_unfused(model, output):
@@ -105,13 +105,7 @@ def main():
         raise ValueError("Use the pinned shipping ONNX Runtime 1.22.0")
     settings = json.loads((run / "settings.json").read_text())
     dataset_path = Path(settings["dataset"])
-    if json.loads((run / "identity.json").read_text()) != {
-        "settings_sha256": digest(run / "settings.json"),
-        "lineage": lineage(dataset_path),
-    }:
-        raise ValueError("Run lineage changed")
-    dataset = validate_dataset(dataset_path, DICTIONARY.read_text().splitlines())
-    current_review(dataset, dataset_path)
+    dataset, identity_verification = validate_inputs(run)
     describe(run, dataset)  # Recheck completed selection, export, scores and every parity case.
     prior = json.loads((run / "deployment/parity.json").read_text())
     cases = [row for row in prior["cases"] if not row["allclose"] or not row["same_tokens"]]
@@ -169,6 +163,7 @@ def main():
                 providers=["CPUExecutionProvider"],
             )
     report = {
+        "identity_verification": identity_verification,
         "schema_version": 1,
         "kind": "ocr-export-stage-diagnostic",
         "diagnostic": True,

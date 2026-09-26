@@ -89,8 +89,15 @@ def validate_dataset(path, dictionary):
         receipt = path.parent / "references/manifest.json"
         if sha(receipt) != dataset["reference_export_sha256"]:
             raise ValueError("Reference export receipt changed")
-        if any(not row.get("reference_hash") or not row.get("crop_review_hash") for row in rows):
-            raise ValueError("Human field and separate crop review provenance are required")
+        if any(
+            not row.get("reference_hash")
+            or not row.get("crop_review_hash")
+            or not row.get("privacy_review_sha256")
+            for row in rows
+        ):
+            raise ValueError(
+                "Human field, separate crop and privacy review provenance are required"
+            )
     return dataset
 
 

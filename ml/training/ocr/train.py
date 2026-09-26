@@ -45,6 +45,8 @@ def lineage(dataset_path):
             for name in ["train.py", "contract.py", "prepare.py"]
         },
         "reference_tool_sha256": sha(ROOT / "ml/data/annotation/reference-data.py"),
+        "privacy_tool_sha256": sha(ROOT / "ml/data/annotation/privacy.py"),
+        "compatibility_tool_sha256": sha(Path(__file__).with_name("run_identity.py")),
         "python": sys.version,
         "platform": platform.platform(),
     }
@@ -65,6 +67,12 @@ def current_review(dataset, path):
         if reference.reference_hash(ref) != expected:
             raise ValueError("Live human reference changed; prepare a new dataset")
         refs.append(ref)
+    privacy = reference.validate_privacy(root, refs)
+    if exported.get("privacy_review") != privacy or any(
+        row.get("privacy_review_sha256") != privacy["review_file_sha256"]
+        for row in dataset["samples"]
+    ):
+        raise ValueError("Privacy or purpose review changed; prepare a new dataset")
     checked = reference.reviewed_crops(root, refs)
     if any(row["crop_review_hash"] != sha(root / "crop-review.json") for row in dataset["samples"]):
         raise ValueError("Crop review changed; prepare a new dataset")
@@ -84,7 +92,8 @@ def current_review(dataset, path):
     for row in dataset["samples"]:
         record = expected[row["id"]]
         if record["line_id"] not in checked or any(
-            row[key] != record[key] for key in ["text", "partition", "group", "reference_hash"]
+            row[key] != record[key]
+            for key in ["text", "partition", "group", "reference_hash", "privacy_review_sha256"]
         ):
             raise ValueError("Training label or partition differs from the reviewed reference")
         if (
@@ -176,20 +185,15 @@ def execute(run, pause_after_epoch=None):
     from ppocr.postprocess import build_post_process
 
     config = json.loads((run / "settings.json").read_text())
-    identity = json.loads((run / "identity.json").read_text())
     dataset_path = Path(config["dataset"])
-    if identity != {
-        "settings_sha256": sha(run / "settings.json"),
-        "lineage": lineage(dataset_path),
-    }:
-        raise ValueError(
-            "Run configuration, source, data or environment changed; preserve this run"
-        )
+    from run_identity import validate_inputs
+
+    dataset, identity_proof = validate_inputs(run)
+    if identity_proof["mode"] != "current":
+        raise ValueError("Use the archived engine for an original synthetic run")
     subprocess.run(
         [sys.executable, str(Path(__file__).with_name("restore.py")), "--offline"], check=True
     )
-    dataset = validate_dataset(dataset_path, DICTIONARY.read_text().splitlines())
-    current_review(dataset, dataset_path)
     chars = DICTIONARY.read_text().splitlines()
     pin = json.loads((ROOT / "ml/registry/ocr-base.json").read_text())
     actual_dictionary = hashlib.sha256(
@@ -475,7 +479,12 @@ def main():
     with (run / "training.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            execute(run, args.pause_after_epoch)
+            from run_identity import resume_legacy, verify
+
+            if verify(run)["mode"] == "archived-synthetic-v1":
+                resume_legacy(run, args.pause_after_epoch)
+            else:
+                execute(run, args.pause_after_epoch)
         except BaseException:
             write(
                 run / "last-interruption.json",
