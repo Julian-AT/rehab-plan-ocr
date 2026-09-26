@@ -28,12 +28,23 @@ import FoundationModels
     var excluding: String
     @Guide(description: "Genannter Kalender, sonst nil.")
     var calendarName: String?
-    @Guide(description: "Nur Referenz aus last_page, sonst nil.")
+    @Guide(
+      description:
+        "Nur Referenz aus last_page, sonst nil. 'Danach': detail next mit dieser Referenz.")
     var reference: String?
     @Guide(description: "last_page Position; 0 ohne Bezug.", .range(0...5))
     var ordinal: Int
     @Guide(description: "Bezug auf last_page.")
     var usesLastPage: Bool
+    @Guide(
+      description: "Genannte untere Startzeit HH:mm (einschließlich); nachmittags 12:00; sonst nil."
+    )
+    var after: String?
+    @Guide(
+      description:
+        "Genannte obere Startzeit HH:mm (ausschließlich); vormittags 12:00, nachmittags 18:00; sonst nil."
+    )
+    var before: String?
 
     func validated() throws -> CalendarQuestion {
       let parsed = date.flatMap { CalendarConversation.civilDate($0) }
@@ -41,10 +52,17 @@ import FoundationModels
         title.count <= 160, excluding.count <= 160,
         let detail = CalendarQuestion.Detail(rawValue: String(describing: detail))
       else { throw CalendarUnderstandingError.invalidRequest }
-      return CalendarQuestion(
+      let lower = after.flatMap(CalendarQuestion.clockMinutes)
+      let upper = before.flatMap(CalendarQuestion.clockMinutes)
+      guard after == nil || lower != nil, before == nil || upper != nil else {
+        throw CalendarUnderstandingError.invalidRequest
+      }
+      let question = CalendarQuestion(
         detail: detail, date: parsed, days: days, title: title, excluding: excluding,
         calendarName: calendarName, reference: reference, ordinal: ordinal,
-        usesLastPage: usesLastPage)
+        usesLastPage: usesLastPage, afterMinutes: lower, beforeMinutes: upper)
+      guard question.validTimeBounds else { throw CalendarUnderstandingError.invalidRequest }
+      return question
     }
   }
   @Generable struct Change {

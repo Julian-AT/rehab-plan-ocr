@@ -80,6 +80,31 @@ import XCTest
     launch(fixture: "tool-probe")
     XCTAssertTrue(app.buttons["speak"].exists)
   }
+  func testTimeConstraintsAndAfterThatUseLiveCalendarFacts() {
+    launch(fixture: "voice-answers")
+    app.buttons["voice-details"].tap()
+    let response = app.staticTexts["voice-response-details"]
+    func ask(_ text: String, containing expected: String) {
+      let input =
+        app.textViews["voice-message"].exists
+        ? app.textViews["voice-message"] : app.textFields["voice-message"]
+      XCTAssertTrue(input.waitForExistence(timeout: 5))
+      input.tap()
+      input.typeText(text)
+      app.buttons["voice-send"].tap()
+      expectation(for: NSPredicate(format: "label CONTAINS %@", expected), evaluatedWith: response)
+      waitForExpectations(timeout: 15)
+    }
+    ask("Wie viele Termine habe ich morgen vor 10 Uhr?", containing: "1 passender Termin")
+    ask("Wie viele Termine habe ich morgen nach 10 Uhr?", containing: "2 passende Termine")
+    ask("Termine morgen nachmittags", containing: "keine passenden lesbaren Termine")
+    ask("Was ist mein nächster Termin?", containing: "Physiotherapie")
+    ask("Und danach?", containing: "Übung 1")
+    XCTAssertFalse(response.label.contains("Physiotherapie"))
+    ask("Welcher Raum?", containing: "105")
+    ask("Und danach?", containing: "Übung 2")
+    capture("calendar-temporal-constraints-and-references")
+  }
   func testMicrophoneLevelsDriveWaveformAndStopEndsSession() {
     for (dark, large) in [(false, false), (true, false), (true, true)] {
       launch(dark: dark, large: large, input: true)

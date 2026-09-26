@@ -15,6 +15,23 @@ struct CalendarQuestion: Equatable, Sendable {
   var ordinal = 0
   var offset = 0
   var usesLastPage = false
+  /// Start-time constraints in the explicitly captured civil timezone.
+  var afterMinutes: Int?
+  var beforeMinutes: Int?
+  var timezone = TimeZone.current.identifier
+  /// Filled only after resolving an allowed conversational reference to live data.
+  var afterEventID: String?
+  var afterEventDate: Date?
+  var hasTimeBounds: Bool { afterMinutes != nil || beforeMinutes != nil }
+  var validTimeBounds: Bool {
+    [afterMinutes, beforeMinutes].compactMap { $0 }.allSatisfy { (0..<1440).contains($0) }
+      && (afterMinutes ?? 0) < (beforeMinutes ?? 1440)
+      && TimeZone(identifier: timezone) != nil
+  }
+  static func clockMinutes(_ text: String) -> Int? {
+    guard !VoiceRules.matches(#"^([01]\d|2[0-3]):[0-5]\d$"#, text).isEmpty else { return nil }
+    return VoiceRules.time(text)
+  }
 
   static func concernsCalendar(_ text: String) -> Bool {
     VoiceRules.parse(text).action != .unsupported
@@ -27,6 +44,39 @@ struct CalendarQuestion: Equatable, Sendable {
   /// Deliberately complete patterns: extra constraints go to structured understanding.
   static func direct(_ input: String, now: Date = .now, calendar: Calendar = .current) -> Self? {
     let text = VoiceRules.normalized(input).trimmingCharacters(in: .punctuationCharacters)
+    if [
+      "danach", "und danach", "was kommt danach", "welcher termin kommt danach",
+      "was steht danach an",
+    ]
+    .contains(text) {
+      return Self(detail: .next, days: 90, usesLastPage: true)
+    }
+    let timePattern =
+      #" (vormittags|nachmittags|vor \d{1,2}(?::[0-5]\d)? uhr|(?:nach|ab) \d{1,2}(?::[0-5]\d)? uhr)$"#
+    if let expression = try? NSRegularExpression(pattern: timePattern),
+      let match = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+      let range = Range(match.range, in: text),
+      var question = direct(String(text[..<range.lowerBound]), now: now, calendar: calendar)
+    {
+      guard !question.hasTimeBounds else { return nil }
+      let suffix = text[range].trimmingCharacters(in: .whitespaces)
+      switch suffix {
+      case "vormittags": question.beforeMinutes = 12 * 60
+      case "nachmittags":
+        question.afterMinutes = 12 * 60
+        question.beforeMinutes = 18 * 60
+      default:
+        let clock = suffix.split(separator: " ").dropFirst().joined(separator: " ")
+        guard let minutes = VoiceRules.time(clock) else { return nil }
+        if suffix.hasPrefix("vor ") {
+          question.beforeMinutes = minutes
+        } else {
+          question.afterMinutes = minutes
+        }
+      }
+      question.timezone = calendar.timeZone.identifier
+      return question.validTimeBounds ? question : nil
+    }
     let next = #"^(?:was|wann) ist (?:mein|der) nächste(?:r)? termin$|^(?:mein )?nächster termin$"#
     if !VoiceRules.matches(next, text).isEmpty { return Self(detail: .next, days: 90) }
     let dates =
@@ -78,6 +128,9 @@ enum CalendarAnswer {
     _ question: CalendarQuestion, events: [CalendarEvent], warning: String = "",
     now: Date = .now, address: VoiceAddress = .du
   ) -> Result {
+    guard question.validTimeBounds else {
+      return Result(text: "Bitte die Uhrzeitangabe und den Zeitraum prüfen.")
+    }
     var seen = Set<String>()
     var found = events.filter {
       $0.values.end > $0.values.start && seen.insert($0.id).inserted
@@ -91,8 +144,25 @@ enum CalendarAnswer {
             VoiceRules.normalized(question.excluding)))
     }.sorted { ($0.values.start, $0.id) < ($1.values.start, $1.id) }
     if question.detail == .next { found = found.filter { $0.values.end > now } }
-    let prefix =
-      warning.isEmpty ? "" : warning.trimmingCharacters(in: .whitespacesAndNewlines) + " "
+    var warnings = [warning].filter { !$0.isEmpty }
+    if question.hasTimeBounds {
+      let unknownTimes = found.contains(where: \.isAllDay)
+      var calendar = Calendar.current
+      calendar.timeZone = TimeZone(identifier: question.timezone)!
+      found = found.filter { event in
+        guard !event.isAllDay else { return false }
+        let parts = calendar.dateComponents([.hour, .minute], from: event.values.start)
+        guard let hour = parts.hour, let minute = parts.minute else { return false }
+        let time = hour * 60 + minute
+        return time >= (question.afterMinutes ?? 0) && time < (question.beforeMinutes ?? 1440)
+      }
+      if unknownTimes {
+        warnings.append(
+          "Ganztägige Termine haben keine bekannte Uhrzeit und sind in dieser Uhrzeitauswahl nicht enthalten."
+        )
+      }
+    }
+    let prefix = warnings.isEmpty ? "" : warnings.joined(separator: " ") + " "
     if question.detail == .count {
       return Result(
         text: prefix

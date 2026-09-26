@@ -75,6 +75,111 @@ actor CalendarFixture {
     let excluded = CalendarAnswer.build(
       CalendarQuestion(detail: .count, excluding: "Bewegung"), events: rows, now: now)
     precondition(excluded.total == 0)
+    var vienna = Calendar(identifier: .gregorian)
+    vienna.timeZone = TimeZone(identifier: "Europe/Vienna")!
+    let morning = CalendarQuestion.direct("Termine heute vormittags", now: now, calendar: vienna)!
+    precondition(morning.beforeMinutes == 720 && morning.afterMinutes == nil)
+    let afternoon = CalendarQuestion.direct(
+      "Termine heute nachmittags", now: now, calendar: vienna)!
+    precondition(afternoon.afterMinutes == 720 && afternoon.beforeMinutes == 1080)
+    precondition(
+      CalendarAnswer.build(morning, events: rows, now: now).events.map(\.id) == ["0", "1"])
+    precondition(CalendarAnswer.build(afternoon, events: rows, now: now).total == 6)
+    let late = CalendarQuestion.direct(
+      "Wie viele Termine habe ich heute nach 14 uhr", now: now, calendar: vienna)!
+    precondition(CalendarAnswer.build(late, events: rows, now: now).total == 4)
+    precondition(CalendarQuestion.direct("Termine heute nach 25 uhr", now: now) == nil)
+    precondition(CalendarQuestion.direct("Termine heute nach 14 uhr nach 10 uhr", now: now) == nil)
+    precondition(
+      CalendarQuestion.direct("Termine heute nach 14 uhr außer Bewegung", now: now) == nil)
+    let invalidBounds = CalendarQuestion(afterMinutes: 900, beforeMinutes: 800)
+    precondition(!invalidBounds.validTimeBounds)
+    var differentZone = morning
+    differentZone.timezone = "UTC"
+    precondition(CalendarAnswer.build(differentZone, events: rows, now: now).total == 4)
+    let allDay = CalendarEvent(
+      id: "all-day", external_id: "all-day", calendar_id: "visible", calendar_title: "Privat",
+      source: "Quelle", occurrence: "", recurring: false, system_only: false, writable: true,
+      values: rows[0].values, metadata: .object(["all_day": .bool(true)]), fingerprint: "all-day")
+    let timedAndUnknown = CalendarAnswer.build(morning, events: rows + [allDay], now: now)
+    precondition(
+      timedAndUnknown.total == 2 && timedAndUnknown.text.contains("keine bekannte Uhrzeit"))
+    var understood = CalendarUnderstanding.Query(
+      detail: .list, date: "2026-09-15", days: 1, title: "", excluding: "", calendarName: nil,
+      reference: nil, ordinal: 0, usesLastPage: false, after: "12:00", before: "18:00")
+    let validatedTime = try understood.validated()
+    precondition(validatedTime.afterMinutes == 720)
+    for invalid in ["25:00", "12:61", "morgen"] {
+      understood.after = invalid
+      do {
+        _ = try understood.validated()
+        preconditionFailure("Invalid model time accepted")
+      } catch CalendarUnderstandingError.invalidRequest {}
+    }
+    let boundedFixture = CalendarFixture(rows)
+    let boundedStore = CalendarConversation(fetch: { start, end in
+      await boundedFixture.query(start, end)
+    })
+    let boundedToken = UUID()
+    await boundedStore.begin(boundedToken)
+    let boundedFirst = try await boundedStore.resolve(afternoon, token: boundedToken, now: now)
+    let boundedMore = try await boundedStore.resolve(
+      CalendarQuestion(offset: 5, usesLastPage: true), token: boundedToken, now: now)
+    precondition(boundedFirst.total == 6 && boundedMore.events.map(\.id) == ["7"])
+    do {
+      _ = try await boundedStore.resolve(invalidBounds, token: boundedToken)
+      preconditionFailure("Contradictory time bounds accepted")
+    } catch CalendarUnderstandingError.invalidRequest {}
+    let relativeFixture = CalendarFixture(rows)
+    let relativeStore = CalendarConversation(fetch: { start, end in
+      await relativeFixture.query(start, end)
+    })
+    let relativeToken = UUID()
+    await relativeStore.begin(relativeToken)
+    _ = try await relativeStore.resolve(
+      CalendarQuestion(detail: .next, date: now), token: relativeToken, now: now)
+    let afterThat = CalendarQuestion.direct("Und danach?", now: now)!
+    let relativeNext = try await relativeStore.resolve(afterThat, token: relativeToken, now: now)
+    precondition(relativeNext.events.map(\.id) == ["1"], "After that must not repeat the anchor")
+    let relativeMore = try await relativeStore.resolve(
+      CalendarQuestion(offset: 5, usesLastPage: true), token: relativeToken, now: now)
+    precondition(relativeMore.events.map(\.id) == ["2", "3", "4", "5", "6"])
+    let relativeFresh = UUID()
+    await relativeFixture.replace(Array(rows.dropFirst()))
+    await relativeStore.begin(relativeFresh)
+    let hiddenAnchor = try await relativeStore.resolve(
+      CalendarQuestion(offset: 5, usesLastPage: true), token: relativeFresh, now: now)
+    precondition(hiddenAnchor.events.isEmpty && hiddenAnchor.text.contains("nicht mehr lesbar"))
+    var tomorrowValues = rows[0].values
+    tomorrowValues.start_utc = "2026-09-16T08:00:00Z"
+    tomorrowValues.end_utc = "2026-09-16T08:30:00Z"
+    // Keep a distinct event identity while putting the target outside the anchor day.
+    let nextDayEvent = CalendarEvent(
+      id: "tomorrow", external_id: "tomorrow", calendar_id: "visible", calendar_title: "Privat",
+      source: "Quelle", occurrence: "", recurring: false, system_only: false, writable: true,
+      values: tomorrowValues, metadata: .object([:]), fingerprint: "tomorrow")
+    let nextDayFixture = CalendarFixture(rows + [nextDayEvent])
+    let nextDayStore = CalendarConversation(fetch: { start, end in
+      await nextDayFixture.query(start, end)
+    })
+    let nextDayToken = UUID()
+    await nextDayStore.begin(nextDayToken)
+    _ = try await nextDayStore.resolve(
+      CalendarQuestion(detail: .next, date: now), token: nextDayToken, now: now)
+    let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+    let conflictingDate = try await nextDayStore.resolve(
+      CalendarQuestion(detail: .room, date: tomorrow, usesLastPage: true),
+      token: nextDayToken, now: now)
+    precondition(conflictingDate.events.isEmpty && conflictingDate.text.contains("anderen Tag"))
+    let tomorrowAfter = try await nextDayStore.resolve(
+      CalendarQuestion(detail: .next, date: tomorrow, usesLastPage: true),
+      token: nextDayToken, now: now)
+    precondition(
+      tomorrowAfter.events.map(\.id) == ["tomorrow"],
+      "Explicit date must survive reference resolution")
+    let tomorrowMore = try await nextDayStore.resolve(
+      CalendarQuestion(offset: 5, usesLastPage: true), token: nextDayToken, now: now)
+    precondition(tomorrowMore.events.isEmpty && tomorrowMore.offset == 1)
     let fixture = CalendarFixture(rows)
     let store = CalendarConversation(fetch: { start, end in await fixture.query(start, end) })
     let token = UUID()

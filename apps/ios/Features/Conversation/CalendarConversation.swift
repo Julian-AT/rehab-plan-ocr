@@ -103,7 +103,8 @@ actor CalendarConversation {
   ) async throws -> CalendarAnswer.Result {
     try check(token)
     guard (1...90).contains(input.days), (0...500).contains(input.offset),
-      (0...5).contains(input.ordinal), input.title.count <= 160, input.excluding.count <= 160
+      (0...5).contains(input.ordinal), input.title.count <= 160, input.excluding.count <= 160,
+      input.validTimeBounds
     else { throw CalendarUnderstandingError.invalidRequest }
     var question = input
     if input.usesLastPage && input.detail == .list && input.offset > 0 {
@@ -122,22 +123,63 @@ actor CalendarConversation {
     let needsReference =
       question.reference != nil || question.ordinal > 0
       || (question.usesLastPage && question.detail != .list)
+    let followsReference = needsReference && question.detail == .next
     if needsReference && referenced == nil {
       return CalendarAnswer.Result(
         text: address.choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?"))
     }
-    let start = Calendar.current.startOfDay(for: referenced?.values.start ?? question.date ?? now)
+    if followsReference && question.date == nil { question.days = 90 }
+    if needsReference && !followsReference, let date = question.date, let referenced,
+      !Calendar.current.isDate(date, inSameDayAs: referenced.values.start)
+    {
+      return CalendarAnswer.Result(
+        text:
+          "Der besprochene Termin liegt an einem anderen Tag. Bitte den Termin oder das Datum genauer angeben."
+      )
+    }
+    let start = Calendar.current.startOfDay(for: question.date ?? referenced?.values.start ?? now)
     let response = try await query(
-      start: start, days: referenced == nil ? question.days : 1, token: token)
+      start: start, days: referenced == nil || followsReference ? question.days : 1, token: token)
     try check(token)
-    let events =
-      referenced.map { old in response.events.filter { $0.id == old.id } } ?? response.events
-    if referenced != nil && events.isEmpty {
+    if followsReference {
+      question.afterEventID = referenced?.id
+      question.afterEventDate = referenced?.values.start
+    }
+    var warning = response.warning
+    let events: [CalendarEvent]
+    if let anchorID = question.afterEventID {
+      let anchorResponse: CalendarQueryResponse
+      if let anchorDate = question.afterEventDate,
+        !Calendar.current.isDate(anchorDate, inSameDayAs: start)
+      {
+        anchorResponse = try await query(
+          start: Calendar.current.startOfDay(for: anchorDate), days: 1, token: token)
+        if !anchorResponse.warning.isEmpty && anchorResponse.warning != warning {
+          warning = [warning, anchorResponse.warning].filter { !$0.isEmpty }.joined(separator: " ")
+        }
+      } else {
+        anchorResponse = response
+      }
+      guard let anchor = anchorResponse.events.first(where: { $0.id == anchorID }) else {
+        return CalendarAnswer.Result(
+          text: "Der zuvor besprochene Termin ist in den ausgewählten Kalendern nicht mehr lesbar.")
+      }
+      events = response.events.filter { $0.id != anchorID && $0.values.start >= anchor.values.end }
+      // Pagination keeps the native anchor, not a model-produced ID or the
+      // previous answer's copied end time. Every turn resolves its live values.
+      question.reference = nil
+      question.ordinal = 0
+      question.usesLastPage = false
+    } else {
+      events =
+        referenced.map { old in response.events.filter { $0.id == old.id } } ?? response.events
+    }
+    if referenced != nil && !followsReference && events.isEmpty {
       return CalendarAnswer.Result(
         text: "Der zuvor besprochene Termin ist in den ausgewählten Kalendern nicht mehr lesbar.")
     }
     let result = CalendarAnswer.build(
-      question, events: events, warning: response.warning, now: now, address: address)
+      question, events: events, warning: warning, now: now, address: address)
     if !result.events.isEmpty {
       var page: [String] = []
       for event in result.events {
@@ -156,7 +198,7 @@ actor CalendarConversation {
       lastPage = []
       references = [:]
     }
-    if !needsReference {
+    if !needsReference || followsReference {
       question.date = start
       question.offset = result.offset
       lastQuestion = question

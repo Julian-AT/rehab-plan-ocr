@@ -26,7 +26,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Resolve repaired identities without rewriting historical approved values.
 - [x] Durable save outcomes independent of reminder/widget failures.
 - [ ] Shared external-edit, invitation, recurrence and alarm protection.
-- [ ] Replacement-preview invalidation on changed inputs and calendar snapshots.
+- [x] Replacement-preview invalidation on changed inputs and calendar snapshots.
 - [x] Local erasure despite calendar access loss, with restoration limitations.
 - [x] Aggregate retention including PDF originals; no expired-page resurrection.
 - [x] Correct Today deep links.
@@ -284,3 +284,14 @@ output UI cases also passed without changing the production audio setup. The ear
 CoreAudio RPC abort is therefore intermittent and remains unexplained; neither the
 successful reruns nor off-main PCM decoding establish its resolution. No device,
 latency, energy or pause-handling qualification follows from these simulator runs.
+
+Calendar answers now preserve morning/afternoon and explicit clock bounds, including
+pagination. Invalid or contradictory bounds are rejected; all-day events are not
+given invented clock times. “Und danach?” resolves the previous event from live
+visible records and selects following events without repeating it. An explicit
+requested date survives reference resolution; an incompatible detail date asks
+for clarification. A hidden/deleted anchor cannot drive a later page. The expanded
+native conversation probe and simulator build pass, and both typed-calendar UI
+regressions pass (127.642 seconds). The added cross-day reference regressions pass
+in the final native probe. These checks do not qualify model interpretation or
+physical speech latency.
