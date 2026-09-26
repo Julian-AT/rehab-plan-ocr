@@ -4,6 +4,18 @@ export PATH := $(CURDIR)/.tools/bin:$(HOME)/.cargo/bin:$(PATH)
 # env performs lookup in the recipe environment, including bootstrapped tools.
 TARGET ?= simulator
 
+CLEANUP_MANIFEST ?= .local/maintenance/cleanup.json
+PEAK_GIB ?= 0
+.PHONY: inventory-artifacts clean-artifacts check-storage
+inventory-artifacts:
+	python3 tooling/dev/artifacts.py plan --manifest "$(CLEANUP_MANIFEST)"
+
+clean-artifacts:
+	python3 tooling/dev/artifacts.py apply --manifest "$(CLEANUP_MANIFEST)"
+
+check-storage:
+	python3 tooling/dev/artifacts.py space --peak-gib "$(PEAK_GIB)"
+
 help:
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'

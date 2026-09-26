@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "reserve_gib": 20,
+  "protected": [
+    ".local/datasets", ".local/models", ".local/runs", ".local/migrations",
+    ".local/upstream", ".local/envs", "docs/product/visual-baseline",
+    "apps/ios/build/Laßnitzhöhe.xcarchive", "external originals and simulators"
+  ],
+  "rebuildable": [
+    {
+      "path": "apps/ios/build/DerivedData/Build/Intermediates.noindex",
+      "consumers": ["tooling/build/build-native.sh", "apps/ios/project.yml"],
+      "reason": "Xcode object files and dependency scanning; products and test evidence remain",
+      "rebuild": "make build TARGET=simulator"
+    },
+    {
+      "path": "apps/ios/build/DerivedData/ModuleCache.noindex",
+      "consumers": ["tooling/build/build-native.sh"],
+      "reason": "Compiler module cache regenerated from pinned SDK and source",
+      "rebuild": "make build TARGET=simulator"
+    },
+    {
+      "path": "apps/ios/build/EventTests/Index.noindex",
+      "consumers": ["tooling/checks/test-calendar-events.sh"],
+      "reason": "Editor index; EventKit test results and executable remain",
+      "rebuild": "make test-calendar-events"
+    },
+    {
+      "path": ".local/builds/assistant-app-trial/DerivedData/Build/Intermediates.noindex",
+      "consumers": ["tooling/build/build-assistant-trial.py"],
+      "reason": "Intermediate objects; failed-provider app binary, models and reports retained",
+      "rebuild": "make build-assistant-trial"
+    },
+    {
+      "path": ".local/builds/assistant-app-trial/DerivedData/ModuleCache.noindex",
+      "consumers": ["tooling/build/build-assistant-trial.py"],
+      "reason": "Compiler module cache; retained trial executable does not load it",
+      "rebuild": "make build-assistant-trial"
+    },
+    {
+      "path": "target/debug/incremental",
+      "consumers": ["tooling/dev/quality.py"],
+      "reason": "Incremental compiler cache; normal project builds disable incrementality",
+      "rebuild": "make test"
+    }
+  ]
+}
