@@ -21,16 +21,16 @@ Both custom models must be trained and evaluated before the project is complete.
 ### 1. Reliable baseline
 
 - [ ] Record source/build/toolchain/model/schema/device and visual baseline.
-- [ ] Reconcile current dataset, reference approvals and grouping.
-- [ ] Immutable calendar scope; explicit empty selection; stale-result rejection.
-- [ ] Resolve repaired identities without rewriting historical approved values.
-- [ ] Durable save outcomes independent of reminder/widget failures.
+- [x] Reconcile current dataset, reference approvals and grouping.
+- [x] Immutable calendar scope; explicit empty selection; stale-result rejection.
+- [x] Resolve repaired identities without rewriting historical approved values.
+- [x] Durable save outcomes independent of reminder/widget failures.
 - [ ] Shared external-edit, invitation, recurrence and alarm protection.
 - [ ] Replacement-preview invalidation on changed inputs and calendar snapshots.
-- [ ] Local erasure despite calendar access loss, with restoration limitations.
-- [ ] Aggregate retention including PDF originals; no expired-page resurrection.
-- [ ] Correct Today deep links.
-- [ ] Unreadable day boundaries and neighboring-column reread contamination.
+- [x] Local erasure despite calendar access loss, with restoration limitations.
+- [x] Aggregate retention including PDF originals; no expired-page resurrection.
+- [x] Correct Today deep links.
+- [x] Unreadable day boundaries and neighboring-column reread contamination.
 - [ ] Preserve field uncertainty, blanks, missing/cropped/contradictory evidence.
 - [ ] Invalid spoken dates, corrections, negations and partial changes.
 - [ ] Explicit conversation states and older-iOS current-request recovery.
@@ -42,9 +42,9 @@ Both custom models must be trained and evaluated before the project is complete.
 - [ ] Consumer inventory, documentation consolidation and verified private migration.
 - [ ] Separate make targets for restore/generate/convert/build/test/package.
 - [ ] Read-only normal-build manifest verification and identity-based caches.
-- [ ] Independent locked training and app-tooling environments.
+- [x] Independent locked training and app-tooling environments.
 - [ ] Discoverable isolated tests and portable/native/simulator/policy/package CI.
-- [ ] First content independent of reminder reconciliation; coalesced refreshes.
+- [x] First content independent of reminder reconciliation; coalesced refreshes.
 - [ ] Typed timestamp projections, indexed archive summaries and pagination.
 - [ ] Background image/audio processing, bounded buffers and waveform updates.
 - [ ] Paired measurements for latency, memory, energy, thermal and session reuse.
@@ -88,3 +88,45 @@ The starting working tree was clean. About 61 GiB was available, superseding the
 older low-disk-space report. `make test` was started against the baseline; subsequent
 entries must distinguish portable/native tests, simulator builds, physical evidence
 and unperformed validation. No device update is authorized by this ledger.
+
+## Verified implementation slices — 2026-09-26
+
+Calendar queries now carry immutable selected IDs, timezone and a monotonically
+increasing selection revision. Agenda caching rejects changes, including A→B→A,
+and reminder maintenance no longer blocks first content. Widget display follows
+the same calendar selection, including external events; reminders still use
+ownership. A committed mutation returns a durable success with separate warnings.
+
+Source retention now uses schema 9 and journaled aggregate deletion. New stores
+receive 30 days; existing preferences and unfinished reviews are preserved. PDF
+originals and their pages expire together; startup replays interrupted deletions
+and deleted originals cannot be rasterized again. Repaired calendar identities
+are resolved through current ownership without rewriting original approved values.
+The full preview is revalidated before recording a new calendar write.
+
+The parser preserves unreadable day boundaries and validates comma-separated
+dates. Field rereads touching neighboring column edges cannot become accepted
+values. Voice requests use explicit interaction states, validate dates and retain
+the current request when older FoundationModels sessions exceed context limits.
+Title/duration changes produce minimal patches. Broader German dialogue coverage
+and actual older-iOS inference remain open.
+
+Verification: 157 Rust core tests passed; workspace Clippy passed with warnings
+as errors. The native calendar suite completed 14 tests with one simulator-only
+skip and zero failures. Voice/date/state probes and four model-restoration tests
+passed. The current simulator app builds. The Today-link UI regression passed.
+A broad UI run found an audio timeout and an obsolete save-receipt assertion;
+the isolated real-audio rerun passed. Save-receipt verification is being repeated
+against the existing conversation wording. The full UI suite is not yet green.
+
+Training environments are separately locked and load successfully. The official
+PP-OCRv6 Small training checkpoint matches all 422 state tensors and the exact
+shipping dictionary. Four optimizer steps on eight invented training lines,
+export and conversion to ONNX completed; 24/24 Paddle/ONNX parity cases passed.
+See [the experiment record](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
+This is a synthetic pipeline smoke test, not a promoted OCR checkpoint or a
+real-photo quality result. Qwen3 training/export verification is in progress.
+
+The known iPhone 17 was unavailable during the read-only device inventory. No
+device was updated. No real-device speed, energy, thermal or usability improvement
+has been claimed. Milestones 1–4 remain open until their complete exit gates pass.
