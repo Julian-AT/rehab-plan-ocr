@@ -1,0 +1,2417 @@
+{
+  "document_moves": {
+    "docs/agenda-030.md": "docs/releases/history/agenda-030.md",
+    "docs/apple-voice-preview.md": "docs/releases/history/apple-voice-preview.md",
+    "docs/architecture.md": "docs/architecture/overview.md",
+    "docs/calendar-cache-device-update.md": "docs/releases/history/calendar-cache-device-update.md",
+    "docs/calendar-voice-implementation.md": "docs/releases/history/calendar-voice-implementation.md",
+    "docs/calm-voice-device-update.md": "docs/releases/history/calm-voice-device-update.md",
+    "docs/continuous-calendar-voice.md": "docs/releases/history/continuous-calendar-voice.md",
+    "docs/continuous-voice-device-update.md": "docs/releases/history/continuous-voice-device-update.md",
+    "docs/dataset.md": "docs/development/dataset.md",
+    "docs/fluid-calendar-voice.md": "docs/releases/history/fluid-calendar-voice.md",
+    "docs/fluid-device-update.md": "docs/releases/history/fluid-device-update.md",
+    "docs/greens-device-update.md": "docs/releases/history/greens-device-update.md",
+    "docs/implementation-plan.md": "docs/development/implementation-plan.md",
+    "docs/ios-installation.md": "docs/releases/ios-installation.md",
+    "docs/iphone-update-20260926-s11.md": "docs/releases/history/iphone-update-20260926-s11.md",
+    "docs/kokoro-device-update.md": "docs/releases/history/kokoro-device-update.md",
+    "docs/lassnitzhoehe-release.md": "docs/releases/history/lassnitzhoehe-release.md",
+    "docs/logo-calendar-device-update.md": "docs/releases/history/logo-calendar-device-update.md",
+    "docs/native-iphone-migration.md": "docs/releases/history/native-iphone-migration.md",
+    "docs/native-minimal-device-update.md": "docs/releases/history/native-minimal-device-update.md",
+    "docs/native-minimal-iphone.md": "docs/releases/history/native-minimal-iphone.md",
+    "docs/one-confirmation.md": "docs/releases/history/one-confirmation.md",
+    "docs/optimization-followup-2026-09-26-s16.md": "docs/releases/history/optimization-followup-2026-09-26-s16.md",
+    "docs/plan-voice-comparison-2026-09-26-s15.md": "docs/releases/history/plan-voice-comparison-2026-09-26-s15.md",
+    "docs/preview/2026-09-26-s12-continuous/README.md": "docs/releases/history/previews/2026-09-26-s12-continuous.md",
+    "docs/preview/2026-09-26-s12-fluid/README.md": "docs/releases/history/previews/2026-09-26-s12-fluid.md",
+    "docs/preview/2026-09-26-s12-native/README.md": "docs/releases/history/previews/2026-09-26-s12-native.md",
+    "docs/preview/2026-09-26-s12-quality/README.md": "docs/releases/history/previews/2026-09-26-s12-quality.md",
+    "docs/preview/2026-09-26-s12-smooth-voice/README.md": "docs/releases/history/previews/2026-09-26-s12-smooth-voice.md",
+    "docs/preview/2026-09-26-s12-victoria/README.md": "docs/releases/history/previews/2026-09-26-s12-victoria.md",
+    "docs/preview/2026-09-26-s12/README.md": "docs/releases/history/previews/2026-09-26-s12.md",
+    "docs/preview/2026-09-26-s13-calendar-cache/README.md": "docs/releases/history/previews/2026-09-26-s13-calendar-cache.md",
+    "docs/preview/2026-09-26-s13-fluid/README.md": "docs/releases/history/previews/2026-09-26-s13-fluid.md",
+    "docs/preview/2026-09-26-s13-interface-tracing/README.md": "docs/releases/history/previews/2026-09-26-s13-interface-tracing.md",
+    "docs/preview/2026-09-26-s13-logo-calendar/README.md": "docs/releases/history/previews/2026-09-26-s13-logo-calendar.md",
+    "docs/preview/2026-09-26-s13-page-axis/README.md": "docs/releases/history/previews/2026-09-26-s13-page-axis.md",
+    "docs/preview/2026-09-26-s13-simplified-controls/README.md": "docs/releases/history/previews/2026-09-26-s13-simplified-controls.md",
+    "docs/preview/2026-09-26-s13-voice-waveform/README.md": "docs/releases/history/previews/2026-09-26-s13-voice-waveform.md",
+    "docs/preview/2026-09-26-s14-calendar-banner/README.md": "docs/releases/history/previews/2026-09-26-s14-calendar-banner.md",
+    "docs/preview/2026-09-26-s14-calendar-repair/README.md": "docs/releases/history/previews/2026-09-26-s14-calendar-repair.md",
+    "docs/preview/2026-09-26-s14-calm-voice/README.md": "docs/releases/history/previews/2026-09-26-s14-calm-voice.md",
+    "docs/preview/2026-09-26-s14-greens/README.md": "docs/releases/history/previews/2026-09-26-s14-greens.md",
+    "docs/preview/2026-09-26-s14-soft-greens-audio/README.md": "docs/releases/history/previews/2026-09-26-s14-soft-greens-audio.md",
+    "docs/preview/2026-09-26-s14-zitrus-olive/README.md": "docs/product/visual-baseline/README.md",
+    "docs/preview/2026-09-26-s14-zitrus-olive/cards-dark.png": "docs/product/visual-baseline/cards-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/cards-light.png": "docs/product/visual-baseline/cards-light.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/contrast.json": "docs/product/visual-baseline/contrast.json",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-0.png": "docs/product/visual-baseline/large-dark-0.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-1.png": "docs/product/visual-baseline/large-dark-1.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-2.png": "docs/product/visual-baseline/large-dark-2.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-3.png": "docs/product/visual-baseline/large-dark-3.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-4.png": "docs/product/visual-baseline/large-dark-4.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-dark.png": "docs/product/visual-baseline/large-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light-0.png": "docs/product/visual-baseline/large-light-0.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light-1.png": "docs/product/visual-baseline/large-light-1.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light-2.png": "docs/product/visual-baseline/large-light-2.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light-3.png": "docs/product/visual-baseline/large-light-3.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light-4.png": "docs/product/visual-baseline/large-light-4.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/large-light.png": "docs/product/visual-baseline/large-light.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/legend-dark.png": "docs/product/visual-baseline/legend-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/legend-light.png": "docs/product/visual-baseline/legend-light.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/list-dark.png": "docs/product/visual-baseline/list-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/list-light.png": "docs/product/visual-baseline/list-light.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/list-lower-dark.png": "docs/product/visual-baseline/list-lower-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/list-lower-light.png": "docs/product/visual-baseline/list-lower-light.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/past-events-dark.png": "docs/product/visual-baseline/past-events-dark.png",
+    "docs/preview/2026-09-26-s14-zitrus-olive/past-events-light.png": "docs/product/visual-baseline/past-events-light.png",
+    "docs/preview/termin-farbpaletten.html": "docs/decisions/calendar-palette.html",
+    "docs/quality-device-update.md": "docs/releases/history/quality-device-update.md",
+    "docs/quality-overhaul.md": "docs/releases/history/quality-overhaul.md",
+    "docs/real-image-baseline.md": "docs/releases/history/real-image-baseline.md",
+    "docs/recognition-review.md": "docs/releases/history/recognition-review.md",
+    "docs/reference-cli.md": "docs/development/reference-cli.md",
+    "docs/requirements.md": "docs/releases/history/requirements.md",
+    "docs/research.md": "docs/releases/history/research.md",
+    "docs/simple-app-delivery.md": "docs/releases/history/simple-app-delivery.md",
+    "docs/smooth-voice-device-update.md": "docs/releases/history/smooth-voice-device-update.md",
+    "docs/smooth-voice.md": "docs/releases/history/smooth-voice.md",
+    "docs/soft-audio-device-update.md": "docs/releases/history/soft-audio-device-update.md",
+    "docs/status.md": "docs/development/status.md",
+    "docs/ui-voice-refresh.md": "docs/releases/history/ui-voice-refresh.md",
+    "docs/uniform-calendar-conversation.md": "docs/releases/history/uniform-calendar-conversation.md",
+    "docs/verification.md": "docs/releases/history/verification.md",
+    "docs/victoria-calendar-update.md": "docs/releases/history/victoria-calendar-update.md",
+    "docs/voice-accessibility-proposal.md": "docs/releases/history/voice-accessibility-proposal.md",
+    "docs/zitrus-device-update.md": "docs/releases/history/zitrus-device-update.md"
+  },
+  "files": [
+    {
+      "bytes": 238791,
+      "path": "docs/preview/2026-09-26-s12/archiv-dunkel-groesste-schrift.png",
+      "sha256": "f2f8358e8185556d4a687104f16af48ba3f41d76a4dc4c6f0c48df3b0f42431f"
+    },
+    {
+      "bytes": 1051,
+      "path": "docs/preview/2026-09-26-s12/audio-manifest.json",
+      "sha256": "28a8e17c3efd23aabcc2a7415bd1f4d51073e7a21a391e1ff7e2b7c5a6084f75"
+    },
+    {
+      "bytes": 271747,
+      "path": "docs/preview/2026-09-26-s12/bereits-vorbei.png",
+      "sha256": "3d4138665bac95aeb8958fa06e59f6114d142580c3bea219228b2d62a3cc3a45"
+    },
+    {
+      "bytes": 398753,
+      "path": "docs/preview/2026-09-26-s12/bewegung-reduziert.png",
+      "sha256": "9f57a9611c26b5e93cbd3cdd6aab685250912a7802f6e12c21d6ef47adb1bde8"
+    },
+    {
+      "bytes": 300568,
+      "path": "docs/preview/2026-09-26-s12/dateiimport.png",
+      "sha256": "4e0fc51a0e0844c721321dc1fbfb54059363c058f1b24a5160330f5bb84a3b63"
+    },
+    {
+      "bytes": 128526,
+      "path": "docs/preview/2026-09-26-s12/ein-termin.png",
+      "sha256": "03e4aa1118d065b9d9e735274d45c1b2d3276348cbadd61ed089ee599924888f"
+    },
+    {
+      "bytes": 412091,
+      "path": "docs/preview/2026-09-26-s12/fotoimport.png",
+      "sha256": "bd68f271d66aa95bf82fbd15ecb5fd09a9f9c6ee5be001f1799fa26f26e383a1"
+    },
+    {
+      "bytes": 164579,
+      "path": "docs/preview/2026-09-26-s12/gespeichert-rueckgaengig.png",
+      "sha256": "5866e20ea0dcc4dc8b60b9ec5110967d633e20ddc920579104f8af41783d770a"
+    },
+    {
+      "bytes": 256631,
+      "path": "docs/preview/2026-09-26-s12/gleichnamige-kalender.png",
+      "sha256": "826f3fdd1e3b22b6cd294e9940b3dba3acdfdc47f44c24bde6fd0c683064270a"
+    },
+    {
+      "bytes": 110075,
+      "path": "docs/preview/2026-09-26-s12/heute-frei.png",
+      "sha256": "bc401fd1b38d1ed4d6dd202583955425fc60ff9fa9aaf35c3659887576efc36f"
+    },
+    {
+      "bytes": 130240,
+      "path": "docs/preview/2026-09-26-s12/kalenderauswahl-fehlt.png",
+      "sha256": "f3baddafb55e64249fb27b4379bca266a243eb97887201014277321dba078eb7"
+    },
+    {
+      "bytes": 149884,
+      "path": "docs/preview/2026-09-26-s12/kalenderzugriff-fehlt.png",
+      "sha256": "73b47f125ba116943abd9652bf0cb3135ca8f589dacc1ee1b4f52035fa13e2fd"
+    },
+    {
+      "bytes": 145351,
+      "path": "docs/preview/2026-09-26-s12/kamera-simulator.png",
+      "sha256": "5cebabae2d623d97cbb1745fa2f78d52b85d243de5469c40ba3aec88d965f2db"
+    },
+    {
+      "bytes": 110905,
+      "path": "docs/preview/2026-09-26-s12/leer.png",
+      "sha256": "b226837327195c5c775d9e4a4f8ec897138204a4c293b4ea04c1a316911439e5"
+    },
+    {
+      "bytes": 602444,
+      "path": "docs/preview/2026-09-26-s12/martin-kalender.wav",
+      "sha256": "afe2dd32d540133187eaf113f940d74cd085e3ab25358ef253ff5ef86f1ebe73"
+    },
+    {
+      "bytes": 1246844,
+      "path": "docs/preview/2026-09-26-s12/martin-lange-antwort.wav",
+      "sha256": "38e6fe7350bd1c98bf4a332fb3d744ad2628471fc39220cc828cb06d4762fabd"
+    },
+    {
+      "bytes": 824444,
+      "path": "docs/preview/2026-09-26-s12/martin-langsam.wav",
+      "sha256": "5dc2f251f422982c1386073b6df64c583da3a48b230dca1e876eccbc804d39f8"
+    },
+    {
+      "bytes": 157282,
+      "path": "docs/preview/2026-09-26-s12/mehr.png",
+      "sha256": "bdd68c9da29998e72733c241efc6309c19caf064cb7beb3a555128e4d4b31d1e"
+    },
+    {
+      "bytes": 393118,
+      "path": "docs/preview/2026-09-26-s12/neues-foto-erkannt.png",
+      "sha256": "7c21da74cbb610a14494a01447cadd6572e9b916d3f5512d4397bde2da563008"
+    },
+    {
+      "bytes": 302312,
+      "path": "docs/preview/2026-09-26-s12/plan-speichern.png",
+      "sha256": "bace0a088a508824c1a88004d750d75ff1af29aee1404decd2ef7bdcaf9b283b"
+    },
+    {
+      "bytes": 10844,
+      "path": "docs/preview/2026-09-26-s12/preview-manifest.json",
+      "sha256": "5a092020ce2567162af08cae1de39317e8cf10c17b6bcb815fb9ae7d02e29d97"
+    },
+    {
+      "bytes": 431069,
+      "path": "docs/preview/2026-09-26-s12/spracherkennung-fehlt.png",
+      "sha256": "ea641f3e2c34bcf119be41c381cc4b2ba4a3c7b2887852919c9b012560b6bcfd"
+    },
+    {
+      "bytes": 371133,
+      "path": "docs/preview/2026-09-26-s12/sprachvorschau-verworfen.png",
+      "sha256": "40b0d5619d7d7359dcb5db98ea87cb671300d218a2388c3fa8acced08fd705d0"
+    },
+    {
+      "bytes": 415732,
+      "path": "docs/preview/2026-09-26-s12/sprachvorschau.png",
+      "sha256": "0fe805a0924a26ca1fdc30bd061e79251f872df99b1d6599569932cc3b0463b7"
+    },
+    {
+      "bytes": 441295,
+      "path": "docs/preview/2026-09-26-s12/sprechen-groesste-schrift.png",
+      "sha256": "8c24d506855ffb1e0e9a3e568103bf3572c81a5d5dc42b26213b9a1da5901e03"
+    },
+    {
+      "bytes": 95956,
+      "path": "docs/preview/2026-09-26-s12/sprechen-ruhender-orb.mp4",
+      "sha256": "49b2f260d461ea1c002e8c178c07ad46ade13652a2d5fda321aa0258147f76b7"
+    },
+    {
+      "bytes": 398753,
+      "path": "docs/preview/2026-09-26-s12/sprechen.png",
+      "sha256": "9f57a9611c26b5e93cbd3cdd6aab685250912a7802f6e12c21d6ef47adb1bde8"
+    },
+    {
+      "bytes": 239040,
+      "path": "docs/preview/2026-09-26-s12/termine-dunkel-groesste-schrift.png",
+      "sha256": "82626e820a9adcb55548f2a32e5bcc06937a8804c6eca0e45bd79117fb4e6369"
+    },
+    {
+      "bytes": 225496,
+      "path": "docs/preview/2026-09-26-s12/termine-hell.png",
+      "sha256": "6a7567a38695169ba16cd2cd22bbdb1f36aaf8a39661b8849d67b6119018daa1"
+    },
+    {
+      "bytes": 6911,
+      "path": "docs/preview/2026-09-26-s12/verification-results.json",
+      "sha256": "a943e28e7336ceca7260625771f04e450ea26f1d4d07433eca5e8e456637f7c9"
+    },
+    {
+      "bytes": 253963,
+      "path": "docs/preview/2026-09-26-s12/weitere-tage.png",
+      "sha256": "7e4c3ebe5034454895626ad6b97c369b912cf3d105c51611bfc16e8ac8e46516"
+    },
+    {
+      "bytes": 616549,
+      "path": "docs/preview/2026-09-26-s12-continuous/bewegung-reduziert.png",
+      "sha256": "be50329d8ab188f2d03ae6c17efb5d929c34ed6ca31accb75b57b5174341c208"
+    },
+    {
+      "bytes": 214998,
+      "path": "docs/preview/2026-09-26-s12-continuous/farblegende.png",
+      "sha256": "e99e7b6b569273e584ddc50e3d96bfaaeac0b38dc17df5b10295448212318826"
+    },
+    {
+      "bytes": 262282,
+      "path": "docs/preview/2026-09-26-s12-continuous/kalender-dunkel.png",
+      "sha256": "a4fee5ba657efdad869c5ec6c910dd4d16b9e392a33e4d4e6303c887fd0f54be"
+    },
+    {
+      "bytes": 305854,
+      "path": "docs/preview/2026-09-26-s12-continuous/kalender-grosse-schrift.png",
+      "sha256": "330a75b9a245242018c9288373b072e27986139ccf308122e97583accd4f0893"
+    },
+    {
+      "bytes": 253080,
+      "path": "docs/preview/2026-09-26-s12-continuous/kalender-hell.png",
+      "sha256": "7b79178bedb3428cf08d8281e7dada4a6d880227d97787a0212b80e5570a0287"
+    },
+    {
+      "bytes": 629944,
+      "path": "docs/preview/2026-09-26-s12-continuous/kalender-seiten.mp4",
+      "sha256": "185a25eabd47ac4e8abbcdeacadc041d865c0d7adcab6931d54944bdc774c886"
+    },
+    {
+      "bytes": 78,
+      "path": "docs/preview/2026-09-26-s12-continuous/kalenderwerkzeuge.txt",
+      "sha256": "ce72ae1f550b8d7ced80a04192b34bc8c9c15f07406ae8d7e4c1584ccd199299"
+    },
+    {
+      "bytes": 2879,
+      "path": "docs/preview/2026-09-26-s12-continuous/screenshot-origins.json",
+      "sha256": "acdc93def56d4985c919bfa338ffc6c596021e621fcca190c8a92b94768dd72c"
+    },
+    {
+      "bytes": 533083,
+      "path": "docs/preview/2026-09-26-s12-continuous/sprechen-grosse-schrift.png",
+      "sha256": "c18aca14171d8fa51a77d64bb56eb788b5701161a4d41cbae7ff8930c26ace67"
+    },
+    {
+      "bytes": 630170,
+      "path": "docs/preview/2026-09-26-s12-continuous/text-folgt-audio.png",
+      "sha256": "d7e2b9b44938166e5a04b29e520f76e3526fa76b9424394503df30666fa5c3df"
+    },
+    {
+      "bytes": 627951,
+      "path": "docs/preview/2026-09-26-s12-continuous/text-waehrend-victoria.png",
+      "sha256": "7f9b02d5a1e80f07152e425b41007cf25023dc49f1bbd02840823067bd87e6a1"
+    },
+    {
+      "bytes": 4253,
+      "path": "docs/preview/2026-09-26-s12-continuous/verification.json",
+      "sha256": "1fea1d4cb8795452b5003dd1cf2fe4d34d40875bbce5a02f16444b4cf4711ef3"
+    },
+    {
+      "bytes": 1600,
+      "path": "docs/preview/2026-09-26-s12-continuous/victoria-fruehstueck-marks.json",
+      "sha256": "ecd4901aa579f4c09453db70310309eaeeb09f2a448de038ad3cedc89353d0d6"
+    },
+    {
+      "bytes": 525644,
+      "path": "docs/preview/2026-09-26-s12-continuous/victoria-fruehstueck.wav",
+      "sha256": "ac1ef0ae8fb63a1f0a01817f5cd56b8f2d14a7ea04de312690fa3295454fb6a9"
+    },
+    {
+      "bytes": 1832,
+      "path": "docs/preview/2026-09-26-s12-continuous/victoria-kalender-marks.json",
+      "sha256": "909bdcef4bc5d5048123a343a07ab4ae893c84f089c286190616033e74185c49"
+    },
+    {
+      "bytes": 705644,
+      "path": "docs/preview/2026-09-26-s12-continuous/victoria-kalender.wav",
+      "sha256": "f29382c074aef02aef84e4505107edde3cc4247f2110246454c14a5c67486b06"
+    },
+    {
+      "bytes": 379432,
+      "path": "docs/preview/2026-09-26-s12-continuous/victoria-text.mp4",
+      "sha256": "7652334eea69978f6f25aecb4cff3fd1abc5efbabe66b39d5c84790a655b41dd"
+    },
+    {
+      "bytes": 767,
+      "path": "docs/preview/2026-09-26-s12-continuous/video-origin.json",
+      "sha256": "27c1987a58a66c614db323c577cd82b273e1a431e39cda20312518e9e080abf0"
+    },
+    {
+      "bytes": 183327,
+      "path": "docs/preview/2026-09-26-s12-continuous/vorschlag-bestaetigen.png",
+      "sha256": "cdbabfd27d8709fde2551c0abe55a31c3c5b9a9c3e92c6c857c1bf457700a3df"
+    },
+    {
+      "bytes": 258679,
+      "path": "docs/preview/2026-09-26-s12-continuous/vorschlag-gespeichert.png",
+      "sha256": "94ae70327eaafbfb7219dd7345fcbb675267ff52c58da9ee5503b55ae1b08224"
+    },
+    {
+      "bytes": 251485,
+      "path": "docs/preview/2026-09-26-s12-continuous/wochenblaettern.png",
+      "sha256": "901976fea41c4ca43f8af856c0b2d39dba6738d5ea040f364936a24b0241f13a"
+    },
+    {
+      "bytes": 255713,
+      "path": "docs/preview/2026-09-26-s12-continuous/wochengrenze.png",
+      "sha256": "b70d51ea9acec729645e72307150e9d1e49d3c98d0f16abcc59c90e9253310a7"
+    },
+    {
+      "bytes": 653445,
+      "path": "docs/preview/2026-09-26-s12-fluid/abgebrochene-wiedergabe.png",
+      "sha256": "807447cf91db1bf797c0ae77b84d9d12101bc5b916d5494da418e4f0a0c0d5a7"
+    },
+    {
+      "bytes": 366996,
+      "path": "docs/preview/2026-09-26-s12-fluid/antwort-aus-kalender.png",
+      "sha256": "68f3eb8082b2637b1fe8e6b759e5ff649da22efe0e393f543282d60139535e48"
+    },
+    {
+      "bytes": 184602,
+      "path": "docs/preview/2026-09-26-s12-fluid/archiv-groesste-schrift.png",
+      "sha256": "c308ae08eb5f68bd87f22e562499e6ae5047d5688bee7ffeea29f43f57b2de93"
+    },
+    {
+      "bytes": 195,
+      "path": "docs/preview/2026-09-26-s12-fluid/audio-meter.json",
+      "sha256": "411ae4050d2856d82b2ff2ecc65c4fe4f8f1abf7ff501c3fce21bd789aaca641"
+    },
+    {
+      "bytes": 637047,
+      "path": "docs/preview/2026-09-26-s12-fluid/bewegung-reduziert.png",
+      "sha256": "3366db31918355ffe25d53972b6b7e3e3d37319748396dec4d7ee95af7dfb99b"
+    },
+    {
+      "bytes": 838,
+      "path": "docs/preview/2026-09-26-s12-fluid/foundation-status.json",
+      "sha256": "1a9cab7708b6635a8e75f57df4c255b4d204270365793f2354686f5970d846ff"
+    },
+    {
+      "bytes": 354198,
+      "path": "docs/preview/2026-09-26-s12-fluid/freies-gespraech-modellstatus.png",
+      "sha256": "c01fe618f07bcbc89f1fe91656e2a33bf3d65342cababc80013d27b1ee39fd3c"
+    },
+    {
+      "bytes": 243998,
+      "path": "docs/preview/2026-09-26-s12-fluid/gespraechsdetails.png",
+      "sha256": "5627ae4cabe7814a08db28dc6c1bff69f8309b8b985298af62ecbd1969d9aa2b"
+    },
+    {
+      "bytes": 621191,
+      "path": "docs/preview/2026-09-26-s12-fluid/gruener-orb-und-sprechen.png",
+      "sha256": "41bc03b03f9512161928bf797c151ddea3754a620cdb1820d2e0ecfd8b87e12e"
+    },
+    {
+      "bytes": 223756,
+      "path": "docs/preview/2026-09-26-s12-fluid/kalender-dunkel.png",
+      "sha256": "3a138d0d352858559c15586e7afeea2ffd8d3481a7020e6eb6126af5be9fae73"
+    },
+    {
+      "bytes": 199766,
+      "path": "docs/preview/2026-09-26-s12-fluid/kalender-ueberlappende-termine.png",
+      "sha256": "f8bc83695340c9a0f4f785a514ce15a9d9201188a83b40af021bd972141dde05"
+    },
+    {
+      "bytes": 245855,
+      "path": "docs/preview/2026-09-26-s12-fluid/kalender-uebersicht-ort-therapeut.png",
+      "sha256": "4b7398677b0194c0c6d76a9b22753b65d7eae924562a31ae5ed180a73cc5196b"
+    },
+    {
+      "bytes": 196776,
+      "path": "docs/preview/2026-09-26-s12-fluid/kalenderdarstellung-einstellbar.png",
+      "sha256": "02e4b28e75351ea1789acadc49fc6b44e98af76febdfa7fcb74b6c46825e0904"
+    },
+    {
+      "bytes": 4917,
+      "path": "docs/preview/2026-09-26-s12-fluid/manifest.json",
+      "sha256": "7767f8a6debb53304f671e0f7c054540b39a52e8a580a094911089cb47bd2aa9"
+    },
+    {
+      "bytes": 219180,
+      "path": "docs/preview/2026-09-26-s12-fluid/mehr-groesste-schrift.png",
+      "sha256": "7e0882e93a3d82b1f3ff8cfb045ea9d8237ac0b6129d8a18d9ab6930710bca37"
+    },
+    {
+      "bytes": 145074,
+      "path": "docs/preview/2026-09-26-s12-fluid/native-apple-kamera.png",
+      "sha256": "9efb348c937ff950443c8fcdd86da99eeea8b1c0942ec6c44f0de6c8cae37f04"
+    },
+    {
+      "bytes": 347913,
+      "path": "docs/preview/2026-09-26-s12-fluid/orb-victoria.mp4",
+      "sha256": "125776d1946df66eb259eefaea04883451b5cf8b5610b2194538e88324eed8dd"
+    },
+    {
+      "bytes": 224006,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprache-ohne-dateieinrichtung.png",
+      "sha256": "1cccbc353dfe65096e94a4d75015da6866040f034da904f9d233c7d39b165bd4"
+    },
+    {
+      "bytes": 224061,
+      "path": "docs/preview/2026-09-26-s12-fluid/spracheinstellungen.png",
+      "sha256": "5b86cb49c82ddae2cbca01c7f614192b6e9c1d897e7fdaa5749240949835e084"
+    },
+    {
+      "bytes": 654498,
+      "path": "docs/preview/2026-09-26-s12-fluid/spracherkennung-nativer-hinweis.png",
+      "sha256": "b0dd77263d4d794834bbcdb39893d9f5871f6c53f14bfeb09d75f5942a88c87b"
+    },
+    {
+      "bytes": 289962,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprachvorschlag-gespeichert.png",
+      "sha256": "954cdf5b6a33105c905d1b59b9fb91608653936fe6765203ceee8bf4ce153785"
+    },
+    {
+      "bytes": 226556,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprachvorschlag-vor-bestaetigung.png",
+      "sha256": "302cbbddc88e134e130ad4adb1db9052aadb226bba12302a473b2e6b08511e64"
+    },
+    {
+      "bytes": 499211,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprechen-dunkel.png",
+      "sha256": "5814fbd303b32d83d9928e2dff0a33bfe251c36822822cf500693084378f43bf"
+    },
+    {
+      "bytes": 707054,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprechen-echte-wiedergabe.png",
+      "sha256": "0b06505c2e978b4be6ab88a83935343d43f55d792882c65f8e29a192834e62c9"
+    },
+    {
+      "bytes": 553135,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprechen-groesste-schrift.png",
+      "sha256": "415354357d8f294eb9fd9ed13765feeb3997aff29ffb3ce0aba1346bb937d2a4"
+    },
+    {
+      "bytes": 635395,
+      "path": "docs/preview/2026-09-26-s12-fluid/sprechen-ruhe.png",
+      "sha256": "0ca2497fe427f6c10596ee4b3c66a031115c6642c792177f6369b0a4f7bd0ebc"
+    },
+    {
+      "bytes": 298485,
+      "path": "docs/preview/2026-09-26-s12-fluid/tagesliste-groesste-schrift.png",
+      "sha256": "15c4ea09259db6221631fa19e878898475d7190c2b4c30ca7e034f93afcd764a"
+    },
+    {
+      "bytes": 337706,
+      "path": "docs/preview/2026-09-26-s12-fluid/tagesliste-nach-neustart.png",
+      "sha256": "04b964589b60cc1433c91b1b7ac8f974d78e4c2400fc854fd0d718fdf0951348"
+    },
+    {
+      "bytes": 240701,
+      "path": "docs/preview/2026-09-26-s12-fluid/ueberlappung-dunkel.png",
+      "sha256": "14e8c91f0de6528e45e29403a625a50f36d322275d58b2b410836a58fd626c5e"
+    },
+    {
+      "bytes": 3237,
+      "path": "docs/preview/2026-09-26-s12-fluid/verification.json",
+      "sha256": "f4360de42ed5ef8c793883a0f8d63d63b2e5642ac65fdd8f23db6d4db26b8f33"
+    },
+    {
+      "bytes": 408,
+      "path": "docs/preview/2026-09-26-s12-fluid/video-origin.json",
+      "sha256": "9a9b748c38a3f083464f9d90b79c56b3fefa75de94f718a92cd9e4332dfa0403"
+    },
+    {
+      "bytes": 248217,
+      "path": "docs/preview/2026-09-26-s12-fluid/wischen-ueber-wochengrenze.png",
+      "sha256": "346aadc49e3e41468f6f04d484b14cd91c60424ba57d8a8604e4b170ee1b21aa"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-native/abgebrochene-wiedergabe.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 184602,
+      "path": "docs/preview/2026-09-26-s12-native/archiv-groesste-schrift.png",
+      "sha256": "c308ae08eb5f68bd87f22e562499e6ae5047d5688bee7ffeea29f43f57b2de93"
+    },
+    {
+      "bytes": 196620,
+      "path": "docs/preview/2026-09-26-s12-native/archiv-plaene.png",
+      "sha256": "c874f0cb6ea42820365628dc38eb797970c38a01833780ea2e23762747464ce2"
+    },
+    {
+      "bytes": 195,
+      "path": "docs/preview/2026-09-26-s12-native/audio-meter.json",
+      "sha256": "93bb728f8f1aa2ecdf3a73c8e272b39489af108a2537849e0e89495d4ece6a1f"
+    },
+    {
+      "bytes": 159548,
+      "path": "docs/preview/2026-09-26-s12-native/automatischer-tagesabschluss.png",
+      "sha256": "4fb8969edcfbec12200970a0608425da3d2f6ee8096fcea9eb7cb45c8a2e0693"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-native/bewegung-reduziert.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 302196,
+      "path": "docs/preview/2026-09-26-s12-native/dateiimport.png",
+      "sha256": "91684713605961bf4f7a44af8237a05305016d7d1c75bdbc18b410a98b005915"
+    },
+    {
+      "bytes": 199018,
+      "path": "docs/preview/2026-09-26-s12-native/einstellungen-nach-neustart.png",
+      "sha256": "67c42e1b92700fb37a5a33c937476bf12c7259c18c91a05cb46dc6bf69c3af04"
+    },
+    {
+      "bytes": 236077,
+      "path": "docs/preview/2026-09-26-s12-native/einstellungen-speicherfehler.png",
+      "sha256": "d726c833eb906684a73b32799a6c2dc2354527445f349e23d2737cbb107715f0"
+    },
+    {
+      "bytes": 197845,
+      "path": "docs/preview/2026-09-26-s12-native/erinnerungen-sofort-gespeichert.png",
+      "sha256": "7dfcbee2bcddcb1afbfa4454ff37b5c7a95c23a286998b7a0fdc50bf1bb2b4bc"
+    },
+    {
+      "bytes": 472311,
+      "path": "docs/preview/2026-09-26-s12-native/erkennung-tabs.png",
+      "sha256": "1202e460951e41cb15a8c782d30446be511f9f4e673d3e76db006dd4aba28c3c"
+    },
+    {
+      "bytes": 302415,
+      "path": "docs/preview/2026-09-26-s12-native/fotoimport.png",
+      "sha256": "44ec6e1dc10639467591aee438712f146a149ebc3ea1dbd9c5d167f5cc3d3b37"
+    },
+    {
+      "bytes": 186339,
+      "path": "docs/preview/2026-09-26-s12-native/gespraechsdetails.png",
+      "sha256": "5975782fa8f9301cf4e0c7a88900bcbfe58a2c9d16e31a0d5c7d3b21e67cf25b"
+    },
+    {
+      "bytes": 186471,
+      "path": "docs/preview/2026-09-26-s12-native/import-gespeichert.png",
+      "sha256": "e726c923049f68b46af346e48e05a3fb3c928b7dbcd945a6e8fb1bac5c21f4a4"
+    },
+    {
+      "bytes": 164313,
+      "path": "docs/preview/2026-09-26-s12-native/kalenderauswahl-fehlt.png",
+      "sha256": "e970cb61d1e6ab1c79d7531b0b84e1df77c7986fa731bd31f7a1b345de1f3989"
+    },
+    {
+      "bytes": 167212,
+      "path": "docs/preview/2026-09-26-s12-native/kalenderzugriff-fehlt.png",
+      "sha256": "636b74fe8f2e175320b77ed0061b3a7ea09db2b6b0e0e143d2c39545d24d0dc3"
+    },
+    {
+      "bytes": 149313,
+      "path": "docs/preview/2026-09-26-s12-native/keine-termine.png",
+      "sha256": "09be26490a610084b618fc504610578ff48e6b73c9a247652f050337102bbf66"
+    },
+    {
+      "bytes": 162587,
+      "path": "docs/preview/2026-09-26-s12-native/kurze-termine.png",
+      "sha256": "97a0cf9666e713a4805f5a208afe240d9bc6358b8295f18254bce4f1f1e3ef9e"
+    },
+    {
+      "bytes": 219180,
+      "path": "docs/preview/2026-09-26-s12-native/mehr-groesste-schrift.png",
+      "sha256": "7e0882e93a3d82b1f3ff8cfb045ea9d8237ac0b6129d8a18d9ab6930710bca37"
+    },
+    {
+      "bytes": 224096,
+      "path": "docs/preview/2026-09-26-s12-native/mehr-hell.png",
+      "sha256": "900b85127b5746c68d0b0e8d4fc640e75c617ed5bb237de27370eef6dce77583"
+    },
+    {
+      "bytes": 238802,
+      "path": "docs/preview/2026-09-26-s12-native/mehr-version.png",
+      "sha256": "2d30e17bac5a413c7487c073e6714d8976449e01c299ea61fbdf623d43acb35b"
+    },
+    {
+      "bytes": 181221,
+      "path": "docs/preview/2026-09-26-s12-native/mehrseitiger-plan.png",
+      "sha256": "0ec6f9b2d75e65ea13af4fbddde591d9d528038d1cf4f3a5b10070ffc7bce029"
+    },
+    {
+      "bytes": 141054,
+      "path": "docs/preview/2026-09-26-s12-native/neue-vorgabe-validierung.png",
+      "sha256": "52660c9fef51c3970c07032ec98a57ebbd48f744bb5fee8c45bc09dc3a6306ea"
+    },
+    {
+      "bytes": 196835,
+      "path": "docs/preview/2026-09-26-s12-native/original-ansicht.png",
+      "sha256": "0c2bdbddec9adf0aaf5ac259d224f972db26934730af35d4cbc5b1b6f82aaa88"
+    },
+    {
+      "bytes": 13610,
+      "path": "docs/preview/2026-09-26-s12-native/preview-manifest.json",
+      "sha256": "bac9da8d14b50d48d404a3f6e1d2150291efb9a7e195804038e1cc1cbe3108d5"
+    },
+    {
+      "bytes": 287517,
+      "path": "docs/preview/2026-09-26-s12-native/speicherziel-native-navigation.png",
+      "sha256": "a7af798a52fee299650cd919238674990e8dbed408d52a3d13ea35418bdcba51"
+    },
+    {
+      "bytes": 239554,
+      "path": "docs/preview/2026-09-26-s12-native/spracheinstellungen.png",
+      "sha256": "e198562ea6789b24e2b3074626dab6136ab3053bf048988bf080f89982db7c20"
+    },
+    {
+      "bytes": 383273,
+      "path": "docs/preview/2026-09-26-s12-native/spracherkennung-nativer-hinweis.png",
+      "sha256": "78cac5cf4369a382c2c0015f3227d30b56a73d8e914c1d7b36b145bbe7807495"
+    },
+    {
+      "bytes": 327900,
+      "path": "docs/preview/2026-09-26-s12-native/sprachvorschlag-gespeichert.png",
+      "sha256": "c75e5ad4b5705f53f36d28d543c20f612dbe7810221103c4f0a23db6a99d9579"
+    },
+    {
+      "bytes": 205252,
+      "path": "docs/preview/2026-09-26-s12-native/sprachvorschlag-vor-bestaetigung.png",
+      "sha256": "e98fe708b07d4d68bc61fefdccddb56266e9c945508bddc3ed0652fd6b01ccc1"
+    },
+    {
+      "bytes": 192683,
+      "path": "docs/preview/2026-09-26-s12-native/sprechen-audio.mp4",
+      "sha256": "2791001b5d9895272375867e8d920e3b6fddf5fc7695a7d732f57aa48fc9f09e"
+    },
+    {
+      "bytes": 329046,
+      "path": "docs/preview/2026-09-26-s12-native/sprechen-dunkel.png",
+      "sha256": "ae237462775ff3c1f960916ed5e006698ae5d23e9e306bba74b3fabceb3cefd6"
+    },
+    {
+      "bytes": 407131,
+      "path": "docs/preview/2026-09-26-s12-native/sprechen-echte-wiedergabe.png",
+      "sha256": "29dff1c83b68198d7a061fb5fbdc24a32ba4176df7e8857b2de49e0468ff4957"
+    },
+    {
+      "bytes": 335338,
+      "path": "docs/preview/2026-09-26-s12-native/sprechen-groesste-schrift.png",
+      "sha256": "20994a886063ef8a38a240f7ff368305292353bf6b150252d990b18af67b3c50"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-native/sprechen-ruhe.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 280145,
+      "path": "docs/preview/2026-09-26-s12-native/tagesliste-groesste-schrift.png",
+      "sha256": "42fe051b57632c365f063e21be64c27f3ad5cffb6d5121c5911b3a2da4ba5b22"
+    },
+    {
+      "bytes": 158522,
+      "path": "docs/preview/2026-09-26-s12-native/tagesverlauf.png",
+      "sha256": "497745a386fcda6153879cdb4829906561c32d1d9c0369d33f7a0a1a2b29c059"
+    },
+    {
+      "bytes": 187644,
+      "path": "docs/preview/2026-09-26-s12-native/termine-hell.png",
+      "sha256": "86f0db01a0e572a7d7db5e51eeb04dec5e863eca47bf5991505af3f28e1ead2d"
+    },
+    {
+      "bytes": 168835,
+      "path": "docs/preview/2026-09-26-s12-native/terminformular.png",
+      "sha256": "2085e291dc0792ab489163ea8c45421564d164c832118314eb77ca5f559833f4"
+    },
+    {
+      "bytes": 243311,
+      "path": "docs/preview/2026-09-26-s12-native/terminpruefung-grosse-schrift.png",
+      "sha256": "0470e82fcb9f2e6c4908f74a4f263717135c4a3b936de56f835b2a0a25d25f7d"
+    },
+    {
+      "bytes": 492573,
+      "path": "docs/preview/2026-09-26-s12-native/terminpruefung-rueckfrage.png",
+      "sha256": "db3462b7d3ef05db97ad525b60f1275061abaca8de6ac275d688a81bbf988a55"
+    },
+    {
+      "bytes": 321052,
+      "path": "docs/preview/2026-09-26-s12-native/terminpruefung.png",
+      "sha256": "cd23c7fdf88dff8db530deb974c952fe82dc63b1f408a509a83c41ace8a1d8e6"
+    },
+    {
+      "bytes": 166552,
+      "path": "docs/preview/2026-09-26-s12-native/ueberlappung-dunkel.png",
+      "sha256": "c567d53cff22500b0a6ae8177493b6993a790926fdce402dd81d16cd60cb7260"
+    },
+    {
+      "bytes": 9239,
+      "path": "docs/preview/2026-09-26-s12-native/verification-results.json",
+      "sha256": "17471b4c16434bb1dc6d170ccf30883ba7522c3f348b34f80b2d99c70e99a7c6"
+    },
+    {
+      "bytes": 159548,
+      "path": "docs/preview/2026-09-26-s12-native/zeit-zum-erholen.png",
+      "sha256": "4fb8969edcfbec12200970a0608425da3d2f6ee8096fcea9eb7cb45c8a2e0693"
+    },
+    {
+      "bytes": 358290,
+      "path": "docs/preview/2026-09-26-s12-quality/archiv-nach-teilen.png",
+      "sha256": "17a2a19c7088a520c5b27f7ce70611fc7cb97ceb7c470fa93d108dce68f959ec"
+    },
+    {
+      "bytes": 612972,
+      "path": "docs/preview/2026-09-26-s12-quality/bewegung-reduziert.png",
+      "sha256": "a7c19642101a8b193e9bc340673d21a835124b8e38e289e16e4424ffd5189187"
+    },
+    {
+      "bytes": 283650,
+      "path": "docs/preview/2026-09-26-s12-quality/einstellungen-fehler.png",
+      "sha256": "4ad7d38385735762d400d076f7804ccaa68d259ceb87f5713e1d33eb94058cde"
+    },
+    {
+      "bytes": 209932,
+      "path": "docs/preview/2026-09-26-s12-quality/farblegende.png",
+      "sha256": "0dd979cee5b79500d71301ccc576d736522e2a64489236a4be56b94ec13c9044"
+    },
+    {
+      "bytes": 216437,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-dunkel.png",
+      "sha256": "07ea3cc99279ccf6b257e8d9ba2fe6357bd9c0a67e546c5c5345f0fcb06a1b2e"
+    },
+    {
+      "bytes": 723329,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-gesten.mp4",
+      "sha256": "042305d8dbdaab0da7035e39f416d0676e4703b91abcf5cd0db3d7eeca0ea0c5"
+    },
+    {
+      "bytes": 222005,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-grosse-schrift.png",
+      "sha256": "4216650464a5336ff3ddb07c869dc9b3286151c290706a84f7d2255715c1434d"
+    },
+    {
+      "bytes": 144812,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-leerer-tag.png",
+      "sha256": "ca69a892338565c120df84a5f045bdf5cb74c2278fa59062292080400f430227"
+    },
+    {
+      "bytes": 252411,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-uhrzeit-erhalten.png",
+      "sha256": "ef3e46c7b5e315043bc185c576d81e7e6e0ecf85b90d67fc7f935685dd22874c"
+    },
+    {
+      "bytes": 247840,
+      "path": "docs/preview/2026-09-26-s12-quality/kalender-zeitspalte.png",
+      "sha256": "7c9e1e537b81f7be4821dbfac5129baa109308cb8599eab4d6ecd4962942e858"
+    },
+    {
+      "bytes": 283948,
+      "path": "docs/preview/2026-09-26-s12-quality/kalenderstatus.png",
+      "sha256": "4f8972229a211d5b8d4c1f5a28d1afa476c47efdcdca9e6092c61f60e9f84d52"
+    },
+    {
+      "bytes": 162538,
+      "path": "docs/preview/2026-09-26-s12-quality/loeschvorschlag.png",
+      "sha256": "2de6d4fef27788478e2ef2fbc72b37e3dd8adca63d24f8015d6314fe097026c3"
+    },
+    {
+      "bytes": 231448,
+      "path": "docs/preview/2026-09-26-s12-quality/mehr.png",
+      "sha256": "cd885f6ab58048016a8611e403c40ca8b60af82cf6ff49c953027b3abec6e76c"
+    },
+    {
+      "bytes": 154961,
+      "path": "docs/preview/2026-09-26-s12-quality/nach-ruecknahme.png",
+      "sha256": "02b78b7d491f47e948afce64844b44bf81d5b810a6cb4c532824f7e372380371"
+    },
+    {
+      "bytes": 6691,
+      "path": "docs/preview/2026-09-26-s12-quality/origins.json",
+      "sha256": "d195297ee5c6afe231d309c628c067325952f7a05bff064ee143aa7102f5f92a"
+    },
+    {
+      "bytes": 240604,
+      "path": "docs/preview/2026-09-26-s12-quality/plan-grosse-schrift.png",
+      "sha256": "f747a56309249aa1a3d039a28d76be5e03cbf59c1850d2156577e3334f0c1669"
+    },
+    {
+      "bytes": 457016,
+      "path": "docs/preview/2026-09-26-s12-quality/plan-nach-dateiimport.png",
+      "sha256": "4a2f35f710a0313a2a0cd61ee248b626b3db9dfad7baea0c225db121c089e03e"
+    },
+    {
+      "bytes": 177864,
+      "path": "docs/preview/2026-09-26-s12-quality/sprachvorschlag.png",
+      "sha256": "034b3606dedd0d15c8359cd8130618b2ffcc72fec58fd66e9d59f3799ef70f00"
+    },
+    {
+      "bytes": 166400,
+      "path": "docs/preview/2026-09-26-s12-quality/teilen-dunkel-grosse-schrift.png",
+      "sha256": "255ab6353ccc5c096f804b6112aa714c21a594357ec610f4b24975c677ad38a0"
+    },
+    {
+      "bytes": 97167,
+      "path": "docs/preview/2026-09-26-s12-quality/teilen-hell.png",
+      "sha256": "d9b9c7dd40776da3b0fa750298190b241ceeefaa35c18bc3a7ccb2202ba890d2"
+    },
+    {
+      "bytes": 227738,
+      "path": "docs/preview/2026-09-26-s12-quality/testerinnerung-bestaetigt.png",
+      "sha256": "e9e6f6397386ae4643d0fcc3c0935533e2781e66385b350f4ef4caedf22453c5"
+    },
+    {
+      "bytes": 26687,
+      "path": "docs/preview/2026-09-26-s12-quality/verification.json",
+      "sha256": "a364cde6d20556dc8733472b81eb11224064d58a31a2d6d0741940753dedf6c2"
+    },
+    {
+      "bytes": 139901,
+      "path": "docs/preview/2026-09-26-s12-quality/verlauf.png",
+      "sha256": "bd79444b38c05273df8c508a2882cb24bbbe375dfd1002c259dfa09d86e0e3e8"
+    },
+    {
+      "bytes": 1600,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-fruehstueck-marks.json",
+      "sha256": "ecd4901aa579f4c09453db70310309eaeeb09f2a448de038ad3cedc89353d0d6"
+    },
+    {
+      "bytes": 525644,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-fruehstueck.wav",
+      "sha256": "3c375b428ddada47f157e3e44d825cd55ce81cabba15ec7ae75486366835bb75"
+    },
+    {
+      "bytes": 1703,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-kalender-marks.json",
+      "sha256": "38b30f531436d39139165cf8929d271f5d3de903552e98fddca0e950ca3cd9b0"
+    },
+    {
+      "bytes": 654044,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-kalender.wav",
+      "sha256": "57519f583acae0215265a284d2bdcb849a7d69c0c8cac3111699141336f6613d"
+    },
+    {
+      "bytes": 4265,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-lange-antwort-marks.json",
+      "sha256": "64c9d292d1c549a49f9f69d850498ab7e3baf10e503f6858296955e15bc8fd0a"
+    },
+    {
+      "bytes": 1464044,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-lange-antwort.wav",
+      "sha256": "b11c85832e898288803394f2362f548a1f22db76c460cf5ae21343ba6cd0190c"
+    },
+    {
+      "bytes": 1728,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-langsam-marks.json",
+      "sha256": "5d5c145fe97af530c38437bda42c52c028224f21cc00f39ca43577a97ecb1bc0"
+    },
+    {
+      "bytes": 948044,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-langsam.wav",
+      "sha256": "2de3a35402ae4cd050c80a9f9a3a34bdc43a15eec788facdbe3e9c5a6480b6c3"
+    },
+    {
+      "bytes": 994590,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-text.mp4",
+      "sha256": "34563af6049232dd03b88cd7b2edea9211d81527db83c4ca2029e84bcb03fb1f"
+    },
+    {
+      "bytes": 624421,
+      "path": "docs/preview/2026-09-26-s12-quality/victoria-wiedergabe.png",
+      "sha256": "27206357af137ef9dabf6766820b0480c594bef807e32e6ac22ede688e579a1d"
+    },
+    {
+      "bytes": 195,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/audio-meter.json",
+      "sha256": "be466eef53c9c4050cc3f46e91dc5bd365e7a4cbc3143957176f2b47c50ded32"
+    },
+    {
+      "bytes": 616169,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/bewegung-reduziert.png",
+      "sha256": "89e834704188d95799537f3271aec6534616d8053ac0d37fd99e06b357310306"
+    },
+    {
+      "bytes": 653471,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/echte-wiedergabe.png",
+      "sha256": "55a4eaf6d8576b41229ab03600c879eabb162ab6c722af57657b6bff0743dde1"
+    },
+    {
+      "bytes": 243998,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/gespraechsdetails.png",
+      "sha256": "5627ae4cabe7814a08db28dc6c1bff69f8309b8b985298af62ecbd1969d9aa2b"
+    },
+    {
+      "bytes": 372982,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/orb-victoria.mp4",
+      "sha256": "3f494503bd632ef2b97b12a7731d49caf03a1374c5d9beb3a19c283afca97b73"
+    },
+    {
+      "bytes": 1280,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/screenshot-origins.json",
+      "sha256": "b35def37d51ebef4e0926dc3f5e42afe04f7e25330a92123c9fd3aecfa592adf"
+    },
+    {
+      "bytes": 504170,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/sprechen-dunkel.png",
+      "sha256": "5f9fb3cb9995637208e41ee8a1ff3a10b85b041d4e4527f81abad6380e18cd32"
+    },
+    {
+      "bytes": 536820,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/sprechen-grosse-schrift.png",
+      "sha256": "af480b120bb5472db831e728dbb0551cf16be03f4ccc90732822a864a1a435aa"
+    },
+    {
+      "bytes": 611821,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/sprechen-hell.png",
+      "sha256": "afa6499e79299edb185f1540c554b96a6b2603bb2212fa3fb8e0c3bc123d38e4"
+    },
+    {
+      "bytes": 3214,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/verification.json",
+      "sha256": "1aac5c117d54838108e9c533f1d3d07276ac464df1e7e9379acf6a3867445d79"
+    },
+    {
+      "bytes": 452,
+      "path": "docs/preview/2026-09-26-s12-smooth-voice/video-origin.json",
+      "sha256": "000d1968e018dce99eeb334f048aa8f651ecc99fa4f3a0cc87918029d91e29e5"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-victoria/abgebrochene-wiedergabe.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 181430,
+      "path": "docs/preview/2026-09-26-s12-victoria/archiv-groesste-schrift.png",
+      "sha256": "0965a1936f1b4b5fd360a8d3044cca0347db8b761856be8fc0d50c2943bd7903"
+    },
+    {
+      "bytes": 194,
+      "path": "docs/preview/2026-09-26-s12-victoria/audio-meter.json",
+      "sha256": "72d845c4f65a1a0339fcc1fe14ea8fd16a14c2283822b3982f58fae2cc7ed442"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-victoria/bewegung-reduziert.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 186450,
+      "path": "docs/preview/2026-09-26-s12-victoria/gespraechsdetails.png",
+      "sha256": "735d827da070652ee972e22e12e6af8e3e6f285eb1fe3229a15160faae6dc25c"
+    },
+    {
+      "bytes": 154373,
+      "path": "docs/preview/2026-09-26-s12-victoria/kalender-ab-sechs.png",
+      "sha256": "d71e1a61c328cfcdc77325a4e86b07ce97939138548d54057dcaa8715fd6226a"
+    },
+    {
+      "bytes": 182013,
+      "path": "docs/preview/2026-09-26-s12-victoria/kalender-bis-achtzehn.png",
+      "sha256": "e403c2be3f4e08e6e623a629918993620af3b8a9a564379c8f1345ecc6db45a0"
+    },
+    {
+      "bytes": 160669,
+      "path": "docs/preview/2026-09-26-s12-victoria/kurze-termine.png",
+      "sha256": "d97de869264117b26cf6ab9920ec8eec9ca7fb7206a709ae5b41687a098120e8"
+    },
+    {
+      "bytes": 215078,
+      "path": "docs/preview/2026-09-26-s12-victoria/mehr-groesste-schrift.png",
+      "sha256": "e47b50b883413eb52bba6b0da90b325564f5135509389fc0b31c1fdbc34876d1"
+    },
+    {
+      "bytes": 691,
+      "path": "docs/preview/2026-09-26-s12-victoria/model-export.json",
+      "sha256": "936d48442ffcbd02de8c15a7982e504fdf151cfd3ee6e443ba92f5e82ae2e4c4"
+    },
+    {
+      "bytes": 4089,
+      "path": "docs/preview/2026-09-26-s12-victoria/preview-manifest.json",
+      "sha256": "c374622f22d10d8549bc1f92f900ad9863ce2eea49216d8bfd3202bdf4567d8d"
+    },
+    {
+      "bytes": 236592,
+      "path": "docs/preview/2026-09-26-s12-victoria/spracheinstellungen.png",
+      "sha256": "ccd99e26a4a30dd4a17f105da7d4c5d7ba37b1889beefaf81b89434e9ef19535"
+    },
+    {
+      "bytes": 383273,
+      "path": "docs/preview/2026-09-26-s12-victoria/spracherkennung-nativer-hinweis.png",
+      "sha256": "78cac5cf4369a382c2c0015f3227d30b56a73d8e914c1d7b36b145bbe7807495"
+    },
+    {
+      "bytes": 327900,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprachvorschlag-gespeichert.png",
+      "sha256": "c75e5ad4b5705f53f36d28d543c20f612dbe7810221103c4f0a23db6a99d9579"
+    },
+    {
+      "bytes": 218529,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprachvorschlag-vor-bestaetigung.png",
+      "sha256": "b54b4f74453984560f2d09dd35e2eac0b2d7107c5550cd19e003b5cd917738c8"
+    },
+    {
+      "bytes": 180405,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprechen-audio.mp4",
+      "sha256": "e934b6b58ec03e527480d09abe5caa7638183d840a028d373df57dc34c53891a"
+    },
+    {
+      "bytes": 329046,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprechen-dunkel.png",
+      "sha256": "ae237462775ff3c1f960916ed5e006698ae5d23e9e306bba74b3fabceb3cefd6"
+    },
+    {
+      "bytes": 401702,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprechen-echte-wiedergabe.png",
+      "sha256": "5e3ceba6cd29080074f013ea0af7ef94ffac49e3abb21c43d32ffc0822083856"
+    },
+    {
+      "bytes": 335338,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprechen-groesste-schrift.png",
+      "sha256": "20994a886063ef8a38a240f7ff368305292353bf6b150252d990b18af67b3c50"
+    },
+    {
+      "bytes": 363238,
+      "path": "docs/preview/2026-09-26-s12-victoria/sprechen-ruhe.png",
+      "sha256": "99d8173164bec31cd2badf239ea7ce9198b61e8665cdb150111a4929ea386f2b"
+    },
+    {
+      "bytes": 248571,
+      "path": "docs/preview/2026-09-26-s12-victoria/tagesliste-groesste-schrift.png",
+      "sha256": "a184ba958c57ff795763d11d14afd4e3a56c24d67f89bc68679967eba13ffff6"
+    },
+    {
+      "bytes": 181597,
+      "path": "docs/preview/2026-09-26-s12-victoria/termine-hell.png",
+      "sha256": "2b042c6a486838f7e25eaeb17fed25805c76ba7177baaaccd9e1ff0b380e96b4"
+    },
+    {
+      "bytes": 169592,
+      "path": "docs/preview/2026-09-26-s12-victoria/terminformular.png",
+      "sha256": "3af1db644989dc230f77d391250d5ce4356d547afbe2173721b750bb254144e2"
+    },
+    {
+      "bytes": 166891,
+      "path": "docs/preview/2026-09-26-s12-victoria/ueberlappung-dunkel.png",
+      "sha256": "f3f2766c083ba0bd7a9e4a37a1697b34704fbc6a2f0668f0fb00dbf02d276d02"
+    },
+    {
+      "bytes": 1568,
+      "path": "docs/preview/2026-09-26-s12-victoria/verification-results.json",
+      "sha256": "9819f4423e2da57578ab0cafb6f4da34c910ec45b01ca76225b1df92b9f01557"
+    },
+    {
+      "bytes": 705644,
+      "path": "docs/preview/2026-09-26-s12-victoria/victoria-kalender.wav",
+      "sha256": "a1a9ac616e632ec0b538864f14ae214411e602bdff8cc8064bab2b8966744012"
+    },
+    {
+      "bytes": 1454444,
+      "path": "docs/preview/2026-09-26-s12-victoria/victoria-lange-antwort.wav",
+      "sha256": "732d6ace40d7b611a206632ff7dec1a2a5d24340caffc2c0502c65cc556945b4"
+    },
+    {
+      "bytes": 924044,
+      "path": "docs/preview/2026-09-26-s12-victoria/victoria-langsam.wav",
+      "sha256": "d9373ff176d74c472e89d98ac8279e2aef337ecdc01fea7e594622494e18c6b1"
+    },
+    {
+      "bytes": 354,
+      "path": "docs/preview/2026-09-26-s12-victoria/video-origin.json",
+      "sha256": "5df63bdfec00b8da2f3344a30a8e1b3f17ac0b68e668dd825221184d309b4a2f"
+    },
+    {
+      "bytes": 196243,
+      "path": "docs/preview/2026-09-26-s13-calendar-cache/cache-01-loaded.png",
+      "sha256": "563a73e7da7f7dac8b8b0ec9be3d1c4023817f95cd4385821645a953a47e1b8a"
+    },
+    {
+      "bytes": 196243,
+      "path": "docs/preview/2026-09-26-s13-calendar-cache/cache-02-refresh-with-content.png",
+      "sha256": "563a73e7da7f7dac8b8b0ec9be3d1c4023817f95cd4385821645a953a47e1b8a"
+    },
+    {
+      "bytes": 147437,
+      "path": "docs/preview/2026-09-26-s13-calendar-cache/cache-03-empty-during-refresh.png",
+      "sha256": "4994634bf232d282ce0f7f30bd660046dbcc9add09ad041e30703c66fb89377e"
+    },
+    {
+      "bytes": 197031,
+      "path": "docs/preview/2026-09-26-s13-calendar-cache/cache-04-refreshed.png",
+      "sha256": "4a12de7a63c44c32dc9f987ddc60022b3898a8d2b7ffb55b420df13a914380b9"
+    },
+    {
+      "bytes": 443015,
+      "path": "docs/preview/2026-09-26-s13-calendar-cache/cache-demo.mp4",
+      "sha256": "a2b52c0a467caadcedac156536abb132743657d79f7176ede99df047cb18ffed"
+    },
+    {
+      "bytes": 319,
+      "path": "docs/preview/2026-09-26-s13-fluid/audio-pipeline-probe.json",
+      "sha256": "8c17910a100f01e142da9623de18533d1ee4f00180ef667bdbc7f569e5563330"
+    },
+    {
+      "bytes": 1604774,
+      "path": "docs/preview/2026-09-26-s13-fluid/darstellung.mp4",
+      "sha256": "6ec49fe9d561d232435784beecabe34dfe3c35d08eb52303302da9b7ec02dd91"
+    },
+    {
+      "bytes": 345005,
+      "path": "docs/preview/2026-09-26-s13-fluid/eingabe.png",
+      "sha256": "7e65d11e3d0698e308dd7154c451df14132e4811eaccc87870079d7bded9ea5c"
+    },
+    {
+      "bytes": 279045,
+      "path": "docs/preview/2026-09-26-s13-fluid/farben-vorschau.png",
+      "sha256": "c374d76eb0aeb4707d0e70880b742213999ccc113ddbc2d4af168e81c1553122"
+    },
+    {
+      "bytes": 322928,
+      "path": "docs/preview/2026-09-26-s13-fluid/farben.png",
+      "sha256": "d344f5efbbe44ee55b032b5c5f42884e98db73713c6e4c728c33900bb5df6412"
+    },
+    {
+      "bytes": 689650,
+      "path": "docs/preview/2026-09-26-s13-fluid/gespraech.mp4",
+      "sha256": "34e565e450788f83eb4d17f0752c83aeebf14797821ce066bae600fae2027e81"
+    },
+    {
+      "bytes": 461864,
+      "path": "docs/preview/2026-09-26-s13-fluid/hilfe-grosse-schrift.png",
+      "sha256": "17e0fde52105192c8d7451c1341271db43a7416684db775a8195c1b1178ab5bf"
+    },
+    {
+      "bytes": 374516,
+      "path": "docs/preview/2026-09-26-s13-fluid/hilfe.png",
+      "sha256": "f5bd054ac5bd8fa51b75bb8dc0a79933fdc02e43dc324162650f9be61a5bf853"
+    },
+    {
+      "bytes": 157129,
+      "path": "docs/preview/2026-09-26-s13-fluid/kalender-dunkel.png",
+      "sha256": "cb8434c99854dded58667842c09e112232712e19fdea88df11018b11444ac38f"
+    },
+    {
+      "bytes": 445089,
+      "path": "docs/preview/2026-09-26-s13-fluid/kalender.mp4",
+      "sha256": "445fae4191469920e3d29d1f05028f7d4782fb02fcce06e02febf846b25d5b42"
+    },
+    {
+      "bytes": 232236,
+      "path": "docs/preview/2026-09-26-s13-fluid/kurztermine.png",
+      "sha256": "64b5bcab203781695d89330296b09d17a6d0eb4ae6b345d61e4c149b0c0b8440"
+    },
+    {
+      "bytes": 149368,
+      "path": "docs/preview/2026-09-26-s13-fluid/leerer-tag.png",
+      "sha256": "5554288e1aaa59e255b4918d3663f738e2cbf559e3e062eabb504fbe129c35ae"
+    },
+    {
+      "bytes": 221216,
+      "path": "docs/preview/2026-09-26-s13-fluid/legende-dunkel.png",
+      "sha256": "a06e6500ce6b6cf8f08127626f0390bdf3baba911e467ddc3ae46b679a7a0d0a"
+    },
+    {
+      "bytes": 9807,
+      "path": "docs/preview/2026-09-26-s13-fluid/media-sources.json",
+      "sha256": "7e616c360022bb481c555673d97ab72687b43c75c2e22022e285b1601870947a"
+    },
+    {
+      "bytes": 235955,
+      "path": "docs/preview/2026-09-26-s13-fluid/mehr.png",
+      "sha256": "f07d6e62d23b7fbb1a57fcbe1d116ecdcd35f241114e0bfe1d0a51186e8e4743"
+    },
+    {
+      "bytes": 504010,
+      "path": "docs/preview/2026-09-26-s13-fluid/orb.png",
+      "sha256": "387c9ee515416fbeed676a8abe5be3416809e7d4d5b9aea75c9bc59f52173b23"
+    },
+    {
+      "bytes": 212373,
+      "path": "docs/preview/2026-09-26-s13-fluid/position.png",
+      "sha256": "bd318b45f3258e98c6149777352b95cb1390c33b08bcacabe0ab0b2d56ea9fd6"
+    },
+    {
+      "bytes": 209,
+      "path": "docs/preview/2026-09-26-s13-fluid/preview-audio-meter.json",
+      "sha256": "5e1ae3923f36055ce84619c2d5dcbbb23c2e73350e708648fc9e912ef76f0b74"
+    },
+    {
+      "bytes": 78,
+      "path": "docs/preview/2026-09-26-s13-fluid/preview-calendar-tools.txt",
+      "sha256": "ce72ae1f550b8d7ced80a04192b34bc8c9c15f07406ae8d7e4c1584ccd199299"
+    },
+    {
+      "bytes": 617789,
+      "path": "docs/preview/2026-09-26-s13-fluid/reduzierte-bewegung.png",
+      "sha256": "01ce0da149d6f0707f2f68e1f1963219a02656d0ee2d692d685dfc24fa2a0509"
+    },
+    {
+      "bytes": 3660,
+      "path": "docs/preview/2026-09-26-s13-fluid/sha256.json",
+      "sha256": "109ffde0eaea8675fda47809a58036406141627b7f97cc576f7c591cf6ac3395"
+    },
+    {
+      "bytes": 1142097,
+      "path": "docs/preview/2026-09-26-s13-fluid/speicherziel.mp4",
+      "sha256": "e1f2ea1581be82b001feb910114587a1dcb8e357af62f20213ec95a742fbd8d7"
+    },
+    {
+      "bytes": 281193,
+      "path": "docs/preview/2026-09-26-s13-fluid/speicherziel.png",
+      "sha256": "7ebaf2fe23fc1c71d461b46aab7e454c3e7b787a1bb796c3662ff7e3fccf27a4"
+    },
+    {
+      "bytes": 13487,
+      "path": "docs/preview/2026-09-26-s13-fluid/verification.json",
+      "sha256": "e9531228d5a2f84f7a7bd3a9f2ccc7a6635b3415b5b5864f2d3f9f82c5c0f44e"
+    },
+    {
+      "bytes": 369221,
+      "path": "docs/preview/2026-09-26-s13-fluid/verlauf.png",
+      "sha256": "24e58b581a715c23470f8c17523a34268b2b8616e94f212feef69267b6837c8b"
+    },
+    {
+      "bytes": 1600,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-fruehstueck-marks.json",
+      "sha256": "ecd4901aa579f4c09453db70310309eaeeb09f2a448de038ad3cedc89353d0d6"
+    },
+    {
+      "bytes": 525644,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-fruehstueck.wav",
+      "sha256": "2f2d57f8e047df9eed41cde99a2b601d29cd13368c3089d8541dece54eb771a9"
+    },
+    {
+      "bytes": 1703,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-kalender-marks.json",
+      "sha256": "38b30f531436d39139165cf8929d271f5d3de903552e98fddca0e950ca3cd9b0"
+    },
+    {
+      "bytes": 654044,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-kalender.wav",
+      "sha256": "6d69952a2995af2db12af6887444fffba9a2ba594fdd8793ad84a3a625d8c30a"
+    },
+    {
+      "bytes": 4409,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-lange-antwort-marks.json",
+      "sha256": "fbda5ff7049c496d197200946ca71a85cf68a668d344b04d9b27e175af6946e4"
+    },
+    {
+      "bytes": 1458044,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-lange-antwort.wav",
+      "sha256": "4c2d0cc899b75c612ffc4e8b617870e1271e74882132a08a69744767d624f6e0"
+    },
+    {
+      "bytes": 1858,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-langsam-marks.json",
+      "sha256": "87de08dd6c1d59b895f75c94ae2b56ae3bfbfff884990377f2034769a88daae5"
+    },
+    {
+      "bytes": 936044,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-langsam.wav",
+      "sha256": "d91e85eb6829aeacdbc92e48b29127280c7bddb60c12923ceab7f254c2be88d5"
+    },
+    {
+      "bytes": 1214,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-ohne-zusatzangaben-marks.json",
+      "sha256": "b364f7661f948f465d9f285f41e944e4a8534bafb3f54f7df3a27dd99ac83587"
+    },
+    {
+      "bytes": 481244,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-ohne-zusatzangaben.wav",
+      "sha256": "d803f160cacf98895f075657f9018ed028bd7ba51cbe392ba5b6605a7d7586e9"
+    },
+    {
+      "bytes": 1683,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-raumnummern-marks.json",
+      "sha256": "30482f4bb947f67e2511e831fb5361a6551a0e32cee5cada9d1c375a5786e89b"
+    },
+    {
+      "bytes": 625244,
+      "path": "docs/preview/2026-09-26-s13-fluid/victoria-raumnummern.wav",
+      "sha256": "c63f29adf12209f157b6088ba7307bf6ffe4fa40a09b66e2601e0470caf0db91"
+    },
+    {
+      "bytes": 1320490,
+      "path": "docs/preview/2026-09-26-s13-fluid/wiedergabe.mp4",
+      "sha256": "4a2344b3e90f504bb0ede367418b13b966db564bd0c40c39de46b562d40678bb"
+    },
+    {
+      "bytes": 207709,
+      "path": "docs/preview/2026-09-26-s13-fluid/zeitachse.png",
+      "sha256": "f768460f0d077ea0f2f190159e845877e3ad50ad7bcaf6b94df80d75b23c267c"
+    },
+    {
+      "bytes": 120994,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-dark.png",
+      "sha256": "6cdc3a8883357fbcb1e9851e74edfd78c0fb611218176a755a86434a8ac5aff7"
+    },
+    {
+      "bytes": 137020,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-light.png",
+      "sha256": "8797260bed8c3993974d8d85f66d62b30b47c17c8c22097c295d61892071f9eb"
+    },
+    {
+      "bytes": 204635,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-settings-dark.png",
+      "sha256": "a8c2c874f322b6f85ca141111028c0db2ff7ad6df0b1ba61eb08983ae35a529d"
+    },
+    {
+      "bytes": 228466,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-settings-light.png",
+      "sha256": "e4c3f8f6bca8cdc3fde99d3aa39d72ad216650cd914e70d2221a61c1038b4869"
+    },
+    {
+      "bytes": 205302,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-status-dark.png",
+      "sha256": "35863db1339e4b660205c02a6206b88d53f9e324e030c5a8ed961dee2a3a9840"
+    },
+    {
+      "bytes": 259557,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-calendar-status-light.png",
+      "sha256": "aefb2806c557ec269a9c3b2d5b6daf2ba78ad89a651c4cd19f1fa09cd5abe4c4"
+    },
+    {
+      "bytes": 337064,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-inline-send.png",
+      "sha256": "a36a1744b750860762259db01d862deda4af6a059d746d6bb7e0962034dad435"
+    },
+    {
+      "bytes": 301102,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-large-help-scrolled.png",
+      "sha256": "203e5e845ab0cd418d5214e0d9c045b0319631eb6f3e636c67cff55983028f4c"
+    },
+    {
+      "bytes": 307326,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-large-help.png",
+      "sha256": "15a243a96b7992277289fd703b736fb4e640ce2e89b250b777c98389fbc5e353"
+    },
+    {
+      "bytes": 500589,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-orb-dark.png",
+      "sha256": "2e17896ff38638931320636379bc8632de30385267ccf4694ca4bf2c8747910d"
+    },
+    {
+      "bytes": 610275,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-orb-light.png",
+      "sha256": "9a55b44726d38736e312326336639edf28eda9eac0fb56f37f0e5a2aaa3b587c"
+    },
+    {
+      "bytes": 130852,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-reconcile.png",
+      "sha256": "6e45ac092d98d30f7c2ccdea15e30a1b4e673368ff0698f53dbd77c37af2ae1f"
+    },
+    {
+      "bytes": 351456,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-tooltip-dark.png",
+      "sha256": "5f30b8e35059eef84be18477213d0ece360ec288290726c05c05269528018eed"
+    },
+    {
+      "bytes": 406615,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-tooltip-light.png",
+      "sha256": "9554742fe1516f7883077d86dbff7bd93e7ba8b8fbf0f53e5b263a38c1ab2547"
+    },
+    {
+      "bytes": 149245,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-voice-settings-dark.png",
+      "sha256": "1595d37b4bfa7b3b6714e2675f4d893e33e710a7ae9f3987c42213dc3a21c0f2"
+    },
+    {
+      "bytes": 187285,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/polish-voice-settings-light.png",
+      "sha256": "ec8ad961016add2768eacf83195f6210f361b5672a672439d001c50cf493817d"
+    },
+    {
+      "bytes": 288357,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-cancelled.png",
+      "sha256": "c6861a92a36cccc7996dd234912de4c5118e6dea76c5fd7e43d4c235bed9fe0e"
+    },
+    {
+      "bytes": 206722,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-decode.png",
+      "sha256": "012d805f279798481b0806e879f2eaceb40bc485807984fe87d5cf37559a5a2e"
+    },
+    {
+      "bytes": 4582871,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-demo.mp4",
+      "sha256": "18576e7454c82749032f3df8ea81e9bd97f0803b9d4d08156f6ecf5b5d2ddc61"
+    },
+    {
+      "bytes": 266524,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-detection.png",
+      "sha256": "7fa79c63c5362f8af83c51cd66433efecd68fd1dc864f99da74885bb17467dff"
+    },
+    {
+      "bytes": 255239,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-layout_and_fields.png",
+      "sha256": "70b6de2308f48dfc539ebaa7e15282cc328806094392b16199c6d427fbd2e501"
+    },
+    {
+      "bytes": 219988,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-preprocessing.png",
+      "sha256": "ac29b65c53bafbd33a5ebb5470446de5e69c85f85bcf8b37f3014e138192a64d"
+    },
+    {
+      "bytes": 261477,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-recognition.png",
+      "sha256": "c84f8a9dd8ea1a10ad2dba872bc7e5a56fe7c63fce8c2410e66ad0f818321540"
+    },
+    {
+      "bytes": 345016,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-reread-crop.png",
+      "sha256": "7b7f65daa1bb14d9e18aa1eabb97f327f5827522328b5790f7c5af6a7a62bd59"
+    },
+    {
+      "bytes": 306967,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-selected-field.png",
+      "sha256": "15364d44313b5a7f1195d9f0f8b340ba39cf5743d2f3ccff34196c6be331cf60"
+    },
+    {
+      "bytes": 302570,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-selected-text.png",
+      "sha256": "c117c5ad8fed5de60c614b76bc7d099df229e2cfd1fdcaa2e25ea042747e39e1"
+    },
+    {
+      "bytes": 249367,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-selective_reread.png",
+      "sha256": "276c28290018d3901d064a9352864021f6011a74f843611022af5935851170b4"
+    },
+    {
+      "bytes": 288437,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-steps.png",
+      "sha256": "49d5fb32f3e3679abe92613db60ee0e6af30f63a2913737e9606edd31cfe5d93"
+    },
+    {
+      "bytes": 234644,
+      "path": "docs/preview/2026-09-26-s13-interface-tracing/tracing-zoom.png",
+      "sha256": "92760feee1f4d56a93d7bd5ea537fb193ce0df641dad5a65cba6d6219d484a06"
+    },
+    {
+      "bytes": 102625,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/auswahl-dunkel.png",
+      "sha256": "b399e55ef1f9e74e83503b3b95d13eb512dd96e27829ead4807007f360e79054"
+    },
+    {
+      "bytes": 132982,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/auswahl-hell.png",
+      "sha256": "bcb85abaf5c0eaaeb2ef5a16b58d65d3f8ba202b4e08aaf3536e2026ced314be"
+    },
+    {
+      "bytes": 228101,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/darstellung-dunkel.png",
+      "sha256": "0bf61f5bf30daff07ca9ad3a693e8ff094b2cbe1ae831265b8743e89beab14e3"
+    },
+    {
+      "bytes": 290482,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/darstellung-hell.png",
+      "sha256": "c1d0d0be41da8ac8058d411fa7fc9d6bfa437aa3def37aaeaedb783fe62b2add"
+    },
+    {
+      "bytes": 204273,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-liste-dunkel.png",
+      "sha256": "556db17d0b9bacebfc4bcea68fa81c8b166c340f617ba11c12319887bc567711"
+    },
+    {
+      "bytes": 219639,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-liste-hell.png",
+      "sha256": "410495ec46046ba22325cc2aa9b67b158d63b781335e9221f209fcab8edae0df"
+    },
+    {
+      "bytes": 230978,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-mehr-dunkel.png",
+      "sha256": "334d4de5b4c82edf5f8cd8dcdde62a5d754df8820821669bd67c53dfb941e618"
+    },
+    {
+      "bytes": 274142,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-mehr-hell.png",
+      "sha256": "aa2108b56b4519f32fec3fbc6dcf9804dcc747f8a3dd2c8ef3d18f36d02d9e32"
+    },
+    {
+      "bytes": 367393,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-schalter-dunkel.png",
+      "sha256": "361dd8974252fee6950b2ffa44f48e03aaa6e6419f484f626c91c6097552fed3"
+    },
+    {
+      "bytes": 523357,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-schalter-hell.png",
+      "sha256": "0e9d28ffef14b4baad6d69c78c59c566c15ca84e1ecfbfb859a419a915dc7eb7"
+    },
+    {
+      "bytes": 228995,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-sprache-dunkel.png",
+      "sha256": "ae95549e846840c4d3c0e98a4ae5775228da16930fa137bd71ba1973ca1597e4"
+    },
+    {
+      "bytes": 317364,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/grosse-schrift-sprache-hell.png",
+      "sha256": "96dd1576e5c60c3181e5179bcb94f7d4a27db61b8ce2becd558b64a035c44773"
+    },
+    {
+      "bytes": 164655,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kalender-dunkel.png",
+      "sha256": "a7f76b7c655cd8e3135442c433f09690b66ef3390da353548ede530f9b344fb6"
+    },
+    {
+      "bytes": 195528,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kalender-grosszuegig.png",
+      "sha256": "175ba5b818c273a5772641f7e44595b5d5f8fcc3eaba3be3aac44fd527339f35"
+    },
+    {
+      "bytes": 195705,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kalender-standard.png",
+      "sha256": "415cf207e2964deb58f0757fd757bfb0f5e820f51ff83ea97bc9e784fe5e0491"
+    },
+    {
+      "bytes": 220903,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kalender-uebersicht.png",
+      "sha256": "e9dc7eed9ad4c02f71f8a1d03334524b9fbaf459780cfa0c2b801dfe93fbd0a6"
+    },
+    {
+      "bytes": 232587,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kollisionsliste.png",
+      "sha256": "1bbf39d7eee989a3a508084a1e7ddd1a9b3c42554f89f6608e12246de2b06649"
+    },
+    {
+      "bytes": 165464,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/kurze-lange-termine.png",
+      "sha256": "437f6c545042bc2407bde3da56fd7ea6a95d79033d881d65e81ccf2e6899b639"
+    },
+    {
+      "bytes": 148210,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/leerer-tag.png",
+      "sha256": "0ec8d8e678aeda2f3259c92f16fa314c0578a1276f1bec4a3d7e5bdf30ccf412"
+    },
+    {
+      "bytes": 120712,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/loeschaktion-dunkel.png",
+      "sha256": "9c6c11c6655d9f645b27b8eccafb7e70fa1b33683f0c77eeb01f4d76ce19f7c8"
+    },
+    {
+      "bytes": 155085,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/loeschaktion-hell.png",
+      "sha256": "9045590f8081ae36eb4ec4eb38fb9d426e6035f634a5189c19e6e1277527691e"
+    },
+    {
+      "bytes": 183695,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/mehr-dunkel.png",
+      "sha256": "20c12f6c17606aec0512153d3eaa355bfd8fbef92732eda57fd219ca8fecccfe"
+    },
+    {
+      "bytes": 237244,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/mehr-hell.png",
+      "sha256": "1c537ee6e65f8a839552df65bd0fb86f88fa67394c553ea348e6c3ab1b781974"
+    },
+    {
+      "bytes": 499112,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/primaere-aktion-dunkel.png",
+      "sha256": "f88d3a16a0946568973505a48f26bdb90dfed5266c522f7e8fa80d753568de58"
+    },
+    {
+      "bytes": 609301,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/primaere-aktion-hell.png",
+      "sha256": "074d89fa49bebd45c0b783a5b8ae59263174c183497a44093cefe4ceea7ec416"
+    },
+    {
+      "bytes": 7845,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/screenshot-sources.json",
+      "sha256": "57a1b2789e42b373c8917c9eac4b00a5ae765722d0d4da569c97f6874e578bf8"
+    },
+    {
+      "bytes": 201170,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/sprache-dunkel.png",
+      "sha256": "b3b5571e5bf330760cd13f3465c1c2b3c0ccbf4760d38b16144d952845eeeb97"
+    },
+    {
+      "bytes": 238863,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/sprache-hell.png",
+      "sha256": "29e201159eacff5ebb3d66a50cad58539cac3a5e189de550f195f223caea6523"
+    },
+    {
+      "bytes": 390542,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/tageswechsel.mp4",
+      "sha256": "d105a776f852d5b42359da40319db7fb2a905217dac404972339ff05d07418bd"
+    },
+    {
+      "bytes": 169611,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/termin-details.png",
+      "sha256": "45be484d4a7a70fccc1053f56e923f65cd2280f5551443d6e61d0e2e0862730d"
+    },
+    {
+      "bytes": 200947,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/uhrzeit-nach-tageswechsel.png",
+      "sha256": "5ea810ee227021034f08b9b05b760dbf80d5290089687ad7ce674dbec7f466e3"
+    },
+    {
+      "bytes": 6842,
+      "path": "docs/preview/2026-09-26-s13-logo-calendar/verification.json",
+      "sha256": "46a1ba4e07c6721262236018063c94d7cc040b468598f10b1ebae318a42dda4b"
+    },
+    {
+      "bytes": 147158,
+      "path": "docs/preview/2026-09-26-s13-page-axis/leerer-tag.png",
+      "sha256": "5048e2bcb87f3c62c41993261aec904c149cda42de8635a6986727ba1f0a926d"
+    },
+    {
+      "bytes": 253853,
+      "path": "docs/preview/2026-09-26-s13-page-axis/naechster-tag.png",
+      "sha256": "0cf3fe031c28fcbdea669098232159b57d50ad8d6ca8d7ae3fb3ee0af4bfc457"
+    },
+    {
+      "bytes": 722699,
+      "path": "docs/preview/2026-09-26-s13-page-axis/tageswechsel.mp4",
+      "sha256": "ac7b910e9d5cddbbffb11ffab5e1ad0216cb972e075da98e47486beb67f26bfa"
+    },
+    {
+      "bytes": 250579,
+      "path": "docs/preview/2026-09-26-s13-page-axis/termine.png",
+      "sha256": "33568696a7cdd1e533f67f6b9568dc8905ea99c17b8f4d48df805a8034b1efb3"
+    },
+    {
+      "bytes": 3183,
+      "path": "docs/preview/2026-09-26-s13-page-axis/verification.json",
+      "sha256": "3a1207ae7a27bb5e41bfaddc6193c2377e976dac72dafa721b65dd804524aa4e"
+    },
+    {
+      "bytes": 121384,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-dark.png",
+      "sha256": "7fc2c0880bdb5d4e064332ba2feebd3856dfcbe8c21f67dd077b4f188657a723"
+    },
+    {
+      "bytes": 137696,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-light.png",
+      "sha256": "e88c953d50b5f1cc8f50e042eeb42f0306ace003eeebee43b77c22b580f97376"
+    },
+    {
+      "bytes": 190681,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-settings-dark.png",
+      "sha256": "dc09ef548ef8ca5eafbbde1aa7834241cd4d4d474ed2a35edaee8a4f35772556"
+    },
+    {
+      "bytes": 216599,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-settings-light.png",
+      "sha256": "3b6cda7ce290b95a094782f37036c740ba78f50a08f86590e294dfb99d86f64b"
+    },
+    {
+      "bytes": 196749,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-status-dark.png",
+      "sha256": "b05dfeb5f565b1b95e49a265d8c21a1495f389d90cd53363fad4ecb7e4e46812"
+    },
+    {
+      "bytes": 221887,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-calendar-status-light.png",
+      "sha256": "6567b37bf6fae9fcd2161965d4aa64fdc270860f14fc8870964a02a510a74486"
+    },
+    {
+      "bytes": 336780,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-inline-send.png",
+      "sha256": "548173bd0b847cb63c60cbe2c441639f99588ac97cc96b06530f0d13acc37368"
+    },
+    {
+      "bytes": 217800,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-large-help-scrolled.png",
+      "sha256": "26b0e989c3f9f69c811c6afb838e82e128b3d6c556eca3ed9c865897331525e9"
+    },
+    {
+      "bytes": 217809,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-large-help.png",
+      "sha256": "07d51ac79fdaa33681f836b4facce15cd85adc189c6c7c10a2c922c79c63d011"
+    },
+    {
+      "bytes": 498057,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-orb-dark.png",
+      "sha256": "01b561600bdd1527054de31c40ba2dccbcc4f9c0c037a2eb0861915fdc22a717"
+    },
+    {
+      "bytes": 616400,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-orb-light.png",
+      "sha256": "d84bb488ffb2475255596606c21411bc83ab6e889e8075e25ca285c174d854d6"
+    },
+    {
+      "bytes": 133867,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-reconcile.png",
+      "sha256": "52385b29c7d6570b520d57f391ab56903016ec28f1162aaff8a3e14bba392ab4"
+    },
+    {
+      "bytes": 239001,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-tooltip-dark.png",
+      "sha256": "7992a9f4f68d61db6c5b5356b5da2e381f6bb17aecc70927514668abe4bbe76f"
+    },
+    {
+      "bytes": 295444,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-tooltip-light.png",
+      "sha256": "c390281d3f3c403055f847d998ffba00d458723ecccb8da9d5f4a0bffbcf460e"
+    },
+    {
+      "bytes": 144758,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-voice-settings-dark.png",
+      "sha256": "eb3dcbf4af5e54858562bce2fff211e71681098523c2e6fb72cae79ee2b68bd3"
+    },
+    {
+      "bytes": 180992,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/polish-voice-settings-light.png",
+      "sha256": "46fa3add68fa3c0f12fa96d592a22d7e8ff7327de2ae0e870792da6be0de5aa2"
+    },
+    {
+      "bytes": 222224,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-calendar-settings.png",
+      "sha256": "27e37fbe33c368d58c51627585188ee4eea85e6e742ab10e86335f32ecf3b56b"
+    },
+    {
+      "bytes": 160501,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-destination-after-restart.png",
+      "sha256": "750362c7c10a019bb7d18be8b5e1f683e60048a73fbdb1cdad9f2f8c4827aeaf"
+    },
+    {
+      "bytes": 153073,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-destination-selection.png",
+      "sha256": "269dc7103e905438e984402ea15473979e1454efa896172d49c955881e4514c3"
+    },
+    {
+      "bytes": 192288,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-diagnostics-dark.png",
+      "sha256": "8e5922e22041b5a53139bb4ac36b72419358384f45ad13d328ccdae4735a03c9"
+    },
+    {
+      "bytes": 214644,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-diagnostics-light.png",
+      "sha256": "ed068415e51f38239ff0ff8d9156681c85deecb5c755c90b824801eba7157917"
+    },
+    {
+      "bytes": 391646,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-large-calendar-settings.png",
+      "sha256": "f188d1ca31776f2613866cc091890523fe3cbb82123596ea5fb2f9528db4d236"
+    },
+    {
+      "bytes": 159674,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-large-destination.png",
+      "sha256": "6af004e68e3f13fcddde174c7dc408e0ce2ba71d472eafe31672f6beaf6d3cc5"
+    },
+    {
+      "bytes": 277566,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-large-message.png",
+      "sha256": "7b5f77586ebdce4b8f6600840dc5e43cd4460aaadba39aee96b001d7cea2abd4"
+    },
+    {
+      "bytes": 224503,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-large-tracing.png",
+      "sha256": "db340cd68441e270f5834d99ec5add4ac5b32ab2f76304db5e6b2a6585b70288"
+    },
+    {
+      "bytes": 142433,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-tracing-dark.png",
+      "sha256": "fe35506f956ccb691fd2c32dd52a534ff89f389ed72b41326017ebfb2824bcc0"
+    },
+    {
+      "bytes": 167577,
+      "path": "docs/preview/2026-09-26-s13-simplified-controls/simple-tracing-light.png",
+      "sha256": "b0217a11adfacb541fd4a8203658654378290f1c441a0590202d3d3c9e159d7e"
+    },
+    {
+      "bytes": 474968,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/answer-demo.mp4",
+      "sha256": "2b77dae0f5506c3435c3a16ba1b28deb98ff3de9f04d79a9d9537e2267cfe175"
+    },
+    {
+      "bytes": 431141,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/microphone-demo.mp4",
+      "sha256": "dfa6e406a352e6e81da5d4bb917e5c3c5fe4df31456b2e6e01a6c05df23cf532"
+    },
+    {
+      "bytes": 136564,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-answer-center.png",
+      "sha256": "042b3b3bc1196286b08ab5c903b9c1a28d777f6d00dcd3391b60d67a4eb36322"
+    },
+    {
+      "bytes": 185290,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-answer-large.png",
+      "sha256": "5639cafd9dee085bcab23444d100f51ffe24a37b5074c89d944aa32ae94e26b5"
+    },
+    {
+      "bytes": 504743,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-input-dark.png",
+      "sha256": "ce40a5a4e0912b65b0b54508c1ee86711e8061ec930365ae089dbb49494f0e06"
+    },
+    {
+      "bytes": 509311,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-input-large.png",
+      "sha256": "1ca540439cfd0148a154afdf9257c03a7898574a8bfb27d7402641fccfd48dd0"
+    },
+    {
+      "bytes": 630390,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-input-light.png",
+      "sha256": "8012862507a6a36b96817bd806f05ac639800a329eed71ee7e8660e57dafb734"
+    },
+    {
+      "bytes": 597509,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-silence.png",
+      "sha256": "6c90cc0a6dfea55676a59f57511a9de8211c8479529cc8fe87f2ae7e82cdc27d"
+    },
+    {
+      "bytes": 493171,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-start-dark.png",
+      "sha256": "8058d845d07d9489398bf632b7c203c761818b8748c6d0baf712de298463a06a"
+    },
+    {
+      "bytes": 522240,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-start-large.png",
+      "sha256": "0b4183c5a34212d2a6c114ecc952f397a1d4866434d18eea59fc9f204cdc86e4"
+    },
+    {
+      "bytes": 604499,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-start-light.png",
+      "sha256": "26fff311d68f0359625121a592c577e508d604614921342a491ac7aee452b269"
+    },
+    {
+      "bytes": 497167,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-stopped-dark.png",
+      "sha256": "dabac0d5fe6c9285ce68a86239c5aad7f617d8236fb7469ea60675298f80958f"
+    },
+    {
+      "bytes": 523406,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-stopped-large.png",
+      "sha256": "3ae5d27c284435882a0005895202132f6b5abef485ffe3d02f9c0a819f11b20d"
+    },
+    {
+      "bytes": 600220,
+      "path": "docs/preview/2026-09-26-s13-voice-waveform/voice-stopped-light.png",
+      "sha256": "bdf1a8146baf380c8e1eda683d87af251f232e085c5acc5e1e50de4b504586c7"
+    },
+    {
+      "bytes": 171482,
+      "path": "docs/preview/2026-09-26-s14-calendar-banner/dark.png",
+      "sha256": "168ae971e2480bc4f8d5dde49adb6aa2ce3ae6f4453dce2fce5558ac610265fa"
+    },
+    {
+      "bytes": 268099,
+      "path": "docs/preview/2026-09-26-s14-calendar-banner/large.png",
+      "sha256": "dc5a6697aab108af96e2dca36cd0ddf7ec8f3d9e2222d9b5f77b7f8f68f150a3"
+    },
+    {
+      "bytes": 191375,
+      "path": "docs/preview/2026-09-26-s14-calendar-banner/light.png",
+      "sha256": "44bf7bfc3f7ecb3c14257c782c0cca355a948ec2995beac7f874462879c4766e"
+    },
+    {
+      "bytes": 354404,
+      "path": "docs/preview/2026-09-26-s14-calendar-repair/calendar-repair.png",
+      "sha256": "c93152ad70a030922374eb3776a2684817ffa434d42edb2c8a151d83a4507dbd"
+    },
+    {
+      "bytes": 192436,
+      "path": "docs/preview/2026-09-26-s14-calendar-repair/voice-preparation.png",
+      "sha256": "79191cbdec80122726167692b910bf28a0b1957153306fb3ae585bc0e6d1182a"
+    },
+    {
+      "bytes": 441,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/audio-checks.json",
+      "sha256": "f2f791c7379ad81660c67060eadbc412f8defc81d8880af025e2ac04c0a2cfd7"
+    },
+    {
+      "bytes": 178500,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-cards-dark.png",
+      "sha256": "0d2048e95a3eac5639897828e666f75d50780317eadd8f5f19099a236df025a9"
+    },
+    {
+      "bytes": 200746,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-cards-light.png",
+      "sha256": "d7b179673f3dbb59fc5740f8f08ce015f2f8f122c32e1eb530891a82ceed113a"
+    },
+    {
+      "bytes": 213181,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark-0.png",
+      "sha256": "73e934daf5f3f58eed99754bf4e18a36b016dd1b6b6c550be0ea38ad6bb7d7e6"
+    },
+    {
+      "bytes": 230296,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark-1.png",
+      "sha256": "875c4c62ba2ee16d08e310d844d473c8d69020d999d7cf2221aef8382a1a5ba1"
+    },
+    {
+      "bytes": 219774,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark-2.png",
+      "sha256": "5785772d16daece65da20547627a504e3e32a1def1f0c145d0a3053c5e3c758f"
+    },
+    {
+      "bytes": 230959,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark-3.png",
+      "sha256": "0819de91be16a1f3d10892d5e381c79f7d2df513e914124875c414ef6d369858"
+    },
+    {
+      "bytes": 223671,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark-4.png",
+      "sha256": "4cfb97e9cbf20b6a75b5f31bbbb36ee65d5b4aa674b393e137d95f6fb75a2c43"
+    },
+    {
+      "bytes": 213181,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-dark.png",
+      "sha256": "73e934daf5f3f58eed99754bf4e18a36b016dd1b6b6c550be0ea38ad6bb7d7e6"
+    },
+    {
+      "bytes": 234986,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light-0.png",
+      "sha256": "c81b036e85bfb3d89836d12c5303d9e638ed49e81bddd81176ec7bc3f0326db0"
+    },
+    {
+      "bytes": 247340,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light-1.png",
+      "sha256": "1d6f952a0fce5ac4d0f0ed83781120b352469e5e9371f10c6e2b7284082ae96f"
+    },
+    {
+      "bytes": 236189,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light-2.png",
+      "sha256": "156b65f55341306148c23159eb208ae77de0b58a5d9c6b5aa33ba0509b7de2cc"
+    },
+    {
+      "bytes": 259428,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light-3.png",
+      "sha256": "9552714fea89b2ca22819334f8fb789b9d4d21fe5ee43feabcb31d377520b33a"
+    },
+    {
+      "bytes": 247744,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light-4.png",
+      "sha256": "b3415fb8b62655cb029982903e1a74c00e306316a32e66712eb7dca0679bcb08"
+    },
+    {
+      "bytes": 234986,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-light.png",
+      "sha256": "c81b036e85bfb3d89836d12c5303d9e638ed49e81bddd81176ec7bc3f0326db0"
+    },
+    {
+      "bytes": 227227,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-lower-dark.png",
+      "sha256": "23a5335489fc096bbd13a38311271f02782a55f2c6e5f31e4316f3b049df4237"
+    },
+    {
+      "bytes": 244045,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-large-lower-light.png",
+      "sha256": "917df56fa02044dc5a86f1f621a9e8139f69fa9f0ef7f40e06f230c1cabc214b"
+    },
+    {
+      "bytes": 168902,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-legend-dark.png",
+      "sha256": "174fbb381951ca9a745c7e21b40db23952b4ca15d34927f0dc3a7ccf3962d93f"
+    },
+    {
+      "bytes": 190907,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-legend-light.png",
+      "sha256": "ce0cb6ecb1b6c9e82ba708e39319e4dc35742788eb67a1de7bd5deff4eb0377d"
+    },
+    {
+      "bytes": 235189,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-list-dark.png",
+      "sha256": "727f6f7e7c018ba951cf145c0583fc97b76f9cc213cff7465f19d8b71893ab7d"
+    },
+    {
+      "bytes": 255070,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-list-light.png",
+      "sha256": "aa025066f467d1a4df7e3ad3ff402a85422fb06666feb2c62d613503a2cd0327"
+    },
+    {
+      "bytes": 226826,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-list-lower-dark.png",
+      "sha256": "ae2ca67991fc8267a9fc09a472897984dea1cc8af3a1b554c586b7c830a8fd07"
+    },
+    {
+      "bytes": 247118,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/calm-list-lower-light.png",
+      "sha256": "2848d2068e899f4cf9a0c41a88426e7c2ee66a708698e49ac4159226df51c9cf"
+    },
+    {
+      "bytes": 1368,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/contrast.json",
+      "sha256": "9981afcc5f10224a7de000da40fcc50f1d7add3a093323f5c7ca428497a7e774"
+    },
+    {
+      "bytes": 684044,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/victoria-du.wav",
+      "sha256": "acf34826bb95b71592a9ac9f26bef3428cc2312a5ba1322bfa8002868372bfcd"
+    },
+    {
+      "bytes": 765644,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/victoria-kontext.wav",
+      "sha256": "d17d832a70e10772270a25a09a6a84f2b88e141779cde6a1298fe8921a2a3162"
+    },
+    {
+      "bytes": 685244,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/victoria-sie.wav",
+      "sha256": "9e36e030845be1564d10fa683643887630d502253df3b536afff679651f12127"
+    },
+    {
+      "bytes": 184878,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-address-du.png",
+      "sha256": "52249db051a83a70b4ae9777fee42cf3f5f362e6efb9f82022806a75a3aa7400"
+    },
+    {
+      "bytes": 188126,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-address-sie.png",
+      "sha256": "43324ab451c61b2ee0d800868abc79be5595a65b3cc45527f9c2756df59650d6"
+    },
+    {
+      "bytes": 134988,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-answer-center.png",
+      "sha256": "700147c198e17fb9f336a14e9dbb8e1fd26af8d8fffc32b188e7ef26779f9490"
+    },
+    {
+      "bytes": 185264,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-answer-large.png",
+      "sha256": "1edfd0ce4730044729516f6cd8b78401d1beea3d3dc2fb4a1edcf6c102bd38c7"
+    },
+    {
+      "bytes": 506276,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-input-dark.png",
+      "sha256": "ccb80ece6fde01325ba486d0e152c20fdac3b07543a79c3768e60c1dbdd40d16"
+    },
+    {
+      "bytes": 498755,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-input-large.png",
+      "sha256": "85e3a76e0ee0667e0e946f49d80a0d96aad6553cd6a997987d0c794b01e3cd39"
+    },
+    {
+      "bytes": 631682,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-input-light.png",
+      "sha256": "1cdb7daa906ac0c28ecc05520ac32dd695d1d9924cb7741d370660e1d106e7f4"
+    },
+    {
+      "bytes": 594954,
+      "path": "docs/preview/2026-09-26-s14-calm-voice/voice-silence.png",
+      "sha256": "0fe79edb6f7c19c52b9b04cfad06ecd660a78b39abaabf94e4c7962c4c63a7e3"
+    },
+    {
+      "bytes": 417,
+      "path": "docs/preview/2026-09-26-s14-greens/Greens-7.json",
+      "sha256": "d192462ab46b82f3ec426386abf2afa6287b6fb033f58014998cc32483a767ef"
+    },
+    {
+      "bytes": 713,
+      "path": "docs/preview/2026-09-26-s14-greens/contrast.json",
+      "sha256": "270333e291e4d8833ab8a18654d8786dcfbbb930c649df6538c9d80dc05c0183"
+    },
+    {
+      "bytes": 180133,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-cards-dark.png",
+      "sha256": "18052a7b0ae2353bb801346b76f7ea410fc238fe84fcd7eef8acad41c225ee64"
+    },
+    {
+      "bytes": 207140,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-cards-light.png",
+      "sha256": "2b3824d62a8c5abcc32870fd3161490b7c83336eb6a2326d18816d6daa3d2fc0"
+    },
+    {
+      "bytes": 210364,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark-0.png",
+      "sha256": "26c3cff04b7577074ee9640859e13ae43ef3e9d695ed86c41e45facb05a4bdf8"
+    },
+    {
+      "bytes": 221986,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark-1.png",
+      "sha256": "f47473d6b536385cb10b719a1a27dcd04b4a5c6db624525942400be6da452a8e"
+    },
+    {
+      "bytes": 227632,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark-2.png",
+      "sha256": "62847359ed7877b57ab4df2b56b8b9f0e53104a675a8363fd3b4b6957a274226"
+    },
+    {
+      "bytes": 216233,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark-3.png",
+      "sha256": "3f5f248371a517b5e3112a5dc4f435a3b562bf97382e18c00c2ab2c2bd8f9ec9"
+    },
+    {
+      "bytes": 225235,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark-4.png",
+      "sha256": "5f9ab900e94fcaefa22d5b5371cceab801d99707d282a52da82df6b79e168ec6"
+    },
+    {
+      "bytes": 210364,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-dark.png",
+      "sha256": "26c3cff04b7577074ee9640859e13ae43ef3e9d695ed86c41e45facb05a4bdf8"
+    },
+    {
+      "bytes": 231150,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light-0.png",
+      "sha256": "ec4788e45f1e8099ac291054d8b45fbe0931d491aa8379391ff9543e49e58182"
+    },
+    {
+      "bytes": 242361,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light-1.png",
+      "sha256": "fb4035fa1dbbbce614cdc97cc19eff0896f35b562dc8ae1dec3514a97edc763b"
+    },
+    {
+      "bytes": 247603,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light-2.png",
+      "sha256": "a9f97a654bb3e1296a4b467c36d1bc68bd94688bc62ecbcbfa2ebb2282f76bbe"
+    },
+    {
+      "bytes": 240355,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light-3.png",
+      "sha256": "45632b46537157f00d017110398b13253849b3ed0c133ed40ffe3d50530891e2"
+    },
+    {
+      "bytes": 251532,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light-4.png",
+      "sha256": "0fb302331f25c308c7d20810ba8421ae1738788a0533d7830a1e3db359d4ecc6"
+    },
+    {
+      "bytes": 231150,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-large-light.png",
+      "sha256": "ec4788e45f1e8099ac291054d8b45fbe0931d491aa8379391ff9543e49e58182"
+    },
+    {
+      "bytes": 169676,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-legend-dark.png",
+      "sha256": "2cca561be55ec3eb800cab561d2af828e5f4b3a34a7ad673ff371b880d91b9f2"
+    },
+    {
+      "bytes": 191442,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-legend-light.png",
+      "sha256": "5b5b1b7872c7e4d532b2bbba3bf36ac390c3b346d26feab4f9d8836d6767a0fd"
+    },
+    {
+      "bytes": 234693,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-list-dark.png",
+      "sha256": "3fbe65aedadce0312b79d99fae2a4b7a4c62462dfc7942197eb5dd1b037b655c"
+    },
+    {
+      "bytes": 253731,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-list-light.png",
+      "sha256": "02ff507faa9d716280255ea130140a624a2252eac514823500a6a1b1a6ad64a2"
+    },
+    {
+      "bytes": 226711,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-list-lower-dark.png",
+      "sha256": "7a4a795df2bf720d8310c392be293c8454786a261e260abb414b1a920ce999a1"
+    },
+    {
+      "bytes": 246626,
+      "path": "docs/preview/2026-09-26-s14-greens/greens-list-lower-light.png",
+      "sha256": "96a5bfd54501289786445f038df1381ffd52fc560a4829a247e7adf971905627"
+    },
+    {
+      "bytes": 6188,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/audio-before.json",
+      "sha256": "504be90eeb6df504263c26cdbd84f82397c1a0231ce8c3fcc6a1edc620185e7a"
+    },
+    {
+      "bytes": 178816,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-cards-dark.png",
+      "sha256": "3c3528db6cc9200571b07486a2ed19993e9f04d5ebccd8c26af480e740a9b9f6"
+    },
+    {
+      "bytes": 201459,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-cards-light.png",
+      "sha256": "6a0e0f61645b69842d15e9e37657896926eb72086dff11b469ca51d3726e6c93"
+    },
+    {
+      "bytes": 212898,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark-0.png",
+      "sha256": "bfc4c8d341c0265dc5603c900b947f6b72816b7083c211aab051e68c5545109c"
+    },
+    {
+      "bytes": 224007,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark-1.png",
+      "sha256": "d533b45ca163411fbf8ddd7dc6aaaa2168b4ad21baffac522277dbf59e24d221"
+    },
+    {
+      "bytes": 224968,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark-2.png",
+      "sha256": "fcee39aee13b7aae988caba94ea2e99b862156bd1936c5b6e645892f8cd8d4a3"
+    },
+    {
+      "bytes": 210645,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark-3.png",
+      "sha256": "e5c7eb110e6b3ef108de03e3e0ebb369dde12f3cbef65b92aac7324b074234bd"
+    },
+    {
+      "bytes": 230679,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark-4.png",
+      "sha256": "414de862ea25e08e69ca23de5d420765177934e64b9d1de244c8f7e631dc2e99"
+    },
+    {
+      "bytes": 212898,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-dark.png",
+      "sha256": "bfc4c8d341c0265dc5603c900b947f6b72816b7083c211aab051e68c5545109c"
+    },
+    {
+      "bytes": 234449,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light-0.png",
+      "sha256": "6f32fe2cdcd6f9cda3fa574d649ea5040ac47e5bde44f0930934188407bf2146"
+    },
+    {
+      "bytes": 243699,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light-1.png",
+      "sha256": "97ea634ed9fd51a0fbd45c36e7a2612a24d9db8ea007a862e852568ebbef7127"
+    },
+    {
+      "bytes": 250547,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light-2.png",
+      "sha256": "c3d97ff2d15761d3a7662fe0b04ca54828df274ac168d622e65852fcb7799e3c"
+    },
+    {
+      "bytes": 242721,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light-3.png",
+      "sha256": "58afd0fd136a97a1fb944cfaa4044b4f5b0eaa0a7aaf3785007a8f65d5102b1f"
+    },
+    {
+      "bytes": 250967,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light-4.png",
+      "sha256": "62f38f3c1e7165364b514892bb6f7e23d2b521b27da6f06649c9b64514c02179"
+    },
+    {
+      "bytes": 234449,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-large-light.png",
+      "sha256": "6f32fe2cdcd6f9cda3fa574d649ea5040ac47e5bde44f0930934188407bf2146"
+    },
+    {
+      "bytes": 169581,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-legend-dark.png",
+      "sha256": "e557603a02f3a662a7b39f94214109517110b055ee1aba3d61cc716cffb5e77a"
+    },
+    {
+      "bytes": 191846,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-legend-light.png",
+      "sha256": "2be6ba2bd406a825e212fd1981ec504ecf299e92d30f319a8b5bfc8efe1958ab"
+    },
+    {
+      "bytes": 234465,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-list-dark.png",
+      "sha256": "151d5671e05a08d97d5dd56bfaeedcedde9f87edf33d619413e5c81972f01a14"
+    },
+    {
+      "bytes": 255285,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-list-light.png",
+      "sha256": "ea66f4b82460cee8c6481bab70a97b713ac39efdf1d4af18518ee4d909653e0a"
+    },
+    {
+      "bytes": 227199,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-list-lower-dark.png",
+      "sha256": "e12b0749d67df2328b03227b0a8a5de350abca42567b6c8aa402b87dfe9a2708"
+    },
+    {
+      "bytes": 248723,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/calm-list-lower-light.png",
+      "sha256": "ac7ef8e6bf47131912e4ce6bb4fb7700cf19aed5be20cfbfaa9a345544da65e3"
+    },
+    {
+      "bytes": 4801,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/contrast.json",
+      "sha256": "8078d3d9250af4296deddead240203fcf2e2d0cae29368b68d9e3a15d9b136c8"
+    },
+    {
+      "bytes": 135028,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-answer-center.png",
+      "sha256": "955e0f4077ea4641c552f100c191d45696dfe6110a04d49586a244d823592ec6"
+    },
+    {
+      "bytes": 185331,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-answer-large.png",
+      "sha256": "280e528b88738172b519f784a74aedecdccb71fc16d7a056ba99e309ff6b4bb0"
+    },
+    {
+      "bytes": 464164,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-input-dark.png",
+      "sha256": "e5f01a31ba02c24a751284eb16e066fae799f0d01f2e715018dc95bb75f7e453"
+    },
+    {
+      "bytes": 463509,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-input-large.png",
+      "sha256": "de9a341f205c8f71330c31b154f7a50d2efce5d8de5a3ba329e755661223f7a2"
+    },
+    {
+      "bytes": 591963,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-input-light.png",
+      "sha256": "44dcac48c025187589e81d3ecda34cb1fc425559846a88c053765e49c589f0be"
+    },
+    {
+      "bytes": 590012,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-silence.png",
+      "sha256": "3e2786c5b2db4420d15f09803ea4cd19a2ceca05ed68b97d067916d0a3c1c9db"
+    },
+    {
+      "bytes": 466172,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-start-dark.png",
+      "sha256": "2b0f4c67650bf8254992b131eefea0a3838fa1a1eb29f7fb3f4aa10c1b89fc06"
+    },
+    {
+      "bytes": 496690,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-start-large.png",
+      "sha256": "6ddba7da21c3ceecddb474d7b5f44166729f10e1cf8509ee04a68fe0558ace9b"
+    },
+    {
+      "bytes": 591631,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-start-light.png",
+      "sha256": "c1cb28a26f6fdcf27f598a1570716a719bb76bcba4a3cbdf7c439a8ba6762856"
+    },
+    {
+      "bytes": 465083,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-stopped-dark.png",
+      "sha256": "07ba55528cc221b46381a7978c81bf1583bff0ede9e7a25497797623b6f32742"
+    },
+    {
+      "bytes": 493097,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-stopped-large.png",
+      "sha256": "8404c7d67374abadbb3158744b37213969ac93fa9cded0842d7f4d7b66a63ec5"
+    },
+    {
+      "bytes": 593093,
+      "path": "docs/preview/2026-09-26-s14-soft-greens-audio/voice-stopped-light.png",
+      "sha256": "c9ab6988a59de27c78c102178aae89c0852d6d4edca2b8636b7638b698eeba6a"
+    },
+    {
+      "bytes": 10753,
+      "path": "docs/third-party/licenses/class-variance-authority-license.txt",
+      "sha256": "0ccbf956cffc8dcf515809433cb5242ee67c94513d46e48c261d68d0880de406"
+    },
+    {
+      "bytes": 1063,
+      "path": "docs/third-party/licenses/cn-license.txt",
+      "sha256": "00ff8408e93e2ecc4d90c0edeabdf434100c3aff50acc5d330e17eccd4a3faa5"
+    },
+    {
+      "bytes": 2004,
+      "path": "docs/third-party/licenses/lucide-react-license",
+      "sha256": "668dcc52803480e0a026b31140a4cae668772663cd764e5991d252eef03f98db"
+    },
+    {
+      "bytes": 1079,
+      "path": "docs/third-party/licenses/next-license.txt",
+      "sha256": "ee765244e2d59f5234d474f62e0766fa0c8b99af967fdd4c0cb8dcb0c76ea224"
+    },
+    {
+      "bytes": 1063,
+      "path": "docs/third-party/licenses/radix-ui-license.txt",
+      "sha256": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138"
+    },
+    {
+      "bytes": 1088,
+      "path": "docs/third-party/licenses/react-dom-license",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "bytes": 1088,
+      "path": "docs/third-party/licenses/react-dom-license.txt",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "bytes": 1088,
+      "path": "docs/third-party/licenses/react-license",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "bytes": 1088,
+      "path": "docs/third-party/licenses/react-license.txt",
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "bytes": 1063,
+      "path": "docs/third-party/licenses/shadcn-license.txt",
+      "sha256": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f"
+    },
+    {
+      "bytes": 1071,
+      "path": "docs/third-party/licenses/tailwindcss-license.txt",
+      "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985"
+    },
+    {
+      "bytes": 1090,
+      "path": "docs/third-party/licenses/tauri-license-mit",
+      "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
+    },
+    {
+      "bytes": 1068,
+      "path": "docs/third-party/licenses/tw-animate-css-license.txt",
+      "sha256": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109"
+    },
+    {
+      "bytes": 1072,
+      "path": "docs/third-party/licenses/zod-license.txt",
+      "sha256": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
+    }
+  ],
+  "reason": "Retired preview media and unused web-shell notices; current visual baseline and concise historical reports retained.",
+  "schema_version": 1,
+  "source_revision": "fc1e934601b4837b9f08fbd606c1f6da911a674b",
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

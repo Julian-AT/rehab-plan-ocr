@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "source_revision": "fc1e934601b4837b9f08fbd606c1f6da911a674b",
+  "installed_build": "2026092624",
+  "content": "synthetic calendar fixtures only",
+  "full_app_regression_qualified": false,
+  "images": [
+    {
+      "file": "cards-dark.png",
+      "sha256": "130a0da63c00ad928c8254515a63f11c198008a6edf9f518d503c0a3e67aa5d1",
+      "bytes": 179686,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/cards-dark.png"
+    },
+    {
+      "file": "cards-light.png",
+      "sha256": "c990f6905a7eff86ee3ac62ad017c873841b584d6105e498c076340e35582afd",
+      "bytes": 201617,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/cards-light.png"
+    },
+    {
+      "file": "large-dark-0.png",
+      "sha256": "d438704ebbf154b7fed26fefde09f0d6b6d961b74d4211b242a47fdf4a16facb",
+      "bytes": 212727,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-0.png"
+    },
+    {
+      "file": "large-dark-1.png",
+      "sha256": "fa9a1385d5f1c852699e8d02240bded436829c17854e2f2c56178ecae13e10f7",
+      "bytes": 223797,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-1.png"
+    },
+    {
+      "file": "large-dark-2.png",
+      "sha256": "83a9eaf9088debf0c0a17b048e3f7d9e806ecf0484c576d175f09ae91030f137",
+      "bytes": 226998,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-2.png"
+    },
+    {
+      "file": "large-dark-3.png",
+      "sha256": "864069185e99070a37c14813b4c5d843d3c27b9be0ca4f356541eb6da037e847",
+      "bytes": 211856,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-3.png"
+    },
+    {
+      "file": "large-dark-4.png",
+      "sha256": "8aacaca30aea9bb19d7d374ee110399868250da9197599f92ed558e44a757931",
+      "bytes": 231100,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark-4.png"
+    },
+    {
+      "file": "large-dark.png",
+      "sha256": "d438704ebbf154b7fed26fefde09f0d6b6d961b74d4211b242a47fdf4a16facb",
+      "bytes": 212727,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-dark.png"
+    },
+    {
+      "file": "large-light-0.png",
+      "sha256": "08b00750a517b6b6a55311d063dffaececa0b4d0872fc2b34c14d0ef6c52d9f3",
+      "bytes": 231654,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light-0.png"
+    },
+    {
+      "file": "large-light-1.png",
+      "sha256": "0e65b8d34392b71151b415562d6070c72bb330be8198f13626c76da150edc86a",
+      "bytes": 242871,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light-1.png"
+    },
+    {
+      "file": "large-light-2.png",
+      "sha256": "b3c04cb16a97ec846b268dd792b43415834667c2896714bcab86ed85a4a6c0ea",
+      "bytes": 245375,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light-2.png"
+    },
+    {
+      "file": "large-light-3.png",
+      "sha256": "0cfd09994800869bc01ff4ef96041f893f9fdef28b620f2781f05f2ffe04764c",
+      "bytes": 233178,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light-3.png"
+    },
+    {
+      "file": "large-light-4.png",
+      "sha256": "4f964f730f63de4533fe422e81c40c33e8a0a6f8b087bd2f75f368b691385969",
+      "bytes": 248377,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light-4.png"
+    },
+    {
+      "file": "large-light.png",
+      "sha256": "08b00750a517b6b6a55311d063dffaececa0b4d0872fc2b34c14d0ef6c52d9f3",
+      "bytes": 231654,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/large-light.png"
+    },
+    {
+      "file": "legend-dark.png",
+      "sha256": "6bff87f87b184b65d2cd7b5bcf97efe019c3cc7895b91914981247cdc462fe0d",
+      "bytes": 169210,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/legend-dark.png"
+    },
+    {
+      "file": "legend-light.png",
+      "sha256": "4d8f38429ed2072a195dea2e23a067e465ceb62e4b0e09dde4d362d9849c7a62",
+      "bytes": 191228,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/legend-light.png"
+    },
+    {
+      "file": "list-dark.png",
+      "sha256": "1401b13cada29423884fcb608d80a8636c0ab86c62c9e0a13ac759354e677bd5",
+      "bytes": 236106,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/list-dark.png"
+    },
+    {
+      "file": "list-light.png",
+      "sha256": "3732215cb21298ca59ebd249fd5a58af20e0e54820629ea74b8ebae9960006c6",
+      "bytes": 256130,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/list-light.png"
+    },
+    {
+      "file": "list-lower-dark.png",
+      "sha256": "a992cafb639961eca11ed801155a0b975192e3282e53d4fae2f79a9d7b43e8e1",
+      "bytes": 227767,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/list-lower-dark.png"
+    },
+    {
+      "file": "list-lower-light.png",
+      "sha256": "1b80b03f43f9531fdb190f20c7217261d67179f1be07f9e9a635417ddeee45d8",
+      "bytes": 249335,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/list-lower-light.png"
+    },
+    {
+      "file": "past-events-dark.png",
+      "sha256": "ed5f3321d019346597efdc0de07550a2c1fa01d49c26d89bbfdff6d0cdf7a10b",
+      "bytes": 157767,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/past-events-dark.png"
+    },
+    {
+      "file": "past-events-light.png",
+      "sha256": "b9b7e1703ca6c57ced00b34579c653e658c04c94c555175bea0c9d862589b9a1",
+      "bytes": 158719,
+      "original_path": "docs/preview/2026-09-26-s14-zitrus-olive/past-events-light.png"
+    }
+  ]
+}

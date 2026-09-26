@@ -1,7 +1,0 @@
-{
-  "code": "-1",
-  "description": "Error Domain=FoundationModels.LanguageModelSession.GenerationError Code=-1 \"(null)\" UserInfo={NSMultipleUnderlyingErrorsKey=(\n    \"Error Domain=FoundationModels.LanguageModelSession.GenerationError Code=-1 \\\"(null)\\\" UserInfo={NSMultipleUnderlyingErrorsKey=(\\n    \\\"Error Domain=com.apple.SensitiveContentAnalysisML Code=15 \\\\\\\"(null)\\\\\\\" UserInfo={NSMultipleUnderlyingErrorsKey=(\\\\n    \\\\\\\"Error Domain=NSCocoaErrorDomain Code=4865 \\\\\\\\\\\\\\\"Die Daten konnten nicht gelesen werden, da sie fehlen.\\\\\\\\\\\\\\\" UserInfo={NSMultipleUnderlyingErrorsKey=(\\\\\\\\n)}\\\\\\\"\\\\n)}\\\"\\n)}\"\n)}",
-  "domain": "FoundationModels.LanguageModelSession.GenerationError",
-  "record_kind": "historical-technical-record",
-  "original_attestation": "external-private-archive"
-}

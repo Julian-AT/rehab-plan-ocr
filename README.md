@@ -18,9 +18,9 @@ benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiter
 | `ml/evaluation/fixtures` | Ausschließlich synthetische Prüfdaten |
 | `.local` | Ausgeschlossene Datensätze, Modelle, Läufe und neue Build-Caches |
 
-Die [native Architektur](docs/architecture.md) beschreibt Zuständigkeiten, Datenhaltung und Abbruchgrenzen.
+Die [native Architektur](docs/architecture/overview.md) beschreibt Zuständigkeiten, Datenhaltung und Abbruchgrenzen.
 
-Web- und Tauri-Oberflächen sind entfernt. Die [lokale Referenzprüfung](docs/reference-cli.md)
+Web- und Tauri-Oberflächen sind entfernt. Die [lokale Referenzprüfung](docs/development/reference-cli.md)
 übernimmt gespeicherte Zeilenprüfungen, ausdrückliche Freigaben und eingefrorene Datensatzgruppen.
 
 ## Einrichtung und Prüfung
@@ -78,21 +78,16 @@ Die vorhandenen privaten Sammlungen wurden [mit vollständigem Hashvergleich](do
 nach `.local/` verlegt. Aktive Daten- und Modellwerkzeuge verwenden diese Pfade;
 Kompatibilitätslinks erhalten historische Referenzen und Sicherungspfade.
 
-Der [Umsetzungsstand](docs/status.md) unterscheidet bestandene Tests, experimentelle
+Der [Umsetzungsstand](docs/development/status.md) unterscheidet bestandene Tests, experimentelle
 Trainingsartefakte und offene Abnahmeprüfungen. Beide Modell-Testwege haben lokale
 Artefakte erzeugt; daraus folgt noch keine Freigabe für den Einsatz in der App.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
-Auf dem iPhone ist nach dem freigegebenen [Hotspot-Update](docs/zitrus-device-update.md) Build 2026092624 installiert; erster App-Start und Datenerhalt vor und nach diesem Start sind geprüft.
-Die ausgewählte [Palette „Zitrus & Olive“ samt grüner Schrift für „Vergangene Termine anzeigen“](docs/preview/2026-09-26-s14-zitrus-olive/README.md) dokumentiert die installierte Darstellung.
-Die vorherige [Vorschau mit transparenten Grünflächen, Orb-Schatten und Audio-Wiederherstellung](docs/preview/2026-09-26-s14-soft-greens-audio/README.md) dokumentiert die unverändert übernommene Audioverarbeitung. Simulator- und Audio-Regressionsprüfungen bestehen; die Prüfung mit echter Sprache steht aus.
-Die [Kalenderpalette Greens-7](docs/preview/2026-09-26-s14-greens/README.md) ist mit Simulatoraufnahmen dokumentiert. [Du/Sie und die überarbeitete Mikrofonaufnahme](docs/preview/2026-09-26-s14-calm-voice/README.md) sind mit Victoria-Hörproben und Prüfprotokoll dokumentiert. Die Prüfung mit echter Sprache steht noch aus.
-
-Die vorherige gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mitblättern](docs/preview/2026-09-26-s13-page-axis/README.md).
-Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) dokumentiert den verworfenen Versuch
-mit [neuer Simulatorvorschau und Victoria-Hörproben](docs/preview/2026-09-26-s13-fluid/README.md).
-Die [vorherige Qualitätsüberarbeitung](docs/quality-overhaul.md) bleibt als Prüfverlauf erhalten. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.
+Der zuletzt dokumentierte Gerätebuild ist [2026092624](docs/releases/history/zitrus-device-update.md).
+Die [visuelle Referenz „Zitrus & Olive“](docs/product/visual-baseline/README.md) bleibt verbindlich.
+Ältere Vorschauen und Versuche sind über das [historische Inventar](docs/releases/history/README.md)
+nachvollziehbar. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.
 
 Native archive assembly is cached in `.local/builds/ffi` by source, compiled
 archive, model/runtime, headers, architecture and toolchain identities. Every hit

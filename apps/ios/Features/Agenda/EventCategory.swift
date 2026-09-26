@@ -2,7 +2,7 @@ import Foundation
 
 enum EventCategory: String, CaseIterable {
   case therapy, medical, meal, organization, other
-  // Zitrus & Olive, selected from docs/preview/termin-farbpaletten.html at 32%.
+  // Zitrus & Olive, selected from docs/decisions/calendar-palette.html at 32%.
   // Dark accents match the preview's 16% white mix; fills remain transparent.
   static let surfaceOpacity = (light: 0.32, dark: 0.36)
   var rgb: UInt32 {

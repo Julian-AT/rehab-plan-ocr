@@ -108,7 +108,7 @@ Vollständige Zeilen, Tagesgrenzen, Feldzustände und Geometrie am Original prü
 „Leer gedruckt“, „nicht vorhanden“, „unlesbar“, „abgeschnitten“, „widersprüchlich“
 und „unsicher“ getrennt erhalten. Text nicht aus einem Nachbarplan ergänzen.
 Zeilenfreigabe und vollständige Crop-Freigabe sind verschiedene Schritte.
-Die [Referenz-CLI](../../reference-cli.md) dokumentiert die vorhandenen Prüfaktionen.
+Die [Referenz-CLI](../../development/reference-cli.md) dokumentiert die vorhandenen Prüfaktionen.
 Neue Eingangsstapel werden vor dieser Integration manuell auf Datenschutz und
 Beziehungen geprüft; der Intake-Befehl verändert den bestehenden Referenzbestand nicht.
 Das historische `dataset.py inventory` ist kein Importbefehl für neue Stapel.
