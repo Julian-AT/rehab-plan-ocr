@@ -26,6 +26,11 @@ targets:
   Termine:
     type: application
     platform: iOS
+    postBuildScripts: &prepareCodeSign
+      - path: ../../tooling/build/prepare-code-sign.sh
+        name: Prepare signing metadata
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
     sources:
       - path: App
         excludes: [Info.plist]
@@ -97,6 +102,7 @@ targets:
   RehaShare:
     type: app-extension
     platform: iOS
+    postBuildScripts: *prepareCodeSign
     sources:
       - path: Extensions/Share
       - path: Shared/Intake
@@ -126,6 +132,7 @@ targets:
   RehaWidgets:
     type: app-extension
     platform: iOS
+    postBuildScripts: *prepareCodeSign
     sources:
       - path: Extensions/Widgets
       - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
@@ -151,6 +158,7 @@ targets:
   RehaNotificationContent:
     type: app-extension
     platform: iOS
+    postBuildScripts: *prepareCodeSign
     sources:
       - path: Extensions/NotificationContent
       - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
