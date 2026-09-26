@@ -1,19 +1,14 @@
 .git
-node_modules
 target
-dist
 data/private
 models/private
 artifacts
-src-tauri/gen
 test-results
-playwright-report
 .venv
 
-**/.tauri
 **/.build
 **/__pycache__
-.next
-out
 
 verify
+apps/ios/build
+.tools

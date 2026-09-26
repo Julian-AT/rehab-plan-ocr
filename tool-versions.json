@@ -1,0 +1,82 @@
+{
+  "versions": {
+    "rust": "1.98.1",
+    "python": "3.12.13",
+    "ruff": "0.15.14",
+    "uv": "0.11.16",
+    "shellcheck": "0.11.0",
+    "shfmt": "3.12.0",
+    "xcodegen": "2.46.0",
+    "swift-format": "6.3.0",
+    "xcode-builds": [
+      "17E192",
+      "17E202"
+    ]
+  },
+  "downloads": {
+    "shfmt": {
+      "darwin-arm64": {
+        "url": "https://github.com/mvdan/sh/releases/download/v3.12.0/shfmt_v3.12.0_darwin_arm64",
+        "sha256": "d903802e0ce3ecbc82b98512f55ba370b0d37a93f3f78de394f5b657052b33dd"
+      },
+      "darwin-amd64": {
+        "url": "https://github.com/mvdan/sh/releases/download/v3.12.0/shfmt_v3.12.0_darwin_amd64",
+        "sha256": "c31548693de6584e6164b7ed5fbb7b4a083f2d937ca94b4e0ddf59aa461a85e4"
+      },
+      "linux-amd64": {
+        "url": "https://github.com/mvdan/sh/releases/download/v3.12.0/shfmt_v3.12.0_linux_amd64",
+        "sha256": "d9fbb2a9c33d13f47e7618cf362a914d029d02a6df124064fff04fd688a745ea"
+      },
+      "linux-arm64": {
+        "url": "https://github.com/mvdan/sh/releases/download/v3.12.0/shfmt_v3.12.0_linux_arm64",
+        "sha256": "5f3fe3fa6a9f766e6a182ba79a94bef8afedafc57db0b1ad32b0f67fae971ba4"
+      }
+    },
+    "shellcheck": {
+      "darwin-arm64": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.aarch64.tar.gz",
+        "sha256": "339b930feb1ea764467013cc1f72d09cd6b869ebf1013296ba9055ab2ffbd26f"
+      },
+      "darwin-amd64": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.x86_64.tar.gz",
+        "sha256": "c2c15e08df0e8fbc374c335b230a7ee958c313fa5714817a59aa59f1aa594f51"
+      },
+      "linux-amd64": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz",
+        "sha256": "b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
+      },
+      "linux-arm64": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.aarch64.tar.gz",
+        "sha256": "68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+      }
+    },
+    "uv": {
+      "darwin-arm64": {
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.16/uv-aarch64-apple-darwin.tar.gz",
+        "sha256": "2b25be1af546be330b340b0a76b99f989daa6d92678fdffb87438e661e9d88fb"
+      },
+      "darwin-amd64": {
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.16/uv-x86_64-apple-darwin.tar.gz",
+        "sha256": "6b91ae3de155f51bd1f5b74814821c79f016a176561f252cd9ddfb976939af2e"
+      },
+      "linux-amd64": {
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.16/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "74947fe2c03315cf07e82ab3acc703eddef01aba4d5232a98e4c6825ec116131"
+      },
+      "linux-arm64": {
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.16/uv-aarch64-unknown-linux-gnu.tar.gz",
+        "sha256": "8c9d0f0ee98166ae6ab198747519ba6f25db29d185bd2ae5960ecebc91a5c22a"
+      }
+    },
+    "xcodegen": {
+      "darwin-arm64": {
+        "url": "https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip",
+        "sha256": "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806"
+      },
+      "darwin-amd64": {
+        "url": "https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip",
+        "sha256": "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806"
+      }
+    }
+  }
+}

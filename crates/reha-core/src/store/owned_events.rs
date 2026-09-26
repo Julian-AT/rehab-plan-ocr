@@ -38,6 +38,15 @@ pub(super) fn upsert(connection: &Connection, record: &OwnedEventRecord) -> Resu
         params![record.id, record.calendar_id, record.external_id, serde_json::to_string(record)?])?;
     Ok(())
 }
+type EventMutationRow = (
+    String,
+    String,
+    Option<String>,
+    i64,
+    Option<String>,
+    Option<String>,
+);
+
 impl Store {
     pub fn owned_records(&self) -> Result<Vec<OwnedEventRecord>> {
         let mut query = self
@@ -63,7 +72,7 @@ impl Store {
         Ok(self.connection.query_row("SELECT EXISTS(SELECT 1 FROM operations WHERE status IN ('queued','pending','uncertain')) OR EXISTS(SELECT 1 FROM event_mutations WHERE status IN ('pending','uncertain'))", [], |r| r.get(0))?)
     }
     pub fn event_mutation(&self, id: &str) -> Result<Option<Value>> {
-        let raw: Option<(String, String, Option<String>, i64, Option<String>, Option<String>)> = self.connection.query_row(
+        let raw: Option<EventMutationRow> = self.connection.query_row(
             "SELECT proposal,status,result,created_at,undo_of,(SELECT id FROM event_mutations u WHERE u.undo_of=m.id AND u.status IN ('pending','uncertain','saved','acknowledged')) FROM event_mutations m WHERE id=?1",
             [id], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?))).optional()?;
         raw.map(

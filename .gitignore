@@ -8,20 +8,12 @@
 .env*
 
 # Dependencies and generated assets
-node_modules/
-.next/
-out/
-dist/
 /target/
-/src-tauri/target/
-/src-tauri/gen/
 .venv/
 **/.build/
-**/.tauri/
 **/*.xcodeproj/
 __pycache__/
 *.pyc
-*.tsbuildinfo
 
 # Build, test, and local OS output
 *.dylib
@@ -31,7 +23,6 @@ __pycache__/
 *.log
 .DS_Store
 /test-results/
-/playwright-report/
 /coverage/
 
 # Incoming private evaluation images; keep out of commits and build contexts.
@@ -45,3 +36,7 @@ __pycache__/
 # Local visual references; never bundle or publish.
 /beispiel.webp
 /voice.webp
+/.tools/
+.ruff_cache/
+*.tsbuildinfo
+**/.tauri/

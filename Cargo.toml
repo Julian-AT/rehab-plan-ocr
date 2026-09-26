@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/reha-core", "crates/reha-ffi", "src-tauri", "plugins/calendar"]
+members = ["crates/reha-core", "crates/reha-ffi"]
 default-members = ["crates/reha-core"]
 resolver = "2"
 

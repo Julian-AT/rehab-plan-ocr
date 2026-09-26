@@ -1,4 +1,4 @@
-name: Verify both shells
+name: Verify native app and local tools
 on:
   pull_request:
   push:
@@ -9,53 +9,29 @@ permissions:
 concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
-env:
-  CARGO_PROFILE_DEV_DEBUG: "0"
-  CARGO_INCREMENTAL: "0"
 jobs:
   portable:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
-      - run: npm run lint && npm run build && npm test
-      - run: cargo test --locked -p reha-core -p reha-ffi
+      - run: python3 scripts/quality.py bootstrap
+      - run: python3 scripts/quality.py lint --portable
+      - run: python3 scripts/quality.py test --portable
   apple:
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
-          cache: npm
-      - name: Install build tools
-        run: |
-          brew install xcodegen uv
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
-          npm ci
-          uv run scripts/fetch-models.py --tier small
-      - run: sh scripts/test-agenda-projection.sh
-      - run: sh scripts/test-voice-rules.sh
-      - run: sh scripts/test-agenda.sh
-      - run: sh scripts/build-native.sh integration
-      - run: sh scripts/build-native.sh check-bindings
-      - run: sh scripts/build-native.sh test
-      - run: sh scripts/build-native.sh device
-      - name: Keep the Tauri desktop and iOS build paths working
-        run: |
-          npm run build
-          cargo check --locked -p rehab-plan-ocr
-          npm run tauri -- ios init --ci
-          sh scripts/build-ios.sh simulator
-          sh scripts/build-ios.sh device
+      - run: python3 scripts/quality.py bootstrap
+      - run: python3 scripts/quality.py lint
+      - run: python3 scripts/quality.py test
+      - run: python3 scripts/quality.py build check-bindings
+      - run: python3 scripts/quality.py test-ios
+      - run: python3 scripts/quality.py build device

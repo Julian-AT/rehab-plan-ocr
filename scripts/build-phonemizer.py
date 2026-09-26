@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Build checksum-pinned eSpeak-NG for phonemization only, never device playback."""
 import hashlib
-import json
-import os
 from pathlib import Path
 import subprocess
 import sys

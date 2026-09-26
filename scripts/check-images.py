@@ -78,7 +78,8 @@ def summarize(run):
 
 
 def review_html(output, results):
-    escape = lambda value: html.escape(str(value if value is not None else "—"))
+    def escape(value):
+        return html.escape(str(value if value is not None else "—"))
     sections = []
     for result in results:
         identifier = result["id"]

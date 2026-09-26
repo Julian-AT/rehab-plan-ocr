@@ -6,6 +6,7 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -13,7 +14,7 @@ from pathlib import Path
 from icalendar import Calendar
 
 ROOT = Path(__file__).resolve().parents[1]
-binary = ROOT / "target/release/reha"
+binary = Path(os.environ.get("REHA_BINARY", ROOT / "target/release/reha"))
 with tempfile.TemporaryDirectory() as temporary:
     folder = Path(temporary)
     run = json.loads((ROOT / "tests/fixtures/sample-run.json").read_text())

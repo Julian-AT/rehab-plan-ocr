@@ -7,7 +7,7 @@
 import json
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 root = Path(__file__).resolve().parents[1]
 out = root / "tests/fixtures"
@@ -76,7 +76,6 @@ image.filter(ImageFilter.GaussianBlur(2)).save(variants / "blurred.png")
 ImageEnhance.Contrast(image).enhance(0.2).save(variants / "low-contrast.png")
 image.crop((0, 0, 1400, 1100)).save(variants / "cropped.png")
 shadow = image.copy()
-from PIL import ImageChops
 
 mask = Image.new("RGB", image.size)
 md = ImageDraw.Draw(mask)

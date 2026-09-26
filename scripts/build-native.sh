@@ -21,6 +21,7 @@ bindings() {
   rm -rf "$generated"
 }
 framework() {
+  python3 scripts/quality.py space 2
   bindings
   uv run scripts/fetch-models.py --tier small
   uv run scripts/fetch-ios-runtime.py
@@ -32,6 +33,7 @@ framework() {
       device) triple=aarch64-apple-ios ;;
       simulator) triple=aarch64-apple-ios-sim ;;
     esac
+    python3 scripts/quality.py space 1.5
     IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --release -p reha-ffi --lib --features onnx --target "$triple"
     xcrun libtool -static -o "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" \
       "target/$triple/release/libreha_ffi.a" "models/private/runtime/$triple/libonnxruntime.a"

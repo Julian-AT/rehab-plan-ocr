@@ -38,7 +38,7 @@ fn number(n: u32) -> String {
                 "", "", "zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig",
                 "achtzig", "neunzig",
             ];
-            if n % 10 == 0 {
+            if n.is_multiple_of(10) {
                 tens[(n / 10) as usize].into()
             } else {
                 format!(
@@ -62,7 +62,7 @@ fn number(n: u32) -> String {
                     number(n / base)
                 },
                 if base == 100 { "hundert" } else { "tausend" },
-                if n % base == 0 {
+                if n.is_multiple_of(base) {
                     String::new()
                 } else {
                     number(n % base)

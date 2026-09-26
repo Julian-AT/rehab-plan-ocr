@@ -46,7 +46,7 @@ fn evaluate_annotation(
         return Err("Referenz zuerst speichern und ausdrücklich freigeben.".into());
     }
     annotation = saved;
-    guard_reference(&state, &annotation, true)?;
+    guard_reference(state, &annotation, true)?;
     if !annotation
         .document_hashes
         .contains(&run.document.source_hash)
@@ -89,7 +89,7 @@ fn save_annotation(
     for hash in &annotation.document_hashes {
         dataset_image(state, hash.clone())?;
     }
-    let dir = root(&state)?.join("labels");
+    let dir = root(state)?.join("labels");
     std::fs::create_dir_all(&dir).map_err(failure)?;
     if annotation.document_hashes.len() != 1 {
         return Err("Eine Referenz pro Originalfoto speichern.".into());
@@ -205,7 +205,7 @@ fn read_references(
         .collect()
 }
 fn freeze_reference_groups(state: &ReferenceLibrary) -> Response<Value> {
-    let directory = root(&state)?;
+    let directory = root(state)?;
     let mut references = read_references(&directory)?;
     let groups = reha_core::evaluation::development_groups(&references).map_err(failure)?;
     if let Ok(bytes) = std::fs::read(directory.join("split.json")) {
@@ -261,7 +261,7 @@ fn inventory(root: &std::path::Path) -> Response<Value> {
         .map_err(failure)
 }
 fn dataset(state: &ReferenceLibrary) -> Response<Value> {
-    let directory = root(&state)?;
+    let directory = root(state)?;
     let data = inventory(&directory)?;
     let split: Value = std::fs::read(directory.join("split.json"))
         .ok()
@@ -281,7 +281,7 @@ fn dataset(state: &ReferenceLibrary) -> Response<Value> {
     )
 }
 fn dataset_image(state: &ReferenceLibrary, hash: String) -> Response<Value> {
-    let directory = root(&state)?;
+    let directory = root(state)?;
     let data = inventory(&directory)?;
     let entry = data["entries"]
         .as_array()
@@ -319,7 +319,7 @@ fn provisional_reference(state: &ReferenceLibrary, hash: String) -> Response<Val
     if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err("Ungültige Quellkennung.".into());
     }
-    let directory = root(&state)?;
+    let directory = root(state)?;
     let path = checked_path(
         &directory,
         std::path::Path::new(&format!("labels/provisional/{hash}.json")),

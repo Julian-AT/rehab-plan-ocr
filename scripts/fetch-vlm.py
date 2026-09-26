@@ -21,14 +21,20 @@ def fetch(lock, destination):
             if Path(name).name != name:
                 raise ValueError("Unsafe checkpoint path")
             target = directory / name
-            valid = lambda p: p.exists() and p.stat().st_size == item["bytes"] and (not item["sha256"] or hashlib.file_digest(p.open("rb"), "sha256").hexdigest() == item["sha256"])
+            def valid(path):
+                if not path.is_file() or path.stat().st_size != item["bytes"]:
+                    return False
+                with path.open("rb") as source:
+                    return not item["sha256"] or hashlib.file_digest(source, "sha256").hexdigest() == item["sha256"]
             if not valid(target):
                 partial = target.with_suffix(target.suffix + ".part")
                 subprocess.run(["curl", "--fail", "--location", "--retry", "2", "--continue-at", "-", f'https://huggingface.co/{candidate["repository"]}/resolve/{candidate["revision"]}/{name}?download=true', "--output", str(partial)], check=True)
                 if not valid(partial):
                     raise ValueError(f"Checkpoint integrity failed: {name}")
                 partial.replace(target)
-            verified.append({"path": name, "sha256": hashlib.file_digest(target.open("rb"), "sha256").hexdigest(), "bytes": target.stat().st_size})
+            with target.open("rb") as source:
+                checksum = hashlib.file_digest(source, "sha256").hexdigest()
+            verified.append({"path": name, "sha256": checksum, "bytes": target.stat().st_size})
         (directory / "source-manifest.json").write_text(json.dumps({**candidate, "files": verified}, indent=2)+"\n")
 if __name__ == "__main__":
     p=argparse.ArgumentParser(description=__doc__)

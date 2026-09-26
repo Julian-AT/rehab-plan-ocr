@@ -80,3 +80,21 @@ Sieben bestehende Python-Referenztests bestanden ebenfalls.
 Native Terminlinks werden streng validiert und laden aktuelle EventKit-Werte.
 Gelöscht, nicht zugänglich und fehlende lokale Zuordnung sind unterschiedliche Ergebnisse.
 Die native Rücknahme-/Linkprüfung und der Simulator-App-Build bestanden.
+
+## Native Struktur und Qualitätswerkzeuge
+
+App/Erweiterungen/Tests sind nach `apps/ios`, gemeinsame Pakete nach `packages/apple`
+verschoben. Testbilder und JSON-Fixtures liegen unter `tests/fixtures`; Icon-Master und
+Herkunftsnachweis bleiben unter `assets/icon-artwork`. Die Pfadumstellung bestand die
+Rust-Regression sowie Kalender-, Gesprächs- und Diagnoseproben.
+
+Web/Tauri samt Adaptern und alten Buildskripten sind entfernt. 329 nicht mehr verwendete
+Rust-Abhängigkeiten wurden aus dem Lockfile entfernt; keine neue Abhängigkeitsversion kam hinzu.
+Makefile und `scripts/quality.py` bündeln lokale und CI-Prüfungen. Werkzeugversionen und
+Download-Prüfsummen sind festgelegt, Python-Umgebung und Modellkonvertierung getrennt gesperrt.
+ShellCheck und die portable Testsuite einschließlich unabhängiger ICS-Prüfung bestanden.
+Der iOS-spezifische Rust-Code einschließlich Vision-Nachprüfung wurde mit ONNX-Feature
+für `aarch64-apple-ios-sim` erfolgreich geprüft. Das neue XCFramework bleibt noch zu bauen.
+
+Historische Dokumente beschreiben gegebenenfalls frühere Web-/Tauri-Stände. Verbindlicher
+Einstieg sind README.md, apps/ios/README.md und die aktuelle Qualitätsübersicht.

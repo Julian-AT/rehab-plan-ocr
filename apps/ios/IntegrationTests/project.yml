@@ -8,7 +8,6 @@ targets:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - smoke-tests.swift
       - agenda-native-tests.swift
       - event-editing-tests.swift
       - notification-race-tests.swift
