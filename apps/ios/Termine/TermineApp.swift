@@ -76,9 +76,31 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
             }
         }
         .environment(preferences)
+        .environment(scanner)
+        .disabled(!scanner.isReady)
+        .overlay {
+            if !scanner.isReady {
+                VStack(spacing: 16) {
+                    if let error = scanner.erasureError {
+                        Text(scanner.isErasing ? "Datenbereinigung konnte nicht abgeschlossen werden." : "Datenstatus konnte nicht gelesen werden.").font(.headline)
+                        Text(error)
+                        Button("Erneut versuchen") {
+                            Task {
+                                if scanner.isErasing { try? await scanner.eraseLocalData(preferences) }
+                                else { await scanner.initialize(preferences); if scanner.isReady { await preferences.load(); await scanner.recoverInbox(); refresh() } }
+                            }
+                        }
+                    } else { ProgressView(scanner.isErasing ? "Lokale Daten werden gelöscht …" : "Datenstatus prüfen …") }
+                }.padding().background(.regularMaterial, in: .rect(cornerRadius: 16))
+            }
+        }
+        .onChange(of: scanner.isErasing) { _, erasing in if erasing { voice.cancelSession(reason: "erase") } }
+        .onChange(of: scanner.erasedID) { _, _ in
+            todayPath = []; plansPath = []; linkedEvent = nil; openError = nil; refreshID += 1
+        }
         .sheet(item: $linkedEvent) { event in EventEditorView(core: core, original: event, changed: refresh) }
         .onChange(of: tab) { old, _ in if old == .voice { voice.cancelSession(reason: "tab") }; refreshID += 1 }
-        .modifier(CapturePresentation(scanner: scanner))
+        .overlay { if let session = scanner.captureSession { CapturePresentation(scanner: scanner, session: session).id(session.id) } }
         .preferredColorScheme(preferences.value?.appearance == "dark" ? .dark : preferences.value?.appearance == "light" ? .light : nil)
         .onOpenURL { url in Task { await openEvent(url) } }
         .onChange(of: scanner.presentedID) { _, id in
@@ -116,6 +138,8 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
                (reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue || reason == AVAudioSession.RouteChangeReason.newDeviceAvailable.rawValue) { voice.cancelSession(reason: "route-\(reason)") }
         }
         .task {
+            await scanner.initialize(preferences)
+            guard scanner.isReady else { return }
             await preferences.load()
             await scanner.recoverInbox()
             refreshID += 1

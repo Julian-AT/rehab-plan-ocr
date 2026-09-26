@@ -246,7 +246,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     let result = Result { try response() }
     for callback in callbacks { callback(result) }
   }
-  func readStatus(_ completion: @escaping (Result<[String: Any], Error>) -> Void) {
+  func readStatus(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
     let version = generation
     deadline.run(operation: { await self.notifications.snapshot() }) { result in
       do {
@@ -357,7 +357,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       timezone: event.timeZone?.identifier ?? TimeZone.current.identifier,
       title: event.title ?? "Termin", room: event.location ?? "")
   }
-  func sync(_ args: AgendaSyncArgs, completion: @escaping (Result<[String: Any], Error>) -> Void) throws {
+  func sync(_ args: AgendaSyncArgs, completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) throws {
     if let loadError { throw AgendaError.message(loadError) }
     generation &+= 1
     // Rust supplies committed app-owned records. The native cache is needed for
@@ -379,7 +379,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     requestRefresh(completion)
   }
   func activate(
-    _ preferences: ReminderPreferences, completion: @escaping (Result<[String: Any], Error>) -> Void
+    _ preferences: ReminderPreferences, completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void
   ) {
     center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
       self.queue.async {
@@ -744,7 +744,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     try publish()
   }
   /// A one-off notification uses the reserved slot and reports acceptance separately.
-  func testNotification(_ completion: @escaping (Result<[String: Any], Error>) -> Void) {
+  func testNotification(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
     scheduleOne(make: {
       let content = UNMutableNotificationContent()
       content.title = "Testerinnerung"
@@ -754,7 +754,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
                                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false))
     }, completion: completion)
   }
-  func snooze(id: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+  func snooze(id: String, completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
     scheduleOne(make: {
       guard let record = self.state.records.first(where: { $0.id == id }),
             case .found(let event) = self.lookup(record),
@@ -772,8 +772,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
                                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 300, repeats: false))
     }, completion: completion)
   }
-  private func scheduleOne(make: @escaping () throws -> UNNotificationRequest,
-                           completion: @escaping (Result<[String: Any], Error>) -> Void) {
+  private func scheduleOne(make: @escaping @Sendable () throws -> UNNotificationRequest,
+                           completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
     let version = generation
     let reservation = UUID()
     deadline.run(operation: { await self.notifications.snapshot() }) { result in
@@ -827,7 +827,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func userNotificationCenter(
     _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
-    withCompletionHandler completionHandler: @escaping () -> Void
+    withCompletionHandler completionHandler: @escaping @Sendable () -> Void
   ) {
     queue.async {
       guard let id = response.notification.request.content.userInfo["importID"] as? String else {

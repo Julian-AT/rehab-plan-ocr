@@ -98,3 +98,24 @@ für `aarch64-apple-ios-sim` erfolgreich geprüft. Das neue XCFramework bleibt n
 
 Historische Dokumente beschreiben gegebenenfalls frühere Web-/Tauri-Stände. Verbindlicher
 Einstieg sind README.md, apps/ios/README.md und die aktuelle Qualitätsübersicht.
+
+## Strikte Nebenläufigkeit und vollständige Datenbereinigung
+
+App, Widgets, Mitteilungserweiterung und AppleServices kompilieren mit Swift 6.
+Systemdialoge für Kalender und Erfassung sind von den serialisierten Kalenderdiensten
+getrennt; asynchrone Mitteilungsabschlüsse verwenden Sendable-Verträge.
+
+Vollständiges Löschen schließt die Erfassungsannahme vor Beginn, wartet auf Datei-
+und Erkennungsproduzenten und entfernt anschließend auch Inbox und gemeinsame
+Teilen-Belege. Ein persistenter generationsgebundener Dateilock verhindert, dass
+alte Teilen-Rückmeldungen Daten neu anlegen. Unvollständiges Löschen bleibt für
+Wiederholung gesperrt; ein bloßer Start-Lesefehler erlaubt ausschließlich erneutes
+Lesen, niemals ungefragtes Löschen. Angenommene Fotoübertragungen werden vor der
+Erkennung aus temporärem Speicher in die wiederherstellbare Inbox übernommen.
+
+Prüfung: Löschannahme-/Drain-/Dateilock-Probe erfolgreich; sieben EventKit-/Erinnerungs-
+Integrationstests erfolgreich; Simulator-App mit Swift 6 erfolgreich gebaut.
+Tagesliste und Zeitachse teilen nun die Richtungsentscheidung. Terminflächen haben
+Hell-/Dunkel-Varianten, gefüllte Buttons explizite adaptive Kontrastfarben und Texte
+keine persönliche Anrede. Gesten und neue Darstellung benötigen noch die visuelle
+Laufzeitprüfung mit frisch gebautem Rust-Kern.

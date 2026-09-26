@@ -36,13 +36,13 @@ struct CalendarSetupView: View {
                 }
                 if planID != nil { Toggle("Für neue Pläne merken", isOn: $remember) }
                 Text("Ein neuer Standard verschiebt keine bestehenden Termine. Die Anzeigeauswahl wird getrennt eingestellt.").foregroundStyle(.secondary)
-                if let error { Text(error).foregroundStyle(.red) }
+                if let error { Text(error).foregroundStyle(AppPalette.destructive) }
                 if EKEventStore.authorizationStatus(for: .event) == .denied {
                     Link("Zugriff in Einstellungen erlauben", destination: URL(string: UIApplication.openSettingsURLString)!)
                 }
                 if busy { ProcessingRow(text: "Kalender laden …") }
                 Button { Task { await save() } } label: { Text("Diesen Kalender verwenden").frame(maxWidth: .infinity).controlHeight() }
-                    .buttonStyle(.borderedProminent).disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
+                    .buttonStyle(AppPrimaryButtonStyle()).disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
             }.pageTitle("Speicherziel")
                 .toolbar { if !embedded { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() }.disabled(busy) } } }
                 .task { await store.load(); await load(requestAccess: false) }
@@ -112,7 +112,7 @@ struct CalendarPreferencesView: View {
                 }
                 if destinations.isEmpty { Button("Kalenderzugriff erlauben") { Task { await load() } } }
             } header: { Text("Anzeigen und vorlesen") } footer: {
-                Text("Importierte Termine bleiben sichtbar. Weitere Kalender wählst du hier aus.")
+                Text("Importierte Termine bleiben sichtbar. Weitere Kalender können hier ausgewählt werden.")
             }
             if let preferences = store.value {
                 let missing = preferences.displayCalendarIds.filter { id in !destinations.contains { $0.id == id } }
@@ -132,7 +132,7 @@ struct CalendarPreferencesView: View {
                 }
             } header: { Text("Neue Termine") } footer: { Text("Ein neues Speicherziel verschiebt keine bestehenden Termine.") }
             SettingsSaveStatus()
-            if let error { Section { Text(error).foregroundStyle(.red) } }
+            if let error { Section { Text(error).foregroundStyle(AppPalette.destructive) } }
             Section { Button("Kalender neu laden") { Task { await load() } } }
         }.pageTitle("Kalender").task { await store.load(); await load() }
     }

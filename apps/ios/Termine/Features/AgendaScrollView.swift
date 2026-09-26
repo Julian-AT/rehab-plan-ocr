@@ -59,9 +59,14 @@ struct AgendaScrollView: UIViewControllerRepresentable {
         private var applying = false
         private var previousReset = -1
         private var anchorMinute: Double?
+        private let verticalVeto = AxisVeto(rejecting: .horizontal)
+        private let nestedScrolls = NSHashTable<UIScrollView>.weakObjects()
+        private var settlementTask: Task<Void, Never>?
+
         private var busy: Bool {
             vertical.isTracking || vertical.isDragging || vertical.isDecelerating ||
-            horizontal.isTracking || horizontal.isDragging || horizontal.isDecelerating
+            horizontal.isTracking || horizontal.isDragging || horizontal.isDecelerating ||
+            nestedScrolls.allObjects.contains { $0.isTracking || $0.isDragging || $0.isDecelerating }
         }
         override func viewDidLoad() {
             super.viewDidLoad()
@@ -83,7 +88,6 @@ struct AgendaScrollView: UIViewControllerRepresentable {
                 host.view.backgroundColor = .clear; hosts.append(host)
             }
             let horizontalVeto = AxisVeto(rejecting: .vertical)
-            let verticalVeto = AxisVeto(rejecting: .horizontal)
             view.addGestureRecognizer(horizontalVeto); view.addGestureRecognizer(verticalVeto)
             horizontalVeto.finished = { [weak self] in self?.drainAfterTouch() }
             verticalVeto.finished = { [weak self] in self?.drainAfterTouch() }
@@ -93,11 +97,12 @@ struct AgendaScrollView: UIViewControllerRepresentable {
         func receive(_ value: AgendaScrollView) {
             loadViewIfNeeded()
             pending = value
-            if !busy { applyPending() }
+            if !busy { applyPending() } else { observeSettlement() }
         }
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
             if view.bounds.size != lastSize, !busy { applyPending() }
+            for host in hosts { gateNestedScrolls(in: host.view) }
         }
         private func applyPending() {
             guard !applying, let value = pending ?? current, view.bounds.width > 0 else { return }
@@ -132,6 +137,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
             horizontal.contentOffset = CGPoint(x: horizontal.bounds.width, y: 0)
             vertical.contentOffset = CGPoint(x: 0, y: y)
             vertical.isScrollEnabled = value.showsTimeline
+            for host in hosts { host.view.layoutIfNeeded(); gateNestedScrolls(in: host.view) }
         }
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             guard !applying, scrollView === vertical, let current, current.showsTimeline else { return }
@@ -146,8 +152,25 @@ struct AgendaScrollView: UIViewControllerRepresentable {
         private func drainAfterTouch() {
             // UIKit updates tracking flags after the recognizer's terminal callback.
             DispatchQueue.main.async { [weak self] in
-                guard let self, !self.busy else { return }
-                self.settle()
+                guard let self else { return }
+                if self.busy { self.observeSettlement() } else { self.settle() }
+            }
+        }
+        private func gateNestedScrolls(in view: UIView) {
+            if let scroll = view as? UIScrollView, !nestedScrolls.contains(scroll) {
+                scroll.panGestureRecognizer.require(toFail: verticalVeto)
+                nestedScrolls.add(scroll)
+            }
+            for child in view.subviews { gateNestedScrolls(in: child) }
+        }
+        private func observeSettlement() {
+            guard settlementTask == nil else { return }
+            settlementTask = Task { @MainActor [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    guard let self else { return }
+                    if !self.busy { self.settlementTask = nil; self.settle(); return }
+                }
             }
         }
         private func settle() {

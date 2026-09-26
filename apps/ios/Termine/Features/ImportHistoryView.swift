@@ -16,7 +16,7 @@ struct ImportHistoryView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let error { Section { Text(error).foregroundStyle(.red) } }
+                if let error { Section { Text(error).foregroundStyle(AppPalette.destructive) } }
                 if busy { ProgressView("Kalender wird abgeglichen …") }
                 if let proposal {
                     Section("Rücknahme prüfen") {

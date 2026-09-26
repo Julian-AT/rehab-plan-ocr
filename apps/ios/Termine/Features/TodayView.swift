@@ -120,14 +120,7 @@ struct TodayView: View {
             WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
             Divider()
             TimelineView(.periodic(from: .now, by: 15)) { context in
-                let agenda = DayAgenda(events: model.events(on: selectedDate) ?? [], date: selectedDate, now: context.date)
-                if typeSize.isAccessibilitySize || listView || usesList(agenda) {
-                    CalendarPager(selection: $selectedDate, step: 1) { date in
-                        day(DayAgenda(events: model.events(on: date) ?? [], date: date, now: context.date), now: context.date)
-                    }.accessibilityIdentifier("agenda-days")
-                } else {
-                    sharedTimeline(now: context.date)
-                }
+                sharedTimeline(now: context.date)
             }.onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
                 followToday(Calendar.current.startOfDay(for: .now))
             }
@@ -184,7 +177,7 @@ struct TodayView: View {
                     Label("Zeit zum Erholen", systemImage: "leaf")
                 } description: { Text("Für heute stehen keine weiteren Termine an.") }
                 actions: { Button("Vergangene Termine anzeigen") { showPast = true }.accessibilityIdentifier("past-events") }
-            } else if usesList(agenda) {
+            } else {
                 List {
                     ForEach(agenda.events) { event in
                         Button { editor = event } label: { CalendarAgendaRow(event: event, now: now) }
@@ -192,8 +185,7 @@ struct TodayView: View {
                             .accessibilityIdentifier("agenda-event-\(event.id)")
                     }
                 }.accessibilityIdentifier("agenda-accessible-list")
-            } else {
-                DayTimeline(agenda: agenda, now: now, density: AgendaDensity(rawValue: density) ?? .overview, selected: agenda.date == selectedDate, scrollMinute: $scrollMinute, reset: scrollReset) { editor = $0 }
+
             }
         }
     }
@@ -204,9 +196,9 @@ struct TodayView: View {
         let density = AgendaDensity(rawValue: density) ?? .overview
         let projection = ReadableAgendaLayout(windows.flatMap(\.timed), pointsPerHour: density.pointsPerHour, heights: measuredHeights)
         let selected = agendas[1]
-        let visible = !selected.events.isEmpty && !(selected.isComplete && !showPast) && model.events(on: selectedDate) != nil
+        let visible = !usesList(selected) && !windows[1].timed.isEmpty && !(selected.isComplete && !showPast) && model.events(on: selectedDate) != nil
         return VStack(spacing: 0) {
-            if !selected.allDay.isEmpty {
+            if !usesList(selected) && !selected.allDay.isEmpty {
                 DisclosureGroup("Ganztägig · \(selected.allDay.count)") {
                     ForEach(selected.allDay) { event in
                         Button { editor = event } label: { CalendarAgendaRow(event: event, now: now) }.buttonStyle(.plain)
@@ -216,7 +208,7 @@ struct TodayView: View {
             AgendaScrollView(date: selectedDate, projection: projection, pages: { viewport, offset in
                 zip(agendas, windows).map { agenda, window in
                     let layout = ReadableAgendaLayout(segments: window.timed, projection: projection, pointsPerHour: density.pointsPerHour)
-                    if agenda.events.isEmpty || (agenda.isComplete && !showPast) || model.events(on: agenda.date) == nil {
+                    if usesList(agenda) || agenda.events.isEmpty || (agenda.isComplete && !showPast) || model.events(on: agenda.date) == nil {
                         return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
                     }
                     return AnyView(TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) { id, height in
@@ -226,7 +218,7 @@ struct TodayView: View {
             }, gutter: AnyView(TimelineGutter(start: windows[1].start, layout: projection)),
                showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil, initialMinute: windows[1].scrollMinute, reset: scrollReset,
                minute: $scrollMinute, selectDate: { selectedDate = $0 })
-            if !windows[1].outside.isEmpty {
+            if !usesList(selected) && !windows[1].outside.isEmpty {
                 DisclosureGroup("Außerhalb von 06:00–18:00") {
                     ScrollView {
                         ForEach(windows[1].outside) { event in
@@ -251,7 +243,7 @@ struct TodayView: View {
         case .noAccess:
             ContentUnavailableView {
                 Label("Kalenderzugriff fehlt", systemImage: "calendar.badge.exclamationmark")
-            } description: { Text("Erlaube den Zugriff, damit deine Termine hier erscheinen.") } actions: {
+            } description: { Text("Kalenderzugriff erlauben, um Termine anzuzeigen.") } actions: {
                 if EKEventStore.authorizationStatus(for: .event) == .notDetermined {
                     Button("Kalenderzugriff erlauben") { setup = true }
                 } else {
@@ -261,7 +253,7 @@ struct TodayView: View {
         case .noSelection:
             ContentUnavailableView {
                 Label("Kalender auswählen", systemImage: "calendar")
-            } description: { Text("Wähle die Kalender aus, deren Termine du sehen möchtest.") }
+            } description: { Text("Kalender für die Terminansicht auswählen.") }
             actions: { Button("Kalender auswählen") { setup = true } }
         case .failed:
             ContentUnavailableView {
@@ -318,71 +310,6 @@ private struct WeekSelector: View {
             .accessibilityElement(children: .contain).accessibilityIdentifier("agenda-week")
     }
     private func move(_ days: Int) { visibleWeek = Calendar.current.date(byAdding: .day, value: days, to: visibleWeek)! }
-}
-
-private struct DayTimeline: View {
-    let agenda: DayAgenda
-    let now: Date
-    let density: AgendaDensity
-    let selected: Bool
-    @Binding var scrollMinute: Double?
-    let reset: Int
-    let select: (CalendarEvent) -> Void
-    @State private var heights: [String: Double] = [:]
-    private var hourHeight: Double { density.pointsPerHour }
-    @State private var position = ScrollPosition()
-    @State private var positioned = false
-    var body: some View {
-        let window = AgendaWindow(agenda: agenda, now: now)
-        let layout = ReadableAgendaLayout(window.timed, pointsPerHour: hourHeight, heights: heights)
-        VStack(spacing: 0) {
-                    if !agenda.allDay.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Ganztägig").font(.subheadline).foregroundStyle(.secondary)
-                            ForEach(agenda.allDay) { event in
-                                Button { select(event) } label: {
-                                    CalendarAgendaRow(event: event, now: now)
-                                }.buttonStyle(.bordered).controlHeight()
-                                    .accessibilityLabel(event.spoken + " " + event.placeDescription)
-                                    .accessibilityIdentifier("agenda-event-\(event.id)")
-                            }
-                        }.padding(.horizontal)
-                    }
-            ScrollView {
-                TimelineCanvas(window: window, layout: layout, now: now, select: select) { id, height in
-                    if abs((heights[id] ?? 0) - height) > 1 { heights[id] = height }
-                }.frame(height: layout.height + 52)
-                    .padding(.vertical, 12)
-            }.accessibilityIdentifier("day-timeline")
-                .scrollPosition($position)
-                .onScrollGeometryChange(for: Bool.self) { $0.containerSize.height > 0 && $0.contentSize.height > 0 } action: { _, ready in
-                    if ready && !positioned {
-                        positioned = true
-                        if selected && scrollMinute == nil { scrollMinute = window.scrollMinute }
-                        position.scrollTo(y: layout.y(scrollMinute ?? window.scrollMinute))
-                    }
-                }
-                .onScrollGeometryChange(for: Double.self) { max(0, Double($0.contentOffset.y + $0.contentInsets.top)) } action: { _, y in
-                    if selected && positioned && position.isPositionedByUser { scrollMinute = layout.minute(at: y) }
-                }
-                .onChange(of: selected) { _, active in
-                    if active { position.scrollTo(y: layout.y(scrollMinute ?? window.scrollMinute)) }
-                }
-                .onChange(of: reset) { position.scrollTo(y: layout.y(window.scrollMinute)) }
-            if !window.outside.isEmpty {
-                DisclosureGroup("Außerhalb von 06:00–18:00") {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(window.outside) { event in
-                                Button { select(event) } label: { CalendarAgendaRow(event: event, now: now) }
-                                    .buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
-                            }
-                        }
-                    }.frame(maxHeight: 200)
-                }.padding().accessibilityIdentifier("agenda-outside-hours")
-            }
-        }
-    }
 }
 
 private struct TimelineCanvas: View {
@@ -444,7 +371,7 @@ private struct TimelineAppointment: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: Double.self) { Double($0.size.height) } action: { measured($0) }
                 .frame(height: height, alignment: .topLeading)
-                .background(EventCategory.classify(event.values.title).color.opacity(0.12), in: .rect(cornerRadius: 10))
+                .background(EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 10))
                 .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(EventCategory.classify(event.values.title).color).frame(width: 3).padding(.vertical, 8) }
                 .contentShape(.rect)
         }.buttonStyle(.plain)

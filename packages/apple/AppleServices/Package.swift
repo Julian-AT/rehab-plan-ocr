@@ -5,5 +5,5 @@ let package = Package(
     platforms: [.iOS(.v17)],
     products: [.library(name: "AppleServices", targets: ["AppleServices"])],
     targets: [.target(name: "AppleServices")],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

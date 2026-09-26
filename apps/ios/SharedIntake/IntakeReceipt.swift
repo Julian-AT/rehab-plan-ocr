@@ -9,19 +9,23 @@ struct IntakeReceipt: Codable, Sendable {
 }
 enum IntakeStaging {
     static let group = "group.at.rehakalender.personal.intake"
-    static func root() throws -> URL {
+    static func gate() throws -> IntakeGate {
         guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return root.appendingPathComponent("receipts", isDirectory: true)
+        return IntakeGate(root: root)
     }
+    static func root() throws -> URL { try gate().root.appendingPathComponent("receipts", isDirectory: true) }
     static func validateSize(_ url: URL) throws {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular,
               let size = attributes[.size] as? NSNumber,
               size.uint64Value <= 40 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
     }
-    static func stage(_ url: URL) throws -> IntakeReceipt {
+    static func stage(_ url: URL, generation: UUID) throws -> IntakeReceipt {
+        try gate().write(generation: generation) { try writeReceipt(url) }
+    }
+    private static func writeReceipt(_ url: URL) throws -> IntakeReceipt {
         let files = FileManager.default
         guard let size = (try files.attributesOfItem(atPath: url.path))[.size] as? NSNumber,
               size.uint64Value <= 40*1024*1024 else { throw CocoaError(.fileReadTooLarge) }
@@ -40,6 +44,7 @@ enum IntakeStaging {
         return receipt
     }
     static func pending() throws -> [(IntakeReceipt, URL, URL)] {
+        guard try !gate().snapshot().erasing else { return [] }
         let root = try root()
         let folders = (try? FileManager.default.contentsOfDirectory(at:root,includingPropertiesForKeys:nil)) ?? []
         return folders.compactMap { folder in

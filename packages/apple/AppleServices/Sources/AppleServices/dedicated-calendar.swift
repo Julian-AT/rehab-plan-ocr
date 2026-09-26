@@ -78,7 +78,7 @@ final class DedicatedCalendar {
     defaults.set(
       [
         "id": calendar.calendarIdentifier,
-        "title": calendar.title ?? Self.title,
+        "title": calendar.title,
         "source_id": calendar.source.sourceIdentifier,
         "source_title": calendar.source.title,
         "source_type": String(calendar.source.sourceType.rawValue),

@@ -37,7 +37,7 @@ struct DraftQuestionView: View {
                     Button("Termin findet statt") { Task { await answer() } }.disabled(busy)
                 }
                 Button("Für später lassen") { dismiss() }.disabled(busy)
-                if let error { Text(error).foregroundStyle(.red) }
+                if let error { Text(error).foregroundStyle(AppPalette.destructive) }
             }
             .pageTitle(questionTitle(question.field))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Schließen") { dismiss() }.disabled(busy) } }

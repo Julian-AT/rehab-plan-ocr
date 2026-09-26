@@ -17,6 +17,7 @@ import UniformTypeIdentifiers
             let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
             do {
                 guard !providers.isEmpty, providers.count<=12 else { throw CocoaError(.fileReadTooLarge) }
+                let generation = try IntakeStaging.gate().ticket()
                 var count=0
                 for provider in providers {
                     let type = provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) ? UTType.pdf.identifier : provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) ? UTType.image.identifier : UTType.data.identifier
@@ -24,13 +25,13 @@ import UniformTypeIdentifiers
                         provider.loadFileRepresentation(forTypeIdentifier:type) { url,error in
                             guard let url else { continuation.resume(throwing:error ?? CocoaError(.fileNoSuchFile)); return }
                             // Copy inside the provider callback: its URL expires on return.
-                            do { continuation.resume(returning:try IntakeStaging.stage(url)) }
+                            do { continuation.resume(returning:try IntakeStaging.stage(url, generation: generation)) }
                             catch { continuation.resume(throwing:error) }
                         }
                     }
                     count += 1
                 }
-                message.text = "\(count) Dateien gesichert. Öffne Laßnitzhöhe, um die Pläne zu erkennen."
+                message.text = "\(count) Dateien gesichert. Die Erkennung kann in Laßnitzhöhe gestartet werden."
             } catch { message.text = "\(error.localizedDescription) Bereits gesicherte Dateien bleiben für Laßnitzhöhe verfügbar." }
             done.isEnabled=true
         }

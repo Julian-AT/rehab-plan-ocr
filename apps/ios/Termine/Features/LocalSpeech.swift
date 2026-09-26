@@ -72,8 +72,8 @@ enum LocalSpeechError: LocalizedError {
                     SFSpeechRecognizer.requestAuthorization { @Sendable status in continuation.resume(returning: status) }
                 }
                 guard generation == current else { throw CancellationError() }
-                guard authorization == .authorized else { throw LocalSpeechError.message("Erlaube die Spracherkennung in den iPhone-Einstellungen. Du kannst auch in den Gesprächsdetails schreiben.") }
-                guard let recognizer = Self.makeRecognizer() else { throw LocalSpeechError.message("Die lokale deutsche Spracherkennung ist noch nicht verfügbar. Aktiviere Deutsch für die Diktierfunktion. In den Gesprächsdetails kannst du auch schreiben.") }
+                guard authorization == .authorized else { throw LocalSpeechError.message("Spracherkennung in den iPhone-Einstellungen erlauben. Texteingabe ist in den Gesprächsdetails möglich.") }
+                guard let recognizer = Self.makeRecognizer() else { throw LocalSpeechError.message("Die lokale deutsche Spracherkennung ist noch nicht verfügbar. Deutsch für die Diktierfunktion aktivieren. Texteingabe ist in den Gesprächsdetails möglich.") }
                 self.recognizer = recognizer
                 let input = SpeechInput()
                 input.frame = { @Sendable [weak self] voice, level in
@@ -181,11 +181,11 @@ struct VoiceSettingsView: View {
                     else { output.speak("Am 14. September um 9 Uhr 15: Physiotherapie, Raum 2.14 in Laßnitzhöhe.") }
                 }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
                 if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
-                if output.phase == .failed { Text(output.status).foregroundStyle(.red) }
+                if output.phase == .failed { Text(output.status).foregroundStyle(AppPalette.destructive) }
             } footer: { Text("Die Stimme ist bereits enthalten und funktioniert auf diesem iPhone ohne Internet.") }
             Section {
                 LabeledContent("Spracherkennung", value: LocalSpeechRecorder.makeRecognizer() == nil ? "Nicht verfügbar" : "Auf diesem iPhone")
-            } footer: { Text("Gespräch starten und Mikrofon sowie Spracherkennung erlauben. Du brauchst keine Sprachdateien in der App einzurichten. Nach etwa 1,2 Sekunden Sprechpause antworte ich automatisch. Du kannst mich durch Hineinsprechen unterbrechen oder das Gespräch pausieren.") }
+            } footer: { Text("Gespräch starten und Mikrofon sowie Spracherkennung erlauben. Zusätzliche Sprachdateien sind nicht nötig. Nach etwa 1,2 Sekunden Sprechpause beginnt die Antwort automatisch. Hineinsprechen unterbricht die Wiedergabe; das Gespräch kann jederzeit pausiert werden.") }
 
         }.pageTitle("Sprache")
             .onAppear { rate = output.rate }

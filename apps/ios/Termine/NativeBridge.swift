@@ -117,7 +117,7 @@ func userMessage(_ error: Error) -> String {
     switch app {
     case .Validation(let message), .Storage(let message): return message
     case .ExpiredScan: return "Dieser Plan wurde gelöscht oder ist noch nicht erkannt."
-    case .StaleRevision: return "Es gibt neuere Änderungen. Lade den aktuellen Stand, bevor du erneut speicherst."
+    case .StaleRevision: return "Es gibt neuere Änderungen. Vor erneutem Speichern den aktuellen Stand laden."
     case .StaleProposal: return "Die Prüfdaten wurden geändert. Erstelle eine neue Kalendervorschau."
     case .PermissionDenied: return "Kalenderzugriff fehlt. Erlaube den Zugriff oder exportiere eine ICS-Datei."
     case .UncertainWrite: return "Der Schreibstatus ist unklar. Gleiche den Kalender vor weiteren Änderungen ab."

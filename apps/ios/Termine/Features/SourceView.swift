@@ -165,8 +165,8 @@ struct CorrectionView: View {
                             }
                         }
                     }
-                } header: { Text("Seitenecken im Originalfoto") } footer: { Text("Die Korrektur startet eine neue Erkennung. Das bisherige Foto und deine Prüfdaten bleiben erhalten.") }
-                if let error { Text(error).foregroundStyle(.red) }
+                } header: { Text("Seitenecken im Originalfoto") } footer: { Text("Die Korrektur startet eine neue Erkennung. Das bisherige Foto und die Prüfdaten bleiben erhalten.") }
+                if let error { Text(error).foregroundStyle(AppPalette.destructive) }
             }
             .pageTitle("Foto korrigieren")
             .toolbar {

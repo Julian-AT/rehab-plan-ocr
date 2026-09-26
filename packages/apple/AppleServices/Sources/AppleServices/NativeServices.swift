@@ -26,9 +26,9 @@ struct ShareArgs: Decodable {
   let content: String
 }
 
-public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate,
-  PHPickerViewControllerDelegate
-{
+/// EventKit and its date formatter are owned by calendarQueue. Presentation is
+/// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
+public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
   public func perform(_ command: String, arguments: Data, completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
     let correlation = UUID().uuidString
@@ -71,8 +71,8 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
       case "reminderStatus": reminderStatus(request)
       case "pendingEventOpen": try pendingEventOpen(request)
       case "testReminder": testReminder(request)
-      case "camera": camera(request)
-      case "photos": photos(request)
+      case "camera": DispatchQueue.main.async { NativePresentation.shared.camera(request) }
+      case "photos": DispatchQueue.main.async { NativePresentation.shared.photos(request) }
       case "decodePhoto":
         DispatchQueue.global(qos: .userInitiated).async {
           do { try self.decodePhoto(request) } catch { request.reject(error.localizedDescription) }
@@ -82,8 +82,8 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
           do { try self.recognize(request) } catch { request.reject(error.localizedDescription) }
         }
       case "protectStorage": try protectStorage(request)
-      case "share": try share(request)
-      case "deviceInfo": deviceInfo(request)
+      case "share": DispatchQueue.main.async { do { try NativePresentation.shared.share(request) } catch { request.reject(error.localizedDescription) } }
+      case "deviceInfo": DispatchQueue.main.async { NativePresentation.shared.deviceInfo(request) }
       default: request.reject("Unbekannte native Aktion.")
       }
     } catch { request.reject(error.localizedDescription) }
@@ -91,28 +91,8 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
   private let store = AgendaService.shared.store
   private let dedicatedCalendar = DedicatedCalendar()
   private let calendarQueue = AgendaService.shared.queue
-  private weak var controller: UIViewController?
-  private var captureServiceRequest: ServiceRequest?
   private let iso = ISO8601DateFormatter()
-
-  public func start() {
-    AgendaService.shared.start()
-    NotificationCenter.default.addObserver(
-      forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
-    ) { [weak self] _ in
-      self?.captureServiceRequest?.reject("Aufnahme durch Hintergrundwechsel unterbrochen.")
-      self?.captureServiceRequest = nil
-    }
-  }
-  private func presenter() -> UIViewController? {
-    var root =
-      controller
-      ?? UIApplication.shared.connectedScenes.compactMap {
-        ($0 as? UIWindowScene)?.keyWindow?.rootViewController
-      }.first
-    while let presented = root?.presentedViewController { root = presented }
-    return root
-  }
+  public func start() { AgendaService.shared.start(); Task { @MainActor in NativePresentation.shared.start() } }
   private func dictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]
   }
@@ -352,7 +332,7 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
     }
   }
   // Permission is requested while editing, but scheduling changes only on Save.
-  // Keep enableReminders' immediate-activation behavior for the Tauri adapter.
+  // Keep enableReminders' existing immediate-activation behavior for older callers.
   func requestReminderPermission(_ invoke: ServiceRequest) {
     UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, error in
       self.calendarQueue.async {
@@ -385,82 +365,6 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
       AgendaService.shared.testNotification { result in
         switch result { case .success(let value): invoke.resolve(value); case .failure(let error): invoke.reject(error.localizedDescription) }
       }
-    }
-  }
-  func camera(_ invoke: ServiceRequest) {
-    DispatchQueue.main.async {
-      guard self.captureServiceRequest == nil else {
-        invoke.reject("Eine Aufnahme ist bereits geöffnet.")
-        return
-      }
-      guard UIImagePickerController.isSourceTypeAvailable(.camera), let root = self.presenter()
-      else {
-        invoke.reject("Kamera nicht verfügbar. Foto importieren.")
-        return
-      }
-      self.captureServiceRequest = invoke
-      let picker = UIImagePickerController()
-      picker.sourceType = .camera
-      picker.delegate = self
-      root.present(picker, animated: true)
-    }
-  }
-  func photos(_ invoke: ServiceRequest) {
-    DispatchQueue.main.async {
-      guard self.captureServiceRequest == nil, let root = self.presenter() else {
-        invoke.reject("Fotoauswahl nicht verfügbar.")
-        return
-      }
-      self.captureServiceRequest = invoke
-      var config = PHPickerConfiguration()
-      config.filter = .images
-      config.selectionLimit = 1
-      config.preferredAssetRepresentationMode = .current
-      let picker = PHPickerViewController(configuration: config)
-      picker.delegate = self
-      root.present(picker, animated: true)
-    }
-  }
-  public func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-    picker.dismiss(animated: true)
-    captureServiceRequest?.reject("Aufnahme abgebrochen.")
-    captureServiceRequest = nil
-  }
-  public func imagePickerController(
-    _ picker: UIImagePickerController,
-    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-  ) {
-    picker.dismiss(animated: true)
-    let request = captureServiceRequest
-    captureServiceRequest = nil
-    guard let image = info[.originalImage] as? UIImage else {
-      request?.reject("Aufnahme konnte nicht gelesen werden.")
-      return
-    }
-    DispatchQueue.global(qos: .userInitiated).async {
-      guard let data = image.jpegData(compressionQuality: 0.96) else {
-        request?.reject("Aufnahme konnte nicht gelesen werden.")
-        return
-      }
-      request?.resolve(["base64": data.base64EncodedString(), "filename": "camera.jpg"])
-    }
-  }
-
-  public func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-    picker.dismiss(animated: true)
-    let invoke = captureServiceRequest
-    captureServiceRequest = nil
-    guard let result = results.first else {
-      invoke?.reject("Fotoauswahl abgebrochen.")
-      return
-    }
-    result.itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) {
-      data, _ in
-      guard let data else {
-        invoke?.reject("Foto nicht lokal verfügbar.")
-        return
-      }
-      invoke?.resolve(["base64": data.base64EncodedString(), "filename": "photo-import.heic"])
     }
   }
   func decodePhoto(_ invoke: ServiceRequest) throws {
@@ -527,7 +431,7 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
           "duration_ms": Int(Date().timeIntervalSince(started) * 1000),
           "manifest": [
             "engine": "Apple Vision", "revision": request.revision,
-            "system_version": UIDevice.current.systemVersion, "language_correction": false,
+            "system_version": ProcessInfo.processInfo.operatingSystemVersionString, "language_correction": false,
           ],
         ])
       } catch { invoke.reject("Lokale Vision-Erkennung fehlgeschlagen.") }
@@ -536,33 +440,5 @@ public final class NativeServices: NSObject, UIImagePickerControllerDelegate, UI
   func protectStorage(_ invoke: ServiceRequest) throws {
     let root = try AppStorage.prepare()
     invoke.resolve(["path": root.path, "excluded_from_backup": true])
-  }
-  func share(_ invoke: ServiceRequest) throws {
-    let args = try invoke.parseArgs(ShareArgs.self)
-    let filename = URL(fileURLWithPath: args.filename).lastPathComponent
-    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    let url = directory.appendingPathComponent(filename)
-    try args.content.write(to: url, atomically: true, encoding: .utf8)
-    DispatchQueue.main.async {
-      guard let root = self.presenter() else {
-        try? FileManager.default.removeItem(at: directory)
-        invoke.reject("Teilen nicht verfügbar.")
-        return
-      }
-      let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-      sheet.popoverPresentationController?.sourceView = root.view
-      sheet.completionWithItemsHandler = { _, _, _, _ in
-        try? FileManager.default.removeItem(at: directory)
-      }
-      root.present(sheet, animated: true)
-      invoke.resolve()
-    }
-  }
-  func deviceInfo(_ invoke: ServiceRequest) {
-    invoke.resolve([
-      "model": UIDevice.current.model, "system": UIDevice.current.systemVersion,
-      "physical_validation": false,
-    ])
   }
 }

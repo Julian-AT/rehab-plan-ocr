@@ -8,9 +8,9 @@ final class NotificationDeadline: @unchecked Sendable {
     private let seconds: TimeInterval
     private var jobs: [UUID: Job] = [:]
     init(queue: DispatchQueue, seconds: TimeInterval) { self.queue = queue; self.seconds = seconds }
-    func run<Value>(operation: @escaping () async throws -> Value,
-                    late: ((Result<Value, Error>) -> Void)? = nil,
-                    completion: @escaping (Result<Value, Error>) -> Void) {
+    func run<Value: Sendable>(operation: @escaping @Sendable () async throws -> Value,
+                    late: (@Sendable (Result<Value, Error>) -> Void)? = nil,
+                    completion: @escaping @Sendable (Result<Value, Error>) -> Void) {
         let id = UUID()
         let timeout = DispatchWorkItem { [weak self] in
             guard let self, let job = self.jobs.removeValue(forKey: id) else { return }

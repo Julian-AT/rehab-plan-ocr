@@ -265,14 +265,14 @@ struct ReviewView: View {
                         if !model.targetLocked { Button("Ändern") { setup = true }.controlHeight().disabled(model.saving || model.loading) }
                     }
                     if model.saving { ProcessingRow(text: "Im Kalender speichern …") }
-                    else if model.needsCalendar { Button("Kalender einrichten") { setup = true }.buttonStyle(.borderedProminent).controlSize(.large) }
+                    else if model.needsCalendar { Button("Kalender einrichten") { setup = true }.buttonStyle(AppPrimaryButtonStyle()).controlSize(.large) }
                     else {
                         Button {
                             Task { await model.save(); changed() }
                         } label: {
                             Text(model.saveLabel)
                                 .frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true)
-                        }.buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("save-plan")
+                        }.buttonStyle(AppPrimaryButtonStyle()).controlSize(.large).accessibilityIdentifier("save-plan")
                             .disabled(model.loading || model.selected.isEmpty || !model.hasWrites)
                     }
                 }.frame(maxWidth: .infinity).padding().background(.bar)

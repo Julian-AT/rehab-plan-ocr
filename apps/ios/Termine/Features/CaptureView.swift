@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// Apple's camera includes its own shutter, camera switch, retake and use-photo
 /// controls. An import begins only after the user accepts the photograph.
 struct CaptureView: View {
-    let onShutter: @MainActor () -> String
+    let onShutter: @MainActor () -> String?
     let onPhoto: @MainActor (Data, String) -> Void
     let onFailure: @MainActor (Error, String) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -16,7 +16,7 @@ struct CaptureView: View {
         Group {
             if allowed {
                 NativeCamera { result in
-                    let id = onShutter()
+                    guard let id = onShutter() else { dismiss(); return }
                     switch result {
                     case .success(let bytes): onPhoto(bytes, id)
                     case .failure(let error): onFailure(error, id)
@@ -29,7 +29,7 @@ struct CaptureView: View {
                             ContentUnavailableView {
                                 Label("Kamera nicht verfügbar", systemImage: "camera")
                             } description: {
-                                Text(UIImagePickerController.isSourceTypeAvailable(.camera) ? "Erlaube den Kamerazugriff in den iPhone-Einstellungen." : "Auf diesem Gerät ist keine Kamera verfügbar. Du kannst ein Bild aus Fotos auswählen.")
+                                Text(UIImagePickerController.isSourceTypeAvailable(.camera) ? "Kamerazugriff in den iPhone-Einstellungen erlauben." : "Auf diesem Gerät ist keine Kamera verfügbar. Bilder können aus Fotos ausgewählt werden.")
                             } actions: {
                                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
                                     Button("Einstellungen öffnen") { openURL(URL(string: UIApplication.openSettingsURLString)!) }

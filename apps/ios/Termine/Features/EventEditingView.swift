@@ -116,7 +116,7 @@ struct ProposalCard: View {
             }
             if proposal.kind == "remove" { Text("Das löscht den Kalendereintrag. Es ist keine Absage bei der Klinik.").foregroundStyle(.secondary) }
             if proposal.undo_of != nil && proposal.kind == "create" { Text("Wiederherstellung als neuer Eintrag. Versendete Einladungen oder Benachrichtigungen werden nicht zurückgenommen.") }
-            Button(action: confirm) { Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true) }.buttonStyle(.borderedProminent).disabled(busy).accessibilityIdentifier("confirm-event")
+            Button(action: confirm) { Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true) }.buttonStyle(AppPrimaryButtonStyle()).disabled(busy).accessibilityIdentifier("confirm-event")
             Button("Angaben korrigieren", action: cancel).controlHeight().disabled(busy)
         }
     }
@@ -181,7 +181,7 @@ struct EventEditorView: View {
                     }
                 }
                 if model.busy { ProcessingRow(text: "Kalender prüfen …") }
-                if let error = model.error { Text(error).foregroundStyle(.red) }
+                if let error = model.error { Text(error).foregroundStyle(AppPalette.destructive) }
             }.pageTitle(original == nil ? "Neuer Termin" : "Termin bearbeiten")
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() }.disabled(model.busy) } }
                 .task { await loadCalendar() }
@@ -223,7 +223,7 @@ struct EventHistoryView: View {
         List {
             if let proposal = model.proposal { ProposalCard(proposal: proposal, busy: model.busy, confirm: { Task { await model.confirm(); await load() } }, cancel: { model.interrupt() }) }
             if let result = model.result { Text(result) }
-            if let error = model.error { Text(error).foregroundStyle(.red) }
+            if let error = model.error { Text(error).foregroundStyle(AppPalette.destructive) }
             Button("Schreibstatus abgleichen") { Task { do { let _: [String: JSONValue] = try await core.eventRequest("reconcileEventMutations"); await load() } catch { model.error = userMessage(error) } } }.controlHeight()
             ForEach(history) { item in
                 VStack(alignment: .leading, spacing: AppSpacing.medium) {

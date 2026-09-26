@@ -71,7 +71,7 @@ struct CalendarView: View {
                     Text("\(outcome.results.filter { $0.status == .saved }.count) Änderungen gespeichert · \(outcome.results.filter { $0.status != .saved }.count) offen")
                     Button("Rückgängig") { history = true }
                 }
-                if let error { Text(error).foregroundStyle(.red) }
+                if let error { Text(error).foregroundStyle(AppPalette.destructive) }
                 if busy { ProcessingRow(text: "Wird vorbereitet …") }
             }.pageTitle("Export und Ersetzen")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.disabled(busy) } }
@@ -146,7 +146,7 @@ struct RecoveryView: View {
                     Text("Zuerst abgleichen. Ein unklarer Schreibvorgang wird dabei nicht erneut ausgeführt.")
                     Button("Kalender abgleichen") { Task { await reconcile() } }.disabled(busy)
                 }
-                if let error { Text(error).foregroundStyle(.red) }
+                if let error { Text(error).foregroundStyle(AppPalette.destructive) }
                 ForEach(pending, id: \.attemptId) { item in
                     VStack(alignment: .leading) {
                         Text(item.operation.after?.title ?? item.operation.before?.title ?? "Termin").font(.headline)

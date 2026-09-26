@@ -9,7 +9,7 @@ struct VoicePresentation {
     let level: Double
     @MainActor init(model: VoiceModel, output: SpeechOutput) {
         if model.recorder.state == .recording {
-            phase = .recording; title = "Ich höre zu"; level = model.recorder.level
+            phase = .recording; title = "Spracherkennung läuft"; level = model.recorder.level
         } else if output.phase == .playing {
             phase = .playback; title = "Antwort wird vorgelesen"; level = output.level
         } else if model.recorder.state != .idle || model.busy || model.edits.busy {
@@ -113,7 +113,7 @@ struct VoiceView: View {
             Button(model.mainButtonTitle, systemImage: model.sessionState == .paused ? "play" : model.sessionState == .stopped ? "mic" : "pause") {
                 Task { await model.toggleSession() }
             }
-            .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.extraLarge)
+            .buttonStyle(AppPrimaryButtonStyle(capsule: true)).buttonBorderShape(.capsule).controlSize(.extraLarge)
             .accessibilityIdentifier("speak")
             .accessibilityHint("Einmal starten, automatisch antworten und weiter zuhören. Hineinsprechen unterbricht die Antwort.")
             .disabled(model.edits.busy || model.edits.proposal != nil)
@@ -140,7 +140,7 @@ struct VoiceView: View {
                         ProposalCard(proposal: proposal, busy: model.edits.busy,
                                      confirm: { Task { await model.confirmProposal() } }, cancel: { model.cancelSession() })
                     }
-                    if let error = model.edits.error { Section { Text(error).foregroundStyle(.red) } }
+                    if let error = model.edits.error { Section { Text(error).foregroundStyle(AppPalette.destructive) } }
                 }.pageTitle("Termin prüfen")
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { model.cancelSession() }.disabled(model.edits.busy) } }
             }.interactiveDismissDisabled(model.edits.busy)
@@ -165,7 +165,7 @@ private struct VoiceDetailsView: View {
     var body: some View {
         Form {
             Section("Nachricht") {
-                TextField("Dein Anliegen", text: $message, axis: .vertical).lineLimit(1...4).accessibilityIdentifier("voice-message")
+                TextField("Anliegen", text: $message, axis: .vertical).lineLimit(1...4).accessibilityIdentifier("voice-message")
                 Button("Senden", systemImage: "arrow.up") {
                     let text = message; message = ""
                     Task { await model.submitText(text) }
@@ -173,7 +173,7 @@ private struct VoiceDetailsView: View {
                     .accessibilityIdentifier("voice-send")
             }
             if !model.recorder.transcript.isEmpty {
-                Section("Deine Worte") { Text(model.recorder.transcript).textSelection(.enabled).accessibilityIdentifier("voice-transcript") }
+                Section("Erkannter Text") { Text(model.recorder.transcript).textSelection(.enabled).accessibilityIdentifier("voice-transcript") }
             }
             if !model.response.isEmpty {
                 Section("Antwort") {

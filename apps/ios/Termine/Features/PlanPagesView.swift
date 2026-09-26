@@ -10,47 +10,49 @@ struct CaptureActions: View {
     var body: some View {
         Button(parentID == nil ? "Foto aufnehmen" : "Weitere Seite fotografieren", systemImage: "camera") {
             scanner.presentCapture(.camera, parent: parentID)
-        }.accessibilityIdentifier("\(context)-camera").disabled(parentID == nil && scanner.running)
+        }.accessibilityIdentifier("\(context)-camera").disabled(!scanner.isReady || (parentID == nil && scanner.running))
         Button(parentID == nil ? "Aus Fotos wählen" : "Weitere Seite aus Fotos", systemImage: "photo.on.rectangle") {
             scanner.presentCapture(.photos, parent: parentID)
-        }.accessibilityIdentifier("\(context)-photos").disabled(parentID == nil && scanner.running)
+        }.accessibilityIdentifier("\(context)-photos").disabled(!scanner.isReady || (parentID == nil && scanner.running))
         Button("Datei importieren", systemImage: "folder") {
             scanner.presentCapture(.files, parent: parentID)
-        }.accessibilityIdentifier("\(context)-files").disabled(scanner.running)
+        }.accessibilityIdentifier("\(context)-files").disabled(!scanner.isReady || scanner.running)
     }
 }
 
-struct CapturePresentation: ViewModifier {
-    @Bindable var scanner: ScanModel
+/// Each presentation has an immutable erasure ticket. Replacing this view cannot
+/// authorize callbacks from an earlier camera, picker, or document provider.
+struct CapturePresentation: View {
+    let scanner: ScanModel
+    let session: ScanModel.CaptureSession
     @State private var photo: PhotosPickerItem?
-    func body(content: Content) -> some View {
-        content
-            .fullScreenCover(isPresented: $scanner.showCamera) {
+    @State private var camera = false
+    @State private var photos = false
+    @State private var files = false
+    var body: some View {
+        Color.clear.frame(width: 0, height: 0)
+            .task {
+                switch session.source { case .camera: camera = true; case .photos: photos = true; case .files: files = true }
+            }
+            .fullScreenCover(isPresented: $camera, onDismiss: { scanner.dismissCapture(session) }) {
                 CaptureView(onShutter: {
-                    let id = scanner.beginCapture(parent: scanner.captureParent)
-                    scanner.showCamera = false
+                    let id = scanner.beginCapture(parent: session.parent, ticket: session.ticket)
+                    camera = false
                     return id
                 }, onPhoto: { bytes, id in scanner.receive(bytes, id: id) },
                 onFailure: { error, id in scanner.fail(error, id: id) })
             }
-            .photosPicker(isPresented: $scanner.showPhotos, selection: $photo, matching: .images, preferredItemEncoding: .current)
+            .photosPicker(isPresented: $photos, selection: $photo, matching: .images, preferredItemEncoding: .current)
             .onChange(of: photo) { _, item in
-                guard let item else { return }
-                let parent = scanner.captureParent
-                let id = scanner.beginCapture(parent: parent)
-                Task {
-                    defer { photo = nil }
-                    do {
-                        guard let staged = try await item.loadTransferable(type: StagedPhoto.self) else { throw AppError.Validation(message: "Foto ist nicht lokal verfügbar.") }
-                        scanner.start(staged.url, force: parent != nil, captureID: id)
-                    } catch { scanner.fail(error, id: id) }
-                }
+                if let item { scanner.loadPhoto(item, session: session); photo = nil }
             }
-            .fileImporter(isPresented: $scanner.showFiles, allowedContentTypes: [.image, .pdf]) { result in
-                switch result {
-                case .success(let url): scanner.importFile(url, parent: scanner.captureParent)
-                case .failure(let error): scanner.error = userMessage(error)
+            .fileImporter(isPresented: $files, allowedContentTypes: [.image, .pdf]) { result in
+                if case .success(let url) = result {
+                    scanner.importFile(url, parent: session.parent, ticket: session.ticket)
+                } else if case .failure(let error) = result, scanner.captureSession?.id == session.id {
+                    scanner.error = userMessage(error)
                 }
+                scanner.dismissCapture(session)
             }
     }
 }
@@ -102,7 +104,7 @@ struct PlanPagesView: View {
                     if index > 0 { Button("Seite aus Plan lösen", role: .destructive) { remove = page }.disabled(scanner.running) }
                 }
             }
-            if let error { Text(error).foregroundStyle(.red) }
+            if let error { Text(error).foregroundStyle(AppPalette.destructive) }
         }
         .pageTitle("Seiten")
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }

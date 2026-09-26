@@ -30,3 +30,18 @@ enum AppSpacing {
     static let section: CGFloat = 20
     static let generous: CGFloat = 32
 }
+
+/// Explicit foreground/background pairing keeps filled actions legible in both
+/// appearances. Padding belongs to the label so its complete area is tappable.
+struct AppPrimaryButtonStyle: ButtonStyle {
+    var capsule = false
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 44)
+            .foregroundStyle(AppPalette.onAction)
+            .background(AppPalette.action, in: .rect(cornerRadius: capsule ? 100 : 14))
+            .contentShape(.rect)
+            .opacity(enabled ? (configuration.isPressed ? 0.72 : 1) : 0.4)
+    }
+}

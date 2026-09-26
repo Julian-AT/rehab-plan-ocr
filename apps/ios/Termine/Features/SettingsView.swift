@@ -25,7 +25,7 @@ struct SettingsSaveStatus: View {
     var body: some View {
         if let error = store.error {
             Section {
-                Text(error).foregroundStyle(.red)
+                Text(error).foregroundStyle(AppPalette.destructive)
                 Text("Angezeigt wird der zuletzt gespeicherte Stand.").foregroundStyle(.secondary)
                 Button("Erneut versuchen") { if store.canRetry { store.retry() } else { Task { await store.load() } } }
                     .accessibilityIdentifier("retry-settings")
@@ -41,6 +41,7 @@ struct SettingsView: View {
     let core: NativeApplication
     var page: Page = .appearance
     @Environment(PreferencesStore.self) private var store
+    @Environment(ScanModel.self) private var scanner
     @State private var reminderStatus = ""
     @State private var testingReminder = false
     @State private var testResult: String?
@@ -65,7 +66,7 @@ struct SettingsView: View {
                         Picker("Erscheinungsbild", selection: store.binding(\.appearance, fallback: "system")) {
                             Text("System").tag("system"); Text("Hell").tag("light"); Text("Dunkel").tag("dark")
                         }.accessibilityIdentifier("appearance-picker")
-                    } footer: { Text("Schriftgröße und Bedienungshilfen folgen den Einstellungen deines iPhones.") }
+                    } footer: { Text("Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.") }
                     Section {
                         Picker("Kalendergröße", selection: $density) {
                             ForEach(AgendaDensity.allCases, id: \.rawValue) { Text($0.title).tag($0.rawValue) }
@@ -146,8 +147,7 @@ struct SettingsView: View {
             Button("Alle lokalen Daten löschen", role: .destructive) {
                 Task {
                     erasing = true; defer { erasing = false }
-                    guard await store.flush() else { return }
-                    do { try await core.eraseAll(); await store.reset() } catch { self.error = userMessage(error) }
+                    do { try await scanner.eraseLocalData(store) } catch { self.error = userMessage(error) }
                 }
             }
         }

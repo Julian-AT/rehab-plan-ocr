@@ -129,7 +129,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.widgets
         TARGETED_DEVICE_FAMILY: "1"
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "6.0"
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:
@@ -157,7 +157,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.notification-content
         TARGETED_DEVICE_FAMILY: "1"
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "6.0"
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:

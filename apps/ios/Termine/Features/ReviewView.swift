@@ -86,7 +86,7 @@ struct AppointmentEditor: View {
                         Label(issue.message, systemImage: "exclamationmark.circle").font(.callout)
                     }
                 }
-                if let error = review.error { Text(error).foregroundStyle(.red) }
+                if let error = review.error { Text(error).foregroundStyle(AppPalette.destructive) }
             }
             .pageTitle("Termin bearbeiten")
             .toolbar {

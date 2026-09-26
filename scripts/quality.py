@@ -139,7 +139,7 @@ def tests(portable):
     run("cargo", "build", "--locked", "-p", "reha-core", "--bin", "reha")
     run("uv", "run", "--locked", "python", "tests/verify-ics.py", env=dict(ENV, REHA_BINARY=str(ROOT / "target/debug/reha")))
     if APPLE and not portable:
-        for probe in ["agenda-projection", "agenda", "voice-rules", "conversation-rules", "ordered-settings", "diagnostics", "vad", "native-bindings"]:
+        for probe in ["agenda-projection", "agenda", "voice-rules", "conversation-rules", "ordered-settings", "diagnostics", "intake-erasure", "vad", "native-bindings"]:
             run("sh", f"scripts/test-{probe}.sh")
 
 
