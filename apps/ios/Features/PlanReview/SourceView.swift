@@ -55,14 +55,14 @@ struct SourceView: View {
   let polygons: [[Point]]
   @Environment(\.dismiss) private var dismiss
   @State private var image: UIImage?
-  @State private var pdfURL: URL?
+  @State private var pdfDocument: PDFDocument?
   @State private var dimensions = CGSize(width: 1, height: 1)
   @State private var error: String?
   var body: some View {
     NavigationStack {
       Group {
-        if let pdfURL {
-          SourcePDF(url: pdfURL)
+        if let pdfDocument {
+          SourcePDF(document: pdfDocument)
         } else if let image {
           ZoomImage(image: image, polygons: polygons, dimensions: dimensions).accessibilityLabel(
             "Quellfoto. Zum Vergrößern aufziehen und zum Verschieben ziehen.")
@@ -84,7 +84,7 @@ struct SourceView: View {
             try Task.checkCancellation()
             dimensions = CGSize(width: Int(review.pageWidth), height: Int(review.pageHeight))
             image = loaded
-            pdfURL = nil
+            pdfDocument = nil
           } else {
             try Task.checkCancellation()
             let path = try await core.artifactPath(id: id, artifact: "source.bin")
@@ -93,14 +93,16 @@ struct SourceView: View {
             let isPDF = try await DisplayImage.isPDF(url)
             try Task.checkCancellation()
             if isPDF {
-              pdfURL = url
+              let document = try await DisplayPDF.load(url)
+              try Task.checkCancellation()
+              pdfDocument = document
               image = nil
             } else {
               let loaded = try await DisplayImage.load(url)
               try Task.checkCancellation()
               dimensions = loaded.size
               image = loaded
-              pdfURL = nil
+              pdfDocument = nil
             }
           }
         } catch {
@@ -376,12 +378,14 @@ struct DiagnosticsView: View {
 }
 
 private struct SourcePDF: UIViewRepresentable {
-  let url: URL
+  let document: PDFDocument
   func makeUIView(context: Context) -> PDFView {
     let view = PDFView()
     view.autoScales = true
-    view.document = PDFDocument(url: url)
+    view.document = document
     return view
   }
-  func updateUIView(_ uiView: PDFView, context: Context) {}
+  func updateUIView(_ uiView: PDFView, context: Context) {
+    if uiView.document !== document { uiView.document = document }
+  }
 }
