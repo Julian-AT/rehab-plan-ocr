@@ -58,3 +58,29 @@ run separately from simulator measurements and other model work. Existing
 historical reports and hash-bound helper sources are preserved unchanged.
 This is a bounded failure diagnosis, not OCR accuracy, export, real-plan or
 physical-device acceptance. Full-corpus evaluation does not start automatically.
+
+## Observed result (20 September 2026)
+
+The frozen protocol ran in `.local/runs/ocr-batchnorm-trace-20260926-s20-001`
+after simulator work and archive maintenance finished. All four saved-input/
+complete-output controls reproduced byte for byte. Instrumentation also preserved
+both final outputs byte for byte. All 99 frozen sources and all three retained
+stopping-batch artifacts were rechecked unchanged. Protocol SHA-256 remains
+`7f240f19566d533d471a249def7a5584ba50d6d3679551eb66ea281efe2993a6`;
+report SHA-256 is `197b54e49f2bf92ab848d2d87c34c10ea1bdc1229c3864ea8585dd7c1da06bca`.
+
+The first batch covers 16 of 302 mapped outputs. The first eleven, including
+the first three convolution/BatchNorm/ReLU paths, pooling and concatenation,
+are byte-identical. The next output, `p2o.pd_op.conv2d.3.0` (PIR index 353,
+shape 1×48×12×160), differs by at most 9.918212890625e-05. None of its
+92,160 values violates the unchanged tolerance. Subsequent outputs in this
+batch also remain within tolerance. This locates an early byte difference,
+not the cause of the final graph's failing value.
+
+There are 243 unmapped float outputs, including twelve auxiliary BatchNorm
+outputs before the mapped difference. Consequently the report explicitly leaves
+`earliest_operation_established=false`. The retained NPZ, instrumented ONNX and
+PIR permit a separate same-input convolution replay; that comparison and any
+subsequent graph correction require their own frozen protocol. No weights,
+deployed graph, thresholds or full-corpus selection changed. OCR export and
+real-plan qualification remain open.
