@@ -41,7 +41,9 @@ Systemeigene Kontosynchronisierung liegt außerhalb dieses App-Pfads; nach
 EventKit-Änderungsmeldungen werden die lokalen Terminobjekte erneut abgefragt.
 
 Ein Erkennungslauf belegt die Pipeline. Abbruch wird vor Stufen und zwischen
-Ausschnitten geprüft; ein einzelner ONNX-Aufruf ist nicht vorzeitig unterbrechbar.
+Ausschnitten geprüft. Ein Watchdog signalisiert Abbruch oder Fristablauf auch
+an die RunOptions eines laufenden ONNX-Aufrufs. Dieser kooperative Abbruch
+garantiert weder eine harte Zeitgrenze noch die Unterbrechung laufender Systemcodecs.
 Generationstickets verhindern die Übernahme alter Kamera-, Foto-, PDF- und
 Sprachrückmeldungen. Vollständiges Löschen sperrt die Annahme, wartet auf alle
 Produzenten und löscht erst danach. Die Teilen-Erweiterung nutzt zusätzlich einen
