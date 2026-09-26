@@ -78,3 +78,18 @@ Die privaten Abschlussbelege sind `.local/maintenance/assistant-smoke-a-objects-
 (SHA256 `de0fc5adb5157882b7b70dddc7cb0dcb285bf787960c454b0fc938de1f064879`) und
 `.local/maintenance/model-objects-20260926-s21-001.receipt.json`
 (SHA256 `eaf310a03a1300e73e0d9f5e27ff8b1655560775624648653366e95ff2ff3482`). Historische Laufberichte bleiben unverändert.
+
+Nach den abgeschlossenen Stage2-/Stage3-Exportprüfungen wurde ein neuer Plan mit
+neun registrierten Baselinepfaden angewendet. Er umfasst zusätzlich deren zwei
+neu erzeugte `baseline.gguf`; alle neun Pfade behalten erneut die zugesagten
+Bytes und Metadaten. Ausgewählte trainierte Modelle und Optimizer bleiben unverändert.
+Der freie Volumenplatz stieg während dieser Aktion von 35.555.594.240 auf
+37.056.774.144 Bytes: beobachtet **+1.501.179.904 Bytes**, einschließlich anderer
+Systemaktivität. Das ist keine Zusage exklusiv freigegebener APFS-Extents;
+die 44-GiB-Voraussetzung war auch danach noch nicht erfüllt.
+
+Der neue Plan `.local/maintenance/model-objects-20260926-s21-002.json` hat SHA256
+`f6a92097297b9614e3afed2b590d07fdfc4e2e82763fe98223b69b6108cdf5da`,
+sein abgeschlossener Beleg `model-objects-20260926-s21-002.receipt.json` SHA256
+`db309ef85b6cf11ffd99a86189b654d2e8743563219dfe24b3111363053f5d9d`.
+Die vorherigen Pläne und Belege bleiben erhalten.
