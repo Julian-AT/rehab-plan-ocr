@@ -41,11 +41,18 @@ limits and repeatability after abandoned requests. Model answers are scored agai
 the original invented development cases and compared with the prior desktop GGUF
 outputs. These correlated checks do not increase the independent data count.
 
-The app still needs the strict structured-output adapter, common-provider trials,
-approved help content and a qualified model before production selection. Live
-calendar lookup, ownership/snapshot validation and visible mutation confirmation
-remain app responsibilities. Package linkage/notices must join the shipping
-inventory when that integration becomes part of the app's selected build.
+The app's strict structured-output adapter and explicit provider selection are
+implemented in `CustomAssistantProvider` and `AssistantProviderSelection`.
+The separate [`assistant-trial.yml`](../../../apps/ios/assistant-trial.yml) enables
+native inference only in the Debug trial with `--assistant-model-trial`.
+Spoken app guidance uses the same `AppHelpContent` as the settings views. Existing
+provider comparisons and router replays remain development evidence; see the
+[assistant acceptance record](../../../docs/development/assistant-safety.md).
+A qualified model, independently reviewed conversations and physical-device
+acceptance are still required before production selection. Live calendar lookup,
+ownership/snapshot validation and visible mutation confirmation remain app
+responsibilities. Package linkage/notices must join the shipping inventory when
+this runtime becomes part of the app's selected build.
 
 Implementation references: the pinned source's `include/llama.h`, `examples/simple`
 and [official Apple build script](https://github.com/ggml-org/llama.cpp/blob/41fc7584f0c1d72d9cc1ac46ccae8defc1587f0f/build-xcframework.sh).
