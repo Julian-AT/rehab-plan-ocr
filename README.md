@@ -42,12 +42,19 @@ make build
 make test-ios
 ```
 
-`make restore` lädt gesperrte Abhängigkeiten und Quelldateien. `make convert`
-erstellt daraus lokale Artefakte für den Simulator; mit `TARGET=all` werden auch
-Gerätebibliotheken vorbereitet. Normale Builds prüfen vorhandene Modellgewichte,
+`make restore` lädt gesperrte Rust-/Python-Abhängigkeiten, OCR-Modelle und die
+iOS-Laufzeit. `make restore-rust` lädt ausschließlich die Rust-Abhängigkeiten.
+`make convert` prüft die bereits im Deploymentformat geladenen Artefakte für den
+Simulator; mit `TARGET=all` werden auch die Geräteartefakte geprüft.
+Normale Builds prüfen vorhandene Modellgewichte,
 Wörterbücher, Laufzeitbibliotheken und Build-Identitäten, ohne Downloads oder
 Konvertierungen zu starten. Fehlende oder veränderte Artefakte brechen den Build
 mit einem Hinweis auf den nötigen Einrichtungsschritt ab.
+
+Nach der Einrichtung lässt sich der Build mit
+`CARGO_NET_OFFLINE=true UV_OFFLINE=true make build` ausdrücklich offline wiederholen.
+Die nativen Cargo-Builds verwenden grundsätzlich `--offline`; fehlende Crates
+werden durch den getrennten Schritt `make restore-rust` bereitgestellt.
 
 `make help` zeigt die Einstiegspunkte. Einzelne Prüfungen sind beispielsweise
 `make test-agenda-cache`, `make test-voice-rules` und `make test-tools`.

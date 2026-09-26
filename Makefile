@@ -1,4 +1,4 @@
-.PHONY: help bootstrap doctor format lint test test-tools test-ios build verify bindings check-bindings test-agenda restore convert verify-assets package restore-ocr-training restore-assistant-training restore-assistant-export
+.PHONY: help bootstrap doctor format lint test test-tools test-ios build verify bindings check-bindings test-agenda restore restore-rust convert verify-assets package restore-ocr-training restore-assistant-training restore-assistant-export
 WORKSPACE_TOOLS := $(shell python3 tooling/dev/workspace.py path tools)
 export PATH := $(WORKSPACE_TOOLS)/bin:$(HOME)/.cargo/bin:$(PATH)
 export RUSTUP_TOOLCHAIN := $(shell python3 tooling/dev/workspace.py toolchain)
@@ -93,6 +93,7 @@ help:
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
+	@echo 'Rust downloads only: make restore-rust; offline repeat: CARGO_NET_OFFLINE=true UV_OFFLINE=true make build'
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
 	@echo 'Visual baseline: make test-visual-baseline TEST_ARGS="--run .local/runs/<new-run>" (serial disposable simulator)'
@@ -161,7 +162,10 @@ setup-speech-evaluation:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new local setup directory'; exit 2; }
 	/usr/bin/env uv run --locked python ml/evaluation/speech/transcribe.py --run "$(RUN)" --setup --locale "$(SPEECH_LOCALE)"
 
-restore:
+restore-rust:
+	/usr/bin/env cargo fetch --locked
+
+restore: restore-rust
 	/usr/bin/env uv sync --locked
 	/usr/bin/env uv run --locked python tooling/build/fetch-models.py --tier small
 	/usr/bin/env uv run --locked python tooling/build/fetch-ios-runtime.py

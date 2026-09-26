@@ -6,7 +6,7 @@ eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 mode=${1:-simulator}
 bindings() {
-  cargo build --locked -p reha-ffi --features bindgen
+  cargo build --locked --offline -p reha-ffi --features bindgen
   generated=$(mktemp -d)
   "$CARGO_TARGET_DIR/debug/reha-bindgen" generate "$CARGO_TARGET_DIR/debug/libreha_ffi.dylib" --language swift --metadata-no-deps --no-format --out-dir "$generated"
   if [ "$mode" != bindings ]; then
@@ -38,7 +38,7 @@ framework() {
       simulator) triple=aarch64-apple-ios-sim ;;
     esac
     python3 tooling/dev/quality.py space 1.5
-    IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --release -p reha-ffi --lib --features onnx --target "$triple"
+    IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --offline --release -p reha-ffi --lib --features onnx --target "$triple"
   done
   # Split only our fixed variant names; never interpolate paths or user commands.
   # shellcheck disable=SC2086

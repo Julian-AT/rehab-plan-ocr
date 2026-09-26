@@ -44,8 +44,8 @@ pub struct Proposal {
     pub draft: Option<draft::DraftIntent>,
 }
 
-/// Platform effects only. The FFI adapter exposes typed callbacks, while the
-/// Tauri adapter preserves its existing wire payloads.
+/// Platform effects only. The native FFI adapter exposes typed host callbacks;
+/// shared service commands and test hosts retain JSON payloads at this boundary.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
     /// Native adapters override this binary boundary. The default only preserves
