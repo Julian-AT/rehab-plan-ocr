@@ -110,6 +110,7 @@ struct TodayView: View {
   @State private var create = false
   @State private var showPast = false
   @State private var reloadID = 0
+  @State private var pullRefreshID = 0
   @Environment(PreferencesStore.self) private var preferences
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.openURL) private var openURL
@@ -182,7 +183,12 @@ struct TodayView: View {
         .accessibilityIdentifier("add-plan")
       }
     }
-    .refreshable { reload() }
+    .refreshable {
+      // Keep this revision out of requestID: the refresh gesture owns and awaits
+      // this load instead of starting a second, view-owned task.
+      pullRefreshID += 1
+      await load()
+    }
     .task(id: requestID) { await load() }
     .onChange(of: todayRequestID) { openToday() }
     .onChange(of: preferences.value.map { Set($0.displayCalendarIds) }) { _, _ in
@@ -357,7 +363,7 @@ struct TodayView: View {
     guard scanner.isReady, !Task.isCancelled else { return }
     await model.refresh(
       using: NativeAgendaSource(core: core), week: week, visibleWeek: visibleWeek,
-      key: "\(refreshID)-\(reloadID)-\(Calendar.current.timeZone.identifier)")
+      key: "\(refreshID)-\(reloadID)-\(pullRefreshID)-\(Calendar.current.timeZone.identifier)")
   }
   private func reload() { reloadID += 1 }
   private func followToday(_ today: Date) {

@@ -52,10 +52,14 @@ struct AgendaScrollView: UIViewControllerRepresentable {
   let reset: Int
   @Binding var minute: Double?
   let selectDate: (Date) -> Void
+  @Environment(\.refresh) private var refresh
 
   func makeUIViewController(context: Context) -> Controller { Controller() }
   func updateUIViewController(_ controller: Controller, context: Context) {
     controller.receive(self)
+  }
+  static func dismantleUIViewController(_ controller: Controller, coordinator: ()) {
+    controller.cancelRefresh()
   }
 
   final class Controller: UIViewController, UIScrollViewDelegate {
@@ -71,6 +75,8 @@ struct AgendaScrollView: UIViewControllerRepresentable {
     private let verticalVeto = AxisVeto(rejecting: .horizontal)
     private let nestedScrolls = NSHashTable<UIScrollView>.weakObjects()
     private var settlementTask: Task<Void, Never>?
+    private let refreshControl = UIRefreshControl()
+    private var refreshTask: Task<Void, Never>?
 
     private var busy: Bool {
       vertical.isTracking || vertical.isDragging || vertical.isDecelerating || horizontal.isTracking
@@ -89,6 +95,8 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       vertical.alwaysBounceVertical = false
       vertical.accessibilityIdentifier = "day-timeline"
       horizontal.accessibilityIdentifier = "agenda-days"
+      refreshControl.accessibilityIdentifier = "agenda-refresh-control"
+      refreshControl.addTarget(self, action: #selector(refreshRequested), for: .valueChanged)
       view.addSubview(vertical)
       vertical.addSubview(horizontal)
       for _ in 0..<3 {
@@ -139,21 +147,48 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       horizontal.contentSize = CGSize(width: horizontal.bounds.width * 3, height: height)
       let y = min(max(0, value.projection.y(anchor)), max(0, height - view.bounds.height))
       let pages = value.pages(view.bounds.height, y)
+      let refresh = value.refresh
       for (index, host) in hosts.enumerated() {
         host.rootView = AnyView(
-          pages[index].frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top))
+          pages[index].frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // UIHostingController starts a new SwiftUI environment. Forward the
+            // refresh action explicitly so the nested List owns its indicator.
+            .refreshable { await refresh?() })
         host.view.frame = CGRect(
           x: CGFloat(index) * horizontal.bounds.width, y: 0,
           width: horizontal.bounds.width, height: height)
       }
       vertical.contentSize = CGSize(width: view.bounds.width, height: height)
       horizontal.contentOffset = CGPoint(x: horizontal.bounds.width, y: 0)
-      vertical.contentOffset = CGPoint(x: 0, y: y)
+      // Data may arrive while UIKit is holding the refresh indicator above the
+      // first hour. Keep that offset until the awaited refresh has completed.
+      if !refreshControl.isRefreshing { vertical.contentOffset = CGPoint(x: 0, y: y) }
       vertical.isScrollEnabled = value.showsTimeline
+      vertical.alwaysBounceVertical = value.showsTimeline && refresh != nil
+      vertical.refreshControl = value.showsTimeline && refresh != nil ? refreshControl : nil
       for host in hosts {
         host.view.layoutIfNeeded()
         gateNestedScrolls(in: host.view)
       }
+    }
+    @objc private func refreshRequested() {
+      guard refreshTask == nil else { return }
+      guard let refresh = current?.refresh else {
+        refreshControl.endRefreshing()
+        return
+      }
+      refreshTask = Task { [weak self] in
+        await refresh()
+        guard !Task.isCancelled, let self else { return }
+        self.refreshTask = nil
+        self.refreshControl.endRefreshing()
+        if !self.busy { self.applyPending() }
+      }
+    }
+    func cancelRefresh() {
+      refreshTask?.cancel()
+      refreshTask = nil
+      refreshControl.endRefreshing()
     }
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
       guard !applying, scrollView === vertical, let current, current.showsTimeline else { return }

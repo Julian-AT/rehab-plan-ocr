@@ -38,6 +38,73 @@ import XCTest
     add(shot)
   }
 
+  func testTimelinePullToRefreshWaitsForReloadAndKeepsDay() {
+    checkPullToRefresh(list: false)
+  }
+
+  func testListPullToRefreshWaitsForReloadAndKeepsDay() {
+    checkPullToRefresh(list: true)
+  }
+
+  private func checkPullToRefresh(list: Bool) {
+    continueAfterFailure = false
+    app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
+    app.launchArguments = [
+      "-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "axis",
+      "--preview-agenda-delay",
+    ]
+    app.launch()
+    XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
+    state("settled")
+    pager.swipeLeft()
+    let appointment = event("Therapie Tag 1, 8 Uhr")
+    XCTAssertTrue(appointment.waitForExistence(timeout: 8))
+    if list {
+      app.tabBars.buttons["Mehr"].tap()
+      app.buttons["Darstellung"].tap()
+      let toggle = app.switches["agenda-list-setting"]
+      toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+      XCTAssertEqual(toggle.value as? String, "1")
+      app.tabBars.buttons["Termine"].tap()
+      XCTAssertTrue(
+        app.descendants(matching: .any)["agenda-accessible-list"].waitForExistence(timeout: 8))
+    }
+    state("settled")
+    let scroll =
+      list
+      ? app.descendants(matching: .any)["agenda-accessible-list"]
+      : app.scrollViews["day-timeline"].firstMatch
+    if !list {
+      // The initial timeline anchor is 07:30. Reach 06:00 before a distinct
+      // refresh gesture, allowing any refresh caused by that first drag to finish.
+      scroll.swipeDown()
+      state("settled")
+    }
+    XCTAssertTrue(appointment.isHittable)
+    let restingY = appointment.frame.minY
+    scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).press(
+      forDuration: 0.1,
+      thenDragTo: scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)))
+    state("refreshing")
+    noVisibleLoader()
+    XCTAssertTrue(appointment.isHittable)
+    XCTAssertTrue(app.activityIndicators.allElementsBoundByIndex.contains(where: \.isHittable))
+    // Each calendar read is delayed by three seconds. An increment-and-return
+    // refresh handler would stop its indicator before this interval completes.
+    let prematureCompletion = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "value == %@", "settled"), object: refreshState)
+    prematureCompletion.isInverted = true
+    wait(for: [prematureCompletion], timeout: 1)
+    XCTAssertTrue(app.activityIndicators.allElementsBoundByIndex.contains(where: \.isHittable))
+    state("settled")
+    expectation(
+      for: NSPredicate { _, _ in abs(appointment.frame.minY - restingY) <= 1 },
+      evaluatedWith: appointment)
+    waitForExpectations(timeout: 5)
+    XCTAssertTrue(appointment.isHittable)
+    noVisibleLoader()
+  }
+
   func testCachedDaysStayVisibleDuringDelayedRefresh() {
     continueAfterFailure = false
     app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
