@@ -61,6 +61,22 @@ Bildausrichtung, Skalierung oder Suche nach einem möglichst ähnlichen Kandidat
 Die kurze Haltezeit am Drag-Ende gehört zur simulierten Fingergeste; die
 Synchronisation erfolgt durch erneute Rahmenmessungen.
 
+Die Gestensteuerung misst außerdem für jede Richtung den Unterschied zwischen
+Fingerweg und tatsächlich erreichtem Zeilenweg. Der in Lauf 004 beobachtete
+Verlust beim Erkennen kleiner Drag-Gesten führte sonst zu einer Pendelbewegung
+um das unveränderte Ziel. Die nächste Geste berücksichtigt diesen gemessenen
+Verlust, begrenzt auf 64 Punkte; die Zahl der Versuche und die Positionsgrenze
+bleiben unverändert. Diese Rückkopplung verändert weder Zielkoordinaten noch
+Bildvergleich und muss im nächsten Lauf nachgewiesen werden.
+
+Lauf `visual-baseline-20260926-s19-001` zeigte zusätzlich, dass sehr kurze Wege als
+Tippen auf die Terminzeile erkannt werden können. Die Gesten beginnen deshalb im
+freien linken Listenrand. Bei einem berechneten Weg unter 32 Punkten wird das
+Ziel mit einer 64-Punkte-Geste bewusst überschritten und anschließend aus der
+Gegenrichtung angesteuert. Auch dabei entscheidet ausschließlich die gemessene
+Endposition über Erfolg; geöffneten Terminansichten wird kein Vergleichsbild
+entnommen.
+
 Auch Karten-, normale Listen-, Legenden- und Tagesabschlussaufnahmen verlangen
 einen stabilen sichtbaren Anker. Jede dieser Aufnahmen erhält einen zusätzlichen
 JSON-Anhang mit Termin/Beschriftung, tatsächlich gemessenem Rahmen, Faktor 3 und
@@ -74,6 +90,26 @@ geprüft, ohne vorher auf das Verschwinden des Indikators zu warten. Es gibt
 weiterhin weder Bildmasken für Scrollindikatoren noch eine Pixeltoleranz. Die Reproduzierbarkeit des neuen Verfahrens und die Zuordnung zwischen
 visueller Kartenkante und Accessibility-Rahmen sind im nächsten Simulatorlauf zu
 prüfen; bisher liegen Typprüfung und die historischen Bildmessungen vor.
+
+## Neuer Lauf vom 26. September 2026
+
+`visual-baseline-20260926-s19-002` besteht alle drei Aufnahmetests auf unveränderten
+Quellen. Die zehn großen Zeilen erreichen die festgelegten Positionen; acht ihrer
+zwölf Bilder stimmen vollständig überein. In den vier Bildern mit Index 2 und 4
+liegen sämtliche Unterschiede ausschließlich am fehlenden rechten Scrollindikator
+(2111 beziehungsweise 1157 Pixel). Der gesamte übrige Bildinhalt ist exakt.
+Die ursprünglichen großen Scrollabweichungen sind damit lokalisiert und die
+Positionssteuerung ist tatsächlich geprüft.
+
+Die vollständige Vergleichsprüfung bleibt **fehlgeschlagen: 14/22**. Zusätzlich
+weicht diesmal die untere dunkle Normalliste um 48 Pixel ab; ihr Anker liegt bei
+622⅔ statt 606⅔ Punkten. Die unveränderten beiden Originale haben die farbige
+letzte Kartenkante bei Pixel 1865. Die dunkle Legende weicht an der Tab-Leiste ab.
+Beide Tagesabschlussbilder behalten ihre kleinen historischen Rasterunterschiede.
+Vollständige Bilder, Positionen, Ergebnisse und ausführbare Produkte liegen im
+privaten Lauf und unter `visual-capture-control-20260926-s19-002`; die Diagnose ist
+kein neuer Vergleichsvertrag. Die nächste Aufnahme muss auch die normalen
+Listenpositionen und den ursprünglichen Indikatorzustand reproduzieren.
 
 ## Diagnose der neun historischen Abweichungen
 

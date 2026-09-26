@@ -41,40 +41,62 @@ import XCTest
     waitForExpectations(timeout: 10)
     return element.frame
   }
-  private func dragList(by points: CGFloat) {
+  @discardableResult private func dragList(by points: CGFloat) -> CGFloat {
     let viewport = app.scrollViews["day-timeline"].firstMatch.frame
       .intersection(
         CGRect(x: 0, y: 0, width: app.frame.width, height: app.tabBars.firstMatch.frame.minY))
     let limit = viewport.height * 0.3
     let movement = min(limit, max(-limit, points))
     let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
-      CGVector(dx: viewport.midX, dy: viewport.midY - movement / 2))
+      CGVector(dx: viewport.minX + 8, dy: viewport.midY - movement / 2))
     start.press(
       forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)),
       withVelocity: .slow, thenHoldForDuration: 0.1)
+    return movement
   }
   private func position(_ row: XCUIElement, topPixel: Int) {
     // This contract belongs to the retained iPhone 17 / 3x originals. A changed
     // device must fail instead of quietly rescaling the expected screenshot.
     XCTAssertEqual(app.frame.size, CGSize(width: 402, height: 874))
-    let target = CGFloat(topPixel) / 3
+    // The native List button includes its 15-point top inset. The retained
+    // contract measures the colored card, not the surrounding white list row.
+    let target = CGFloat(topPixel) / 3 - 15
     for _ in 0..<16 where !row.exists { dragList(by: -200) }
     XCTAssertTrue(row.exists)
+    var top = settledFrame(row).minY
+    var lostUpwardTravel: CGFloat = 16
+    var lostDownwardTravel: CGFloat = 16
     for _ in 0..<16 {
-      let top = settledFrame(row).minY
       if abs(top - target) < 1.0 / 6 {
         XCTAssertTrue(row.isHittable)
         return
       }
       let difference = target - top
-      // Cross UIKit's pan-recognition distance even for a subpoint correction;
-      // the next observation measures the actual movement before returning.
-      dragList(by: abs(difference) < 12 ? difference + (difference > 0 ? 24 : -24) : difference)
+      // Measure the gesture travel consumed by pan recognition separately for
+      // each direction. Small corrections otherwise oscillate around the target.
+      let down = difference > 0
+      let loss = down ? lostDownwardTravel : lostUpwardTravel
+      let correction = difference + (down ? loss : -loss)
+      // Very short drags can become taps. Deliberately pass the target with a
+      // recognized gesture, then approach from the other direction next time.
+      let requested = dragList(by: abs(correction) < 32 ? (down ? 64 : -64) : correction)
+      let next = settledFrame(row).minY
+      let actual = next - top
+      let measuredLoss =
+        actual * requested > 0 ? abs(requested) - abs(actual) : loss + 8
+      if down {
+        lostDownwardTravel = min(64, max(0, measuredLoss))
+      } else {
+        lostUpwardTravel = min(64, max(0, measuredLoss))
+      }
+      top = next
     }
     XCTAssertEqual(settledFrame(row).minY, target, accuracy: 1.0 / 6)
   }
-  private func capture(_ name: String, anchor: XCUIElement? = nil, topPixel: Int? = nil) {
-    let before = anchor.map { settledFrame($0) }
+  private func capture(
+    _ name: String, anchor: XCUIElement? = nil, topPixel: Int? = nil, settle: Bool = true
+  ) {
+    let before = anchor.map { settle ? settledFrame($0) : $0.frame }
     let screenshot = app.screenshot()
     XCTAssertEqual(screenshot.image.cgImage?.width, 1206)
     XCTAssertEqual(screenshot.image.cgImage?.height, 2622)
@@ -84,12 +106,13 @@ import XCTest
     add(attachment)
     if let anchor, let before {
       XCTAssertEqual(anchor.frame, before, "Capture moved after geometry settled")
-      if let topPixel { XCTAssertEqual(before.minY * 3, CGFloat(topPixel), accuracy: 0.5) }
+      if let topPixel { XCTAssertEqual(before.minY * 3 + 45, CGFloat(topPixel), accuracy: 0.5) }
       let position: [String: Any] = [
-        "contract": "retained-calendar-positions-v1",
+        "contract": "retained-calendar-positions-v2",
         "anchor": anchor.label,
         "frame_points": [before.minX, before.minY, before.width, before.height],
         "expected_top_pixel": topPixel as Any? ?? NSNull(),
+        "card_inset_pixels": topPixel.map { _ in 45 } as Any? ?? NSNull(),
         "scale": 3,
       ]
       do {
@@ -126,7 +149,9 @@ import XCTest
           timeout: 10))
       capture("calm-list-\(mode)", anchor: event("Frühstück I"))
       app.swipeUp()
-      capture("calm-list-lower-\(mode)", anchor: event("Freier Termin"))
+      // These originals include the transient native scroll indicator. Observe
+      // the frame across the actual capture, without waiting for it to fade.
+      capture("calm-list-lower-\(mode)", anchor: event("Freier Termin"), settle: false)
       app.terminate()
     }
   }
