@@ -240,17 +240,18 @@ enum SystemSpeechConversion {
       let output = AVAudioPCMBuffer(
         pcmFormat: outputFormat, frameCapacity: 4_096)
     else { throw SystemSpeechError.invalidAudio }
-    let position = OSAllocatedUnfairLock(initialState: 0)
+    let input = OSAllocatedUnfairLock(initialState: (offset: 0, failed: false))
     var converted: [Float] = []
     while true {
       try Task.checkCancellation()
       output.frameLength = 0
       var error: NSError?
       let status = converter.convert(to: output, error: &error) { requested, status in
-        let range = position.withLock { offset in
-          let end = min(samples.count, offset + Int(requested))
-          defer { offset = end }
-          return offset..<end
+        let range = input.withLock { state in
+          let end = min(samples.count, state.offset + Int(requested))
+          defer { state.offset = end }
+          if requested == 0 && state.offset < samples.count { state.failed = true }
+          return state.offset..<end
         }
         guard !range.isEmpty else {
           status.pointee = .endOfStream
@@ -260,20 +261,24 @@ enum SystemSpeechConversion {
         // captured by the converter's callback.
         guard let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1),
           let buffer = AVAudioPCMBuffer(
-            pcmFormat: format, frameCapacity: AVAudioFrameCount(range.count))
+            pcmFormat: format, frameCapacity: AVAudioFrameCount(range.count)),
+          let channel = buffer.floatChannelData?[0]
         else {
+          // AVAudioConverter has no input-error status. Remember allocation
+          // failure so its end-of-stream result cannot accept partial speech.
+          input.withLock { $0.failed = true }
           status.pointee = .endOfStream
           return nil
         }
         buffer.frameLength = buffer.frameCapacity
         samples.withUnsafeBufferPointer { source in
-          buffer.floatChannelData![0].update(
+          channel.update(
             from: source.baseAddress!.advanced(by: range.lowerBound), count: range.count)
         }
         status.pointee = .haveData
         return buffer
       }
-      guard error == nil, status != .error,
+      guard !input.withLock({ $0.failed }), error == nil, status != .error,
         converted.count + Int(output.frameLength) <= SpeechPCM.maximumFrames,
         let values = output.floatChannelData?[0]
       else { throw SystemSpeechError.invalidAudio }
