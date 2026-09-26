@@ -372,3 +372,13 @@ den bestandenen 68-Test-Lauf qualifiziert.
   mit null Tests jetzt zu einem Fehler des Make-Befehls; ein tatsächlich
   ausgeführter Fall besteht. Originalbundles und alte Berichte bleiben unverändert.
   [Prüfvertrag und Laufidentitäten](build-reproducibility.md#tatsächlich-ausgeführte-ui-testauswahl).
+
+- Gemeinsame lokale Befehle an `42c5301`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 246 Rusttests, 406 Pythonfälle in
+  70 Gruppen (neun ausdrückliche Umgebungs-Skips), sämtliche vorgesehenen
+  nativen Probes und echter Swift–Rust–Swift-Rundweg. Checkout vorher/nachher
+  sauber; Quellen, Befehle und vollständige Logs bleiben unter
+  `.local/runs/combined-verification-20260926-s19-004/` erhalten. Der Nachweis
+  umfasst auch eigene Terminlinks und die Prüfung tatsächlich ausgeführter
+  UI-Testauswahlen. Vollständige UI-, Modell-, Geräte- und Veröffentlichungsabnahme
+  bleiben separat offen.
