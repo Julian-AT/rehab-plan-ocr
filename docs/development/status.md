@@ -38,13 +38,23 @@ establish current device behavior or authorize an update.
   verify pinned assets; archive/XCFramework caches verify complete input/output
   identities. Locked training environments remain separate from app dependencies.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
-  broad Rust evidence is 172 tests; native EventKit evidence is 15 tests with one
+  broad Rust evidence is 173 tests; native EventKit evidence is 15 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
   exactly below the system status bar. These are not a whole-app visual pass.
 
-The earlier simulator CoreAudio RPC abort is intermittent. A minimal audio app,
-subsequent production-output tests and confirmation tests pass, but the cause is
-unexplained. The complete UI/audio release gate remains open.
+The broad simulator UI run completed 64 tests: 58 passed, five failed and one
+requires a separate reduced-motion simulator setting. All five failures correspond
+to CoreAudio RPC aborts while constructing the output engine. Earlier isolated
+audio checks passed; the cause remains unexplained. The broad run used the build
+at `53c6fe5`, before extraction v10 and the common interpretation provider. Host
+clamshell sleep inflated some test durations, so they are not latency measurements.
+The complete UI/audio release gate remains open.
+
+The common interpretation contract now validates capabilities, availability,
+bounded requests/output, cancellation and deadlines. Rules and Apple Intelligence
+share the contract; custom GGUF execution is not yet registered in the app.
+All four privacy manifests pass built-bundle verification. Privacy/support drafts
+are prepared; publisher/contact information and public distribution review remain open.
 
 ## Dataset and custom models
 
@@ -75,7 +85,7 @@ No calendar operation was executed by these evaluations and no provider was prom
 Shared mutation-protection coverage, complete uncertainty/dialogue regressions,
 full simulator/visual and persistence gates; remaining cleanup, CI/packaging and
 paired device performance; reviewed/grouped OCR data and qualified deployment;
-checked German dialogues, common providers and shipping custom-model integration;
+checked German dialogues, provider comparisons and shipping custom-model integration;
 local speech/voice comparison, natural-pause and patient comprehension tests;
 eSpeak-NG distribution resolution, privacy/support/release qualification and pilot.
 

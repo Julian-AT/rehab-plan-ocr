@@ -172,6 +172,23 @@ has been claimed. Milestones 1–4 remain open until their complete exit gates p
 
 ## Verified implementation slices — 2026-09-26
 
+The app and its three extensions now carry audited privacy manifests. Packaging
+rejects missing, altered, duplicate or unexpected declarations; a discoverable
+`make verify-privacy` checks an existing bundle. Four packaging regressions pass.
+The current simulator app builds and all four manifests match source. German
+privacy/support drafts cover actual local data flows, retention, exports and
+calendar-account synchronization. Publisher/contact completion and public review
+remain open; this does not establish App Store acceptance.
+
+The broad UI run on the `53c6fe5` build completed 64 cases: 58 passed, five failed
+and one skipped for a missing reduced-motion setting. All five failures have
+matching CoreAudio RPC aborts during output-engine initialization, including the
+two typed-query cases. Earlier isolated passes do not close this gate. Host
+clamshell sleep accounts for two roughly 900-second teardown delays; the test
+durations cannot establish application latency. Extraction v10 and the common
+provider contract have since been compiled together in the current simulator app;
+their current-build UI checks remain pending.
+
 The collection guide, consent draft and local intake copy verified incoming files
 without replacing the reference inventory or granting approval. Purpose/receipt,
 retention, speaker grouping, interrupted-copy and existing-inventory checks pass.

@@ -6,7 +6,7 @@ help:
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
-	@echo 'Package an existing archive: make package'
+	@echo 'Packaging: make verify-privacy APP_BUNDLE=<built-app>; make package'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
 
@@ -53,6 +53,11 @@ verify-assets:
 
 package:
 	python3 tooling/release/package-native.py
+
+.PHONY: verify-privacy
+verify-privacy:
+	@test -n "$(APP_BUNDLE)" || { echo 'Set APP_BUNDLE to a built app directory'; exit 2; }
+	python3 tooling/release/privacy.py "$(APP_BUNDLE)"
 
 NATIVE_PROBES := $(patsubst tooling/checks/%.sh,%,$(wildcard tooling/checks/test-*.sh))
 .PHONY: $(NATIVE_PROBES)

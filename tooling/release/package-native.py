@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 import tomllib
 
+from privacy import verify_bundle
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ARCHIVE_ROOT = ROOT / "apps/ios/build/Laßnitzhöhe.xcarchive"
 ARCHIVE_INFO = plistlib.loads((ARCHIVE_ROOT / "Info.plist").read_bytes())
@@ -37,6 +39,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
     # Clear extended attributes in a temporary copy without changing signed files.
     run("xattr", "-cr", str(app))
     run("codesign", "--verify", "--deep", "--strict", str(app))
+    privacy_manifests = verify_bundle(app)
     profiles = []
     common_devices = None
     build_version = None
@@ -122,6 +125,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         "model_files_verified": len(manifest["files"]),
         "speech_model_files_verified": len(speech_manifest["files"]),
         "signatures_verified": True,
+        "privacy_manifests_verified": privacy_manifests,
         "commonly_authorized_devices": len(common_devices),
         "physical_acceptance": "pending",
     }
