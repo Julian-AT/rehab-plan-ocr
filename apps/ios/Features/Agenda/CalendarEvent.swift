@@ -1,5 +1,30 @@
 import Foundation
 
+/// Keep the original wire value while parsing it once per decode or edit.
+/// Layout and spoken-answer projections can read the Date without a formatter.
+@propertyWrapper struct CalendarTimestamp: Codable, Equatable, Sendable {
+  private var rawValue: String
+  private(set) var projectedValue: Date?
+  var wrappedValue: String {
+    get { rawValue }
+    set {
+      rawValue = newValue
+      projectedValue = ISO8601DateFormatter().date(from: newValue)
+    }
+  }
+  init(wrappedValue: String) {
+    rawValue = wrappedValue
+    projectedValue = ISO8601DateFormatter().date(from: wrappedValue)
+  }
+  init(from decoder: Decoder) throws {
+    self.init(wrappedValue: try decoder.singleValueContainer().decode(String.self))
+  }
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
 struct CalendarQueryResponse: Decodable, Sendable {
   let events: [CalendarEvent]
   let unavailableCalendarIDs: [String]?
@@ -17,16 +42,15 @@ struct CalendarQueryResponse: Decodable, Sendable {
 
 struct UnavailableCalendarEvent: Decodable, Sendable {
   let id: String
-  let start: String
-  let end: String
+  @CalendarTimestamp var start: String
+  @CalendarTimestamp var end: String
   enum CodingKeys: String, CodingKey {
     case id
     case start = "start_utc"
     case end = "end_utc"
   }
   func overlaps(_ day: Date, calendar: Calendar = .current) -> Bool {
-    let iso = ISO8601DateFormatter()
-    guard let start = iso.date(from: start), let end = iso.date(from: end), end > start,
+    guard let start = $start, let end = $end, end > start,
       let interval = calendar.dateInterval(of: .day, for: day)
     else { return false }
     return start < interval.end && end > interval.start
@@ -71,15 +95,15 @@ indirect enum JSONValue: Codable, Equatable, Sendable {
 struct CalendarEventValues: Codable, Equatable, Sendable {
   var title: String
   // swift-format-ignore: AlwaysUseLowerCamelCase
-  var start_utc: String
+  @CalendarTimestamp var start_utc: String
   // swift-format-ignore: AlwaysUseLowerCamelCase
-  var end_utc: String
+  @CalendarTimestamp var end_utc: String
   var timezone: String
   var location: String
   // swift-format-ignore: AlwaysUseLowerCamelCase
   var reminder_minutes: Int?
-  var start: Date { ISO8601DateFormatter().date(from: start_utc) ?? .distantPast }
-  var end: Date { ISO8601DateFormatter().date(from: end_utc) ?? .distantPast }
+  var start: Date { $start_utc ?? .distantPast }
+  var end: Date { $end_utc ?? .distantPast }
   var spoken: String {
     let until = Calendar.current.isDate(start, inSameDayAs: end) ? eventTime(end) : eventDate(end)
     return

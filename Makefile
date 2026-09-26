@@ -56,7 +56,7 @@ package:
 NATIVE_PROBES := $(patsubst tooling/checks/%.sh,%,$(wildcard tooling/checks/test-*.sh))
 .PHONY: $(NATIVE_PROBES)
 $(filter-out test-agenda,$(NATIVE_PROBES)):
-	sh tooling/checks/$@.sh
+	sh tooling/checks/$@.sh $(TEST_ARGS)
 
 restore-ocr-training:
 	UV_PROJECT_ENVIRONMENT=$(CURDIR)/.local/envs/ocr uv sync --locked --project ml/training/ocr

@@ -1,7 +1,7 @@
 import Foundation
 
 @main struct AgendaProjectionProbe {
-  static func main() {
+  static func main() throws {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "Europe/Vienna")!
     let iso = ISO8601DateFormatter()
@@ -17,6 +17,24 @@ import Foundation
         metadata: .object(["all_day": .bool(allDay)]), fingerprint: id)
     }
     let past = event("past", "2026-09-12T08:00:00Z", "2026-09-12T09:00:00Z")
+    // Cached dates must follow editor patches without changing persisted wire keys.
+    var edited = past.values
+    edited.start_utc = "2026-09-12T09:30:00+01:00"
+    edited.end_utc = "2026-09-12T10:15:00+01:00"
+    precondition(edited.start == iso.date(from: "2026-09-12T08:30:00Z"))
+    precondition(edited.end.timeIntervalSince(edited.start) == 45 * 60)
+    let encoded = try JSONEncoder().encode(edited)
+    let wire = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+    precondition(Set(wire.keys) == ["title", "start_utc", "end_utc", "timezone", "location"])
+    precondition(wire["start_utc"] as? String == edited.start_utc)
+    let decoded = try JSONDecoder().decode(CalendarEventValues.self, from: encoded)
+    precondition(decoded == edited && decoded.start == edited.start && decoded.end == edited.end)
+    edited.start_utc = "invalid"
+    precondition(edited.start == .distantPast)
+    precondition(past.values.start == iso.date(from: "2026-09-12T08:00:00Z"))
+    let unreadable = UnavailableCalendarEvent(
+      id: "invalid", start: "invalid", end: past.values.end_utc)
+    precondition(!unreadable.overlaps(now, calendar: calendar))
     let midnight = event("midnight", "2026-09-11T21:00:00Z", "2026-09-12T11:00:00Z")
     let ongoing = event("ongoing", "2026-09-12T09:00:00Z", "2026-09-12T11:00:00Z")
     let next = event("next", "2026-09-12T11:00:00Z", "2026-09-12T12:00:00Z")
