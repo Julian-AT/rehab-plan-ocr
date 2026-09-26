@@ -2,7 +2,61 @@ use super::Store;
 use crate::{contracts::PipelineConfig, Error, Result};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Write};
+use std::{
+    fs::{File, Metadata},
+    io::{Read, Write},
+    path::Path,
+};
+
+fn same_original(before: &Metadata, after: &Metadata) -> std::io::Result<bool> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if before.dev() != after.dev() || before.ino() != after.ino() {
+            return Ok(false);
+        }
+    }
+    Ok(after.is_file() && before.len() == after.len() && before.modified()? == after.modified()?)
+}
+
+/// A successful restaging acknowledges the durable bytes and lets the caller
+/// remove its temporary copy. Verify the original itself, with bounded reads,
+/// before issuing that acknowledgement. Never repair an existing corrupt file
+/// by silently overwriting the immutable capture.
+fn retained_original(path: &Path, expected: &[u8]) -> Result<bool> {
+    let before = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error.into()),
+    };
+    let changed = || {
+        Error::Invalid(
+            "Gespeichertes Original ist beschädigt oder verändert. Neue Aufnahme bleibt erhalten."
+                .into(),
+        )
+    };
+    if !before.is_file() || before.len() != expected.len() as u64 {
+        return Err(changed());
+    }
+    let mut file = File::open(path)?;
+    if !same_original(&before, &file.metadata()?)? {
+        return Err(changed());
+    }
+    let mut buffer = [0; 64 * 1024];
+    for chunk in expected.chunks(buffer.len()) {
+        file.read_exact(&mut buffer[..chunk.len()])?;
+        if &buffer[..chunk.len()] != chunk {
+            return Err(changed());
+        }
+    }
+    if file.read(&mut buffer[..1])? != 0
+        || !same_original(&before, &file.metadata()?)?
+        || !same_original(&before, &std::fs::symlink_metadata(path)?)?
+    {
+        return Err(changed());
+    }
+    Ok(true)
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Intake {
@@ -36,7 +90,7 @@ impl Store {
             if old.source_hash != hash || old.status == "deleted" {
                 return Err(Error::Invalid("Aufnahme-ID wird bereits verwendet.".into()));
             }
-            if dir.join("intake.bin").is_file() {
+            if retained_original(&dir.join("intake.bin"), bytes)? {
                 if self.setting(&format!("document:{id}"))?.is_none() {
                     self.ensure_page(id, old.imported_at)?;
                 }

@@ -192,6 +192,70 @@ fn interrupted_capture_is_durable_immutable_and_never_expires() {
         .is_err());
 }
 
+#[test]
+fn restaging_only_acknowledges_an_unchanged_complete_original() {
+    let dir = tempfile::tempdir().unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let store = Store::open(dir.path()).unwrap();
+    let bytes = vec![b'a'; 130_000]; // Cross the streaming verification buffer boundary.
+    let staging = dir.path().join("incoming.png");
+    std::fs::write(&staging, &bytes).unwrap();
+    let config = PipelineConfig::default();
+    store
+        .stage_intake(&id, "original.png", &bytes, &config, 1)
+        .unwrap();
+    let original = store.source_path(&id).unwrap();
+    let modified = std::fs::metadata(&original).unwrap().modified().unwrap();
+    let resumed = store
+        .stage_intake(&id, "retry.png", &bytes, &config, 2)
+        .unwrap();
+    assert_eq!(resumed.filename, "original.png");
+    assert_eq!(
+        std::fs::metadata(&original).unwrap().modified().unwrap(),
+        modified
+    );
+    for length in [bytes.len() - 1, bytes.len(), bytes.len() + 1] {
+        let mut corrupt = bytes.clone();
+        corrupt.resize(length, b'a');
+        corrupt[length - 1] = b'b';
+        std::fs::write(&original, &corrupt).unwrap();
+        assert!(store
+            .stage_intake(&id, "retry.png", &bytes, &config, 3)
+            .is_err());
+        assert_eq!(
+            std::fs::read(&original).unwrap(),
+            corrupt,
+            "Do not overwrite the immutable original"
+        );
+        assert_eq!(
+            std::fs::read(&staging).unwrap(),
+            bytes,
+            "The caller still owns the intact incoming copy"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn restaging_does_not_acknowledge_a_replaced_original_symlink() {
+    let dir = tempfile::tempdir().unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let store = Store::open(dir.path()).unwrap();
+    let bytes = b"synthetic original";
+    store
+        .stage_intake(&id, "original.png", bytes, &PipelineConfig::default(), 1)
+        .unwrap();
+    let original = store.source_path(&id).unwrap();
+    let replacement = dir.path().join("replacement.png");
+    std::fs::write(&replacement, bytes).unwrap();
+    std::fs::remove_file(&original).unwrap();
+    std::os::unix::fs::symlink(&replacement, &original).unwrap();
+    assert!(store
+        .stage_intake(&id, "retry.png", bytes, &PipelineConfig::default(), 2)
+        .is_err());
+    assert_eq!(std::fs::read(&replacement).unwrap(), bytes);
+}
+
 struct NoEffects;
 
 #[test]
