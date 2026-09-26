@@ -27,6 +27,7 @@ pub use text_recognition::*;
 mod speech;
 pub use speech::*;
 mod application;
+mod application_projections;
 pub use application::*;
 mod assistant;
 pub use assistant::*;

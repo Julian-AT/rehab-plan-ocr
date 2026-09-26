@@ -576,11 +576,36 @@ impl NativeApplication {
         self.blocking(|s| {
             let store = s.store.lock().map_err(storage)?;
             Ok(History {
-                scans: convert(store.list_scans().map_err(storage)?)?,
-                intakes: convert(store.intakes().map_err(storage)?)?,
-                batches: convert(store.batches().map_err(storage)?)?,
-                plans: convert(store.plans().map_err(storage)?)?,
-                imports: convert(store.records(None).map_err(storage)?)?,
+                scans: store
+                    .list_scans()
+                    .map_err(storage)?
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_>>()?,
+                intakes: store
+                    .intakes()
+                    .map_err(storage)?
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+                batches: store
+                    .batches()
+                    .map_err(storage)?
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_>>()?,
+                plans: store
+                    .plans()
+                    .map_err(storage)?
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+                imports: store
+                    .records(None)
+                    .map_err(storage)?
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
                 pending: store
                     .pending()
                     .map_err(storage)?
@@ -588,7 +613,7 @@ impl NativeApplication {
                     .map(|(attempt_id, operation)| {
                         Ok(PendingWrite {
                             attempt_id,
-                            operation: convert(operation)?,
+                            operation: operation.try_into()?,
                         })
                     })
                     .collect::<Result<_>>()?,
@@ -979,8 +1004,12 @@ impl NativeApplication {
             .map_err(storage)?
     }
     pub async fn assess_draft(&self, id: String, timezone: String) -> Result<DraftAssessment> {
-        self.blocking(move |s| convert(service::draft::assess(&s, id, timezone).map_err(failure)?))
-            .await
+        self.blocking(move |s| {
+            service::draft::assess(&s, id, timezone)
+                .map_err(failure)?
+                .try_into()
+        })
+        .await
     }
     pub async fn preview_draft(
         &self,
@@ -993,11 +1022,10 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::draft::preview(bridge, &state, id, calendar_id, timezone, reminder)
-                        .await
-                        .map_err(failure)?,
-                )
+                service::draft::preview(bridge, &state, id, calendar_id, timezone, reminder)
+                    .await
+                    .map_err(failure)?
+                    .try_into()
             })
             .await
             .map_err(storage)?
@@ -1013,18 +1041,17 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::draft::preview_replacement(
-                        bridge,
-                        &state,
-                        id,
-                        calendar_id,
-                        timezone,
-                        reminder,
-                    )
-                    .await
-                    .map_err(failure)?,
+                service::draft::preview_replacement(
+                    bridge,
+                    &state,
+                    id,
+                    calendar_id,
+                    timezone,
+                    reminder,
                 )
+                .await
+                .map_err(failure)?
+                .try_into()
             })
             .await
             .map_err(storage)?
@@ -1078,17 +1105,10 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::draft::accept_and_save(
-                        bridge,
-                        &state,
-                        token,
-                        selection,
-                        approve_removals,
-                    )
+                service::draft::accept_and_save(bridge, &state, token, selection, approve_removals)
                     .await
-                    .map_err(failure)?,
-                )
+                    .map_err(failure)?
+                    .try_into()
             })
             .await
             .map_err(storage)?
@@ -1106,21 +1126,20 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::calendar::prepare_calendar(
-                        bridge,
-                        &state,
-                        id,
-                        calendar_id,
-                        None,
-                        timezone,
-                        reminder,
-                        Some(selection),
-                        Some(replacement),
-                    )
-                    .await
-                    .map_err(failure)?,
+                service::calendar::prepare_calendar(
+                    bridge,
+                    &state,
+                    id,
+                    calendar_id,
+                    None,
+                    timezone,
+                    reminder,
+                    Some(selection),
+                    Some(replacement),
                 )
+                .await
+                .map_err(failure)?
+                .try_into()
             })
             .await
             .map_err(storage)?
@@ -1132,10 +1151,9 @@ impl NativeApplication {
         choice: String,
     ) -> Result<Proposal> {
         self.blocking(move |s| {
-            convert(
-                service::calendar::resolve_proposal(&s, token, event_id, choice)
-                    .map_err(failure)?,
-            )
+            service::calendar::resolve_proposal(&s, token, event_id, choice)
+                .map_err(failure)?
+                .try_into()
         })
         .await
     }
@@ -1144,11 +1162,10 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::undo::prepare(bridge, &state, batch_id)
-                        .await
-                        .map_err(failure)?,
-                )
+                service::undo::prepare(bridge, &state, batch_id)
+                    .await
+                    .map_err(failure)?
+                    .try_into()
             })
             .await
             .map_err(storage)?
@@ -1163,11 +1180,12 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::calendar::approve_calendar(bridge, &state, token, approve_removals)
-                        .await
-                        .map_err(failure)?,
-                )
+                service::calendar::approve_calendar(bridge, &state, token, approve_removals)
+                    .await
+                    .map_err(failure)?
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_>>()
             })
             .await
             .map_err(storage)?
@@ -1177,11 +1195,12 @@ impl NativeApplication {
         let bridge = self.bridge.clone();
         runtime()
             .spawn(async move {
-                convert(
-                    service::calendar::reconcile_calendar(bridge, &state)
-                        .await
-                        .map_err(failure)?,
-                )
+                service::calendar::reconcile_calendar(bridge, &state)
+                    .await
+                    .map_err(failure)?
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_>>()
             })
             .await
             .map_err(storage)?
@@ -1224,17 +1243,16 @@ impl NativeApplication {
             let path = PathBuf::from(path);
             let bytes = read_photo_source(&path)?;
             let store = s.store.lock().map_err(storage)?;
-            convert(
-                store
-                    .stage_intake(
-                        &id,
-                        &path.file_name().unwrap_or_default().to_string_lossy(),
-                        &bytes,
-                        &domain::PipelineConfig::default(),
-                        chrono::Utc::now().timestamp(),
-                    )
-                    .map_err(storage)?,
-            )
+            Ok(store
+                .stage_intake(
+                    &id,
+                    &path.file_name().unwrap_or_default().to_string_lossy(),
+                    &bytes,
+                    &domain::PipelineConfig::default(),
+                    chrono::Utc::now().timestamp(),
+                )
+                .map_err(storage)?
+                .into())
         })
         .await
     }
