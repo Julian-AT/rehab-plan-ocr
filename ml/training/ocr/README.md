@@ -4,6 +4,12 @@ The registry pins the official trainable checkpoint, source revision and exact
 shipping CTC dictionary. Model development stays outside app dependencies. Restore
 once online; preparation, adaptation, export and parity then use local files.
 
+Source restore builds a new exclusive staging checkout and publishes it with one
+directory rename only after revision and tracked-content verification. A local
+lock serializes restores. Interrupted staging remains available for inspection;
+retry uses fresh staging. Existing or unexpected checkouts are verified and
+preserved, never reset or deleted automatically.
+
 ```sh
 make restore-ocr-assets
 make prepare-ocr-smoke DATASET=.local/datasets/ocr-example
