@@ -2,8 +2,9 @@
 
 # Documentation
 
-The [implementation ledger](development/implementation-plan.md) is the source of
-current scope, acceptance gates and verified work. The [status](development/status.md)
+The [completion ledger](development/completion.md) records the full remaining scope
+from `8d81c4c`; the [implementation ledger](development/implementation-plan.md) retains
+previous implementation evidence. The [status](development/status.md)
 summarizes remaining work without replacing the evidence.
 
 | Area | Entry point |
