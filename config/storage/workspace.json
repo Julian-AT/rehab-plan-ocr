@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "paths": {
+    "tools": {"canonical": ".local/tools", "legacy": ".tools"},
+    "python": {"canonical": ".local/envs/tools", "legacy": ".venv"},
+    "cargo": {"canonical": ".local/builds/rust", "legacy": "target"},
+    "ios": {"canonical": ".local/builds/ios", "legacy": "apps/ios/build"}
+  }
+}

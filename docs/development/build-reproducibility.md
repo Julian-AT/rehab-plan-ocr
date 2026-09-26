@@ -19,3 +19,35 @@ XcodeGen-Installationstests einschließlich tatsächlich erzeugter Build-Einstel
 und `make doctor` mit Xcode 26.4 / Build 17E192. Das belegt die Werkzeuggrenzen;
 der vollständige Build aus einem frischen Checkout und sein Offline-Wiederanlauf
 bleiben getrennte Abnahmeschritte.
+
+## Arbeitsverzeichnisse
+
+`config/storage/workspace.json` enthält die verbindliche Zuordnung.
+`tooling/dev/workspace.py` wird von Einrichtung, Buildskripten und Prüfwerkzeugen
+verwendet. Ein vorhandener alter Bestand bleibt bis zu seiner ausdrücklich
+ausgeführten, geprüften Verschiebung aktiv; zwei gleichzeitig vorhandene Bestände
+werden weder zusammengeführt noch willkürlich ausgewählt.
+
+| Bestand | Kanonischer Pfad | Erhaltener Kompatibilitätspfad |
+|---|---|---|
+| Werkzeuge | `.local/tools` | `.tools` |
+| Python-Werkzeuge | `.local/envs/tools` | `.venv` |
+| Rust-Produkte | `.local/builds/rust` | `target` |
+| Xcode-Produkte und Archive | `.local/builds/ios` | `apps/ios/build` |
+
+Neue Checkouts verwenden von Beginn an die kanonischen Verzeichnisse. Alte
+Bestände werden mit SHA-256-Inventar, Prozessprüfung, exklusivem Wartungs-Lock und
+Wiederanlaufjournal verschoben. Originaldaten, Trainingsumgebungen, Modelle und
+vorhandene Versuchsergebnisse gehören nicht zu dieser Verschiebung.
+
+Kompatibilitätslinks bleiben erhalten: vorhandene Python-Einstiegsskripte und
+historische Berichte können ihre ursprünglichen absoluten Pfade enthalten.
+Die Migration verändert keine externen Interpreter. Ein interner Link auf einen
+internen absoluten Interpreter-Link bleibt zulässig; direkt aus dem Bestand
+herausführende relative Links benötigen weiterhin eine gesonderte Zuordnung.
+
+`CARGO_TARGET_DIR` bleibt als ausdrücklich gewählter abweichender Ausgabeort
+unterstützt. Generator, Linker, Assembler und CLI-Prüfungen verwenden denselben
+aufgelösten Wert. Fünf Pfadtests vergleichen dies auch mit tatsächlichen
+Cargo-Metadaten; sieben Migrationstests prüfen Datenerhalt, konkurrierende
+Änderungen, externe Linkziele und Wiederanlauf.

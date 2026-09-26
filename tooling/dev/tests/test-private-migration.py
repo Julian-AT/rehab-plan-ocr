@@ -54,6 +54,28 @@ class PrivateMigrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 migration.apply(root, manifest)
 
+    def test_internal_symlink_chain_to_external_interpreter_keeps_its_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            manifest = self.setup_tree(root)
+            interpreter = root / "external-interpreter"
+            interpreter.write_bytes(b"unchanged external executable")
+            source = root / "data/private"
+            (source / "python").symlink_to(interpreter)
+            (source / "python3").symlink_to("python")
+            migration.plan(root, manifest)
+            migration.apply(root, manifest)
+            self.assertEqual((source / "python3").resolve(), interpreter)
+            self.assertEqual(interpreter.read_bytes(), b"unchanged external executable")
+
+    def test_direct_external_relative_symlink_still_requires_explicit_mapping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = self.setup_tree(root)
+            (root / "data/private/escaping").symlink_to("../../outside")
+            with self.assertRaisesRegex(ValueError, "External relative symlink"):
+                migration.plan(root, manifest)
+
     def test_interruption_after_rename_resumes_without_losing_data(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

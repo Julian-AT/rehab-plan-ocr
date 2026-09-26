@@ -36,6 +36,7 @@ def write_json(path, value):
 def inventory(root):
     if root.is_symlink() or not root.is_dir():
         raise ValueError(f"Expected an actual storage directory: {root}")
+    root = root.resolve()
     entries = {}
     for directory, folders, files in os.walk(root, followlinks=False):
         for name in sorted(folders + files):
@@ -44,7 +45,9 @@ def inventory(root):
             before = path.lstat()
             if path.is_symlink():
                 target = os.readlink(path)
-                if not os.path.isabs(target) and not path.resolve().is_relative_to(root.resolve()):
+                if not os.path.isabs(target) and not Path(
+                    os.path.abspath(path.parent / target)
+                ).is_relative_to(root.resolve()):
                     raise ValueError(
                         "External relative symlink needs a relocation mapping; no move performed"
                     )
