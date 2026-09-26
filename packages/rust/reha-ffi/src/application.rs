@@ -325,6 +325,33 @@ pub(crate) struct HostBridge {
     jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
+    fn import_snapshot(
+        &self,
+        records: Vec<domain::ImportRecord>,
+    ) -> service::Response<service::calendar_imports::Snapshot> {
+        let snapshot = self
+            .host
+            .snapshot(records.into_iter().map(Into::into).collect())
+            .map_err(platform_failure)?;
+        Ok(service::calendar_imports::Snapshot {
+            current: snapshot
+                .current
+                .into_iter()
+                .map(|(id, value)| (id, value.into()))
+                .collect(),
+            protected_ids: snapshot.protected_ids,
+        })
+    }
+    fn apply_import(
+        &self,
+        request: service::calendar_imports::ApplyRequest,
+    ) -> service::Response<domain::CalendarResult> {
+        let operation = request.operation.try_into().map_err(platform_failure)?;
+        self.host
+            .apply(operation, request.recovery_only)
+            .map(Into::into)
+            .map_err(platform_failure)
+    }
     fn calendar_status(
         &self,
     ) -> service::Response<service::calendar_administration::PlatformStatus> {
@@ -400,15 +427,6 @@ impl Platform for HostBridge {
                     )
                     .map_err(storage)
                 }
-                "snapshot" => {
-                    let live = self.host.snapshot(convert(args["records"].clone())?)?;
-                    Ok(json!({"current":live.current, "protected_ids":live.protected_ids}))
-                }
-                "apply" => Ok(serde_json::to_value(self.host.apply(
-                    convert(args["operation"].clone())?,
-                    args["recovery_only"].as_bool().unwrap_or(true),
-                )?)
-                .map_err(storage)?),
                 "decodePhoto" => {
                     let bytes = STANDARD
                         .decode(args["base64"].as_str().unwrap_or(""))
@@ -1441,11 +1459,46 @@ mod host_routing_tests {
             }
             Ok(self.response.clone().unwrap_or_else(|| json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()})).to_string())
         }
-        fn snapshot(&self, _: Vec<ImportRecord>) -> Result<LiveCalendar> {
-            unreachable!()
+        fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push(("typedSnapshot".into(), json!(records)));
+            }
+            Ok(LiveCalendar {
+                current: records.into_iter().map(|r| (r.id, r.approved)).collect(),
+                protected_ids: vec!["protected-series".into()],
+            })
         }
-        fn apply(&self, _: CalendarOperation, _: bool) -> Result<CalendarResult> {
-            unreachable!()
+        fn apply(
+            &self,
+            operation: CalendarOperation,
+            recovery_only: bool,
+        ) -> Result<CalendarResult> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            if let Some(calls) = &self.calls {
+                calls.lock().unwrap().push((
+                    "typedApply".into(),
+                    json!({"operation":operation,"recovery_only":recovery_only}),
+                ));
+            }
+            Ok(CalendarResult {
+                id: operation.id,
+                status: if recovery_only {
+                    WriteStatus::Uncertain
+                } else {
+                    WriteStatus::Saved
+                },
+                external_id: operation.external_id,
+                error: recovery_only.then(|| "Unclear durable status".into()),
+                maintenance_warnings: vec!["Separate maintenance warning".into()],
+            })
         }
         fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>> {
             Ok(bytes.into_iter().rev().collect())
@@ -1463,6 +1516,95 @@ mod host_routing_tests {
         ) -> Result<Vec<CalendarOverlap>> {
             unreachable!()
         }
+    }
+    #[test]
+    fn typed_import_effects_preserve_identity_recovery_and_maintenance_warnings() {
+        let calls = Arc::new(Mutex::new(vec![]));
+        let bridge = HostBridge {
+            host: Box::new(Host {
+                calls: Some(calls.clone()),
+                ..Host::default()
+            }),
+            progress: Mutex::new(HashMap::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
+        };
+        let values = domain::EventValues {
+            title: "Erfundene Therapie".into(),
+            start_utc: "2031-05-17T08:00:00Z".into(),
+            end_utc: "2031-05-17T08:30:00Z".into(),
+            timezone: "Europe/Vienna".into(),
+            location: "Raum 204".into(),
+            notes: "Bestätigte Notiz".into(),
+            reminder_minutes: None,
+        };
+        let record = domain::ImportRecord {
+            id: "owned".into(),
+            schedule_id: "schedule".into(),
+            calendar_id: "hidden".into(),
+            external_id: Some("native-event".into()),
+            approved: values.clone(),
+            status: "saved".into(),
+            operation_id: "durable-attempt".into(),
+        };
+        let snapshot = bridge.import_snapshot(vec![record.clone()]).unwrap();
+        assert_eq!(snapshot.current["owned"], values);
+        assert_eq!(snapshot.protected_ids, ["protected-series"]);
+        let mut operation = domain::CalendarOperation {
+            kind: "update".into(),
+            id: record.id,
+            calendar_id: record.calendar_id,
+            external_id: record.external_id,
+            before: Some(values.clone()),
+            after: Some(values),
+            requires_resolution: true,
+            reason: "Fremde Änderung prüfen".into(),
+        };
+        for recovery_only in [false, true] {
+            let result = bridge
+                .apply_import(service::calendar_imports::ApplyRequest {
+                    operation: operation.clone(),
+                    recovery_only,
+                })
+                .unwrap();
+            assert_eq!(result.id, "owned");
+            assert_eq!(result.external_id.as_deref(), Some("native-event"));
+            assert_eq!(
+                result.status,
+                if recovery_only { "uncertain" } else { "saved" }
+            );
+            assert_eq!(result.error.is_some(), recovery_only);
+            assert_eq!(
+                result.maintenance_warnings,
+                ["Separate maintenance warning"]
+            );
+        }
+        let observed = calls.lock().unwrap().clone();
+        assert_eq!(observed.len(), 3);
+        assert_eq!(observed[0].0, "typedSnapshot");
+        assert_eq!(observed[0].1[0]["operation_id"], "durable-attempt");
+        for (index, recovery_only) in [(1, false), (2, true)] {
+            assert_eq!(observed[index].0, "typedApply");
+            assert_eq!(
+                observed[index].1,
+                json!({"operation":operation,"recovery_only":recovery_only})
+            );
+        }
+        for command in ["snapshot", "apply"] {
+            assert!(bridge.call(command, json!({})).is_err());
+        }
+        operation.kind = "unsupported-kind".into();
+        assert!(matches!(
+            bridge.apply_import(service::calendar_imports::ApplyRequest {
+                operation,
+                recovery_only: false,
+            }),
+            Err(service::ServiceError::Storage(_))
+        ));
+        assert_eq!(
+            calls.lock().unwrap().len(),
+            3,
+            "Invalid operation reached the host"
+        );
     }
     #[test]
     fn vision_and_current_event_effects_reach_the_native_callback() {

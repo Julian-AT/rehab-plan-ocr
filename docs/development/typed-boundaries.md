@@ -91,6 +91,30 @@ an `a52d38b`. Die tatsächliche Simulatorausführung unter
 `.local/runs/eventkit-20260926-s18-002/` besteht mit 18 Erfolgen, einem erwarteten
 Dateischutz-Skip und null Fehlern, einschließlich der typisierten Importwiederaufnahme.
 
+## Typisierte Importeffekte im Core
+
+Vorschau, Bestätigung, Planannahme, Rücknahme und Wiederanlauf übergeben Snapshot
+und Importauftrag direkt an `Platform.import_snapshot` und `apply_import`.
+`HostBridge` projiziert die vorhandenen Domainwerte feldweise auf dieselben
+UniFFI-Callbacks; die Stringeffekte `snapshot` und `apply` sind dort entfernt.
+Bestätigte Texte, Uhrzeiten, Zeitzone, Notizen, Erinnerungen, Kalender-/Termin-
+und Auftragsidentitäten sowie `recovery_only` bleiben erhalten. Schreibstatus
+und Wartungswarnungen bleiben getrennt; DB-/Kalenderjournale ändern ihr Format nicht.
+
+Nur die Standardadapter älterer `Platform`-Hosts serialisieren noch diese Aufträge.
+Eine ausgelassene alte Schutzliste bedeutet weiterhin leer; eine vorhandene,
+aber beschädigte Schutzliste scheitert nun ausdrücklich als Speicherfehler.
+Sie kann nicht mehr stillschweigend den Schutz fremder/serieller Termine aufheben.
+Unbekannte Operationen werden vor dem nativen Aufruf abgewiesen.
+
+234 Core-/FFI-Tests, Clippy ohne Warnungen und die tatsächliche Swift-6-
+Bindingsprobe bestehen. Die neue Routingprüfung erfasst sämtliche übergebenen
+Felder, Recovery-Flag und separate Wartungswarnungen; ungültige Aufträge und die
+entfernten Stringeffekte erreichen den Host nicht. Die bisherigen Import-, Undo-,
+Wiederanlauf- und FFI-Prüfungen bestehen ebenfalls. Private Logs:
+`.local/runs/typed-core-import-20260926-s18-002*.log`. Der gemeinsame iOS-Appbuild
+und die vollständige Endabnahme bleiben separate Prüfungen.
+
 ## Kalenderstatus und Verlaufsverwaltung
 
 Status, lokaler Bookkeeping-Abgleich, Wiederanlauf unklarer Terminänderungen,
@@ -222,9 +246,9 @@ gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
 Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
 Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
-Auch die Core-Import-/Undo-Abläufe übergeben Snapshot und Importwrite noch als
-JSON-Werte an `Platform.call`; erst der FFI-Adapter verwendet dort die typisierten
-Callbacks. Der aktive Core-Agenda-Abgleich verwendet weiterhin den Stringcallback
+Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
+`Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
+Core-Agenda-Abgleich verwendet weiterhin den Stringcallback
 `calendar_event_call("agenda", ...)`. Die neue typisierte Swift-Agenda-Methode
 ersetzt damit noch nicht sämtliche aktiven Core-Eingänge. Diese internen Grenzen
 müssen einschließlich Wartungswarnungen und bestehender Legacy-Ergebnisformen
