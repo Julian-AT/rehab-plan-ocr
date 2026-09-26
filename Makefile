@@ -83,3 +83,11 @@ assistant-smoke:
 evaluate-assistant:
 	@test -n "$(RUN)" || { echo 'Set RUN to the completed smoke directory'; exit 2; }
 	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/evaluation/conversation/compare.py --run "$(RUN)" --output "$(RUN)/evaluation"
+
+MIGRATION ?= .local/migrations/private-storage.json
+.PHONY: inventory-private migrate-private
+inventory-private:
+	python3 tooling/dev/migrate-private.py plan --manifest "$(MIGRATION)"
+
+migrate-private:
+	python3 tooling/dev/migrate-private.py apply --manifest "$(MIGRATION)"
