@@ -2,7 +2,7 @@ import AVFoundation
 import AppleServices
 import Foundation
 
-/// A single graph provides the echo reference for microphone AND Victoria.
+/// A single graph provides the echo reference for microphone and local speech.
 @MainActor final class ConversationAudio {
   static let shared = ConversationAudio()
   private(set) var engine: AVAudioEngine?
@@ -110,7 +110,7 @@ import Foundation
       !AVAudioSession.sharedInstance().currentRoute.inputs.isEmpty
     else { throw LocalSpeechError.message("Das Mikrofon ist gerade nicht verfügbar.") }
     // Voice processing requires identical formats on both I/O sides. The
-    // mixer still converts Victoria's 24 kHz audio to this hardware format.
+    // mixer still converts prepared 24 kHz speech to this hardware format.
     graph.connect(graph.mainMixerNode, to: graph.outputNode, format: format)
     graph.inputNode.installTap(onBus: 0, bufferSize: 960, format: format) { @Sendable buffer, _ in
       receive(buffer)
@@ -133,19 +133,13 @@ import Foundation
       format: AVAudioFormat(standardFormatWithSampleRate: 24_000, channels: 1))
     player = node
   }
-  func play(wav: Data) async throws -> Bool {
+  func play(pcm decoded: SpeechPCM) async throws -> Bool {
+    try Task.checkCancellation()
     stopPlayback()
     let id = playbackID
-    // Immutable PCM crosses the actor boundary; AVAudioEngine and its buffers
-    // remain owned here. Cancellation must not start a late spoken response.
-    let decoding = Task.detached(priority: .userInitiated) { try SpeechPCM.decode(wav) }
-    let decoded = try await withTaskCancellationHandler {
-      try await decoding.value
-    } onCancel: {
-      decoding.cancel()
+    guard !decoded.samples.isEmpty, decoded.samples.count <= SpeechPCM.maximumFrames else {
+      throw SpeechPCMError.invalidFile
     }
-    try Task.checkCancellation()
-    guard playbackID == id else { return false }
     if engine == nil {
       let audio = AVAudioSession.sharedInstance()
       try audio.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])

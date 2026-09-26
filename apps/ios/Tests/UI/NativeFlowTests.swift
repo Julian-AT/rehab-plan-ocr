@@ -86,7 +86,7 @@ import XCTest
       NSPredicate(format: "identifier == %@ AND value == %@", "preview-voice", "idle")
     ).firstMatch
     XCTAssertTrue(playing.waitForExistence(timeout: 45))
-    capture("Victoria playing")
+    capture("Local system voice playing")
     preview.tap()
     XCTAssertTrue(idle.waitForExistence(timeout: 5))
     preview.tap()
@@ -152,13 +152,7 @@ import XCTest
     app.buttons["voice-settings"].tap()
     XCTAssertTrue(app.navigationBars["Sprache"].waitForExistence(timeout: 5))
     XCTAssertTrue(app.buttons["preview-voice"].exists)
-    XCTAssertTrue(
-      app.descendants(matching: .any).matching(
-        NSPredicate(
-          format: "label CONTAINS %@ OR value CONTAINS %@", "Victoria · Deutsch",
-          "Victoria · Deutsch"
-        )
-      ).firstMatch.exists)
+    XCTAssertTrue(app.buttons["speech-voice"].exists)
     capture("Local voice setup and playback controls")
   }
   func testNativeTabsArchiveSettingsAndColdLaunch() {

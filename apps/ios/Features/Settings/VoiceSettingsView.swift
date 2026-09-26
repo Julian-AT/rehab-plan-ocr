@@ -11,7 +11,12 @@ struct VoiceSettingsView: View {
         Picker("Anrede", selection: $address) {
           ForEach(VoiceAddress.allCases, id: \.self) { Text($0.rawValue).tag($0) }
         }.accessibilityIdentifier("voice-address").accessibilityValue(address.rawValue)
-        LabeledContent("Stimme", value: "Victoria · Deutsch")
+        Picker("Stimme", selection: $output.voiceID) {
+          ForEach(output.availableVoices) { voice in
+            Text("\(voice.name) · Deutsch").tag(voice.id)
+          }
+          if output.voiceID.isEmpty { Text("Nicht verfügbar").tag("") }
+        }.accessibilityIdentifier("speech-voice")
         VStack(alignment: .leading) {
           LabeledContent(
             "Sprechtempo", value: rate.formatted(.number.precision(.fractionLength(2))) + "×")
@@ -53,6 +58,7 @@ struct VoiceSettingsView: View {
         output.stop()
         output.rate = rate
       }
+      .onChange(of: output.voiceID) { output.stop() }
       .onDisappear { output.stop() }
   }
 }

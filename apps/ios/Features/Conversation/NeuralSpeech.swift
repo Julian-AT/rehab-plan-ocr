@@ -1,5 +1,4 @@
 import AVFoundation
-import RehaCore
 import SwiftUI
 
 struct PlaybackWord: Identifiable {
@@ -22,8 +21,18 @@ struct PlaybackWord: Identifiable {
   var onFailure: ((String) -> Void)?
   var speaking: Bool { phase == .playing || phase == .preparing }
   var voiceID: String {
-    get { "victoria" }
-    set { UserDefaults.standard.set("victoria", forKey: "voice.neural.id") }
+    get {
+      renderer.selectedVoice(preferredVoiceID)?.id ?? ""
+    }
+    set {
+      preferredVoiceID = newValue
+      UserDefaults.standard.set(newValue, forKey: "voice.system.id")
+    }
+  }
+  var availableVoices: [LocalVoice] { renderer.voices }
+  var voiceName: String {
+    renderer.selectedVoice(preferredVoiceID)?.name
+      ?? "Nicht verfügbar"
   }
   var rate: Double {
     get {
@@ -32,8 +41,12 @@ struct PlaybackWord: Identifiable {
     }
     set { UserDefaults.standard.set(newValue, forKey: "voice.neural.rate") }
   }
-  private let renderer = NativeSpeech(
-    modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-german").path)
+  private let renderer: any LocalSpeechRendering
+  private var preferredVoiceID: String?
+  init(renderer: any LocalSpeechRendering = SystemSpeechRenderer()) {
+    self.renderer = renderer
+    preferredVoiceID = UserDefaults.standard.string(forKey: "voice.system.id")
+  }
   private var generation: UInt64 = 0
   private var task: Task<Void, Never>?
   private var meterTask: Task<Void, Never>?
@@ -41,7 +54,7 @@ struct PlaybackWord: Identifiable {
   private var queue: [String] = []
   private var inputEnded = false
   private var wordIndex = 0
-  private var currentMarks: [SpeechWordMark] = []
+  private var currentMarks: [OutputWord] = []
   private var revealed = 0
   private var committed = 0
   private var announced = false
@@ -69,7 +82,7 @@ struct PlaybackWord: Identifiable {
     for phrase in reply.phrases { appendPrepared(phrase) }
     finishResponse()
   }
-  func beginResponse() {
+  private func beginResponse() {
     stop()
     responseID = UUID()
     words = []
@@ -87,7 +100,10 @@ struct PlaybackWord: Identifiable {
     let renderer = renderer
     task = Task {
       do {
-        var prepared: Task<SpeechRender, Error>?
+        guard
+          let voice = renderer.selectedVoice(preferredVoiceID)
+        else { throw SystemSpeechError.unavailable }
+        var prepared: Task<RenderedSpeech, Error>?
         defer { prepared?.cancel() }
         while !Task.isCancelled && generation == id {
           if queue.isEmpty && prepared == nil {
@@ -95,14 +111,14 @@ struct PlaybackWord: Identifiable {
             try await Task.sleep(for: .milliseconds(25))
             continue
           }
-          let audio: SpeechRender
+          let audio: RenderedSpeech
           if let next = prepared {
             audio = try await next.value
             prepared = nil
           } else {
             let text = queue.removeFirst()
-            audio = try await renderer.renderTimed(
-              text: text, voice: "victoria", speed: speed, request: id)
+            audio = try await renderer.render(
+              text: text, voice: voice, rate: speed, request: id)
           }
           guard generation == id else { return }
           try Task.checkCancellation()
@@ -116,8 +132,8 @@ struct PlaybackWord: Identifiable {
           if !queue.isEmpty {
             let text = queue.removeFirst()
             prepared = Task {
-              try await renderer.renderTimed(
-                text: text, voice: "victoria", speed: speed, request: id)
+              try await renderer.render(
+                text: text, voice: voice, rate: speed, request: id)
             }
           }
           meterTask = Task { [weak self] in
@@ -132,7 +148,7 @@ struct PlaybackWord: Identifiable {
               try? await Task.sleep(for: .milliseconds(30))
             }
           }
-          let finished = try await ConversationAudio.shared.play(wav: Data(audio.audio))
+          let finished = try await ConversationAudio.shared.play(pcm: audio.pcm)
           meterTask?.cancel()
           meterTask = nil
           guard generation == id else { return }
@@ -158,20 +174,12 @@ struct PlaybackWord: Identifiable {
       }
     }
   }
-  func appendPhrase(_ phrase: String) {
-    guard !inputEnded, !phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      return
-    }
-    var reply = ConversationReply()
-    reply.append(phrase)
-    for item in reply.phrases { appendPrepared(item) }
-  }
   private func appendPrepared(_ phrase: ConversationReply.Phrase) {
     queue.append(phrase.speech)
     preparedReply.appendPrepared(phrase)
     lastText = preparedReply.text
   }
-  func finishResponse() {
+  private func finishResponse() {
     inputEnded = true
     if announced {
       UIAccessibility.post(notification: .announcement, argument: preparedReply.speech)
@@ -211,7 +219,7 @@ struct PlaybackWord: Identifiable {
   func stop() {
     updateWords(at: ConversationAudio.shared.playbackTime)
     generation &+= 1
-    renderer.setRequest(request: generation)
+    renderer.setRequest(generation)
     task?.cancel()
     task = nil
     meterTask?.cancel()
@@ -243,46 +251,9 @@ struct PlaybackWord: Identifiable {
     onFailure = nil
     UserDefaults.standard.removeObject(forKey: "voice.neural.id")
     UserDefaults.standard.removeObject(forKey: "voice.neural.rate")
+    UserDefaults.standard.removeObject(forKey: "voice.system.id")
+    preferredVoiceID = nil
     UserDefaults.standard.removeObject(forKey: VoiceAddress.key)
   }
   nonisolated static func phrases(_ text: String) -> [String] { SpeechPhrasing.phrases(text) }
-}
-
-struct SpeechControls: View {
-  let text: String
-  @State private var output = SpeechOutput.shared
-  var body: some View {
-    VStack(alignment: .leading, spacing: AppSpacing.small) {
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: AppSpacing.section) { buttons }
-        VStack(alignment: .leading, spacing: 0) { buttons }
-      }
-      if output.lastText == text {
-        Text(output.status).font(.subheadline).foregroundStyle(
-          output.phase == .failed ? .red : .secondary
-        )
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityIdentifier("speech-status").accessibilityValue(output.phase.rawValue)
-      }
-    }
-    // Explicit styles isolate sibling actions inside List/Form rows.
-    .buttonStyle(.borderless)
-  }
-  @ViewBuilder private var buttons: some View {
-    Button {
-      output.speak(text)
-    } label: {
-      Label("Vorlesen", systemImage: "speaker.wave.2").font(.subheadline).controlHeight()
-    }.accessibilityIdentifier("read-aloud")
-    Button {
-      output.speak(text)
-    } label: {
-      Text("Wiederholen").font(.subheadline).controlHeight()
-    }.accessibilityIdentifier("repeat-speech")
-    Button {
-      output.stop()
-    } label: {
-      Text("Stopp").font(.subheadline).controlHeight()
-    }.disabled(!output.speaking).accessibilityIdentifier("stop-speech")
-  }
 }
