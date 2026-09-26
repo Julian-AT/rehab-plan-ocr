@@ -39,7 +39,7 @@ einen Vergleich dauerhafter Daten. Installation ohne Deinstallation.
 
 ## Externe Voraussetzungen
 
-- GitHub-Actions-Abrechnung: auch Lauf `35382848454` vor Runnerstart blockiert.
+- GitHub-Actions-Abrechnung: auch Lauf `35428090593` vom 26.09.2026 vor Runnerstart blockiert.
 - Referenzprüfung, deutsche Sprachprüfung, neue Pläne und Aufnahmen mit Einwilligung.
 - Hörtests und zwei moderierte Bedienungsrunden mit jeweils mindestens fünf Personen.
 - Testhardware mit und ohne Apple Intelligence, einschließlich Mindestbetriebssystem.
