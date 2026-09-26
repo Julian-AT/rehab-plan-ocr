@@ -4,7 +4,7 @@
 
 Vorschau für **0.3.0, Build 2026092621**, mit öffentlichen synthetischen Terminen im iPhone-17-Simulator (iOS 26.4).
 
-**Status:** Implementierung und lokale Prüfungen abgeschlossen. Auf dem echten iPhone wurde dieser Build noch nicht installiert. Die Freigabe dieser Vorschau und der Hörproben sowie die anschließende Prüfung mit echter Sprache stehen aus. Der gemeldete iPhone-Mikrofonfehler ist deshalb noch nicht als behoben bestätigt.
+**Status:** Implementierung und lokale Prüfungen abgeschlossen. Nach ausdrücklicher Freigabe dieser Vorschau und der Hörproben wurde Build 2026092621 über den Hotspot auf dem iPhone installiert. Frische Sicherung und Datenerhalt sind im [Gerätebericht](../../calm-voice-device-update.md) belegt. Der erste Start wurde vom gesperrten iPhone blockiert; die Prüfung mit echter Sprache steht aus. Der gemeldete Mikrofonfehler ist deshalb noch nicht als behoben bestätigt.
 
 ## Vorschau
 
@@ -65,7 +65,7 @@ Die vorhandene lokale Diagnose speichert Berechtigungsstatus, Eingangsart, Engin
 - **UI:** Terminkarten, Tagesliste, Legende und größte Schrift; sichtbare Pegeländerung, Stille, Stopp und Hintergrundwechsel; reale Victoria-Wiedergabe, Wortanzeige und Zentrierung; Anrede nach Neustart und in der nächsten festen Antwort; Kalenderwerkzeuge ohne unbestätigte Schreibzugriffe.
 - **Build/Stil:** Simulatorbuild, Swift-Formatprüfung und Shellprüfung erfolgreich.
 
-Die Simulator-Spracherkennung selbst ist nicht verfügbar. Die Mikrofon-Testquelle erzeugt ausschließlich im Debug-Simulator PCM-Ton oder Stille; sie ist kein Nachweis für Erkennung echter Sprache. Freie Apple-Intelligence-Antworten und das eingebaute iPhone-Mikrofon sind nach Freigabe am Gerät zu prüfen.
+Die Simulator-Spracherkennung selbst ist nicht verfügbar. Die Mikrofon-Testquelle erzeugt ausschließlich im Debug-Simulator PCM-Ton oder Stille; sie ist kein Nachweis für Erkennung echter Sprache. Freie Apple-Intelligence-Antworten und das eingebaute iPhone-Mikrofon sind noch am Gerät zu prüfen.
 
 Nachweise: `/tmp/reha-calm-preview.xcresult` (sechs erfolgreiche Tests; zunächst zwei überholte Testannahmen), `/tmp/reha-calm-followup.xcresult` (beide korrigierten Tests erfolgreich), `/tmp/reha-calm-large.xcresult` (alle Kategorien mit größter Schrift). Der Anrede-Picker hat nun einen expliziten Accessibility-Wert; die Werkzeugprüfung erwartet den unverzierten Therapeutennamen.
 
@@ -82,12 +82,12 @@ sh scripts/test-diagnostics.sh
 sh scripts/test-vad.sh artifacts/calm-voice-preview/victoria-kontext.wav
 ```
 
-## Ausstehende Geräteprüfung nach Freigabe
+## Geräteupdate und ausstehende Sprachprüfung
 
-1. Vorschau und Hörproben ausdrücklich freigeben.
-2. Unmittelbar vor Installation App-Daten und App Groups frisch unter dem ausgeschlossenen privaten Artefaktverzeichnis sichern. Datenbank, Belege, Termine und Einstellungen inventarisieren.
-3. Das bestehende Bundle `at.rehakalender.personal` ohne Deinstallation aktualisieren. Datenbestand mit der frischen Sicherung vergleichen; keine Schemaänderung erwarten.
+1. **Erledigt:** Vorschau und Hörproben ausdrücklich freigegeben.
+2. **Erledigt:** Unmittelbar vor Installation App-Daten und beide App-Gruppen frisch gesichert und inventarisiert.
+3. **Erledigt:** Das bestehende Bundle `at.rehakalender.personal` ohne Deinstallation auf Build 2026092621 aktualisiert. Alle 15 Datenbanktabellen, Einstellungen und 90 dauerhaften Dateien sind unverändert erhalten; Schema weiterhin 8.
 4. Am eingebauten Mikrofon mindestens fünf Starts prüfen: gesprochene Frage, sichtbarer Pegel, Transkript, passende Antwort, erneutes Zuhören. Du/Sie, fehlender Raum, Frühstück I/II und Hineinsprechen abdecken. Stopp sowie Hintergrundwechsel während Aufnahme und Vorbereitung separat prüfen.
 5. Erst nach erfolgreichen Durchläufen den Mikrofonfehler als behoben bestätigen und Geräteversion, Prüfergebnisse und Datenerhalt dokumentieren.
 
-Bis zur Freigabe wurde weder ein Geräteupdate noch eine neue Gerätesicherung durchgeführt.
+Das [Geräteprotokoll](../../calm-voice-device-update.md) dokumentiert Sicherung, Installation, Datenvergleich und den noch vom gesperrten Gerät blockierten Start.
