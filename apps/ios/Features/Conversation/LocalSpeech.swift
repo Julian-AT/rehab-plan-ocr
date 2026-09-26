@@ -26,6 +26,7 @@ import SwiftUI
   private var progress = RecognitionProgress()
   private var firstResult = false
   private var recognizerReady = false
+  private var installingAssets = false
   private var readinessStartedAt = 0.0
   private var endpoint = SpeechEndpoint()
   private var onset: [Bool] = []
@@ -169,10 +170,13 @@ import SwiftUI
         guard let self, self.generation == current, self.microphoneID == id else { return }
         let now = ProcessInfo.processInfo.systemUptime
         if !self.recognizerReady {
-          if now - self.readinessStartedAt >= 10 {
+          if now - self.readinessStartedAt >= (self.installingAssets ? 120 : 10) {
+            let reason: RecognitionFailure =
+              self.installingAssets ? .assetSetupFailed : .unavailable
             LocalDiagnostics.shared.record(
-              .recognitionReadiness, .failed, correlation: self.turnID.uuidString)
-            self.failInput(RecognitionFailure.unavailable.message)
+              .recognitionReadiness, .failed, correlation: self.turnID.uuidString,
+              count: reason.diagnosticCode)
+            self.failInput(reason.message)
             return
           }
           continue
@@ -318,6 +322,7 @@ import SwiftUI
     let current = generation
     completion = nil
     recognizerReady = false
+    installingAssets = false
     readinessStartedAt = ProcessInfo.processInfo.systemUptime
     input?.beginPending(preRoll: preRoll)
     providerTask?.cancel()
@@ -330,7 +335,26 @@ import SwiftUI
       LocalDiagnostics.shared.record(
         .recognitionReadiness, .started, correlation: self.turnID.uuidString)
       do {
-        let selected = try await SpeechRecognitionProviders.ready(titles: self.contextualTitles)
+        let selected = try await SpeechRecognitionProviders.ready(
+          titles: self.contextualTitles,
+          allowInstallation: startMicrophone != nil && !ConversationAudio.shared.microphoneActive
+        ) { [weak self] stage in
+          guard let self, self.generation == current, self.segment == segment,
+            !Task.isCancelled
+          else { return }
+          switch stage {
+          case .assets(let status):
+            LocalDiagnostics.shared.record(
+              .recognitionAssets, .completed, correlation: self.turnID.uuidString,
+              count: status.rawValue)
+          case .installing(let active):
+            self.installingAssets = active
+            self.readinessStartedAt = ProcessInfo.processInfo.systemUptime
+            LocalDiagnostics.shared.record(
+              .recognitionAssets, active ? .started : .completed,
+              correlation: self.turnID.uuidString)
+          }
+        }
         guard self.generation == current, self.segment == segment, !Task.isCancelled else {
           selected.cancel()
           return
@@ -358,9 +382,11 @@ import SwiftUI
         if self.endpointSent && self.state == .recording { self.onEndpoint?() }
       } catch {
         guard self.generation == current, self.segment == segment, !Task.isCancelled else { return }
+        let reason = error as? RecognitionFailure ?? .unavailable
         LocalDiagnostics.shared.record(
-          .recognitionReadiness, .failed, correlation: self.turnID.uuidString)
-        self.failInput((error as? RecognitionFailure ?? .unavailable).message)
+          .recognitionReadiness, .failed, correlation: self.turnID.uuidString,
+          count: reason.diagnosticCode)
+        self.failInput(reason.message)
       }
     }
   }
@@ -433,7 +459,8 @@ import SwiftUI
     } catch {
       if generation == current {
         LocalDiagnostics.shared.record(
-          .recognitionFinalization, .failed, correlation: self.turnID.uuidString)
+          .recognitionFinalization, .failed, correlation: self.turnID.uuidString,
+          count: (error as? RecognitionFailure)?.diagnosticCode)
         cancelTurn()
       }
       if let reason = error as? RecognitionFailure {
@@ -456,6 +483,7 @@ import SwiftUI
     watchdogTask = nil
     receivedBuffer = false
     recognizerReady = false
+    installingAssets = false
     segment = UUID()
     monitor = false
     inputChannel?.finish()

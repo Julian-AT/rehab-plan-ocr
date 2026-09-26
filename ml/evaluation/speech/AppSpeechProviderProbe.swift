@@ -102,7 +102,7 @@ import Speech
     var identities: [String: String] = [:]
     for name in [
       "SpeechRecognitionProvider", "RecognitionTurn", "InputAudio", "SpeechInput",
-      "SpeechInputChannel", "CalendarVocabulary",
+      "SpeechInputChannel", "CalendarVocabulary", "SpeechAssetReadiness",
     ] {
       let path = "apps/ios/Features/Conversation/\(name).swift"
       identities[path] = hash(try Data(contentsOf: root.appendingPathComponent(path)))

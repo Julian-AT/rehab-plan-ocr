@@ -11,9 +11,12 @@ remain in force. Private speech, plans, weights and run artifacts stay under `.l
 `VoiceRecording` remains the app boundary. `SpeechRecognitionProvider` adds explicit
 on-device/phrase capabilities, locale readiness, timestamped stable/provisional
 results and typed completion. Installed German `SpeechAnalyzer`/`SpeechTranscriber`
-assets are preferred (de-AT, then a supported equivalent/de-DE). Missing assets or
-unsupported hardware use the on-device legacy recognizer. No conversation starts
-an asset download or uses server recognition. A failed active turn is not retried
+assets are preferred (de-AT, then a supported equivalent/de-DE). Following failures
+on the phone, first preparation now reserves and installs missing German assets
+**before** microphone startup. This initial setup requires connectivity. Listening
+never downloads assets or uses server recognition. Failed installation is surfaced;
+only unsupported hardware/locales or an explicit trial use the legacy recognizer.
+A failed active turn is not retried
 through another provider. `--speech-legacy-trial` selects the control for paired tests.
 
 The tap copies into a bounded/reusable PCM pool. A serial worker owns VAD,
@@ -22,7 +25,10 @@ silently drops audio into an actionable transcript. Up to two seconds of pending
 input preserve speech during provider preparation, including the 400 ms barge-in
 pre-roll. The existing 1.2/2.5 second pause policy is unchanged.
 
-Readiness has a ten-second deadline. Voiced input with no recognition progress
+Readiness has a ten-second deadline; initial model installation has a separate
+120-second bound while the microphone remains off. Stop invalidates late setup
+completion. Asset states and typed failure categories enter content-free diagnostics.
+Voiced input with no recognition progress
 fails after twelve seconds. Finalization drains conversion/input and waits up to
 two seconds; provisional text is never accepted after timeout. A format change
 after speech invalidates the utterance rather than joining fragments across a gap.

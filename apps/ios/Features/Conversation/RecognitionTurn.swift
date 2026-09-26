@@ -8,7 +8,7 @@ enum RecognitionCompletion: Equatable, Sendable {
 }
 
 enum RecognitionFailure: String, Error, Sendable {
-  case unavailable, assetsMissing, unsupportedLocale, invalidAudio, overflow
+  case unavailable, assetsMissing, assetSetupFailed, unsupportedLocale, invalidAudio, overflow
   case noProgress, finalizationTimeout, interrupted, incomplete
 
   var message: String {
@@ -17,12 +17,30 @@ enum RecognitionFailure: String, Error, Sendable {
       "Sprache ist hörbar, aber die Spracherkennung liefert noch keinen Text. Bitte erneut sprechen."
     case .finalizationTimeout, .incomplete:
       "Die Spracherkennung konnte den Satz nicht abschließen. Bitte den Satz erneut sprechen."
-    case .unavailable, .assetsMissing, .unsupportedLocale:
+    case .assetsMissing, .assetSetupFailed:
+      "Die deutsche Spracherkennung muss zuerst auf diesem iPhone eingerichtet werden. Bitte mit dem Internet verbinden und das Gespräch erneut starten. Danach funktioniert sie offline."
+    case .unavailable, .unsupportedLocale:
       "Die lokale deutsche Spracherkennung ist noch nicht bereit. Deutsch für die Diktierfunktion aktivieren."
     case .overflow, .invalidAudio:
       "Die Mikrofondaten konnten nicht vollständig verarbeitet werden. Bitte erneut sprechen."
     case .interrupted:
       "Die Spracherkennung wurde unterbrochen. Bitte den Satz erneut sprechen."
+    }
+  }
+
+  /// Stable categories only; never log arbitrary provider text or transcripts.
+  var diagnosticCode: Int {
+    switch self {
+    case .unavailable: 1
+    case .assetsMissing: 2
+    case .unsupportedLocale: 3
+    case .invalidAudio: 4
+    case .overflow: 5
+    case .noProgress: 6
+    case .finalizationTimeout: 7
+    case .interrupted: 8
+    case .incomplete: 9
+    case .assetSetupFailed: 10
     }
   }
 }

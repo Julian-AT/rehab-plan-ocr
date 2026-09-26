@@ -24,14 +24,16 @@ protocol RecognitionAudioSink: Sendable {
   func cancel()
 }
 
-/// Readiness is checked before microphone startup. Listening never downloads
-/// assets or falls back to server recognition. The legacy recognizer remains a
-/// capability fallback; a failed active turn is never retried with new meaning.
+/// Setup is permitted only before microphone startup. Listening never downloads
+/// assets or falls back to server recognition. Missing analyzer assets must not
+/// silently select the legacy engine; it remains a hardware/locale fallback.
 @MainActor enum SpeechRecognitionProviders {
-  static func ready(titles: [String]) async throws -> any SpeechRecognitionProvider {
-    if !ProcessInfo.processInfo.arguments.contains("--speech-legacy-trial"),
-      SpeechTranscriber.isAvailable
-    {
+  static func ready(
+    titles: [String], allowInstallation: Bool = false,
+    observe: (RecognitionPreparation) -> Void = { _ in }
+  ) async throws -> any SpeechRecognitionProvider {
+    let legacyRequested = ProcessInfo.processInfo.arguments.contains("--speech-legacy-trial")
+    if !legacyRequested, SpeechTranscriber.isAvailable {
       for identifier in ["de-AT", "de-DE"] {
         try Task.checkCancellation()
         guard
@@ -39,19 +41,45 @@ protocol RecognitionAudioSink: Sendable {
             equivalentTo: Locale(identifier: identifier))
         else { continue }
         let transcriber = SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
-        guard await AssetInventory.status(forModules: [transcriber]) == .installed,
-          let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
+        guard
+          try await SpeechAssetReadiness.ensure(
+            AnalyzerAssets(transcriber: transcriber, locale: locale),
+            allowInstallation: allowInstallation, observe: observe)
         else { continue }
+        guard
+          let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
+        else { throw RecognitionFailure.invalidAudio }
         try Task.checkCancellation()
         return AnalyzerRecognitionProvider(transcriber: transcriber, locale: locale, format: format)
       }
     }
+    if !legacyRequested { observe(.assets(.unsupported)) }
     guard
       let recognizer = ["de-AT", "de-DE"]
         .compactMap({ SFSpeechRecognizer(locale: Locale(identifier: $0)) })
         .first(where: { $0.supportsOnDeviceRecognition && $0.isAvailable })
     else { throw RecognitionFailure.assetsMissing }
     return LegacyRecognitionProvider(recognizer: recognizer, titles: titles)
+  }
+}
+
+@MainActor private struct AnalyzerAssets: RecognitionAssets {
+  let transcriber: SpeechTranscriber
+  let locale: Locale
+  func status() async -> RecognitionAssetStatus {
+    switch await AssetInventory.status(forModules: [transcriber]) {
+    case .unsupported: .unsupported
+    case .supported: .supported
+    case .downloading: .downloading
+    case .installed: .installed
+    @unknown default: .unsupported
+    }
+  }
+  func reserve() async throws { _ = try await AssetInventory.reserve(locale: locale) }
+  func install() async throws {
+    if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+      try await request.downloadAndInstall()
+    }
   }
 }
 

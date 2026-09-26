@@ -58,6 +58,7 @@ extension DiagnosticStep {
   fileprivate var title: String {
     switch self {
     case .recognitionReadiness: "Spracherkennung vorbereiten"
+    case .recognitionAssets: "Deutsches Sprachmodell"
     case .recognitionLocale: "Erkennungssprache"
     case .recognitionProgress: "Erkennungsfortschritt"
     case .recognitionPartial: "Vorläufiges Sprachergebnis"
