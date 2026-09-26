@@ -109,5 +109,27 @@ Sitzung zurücksetzt oder ein bereits abgebrochener Audio-Task erneut aufnimmt.
 
 Dieser Ablauf ist bestanden. Er misst weder reale Erkennungs-/Synthesequalität
 noch Unterbrechungslatenz und ersetzt keine EventKit-, UI- oder Geräteabnahme.
-Die freie sprachliche Abdeckung, insbesondere ordinale Bezüge innerhalb eines
-Änderungsauftrags, ist davon getrennt zu prüfen.
+Die freie sprachliche Abdeckung und tatsächliche deutsche Spracherkennung sind
+davon getrennt zu prüfen.
+
+## Ordinale Änderungsreferenzen
+
+Der vorherige direkte Befehlspfad suchte „zweiten“ als Teil eines Termintitels.
+Der neue Ablauf übernimmt etwa bei „Verschiebe den zweiten Termin auf morgen um
+zehn Uhr“ die zweite Position der zuvor tatsächlich beantworteten Kalenderseite.
+Der gleiche Auftrag ohne eine solche Seite führt zur Klärung. Vor der Vorschau
+werden Sichtbarkeit und Werte dieses Termins erneut gelesen; zusätzliche Titel-,
+Kalender-, Tages- und Uhrzeitangaben müssen dazu passen. Die Änderung bleibt auf
+die angefragten Felder beschränkt und benötigt weiterhin die Schaltfläche.
+
+Die Auflösung eines Änderungsziels erzeugt keine neue gesprochene Kalenderseite.
+Ein abgelehnter Bezug darf insbesondere die ursprünglichen Positionen nicht
+verschieben. Mehrere Positionen, ein unbestimmter „anderer“ Termin und ein
+unklarer Bezug wie „die zweite Therapie“ führen zur Klärung. Eine spätere Auswahl
+kann „Nicht den ersten, sondern den zweiten“ berichtigen; widersprüchliche
+Titel oder zusätzliche Zeit-/Datumsangaben werden nicht stillschweigend verworfen.
+
+Diese Fälle sind Teil desselben echten VoiceModel-Ablaufprobes. Die ursprüngliche
+fehlende Auflösung wurde vor der Änderung durch dessen fehlschlagende Zusicherung
+`Spoken ordinal must use the discussed page` reproduziert. Die Prüfhülle begrenzt
+Cargo und Swift jeweils auf einen Compilerjob.

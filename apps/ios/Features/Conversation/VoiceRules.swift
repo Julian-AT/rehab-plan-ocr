@@ -255,6 +255,81 @@ enum VoiceRules {
         .split(separator: " ").map(String.init))
     return matches("[a-zäöü]+", clean).map { $0[0] }.filter { !ignored.contains($0) }
   }
+  enum EventPosition: Equatable {
+    case absent
+    case ordinal(Int)
+    case ambiguous
+  }
+  private static let eventOrdinalStems = ["erst", "zweit", "dritt", "viert", "fünft"]
+  private static let eventOrdinalWord = "(?:\(eventOrdinalStems.joined(separator: "|")))e[nrms]?"
+  private static let eventMentionPattern =
+    "(?:\\b(?:den|dem|der|die|das|des|beim) \(eventOrdinalWord)\\b|\\b\(eventOrdinalWord) (?:termin|behandlung)\\b|^\(eventOrdinalWord)[.]?$)"
+  private static let eventPositionPattern =
+    "(?:\\b(?:den|dem|der|die|das|des|beim) \(eventOrdinalWord)(?=\\s*(?:$|[.]|(?:termin|behandlung|um|am|heute|morgen|übermorgen)\\b))|\\b\(eventOrdinalWord) (?:termin|behandlung)\\b|^\(eventOrdinalWord)[.]?$)"
+
+  /// Positions refer to a displayed/spoken page, never to a fresh unlabelled
+  /// calendar search. Calendar dates such as “am ersten Mai” are not positions.
+  static func eventPosition(_ input: String) -> EventPosition {
+    let withoutDates = replacing(datePattern, in: normalized(input), with: "")
+    let text = correctedContext(withoutDates, containing: eventMentionPattern)
+    if !matches(
+      #"\b(?:den|dem|der|die|das|des) (?:ander\w*|irgendein\w*) (?:termin|behandlung)\b"#, text
+    ).isEmpty {
+      return .ambiguous
+    }
+    let mentions = matches(eventMentionPattern, text)
+    let references = matches(eventPositionPattern, text).map { $0[0] }
+    guard !references.isEmpty else {
+      return matches(eventMentionPattern, text).isEmpty ? .absent : .ambiguous
+    }
+    guard references.count == mentions.count else { return .ambiguous }
+    guard matches(#"\b(?:nicht|kein\w*|ander\w*|irgendein\w*)\b"#, text).isEmpty else {
+      return .ambiguous
+    }
+    let positions = eventOrdinalStems.enumerated().compactMap { index, stem in
+      references.contains { !matches("\\b\(stem)e[nrms]?\\b", $0).isEmpty } ? index + 1 : nil
+    }
+    return positions.count == 1 ? .ordinal(positions[0]) : .ambiguous
+  }
+
+  static func eventTargetWords(_ input: String) -> [String] {
+    referenceWords(input).filter {
+      matches("^\(eventOrdinalWord)$", $0).isEmpty
+        && !["verschieb", "änder", "lösch", "entfern"].contains($0)
+    }
+  }
+
+  static func selectionIndex(_ input: String, titles: [String]) -> Int? {
+    let names = titles.map(normalized)
+    let namesPattern = names.filter { !$0.isEmpty }.map(NSRegularExpression.escapedPattern).joined(
+      separator: "|")
+    let text = correctedContext(
+      normalized(input),
+      containing: eventPositionPattern + (namesPattern.isEmpty ? "" : "|(?:\(namesPattern))"))
+    // A position-only reply must not silently discard an additional time/date.
+    guard matches(datePattern, text).isEmpty,
+      matches(#"\buhr\b|\d{1,2}:\d{2}"#, text).isEmpty, time(text) == nil
+    else { return nil }
+    guard matches(#"\b(?:nicht|kein\w*|ander\w*|irgendein\w*)\b"#, text).isEmpty else { return nil }
+    switch eventPosition(text) {
+    case .ordinal(let position):
+      let index = position - 1
+      guard names.indices.contains(index),
+        eventTargetWords(text).allSatisfy({ names[index].contains($0) })
+      else { return nil }
+      return index
+    case .ambiguous: return nil
+    case .absent:
+      let named = names.indices.filter { index in
+        !names[index].isEmpty
+          && !matches(
+            "(?<![\\p{L}\\p{N}])" + NSRegularExpression.escapedPattern(for: names[index])
+              + "(?![\\p{L}\\p{N}])", text
+          ).isEmpty
+      }
+      return named.count == 1 ? named[0] : nil
+    }
+  }
   static func explicitMutation(_ input: String) -> VoiceIntent.Action? {
     let text = normalized(input)
     let patterns: [(VoiceIntent.Action, String)] = [

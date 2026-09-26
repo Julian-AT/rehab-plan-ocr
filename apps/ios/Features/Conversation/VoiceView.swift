@@ -325,13 +325,8 @@ struct VoiceSnapshot {
         failed("Wie viele Minuten dauert der Termin?")
       }
     case .event:
-      let words = VoiceRules.normalized(text)
-      let index = ["erste": 0, "zweite": 1, "dritte": 2].first { words.contains($0.key) }?.value
-      let matches = candidates.filter { words.contains(VoiceRules.normalized($0.values.title)) }
-      if let index, candidates.indices.contains(index) {
+      if let index = VoiceRules.selectionIndex(text, titles: candidates.map { $0.values.title }) {
         await choose(candidates[index])
-      } else if matches.count == 1 {
-        await choose(matches[0])
       } else {
         failed("Welcher Termin ist gemeint?")
       }
@@ -541,6 +536,17 @@ struct VoiceSnapshot {
           calendarName: intent.calendarName, timezone: intent.timezone))
       return
     }
+    switch VoiceRules.eventPosition(intent.referenceText) {
+    case .ordinal(let position):
+      await findDiscussedEvent(position)
+      return
+    case .ambiguous:
+      say(
+        dependencies.address().choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?"),
+        question: .action)
+      return
+    case .absent: break
+    }
     let current = session
     let calendar = intent.calendar
     do {
@@ -594,6 +600,43 @@ struct VoiceSnapshot {
           question: .event)
       }
     } catch { if session == current { say(dependencies.errorMessage(error), question: .action) } }
+  }
+  private func findDiscussedEvent(_ position: Int) async {
+    let current = session
+    let token = UUID()
+    modelToken = token
+    await calendarConversation.begin(token)
+    guard session == current, modelToken == token, !Task.isCancelled else { return }
+    do {
+      let result = try await calendarConversation.resolve(
+        CalendarQuestion(
+          date: intent.date, calendarName: intent.calendarName,
+          ordinal: position, timezone: intent.timezone),
+        token: token, now: dependencies.now(), address: dependencies.address(),
+        rememberAnswer: false)
+      guard session == current, modelToken == token, !Task.isCancelled else { return }
+      guard result.total == 1, let event = result.events.first else {
+        say(result.text, question: .action)
+        return
+      }
+      let words = VoiceRules.eventTargetWords(intent.referenceText)
+      let title = VoiceRules.normalized(event.values.title)
+      let minute =
+        intent.calendar.component(.hour, from: event.values.start) * 60
+        + intent.calendar.component(.minute, from: event.values.start)
+      guard words.allSatisfy(title.contains), intent.referenceTime.map({ $0 == minute }) ?? true
+      else {
+        say(
+          "Die Angaben passen nicht zum besprochenen Termin. Bitte den Termin genauer auswählen.",
+          question: .action)
+        return
+      }
+      candidates = [event]
+      await choose(event)
+    } catch {
+      guard session == current, modelToken == token, !Task.isCancelled else { return }
+      say(dependencies.errorMessage(error), question: .action)
+    }
   }
   func choose(_ event: CalendarEvent) async {
     let current = session

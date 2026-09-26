@@ -110,7 +110,8 @@ actor CalendarConversation {
     return nil
   }
   func resolve(
-    _ input: CalendarQuestion, token: UUID, now: Date = .now, address: VoiceAddress = .du
+    _ input: CalendarQuestion, token: UUID, now: Date = .now, address: VoiceAddress = .du,
+    rememberAnswer: Bool = true
   ) async throws -> CalendarAnswer.Result {
     try check(token)
     guard (1...90).contains(input.days), (0...500).contains(input.offset),
@@ -193,6 +194,9 @@ actor CalendarConversation {
     }
     let result = CalendarAnswer.build(
       question, events: events, warning: warning, now: now, address: address)
+    // Resolving an edit target is not a new spoken page. In particular, a later
+    // constraint failure must not silently renumber the page the person heard.
+    guard rememberAnswer else { return result }
     if !result.events.isEmpty {
       var page: [String] = []
       for event in result.events {

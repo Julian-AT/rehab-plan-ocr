@@ -240,12 +240,58 @@ import RehaCore
     let selection = Flow()
     await selection.model.submitAction(.remove)
     precondition(selection.model.question == .event)
+    await selection.model.submitText("den ersten oder den zweiten")
+    precondition(selection.model.edits.proposal == nil && selection.model.question == .event)
+    await selection.model.submitText("den zweiten Physiotherapie")
+    precondition(selection.model.edits.proposal == nil && selection.model.question == .event)
+    await selection.model.submitText("den zweiten um elf Uhr")
+    precondition(selection.model.edits.proposal == nil && selection.model.question == .event)
+    await selection.model.submitText("Nicht den ersten, sondern den zweiten")
+    precondition(selection.model.edits.proposal?.before?.id == "ergo")
+    selection.model.cancelSession()
+    await selection.model.submitAction(.remove)
     await selection.model.submitText("den zweiten")
     precondition(selection.model.edits.proposal?.before?.id == "ergo")
     precondition(selection.calendar.confirmed.isEmpty)
     selection.model.cancelSession()
     await selection.model.confirmProposal()
     precondition(selection.calendar.confirmed.isEmpty && selection.model.edits.proposal == nil)
+
+    let ordinal = Flow()
+    await ordinal.model.submitText("Welche Termine habe ich heute?")
+    await ordinal.model.submitText("Verschiebe den zweiten Termin auf morgen um zehn Uhr")
+    precondition(
+      ordinal.model.edits.proposal?.before?.id == "ergo",
+      "Spoken ordinal must use the discussed page")
+    precondition(ordinal.model.edits.proposal?.after?.start_utc == "2031-05-16T08:00:00Z")
+    precondition(ordinal.model.edits.proposal?.patch.keys.sorted() == ["end_utc", "start_utc"])
+    precondition(ordinal.calendar.confirmed.isEmpty && ordinal.provider.requests.isEmpty)
+
+    let unseen = Flow()
+    await unseen.model.submitText("Verschiebe den zweiten Termin auf morgen um zehn Uhr")
+    precondition(unseen.model.edits.proposal == nil && unseen.calendar.reads == 0)
+    let hidden = Flow()
+    await hidden.model.submitText("Termine heute")
+    hidden.calendar.events = [hidden.calendar.events[0]]
+    await hidden.model.submitText("Lösche den zweiten Termin")
+    precondition(hidden.model.edits.proposal == nil && hidden.calendar.previews.isEmpty)
+    for utterance in [
+      "Verschiebe den ersten oder den zweiten Termin auf morgen um zehn Uhr",
+      "Verschiebe den zweiten Termin Physiotherapie auf morgen um zehn Uhr",
+      "Verschiebe den zweiten Termin um elf Uhr auf morgen um zehn Uhr",
+      "Verschiebe die zweite Therapie auf morgen um zehn Uhr",
+    ] {
+      let conflict = Flow()
+      await conflict.model.submitText("Termine heute")
+      await conflict.model.submitText(utterance)
+      precondition(
+        conflict.model.edits.proposal == nil && conflict.calendar.previews.isEmpty, utterance)
+      await conflict.model.submitText("Verschiebe den ersten Termin auf morgen um zehn Uhr")
+      precondition(
+        conflict.model.edits.proposal?.before?.id == "physio",
+        "Failed selection renumbered the heard page")
+    }
+    precondition(VoiceRules.eventPosition("Lösche den Termin am ersten Mai") == .absent)
 
     let subject = Flow()
     await subject.model.submitAction(.create)
@@ -258,6 +304,9 @@ import RehaCore
     let rejected = Flow()
     await rejected.model.submitText("Plane Gymnastik am 31. April 2031 um acht Uhr")
     await rejected.model.submitText("Wie lösche ich den Termin?")
+    rejected.calendar.events = [
+      rejected.calendar.event("other", title: "Bewegung mit anderen", hour: 8, room: "")
+    ]
     await rejected.model.submitText("Lösche den anderen Termin")
     precondition(rejected.calendar.previews.isEmpty && rejected.calendar.confirmed.isEmpty)
 

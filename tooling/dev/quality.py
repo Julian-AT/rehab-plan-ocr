@@ -343,6 +343,8 @@ def tests(portable):
             "notification-deadline",
             "diagnostics",
             "intake-erasure",
+            "scan-attempts",
+            "intake-provider",
             "temporary-privacy",
             "intake-recovery",
             "intake-size",
