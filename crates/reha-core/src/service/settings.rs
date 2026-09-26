@@ -82,6 +82,16 @@ pub fn settings_value(state: &AppState, value: Option<Value>) -> Response<Value>
                 return Err("Kalenderauswahl ungültig.".into());
             }
         }
+        let changed = value["display_calendar_ids"] != old["display_calendar_ids"]
+            || value["timezone"] != old["timezone"];
+        let revision = old["display_selection_revision"].as_u64().unwrap_or(0);
+        value["display_selection_revision"] = json!(if changed {
+            revision
+                .checked_add(1)
+                .ok_or("Kalenderauswahl-Version erschöpft.")?
+        } else {
+            revision
+        });
         let timezone = value["timezone"].as_str().ok_or("Zeitzone fehlt.")?;
         timezone
             .parse::<chrono_tz::Tz>()

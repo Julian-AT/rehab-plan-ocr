@@ -8,6 +8,8 @@ struct EventResponse: Decodable {
   var system_editor: CalendarEvent?
   var status: String?
   var message: String?
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  var maintenance_warnings: [String]?
 }
 struct EventHistoryItem: Decodable, Identifiable {
   let id: String
@@ -97,6 +99,11 @@ extension NativeApplication {
         response.status == "saved"
         ? "\(proposal.kind == "remove" ? "Kalendereintrag gelöscht" : "Gespeichert") in \(proposal.calendar_title)."
         : response.message ?? "Schreibstatus unklar. Kalender abgleichen."
+      if response.maintenance_warnings?.isEmpty == false {
+        let warning = " Erinnerungen und Widgets konnten noch nicht aktualisiert werden."
+        result = (result ?? "") + warning
+        conversationResult = (conversationResult ?? "") + warning
+      }
       error = nil
     } catch { if session == current { self.error = userMessage(error) } }
   }

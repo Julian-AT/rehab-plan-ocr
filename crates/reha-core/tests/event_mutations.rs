@@ -11,15 +11,35 @@ struct Calendar {
     calendars: Mutex<Value>,
     uncertain: Mutex<bool>,
     interrupted: Mutex<bool>,
+    maintenance_failure: Mutex<bool>,
+    change_selection_during_query: Mutex<bool>,
 }
 impl Platform for Calendar {
     fn progress(&self, _: Value) {}
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         match command {
-            "agenda" => Ok(json!({})),
+            "agenda" => {
+                if *self.maintenance_failure.lock().unwrap() {
+                    Err("Reminder service unavailable".into())
+                } else {
+                    Ok(json!({}))
+                }
+            }
             "eventCalendars" => Ok(self.calendars.lock().unwrap().clone()),
             "queryEvents" => {
                 assert_eq!(args["calendar_ids"], json!(["selected"]));
+                if *self.change_selection_during_query.lock().unwrap() {
+                    service::settings::settings_value(
+                        &self.state,
+                        Some(json!({"timezone":"Europe/Vienna","display_calendar_ids":[]})),
+                    )?;
+                    service::settings::settings_value(
+                        &self.state,
+                        Some(
+                            json!({"timezone":"Europe/Vienna","display_calendar_ids":["selected"]}),
+                        ),
+                    )?;
+                }
                 Ok(json!({"events":[self.event.lock().unwrap().clone()]}))
             }
             "getEvent" => {
@@ -88,8 +108,81 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Calendar>) {
         ),
         uncertain: Mutex::new(false),
         interrupted: Mutex::new(false),
+        maintenance_failure: Mutex::new(false),
+        change_selection_during_query: Mutex::new(false),
     });
     (root, state, calendar)
+}
+
+#[tokio::test]
+async fn committed_mutation_survives_maintenance_failure_without_repeating_write() {
+    let (_root, state, calendar) = fixture();
+    let p = preview(
+        &state,
+        calendar.clone(),
+        "update",
+        json!({"title":"Gespeichert"}),
+    )
+    .await;
+    *calendar.maintenance_failure.lock().unwrap() = true;
+    let result = confirm(&state, calendar.clone(), &p).await.unwrap();
+    assert_eq!(result["status"], "saved");
+    assert_eq!(
+        result["maintenance_warnings"][0],
+        "Reminder service unavailable"
+    );
+    assert_eq!(
+        state.store.lock().unwrap().event_history().unwrap()[0]["status"],
+        "saved"
+    );
+    assert_eq!(
+        confirm(&state, calendar.clone(), &p).await.unwrap()["status"],
+        "saved"
+    );
+    assert_eq!(*calendar.calls.lock().unwrap(), 1);
+}
+
+#[tokio::test]
+async fn calendar_query_scope_rejects_stale_revisions_and_empty_means_none() {
+    let (_root, state, calendar) = fixture();
+    let scope = events::dispatch(calendar.clone(), &state, "agendaSelection", json!({}))
+        .await
+        .unwrap();
+    let request =
+        json!({"start_utc":"2026-09-15T00:00:00Z","end_utc":"2026-09-16T00:00:00Z","scope":scope});
+    assert_eq!(
+        events::query(calendar.clone(), &state, request.clone())
+            .await
+            .unwrap()["events"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    *calendar.change_selection_during_query.lock().unwrap() = true;
+    assert!(events::query(calendar.clone(), &state, request.clone())
+        .await
+        .is_err());
+    *calendar.change_selection_during_query.lock().unwrap() = false;
+    assert!(events::query(calendar.clone(), &state, request)
+        .await
+        .is_err());
+    service::settings::settings_value(
+        &state,
+        Some(
+            json!({"timezone":"Europe/Vienna","calendar_id":"selected","display_calendar_ids":[]}),
+        ),
+    )
+    .unwrap();
+    let empty = events::query(
+        calendar,
+        &state,
+        json!({"start_utc":"2026-09-15T00:00:00Z","end_utc":"2026-09-16T00:00:00Z"}),
+    )
+    .await
+    .unwrap();
+    assert_eq!(empty["events"], json!([]));
+    assert_eq!(empty["scope"]["calendar_ids"], json!([]));
 }
 async fn preview(state: &Application, calendar: Arc<Calendar>, kind: &str, patch: Value) -> Value {
     events::dispatch(calendar,state,"previewEventMutation",json!({"kind":kind,"patch":patch,"calendar_id":"selected","event":fixture_event(),"session":"session","revision":1})).await.unwrap()["proposal"].clone()

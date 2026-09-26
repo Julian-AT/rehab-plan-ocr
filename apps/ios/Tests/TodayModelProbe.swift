@@ -8,10 +8,21 @@ import Foundation
   var synchronizations = 0
   var holdNext = false
   var failure = false
+  var maintenanceFailure = false
+  var maintenancePending: CheckedContinuation<Void, Never>?
+  var holdMaintenance = false
+  var scopes: [AgendaSelection] = []
   var pending: CheckedContinuation<Void, Never>?
   func selection() async throws -> AgendaSelection { selected }
-  func synchronize() async throws { synchronizations += 1 }
-  func events(in week: AgendaWeek) async throws -> CalendarQueryResponse {
+  func synchronize() async throws {
+    synchronizations += 1
+    if holdMaintenance {
+      await withCheckedContinuation { maintenancePending = $0 }
+    }
+    if maintenanceFailure { throw CocoaError(.fileReadUnknown) }
+  }
+  func events(in week: AgendaWeek, scope: AgendaSelection) async throws -> CalendarQueryResponse {
+    scopes.append(scope)
     queries.append(week.start)
     let result =
       responses[week.start] ?? CalendarQueryResponse(events: [], unavailableCalendarIDs: [])
@@ -48,6 +59,7 @@ import Foundation
   }
   private static func refresh(_ model: TodayModel, _ source: Source, key: String) async {
     await model.refresh(using: source, week: week, visibleWeek: week.start, key: key)
+    await Task.yield()
   }
   private static func waitForQuery(_ source: Source) async {
     for _ in 0..<10_000 {
@@ -63,8 +75,39 @@ import Foundation
     await rejectsSupersededAndCancelledLoads()
     await invalidatesSensitiveContexts()
     await boundsCacheAndReusesRecentWeeks()
+    await selectionRaceAndIndependentMaintenance()
     print(
       "Agenda cache: refresh, empty weeks, errors, cancellation, invalidation and eviction passed")
+  }
+
+  private static func selectionRaceAndIndependentMaintenance() async {
+    let model = TodayModel()
+    let source = Source()
+    source.responses[week.start] = response("Sichtbar")
+    source.holdMaintenance = true
+    await refresh(model, source, key: "maintenance")
+    precondition(model.events(on: week.start)?.count == 1)
+    precondition(model.availability == .ready, "Slow maintenance must not delay first content")
+    for _ in 0..<10_000 {
+      if source.maintenancePending != nil { break }
+      await Task.yield()
+    }
+    precondition(source.maintenancePending != nil)
+    source.maintenanceFailure = true
+    source.maintenancePending?.resume()
+    source.maintenancePending = nil
+    source.holdNext = true
+    let pending = Task { await refresh(model, source, key: "selection-race") }
+    await waitForQuery(source)
+    precondition(source.scopes.last == source.selected)
+    source.selected.revision += 2  // A -> B -> A while the read is suspended.
+    source.release()
+    await pending.value
+    precondition(model.events(on: week.start) == nil, "Obsolete scope must never enter the cache")
+    source.selected = AgendaSelection(calendarIDs: [])
+    let count = source.queries.count
+    await refresh(model, source, key: "empty-after-save")
+    precondition(source.queries.count == count && model.availability == .noSelection)
   }
 
   private static func marksOnlyKnownDaysAndClearsRepairedGaps() async {
@@ -236,6 +279,10 @@ import Foundation
     let count = source.queries.count
     await model.refresh(
       using: source, week: AgendaWeek(containing: recent), visibleWeek: recent, key: "browsing")
+    for _ in 0..<10_000 {
+      if source.synchronizations > 0 { break }
+      await Task.yield()
+    }
     precondition(source.queries.count == count && source.synchronizations == 1)
   }
 }

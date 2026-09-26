@@ -207,6 +207,7 @@ def tests(portable):
     if APPLE and not portable:
         for probe in [
             "agenda-projection",
+            "agenda-cache",
             "agenda",
             "voice-rules",
             "conversation-rules",

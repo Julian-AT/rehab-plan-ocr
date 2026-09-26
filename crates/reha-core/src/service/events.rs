@@ -42,6 +42,28 @@ fn ids(p: &Value) -> Vec<String> {
         .filter_map(|s| s.as_str().map(str::to_string))
         .collect()
 }
+
+/// A read is bound to one visible selection, independently of the save target
+/// and reminder ownership. The revision also detects A -> B -> A changes.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AgendaScope {
+    pub calendar_ids: Vec<String>,
+    pub timezone: String,
+    pub revision: u64,
+}
+impl AgendaScope {
+    fn current(state: &AppState) -> Response<Self> {
+        let p = preferences(state)?;
+        let mut calendar_ids = ids(&p);
+        calendar_ids.sort();
+        calendar_ids.dedup();
+        Ok(Self {
+            calendar_ids,
+            timezone: p["timezone"].as_str().unwrap_or("Europe/Vienna").into(),
+            revision: p["display_selection_revision"].as_u64().unwrap_or(0),
+        })
+    }
+}
 async fn native(platform: &Arc<dyn Platform>, name: &'static str, args: Value) -> Response<Value> {
     let platform = platform.clone();
     tokio::task::spawn_blocking(move || platform.call(name, args))
@@ -145,10 +167,22 @@ pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -
         .map_err(|_| "Suchbeginn ungültig.")?;
     let end = chrono::DateTime::parse_from_rfc3339(required(&args, "end_utc")?)
         .map_err(|_| "Suchende ungültig.")?;
-    if end <= start || (end - start).num_days() > 366 {
+    if end <= start || end - start > chrono::Duration::days(366) {
         return Err("Suchzeitraum: maximal ein Jahr.".into());
     }
-    let selected = ids(&preferences(state)?);
+    let scope = AgendaScope::current(state)?;
+    if let Some(requested) = args.get("scope") {
+        let requested: AgendaScope = serde_json::from_value(requested.clone()).map_err(failure)?;
+        if requested != scope {
+            return Err("Kalenderauswahl wurde geändert. Erneut laden.".into());
+        }
+    }
+    if scope.calendar_ids.is_empty() {
+        return Ok(
+            json!({"events":[],"unavailable_calendar_ids":[],"unavailable_events":[],"scope":scope}),
+        );
+    }
+    let selected = &scope.calendar_ids;
     let records: Vec<_> = state
         .store
         .lock()
@@ -158,13 +192,17 @@ pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -
         .into_iter()
         .filter(|r| r.status == "saved" && r.external_id.is_some())
         .collect();
-    let result=native(&platform,"queryEvents",json!({"calendar_ids":selected,"records":records,"start_utc":args["start_utc"],"end_utc":args["end_utc"]})).await?;
+    let mut result=native(&platform,"queryEvents",json!({"calendar_ids":selected,"records":records,"start_utc":args["start_utc"],"end_utc":args["end_utc"],"timezone":scope.timezone,"selection_revision":scope.revision})).await?;
+    if AgendaScope::current(state)? != scope {
+        return Err("Kalenderauswahl wurde während des Ladens geändert. Erneut laden.".into());
+    }
     if result["events"].as_array().is_none_or(|a| {
         a.iter()
             .any(|e| !selected.contains(&e["calendar_id"].as_str().unwrap_or_default().to_string()))
     }) {
         return Err("Kalenderantwort außerhalb der Auswahl.".into());
     }
+    result["scope"] = serde_json::to_value(scope).map_err(failure)?;
     Ok(result)
 }
 fn require_selected_event(state: &AppState, calendar: &str, event: &Value) -> Response<()> {
@@ -340,7 +378,7 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         }
         store.begin_event_mutation(&proposal).map_err(failure)?;
     }
-    let result = native(
+    let mut result = native(
         &platform,
         "mutateEvent",
         json!({"proposal":proposal,"recovery_only":false}),
@@ -356,7 +394,9 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         .finish_event_mutation(token, &result)
         .map_err(failure)?;
     // Ownership and the durable journal are committed before reminder reconciliation.
-    super::agenda::sync(&platform, state).await?;
+    if let Err(warning) = super::agenda::sync(&platform, state).await {
+        result["maintenance_warnings"] = json!([warning]);
+    }
     Ok(result)
 }
 async fn undo(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> Response<Value> {
@@ -527,6 +567,7 @@ pub async fn dispatch(
                 json!({"count": super::calendar::append_pages(state, required(&args, "id")?.into(), pages)?}),
             )
         }
+        "agendaSelection" => serde_json::to_value(AgendaScope::current(state)?).map_err(failure),
         "queryCalendarEvents" => query(platform, state, args).await,
         "previewEventMutation" => preview(platform, state, args, None).await,
         "confirmProposal" => confirm(platform, state, args).await,

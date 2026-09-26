@@ -1,15 +1,21 @@
 import Foundation
 import Observation
 
-struct AgendaSelection {
+struct AgendaSelection: Codable, Equatable, Sendable {
   let calendarIDs: Set<String>
+  var timezone: String = "Europe/Vienna"
+  var revision: UInt64 = 0
+  enum CodingKeys: String, CodingKey {
+    case calendarIDs = "calendar_ids"
+    case timezone, revision
+  }
 }
 
 @MainActor protocol AgendaDataSource {
   var hasAccess: Bool { get }
   func selection() async throws -> AgendaSelection
   func synchronize() async throws
-  func events(in week: AgendaWeek) async throws -> CalendarQueryResponse
+  func events(in week: AgendaWeek, scope: AgendaSelection) async throws -> CalendarQueryResponse
 }
 
 /// Retain complete week snapshots while refreshing. Freshness and request identity
@@ -25,8 +31,9 @@ struct AgendaSelection {
   private var epoch = UUID()
   private var requestID = UUID()
   private var refreshKey: String?
-  private var synchronizedEpoch: UUID?
-  private var calendarIDs: Set<String>?
+  private var maintenanceTask: Task<Void, Never>?
+  private var maintenanceEpoch: UUID?
+  private var selection: AgendaSelection?
   private var calendar = Calendar.current
   private let describe: (Error) -> String
   private(set) var availability: Availability = .loading
@@ -52,7 +59,7 @@ struct AgendaSelection {
     requestID = UUID()
     epoch = UUID()
     refreshKey = nil
-    calendarIDs = nil
+    selection = nil
     clearSnapshots()
     availability = .loading
     isRefreshing = false
@@ -93,9 +100,9 @@ struct AgendaSelection {
     do {
       let selection = try await source.selection()
       guard accept(request, source: source) else { return }
-      if calendarIDs != selection.calendarIDs {
+      if self.selection != selection {
         clearSnapshots()
-        calendarIDs = selection.calendarIDs
+        self.selection = selection
         epoch = UUID()
         availability = .loading
       }
@@ -104,14 +111,24 @@ struct AgendaSelection {
         availability = .noSelection
         return
       }
-      if synchronizedEpoch != epoch {
-        try await source.synchronize()
-        guard accept(request, source: source) else { return }
-        synchronizedEpoch = epoch
+      // Notification callbacks can take seconds or time out. Calendar reads do
+      // not depend on them. Coalesce maintenance independently of visible data.
+      if maintenanceTask == nil && maintenanceEpoch != epoch {
+        maintenanceEpoch = epoch
+        maintenanceTask = Task { [weak self] in
+          try? await source.synchronize()
+          self?.maintenanceTask = nil
+        }
       }
       updateUnavailable(weeks)
       for item in weeks where cache[item.start]?.epoch != epoch {
-        let result = try await source.events(in: item)
+        let result = try await source.events(in: item, scope: selection)
+        guard accept(request, source: source) else { return }
+        guard try await source.selection() == selection else {
+          guard accept(request, source: source) else { return }
+          invalidate()
+          return
+        }
         guard accept(request, source: source) else { return }
         cache[item.start] = Snapshot(response: result, epoch: epoch)
         touch(item.start)
