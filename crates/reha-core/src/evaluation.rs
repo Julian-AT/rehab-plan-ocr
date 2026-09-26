@@ -286,6 +286,10 @@ pub fn development_groups(references: &[Annotation]) -> Result<serde_json::Value
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Metrics {
+    /// Stable reference-row/field keys let comparisons detect new critical errors
+    /// even when the total error count improves. They contain no printed text.
+    pub critical_errors: Vec<String>,
+    pub critical_false_acceptances: Vec<String>,
     pub printed_fields: BTreeMap<String, usize>,
     pub correct_printed_fields: BTreeMap<String, usize>,
     pub empty_fields: BTreeMap<String, usize>,
@@ -387,7 +391,22 @@ pub fn compare(
             full &= truth.end_date == p.end_date && truth.duration_minutes == p.duration_minutes;
         }
         for field in fields.into_iter().chain(["end_date", "duration_minutes"]) {
-            let state = truth.fields.get(field).map(|f| &f.state);
+            let state = truth.fields.get(field).map(|f| &f.state).or_else(|| {
+                // Legacy references still constrain auxiliary values: an invented
+                // overnight ending cannot disappear from critical-error accounting.
+                if !["end_date", "duration_minutes"].contains(&field) {
+                    return None;
+                }
+                if !crate::review::empty(&crate::review::value(truth, field)) {
+                    Some(&PrintedState::Legible)
+                } else if matched
+                    .is_some_and(|p| !crate::review::empty(&crate::review::value(p, field)))
+                {
+                    Some(&PrintedState::NotPrinted)
+                } else {
+                    None
+                }
+            });
             if !matches!(
                 state,
                 Some(PrintedState::Legible | PrintedState::NotPrinted)
@@ -414,11 +433,27 @@ pub fn compare(
             }
             if !correct {
                 m.field_corrections_needed += 1;
+                let critical =
+                    ["date", "start", "end", "end_date", "duration_minutes"].contains(&field);
+                let error_key = format!("{}:{field}", truth.id);
+                if critical {
+                    m.critical_errors.push(error_key.clone());
+                }
                 if let Some(p) = matched {
                     let flagged = !crate::review::field_problems(p).is_empty()
                         || p.issues.iter().any(|i| i.blocking)
                         || !crate::parser::validate(p).is_empty();
                     m.incorrect_unflagged_fields += usize::from(!flagged);
+                    let field_flagged = crate::review::field_problems(p)
+                        .iter()
+                        .chain(p.issues.iter())
+                        .chain(crate::parser::validate(p).iter())
+                        .any(|issue| {
+                            issue.blocking && issue.field.as_deref().is_none_or(|f| f == field)
+                        });
+                    if critical && !field_flagged {
+                        m.critical_false_acceptances.push(error_key);
+                    }
                     if ["location", "therapist"].contains(&field) {
                         m.row_assignment_errors +=
                             usize::from(reference.appointments.iter().enumerate().any(|(j, a)| {
@@ -767,7 +802,28 @@ mod tests {
         predicted[1].end_date = Some("2026-09-11".into());
         let metrics = compare(&r, &predicted, false).unwrap();
         assert_eq!(metrics.fully_correct_count, 0);
+        assert!(metrics.critical_errors.contains(&"a1:end_date".into()));
         assert!(!metrics.schedule_without_correction);
+    }
+    #[test]
+    fn unrelated_uncertain_room_does_not_hide_a_falsely_accepted_time() {
+        let r = approved_fixture();
+        let mut predicted = r.appointments.clone();
+        predicted.iter_mut().for_each(|a| a.fields.clear());
+        predicted[0].start = Some("08:05".into());
+        predicted[0].issues.push(crate::contracts::Issue {
+            code: "room_unknown".into(),
+            field: Some("location".into()),
+            message: "Raum unleserlich".into(),
+            blocking: true,
+        });
+        let m = compare(&r, &predicted, false).unwrap();
+        assert_eq!(m.critical_errors, ["a0:start"]);
+        assert_eq!(m.critical_false_acceptances, ["a0:start"]);
+        predicted[0].issues[0].field = Some("start".into());
+        let m = compare(&r, &predicted, false).unwrap();
+        assert_eq!(m.critical_errors, ["a0:start"]);
+        assert!(m.critical_false_acceptances.is_empty());
     }
     #[test]
     fn geometry_matching_exposes_swapped_rooms_with_identical_times() {

@@ -92,6 +92,28 @@ def reference_hash(ref):
     )
 
 
+def crop_hash(line):
+    return digest(
+        normalized_numbers({k: line[k] for k in ["id", "source_hash", "text", "polygon", "state"]})
+    )
+
+
+def reviewed_crops(root, references):
+    """Field truth does not certify that a training crop contains every glyph."""
+    path = root / "crop-review.json"
+    if not path.exists():
+        return set()
+    review = json.loads(path.read_text())
+    lines = {line["id"]: line for ref in references for line in ref["lines"]}
+    approved = review.get("lines", {})
+    if approved and (review.get("schema_version") != 1 or not review.get("reviewed_at")):
+        raise ValueError("Training crop review needs a version and review timestamp.")
+    for identifier, digest_value in approved.items():
+        if identifier not in lines or crop_hash(lines[identifier]) != digest_value:
+            raise ValueError("Training crop changed after its separate visual review.")
+    return set(approved)
+
+
 def approved(ref):
     kind = ref.get("input_class", "rehabilitation_plan")
     if kind not in {"rehabilitation_plan", "non_plan", "unusable"}:
@@ -441,6 +463,7 @@ def export(root, output, fold, cache_mb):
     }
     for ref in refs.values():
         approved(ref)
+    checked_crops = reviewed_crops(root, refs.values())
     if grouping(list(refs.values())) != json.loads((root / "split.json").read_text()):
         raise ValueError("Frozen source relationships changed.")
     output.mkdir(parents=True, exist_ok=False)
@@ -492,8 +515,11 @@ def export(root, output, fold, cache_mb):
                 ],
             }
         )
+        # Incomplete detection labels would teach the model to ignore real text.
+        if any(line["id"] not in checked_crops for line in unique_lines.values()):
+            detection.pop()
         for line in unique_lines.values():
-            if line["state"] == "legible" and line["text"]:
+            if line["id"] in checked_crops and line["state"] == "legible" and line["text"]:
                 recognition.append(
                     {
                         **provenance,
@@ -551,6 +577,8 @@ def export(root, output, fold, cache_mb):
             "records": records,
             "cache_bytes": cache_mb * 1024 * 1024,
             "training_started": False,
+            "separately_reviewed_crops": len(checked_crops),
+            "recognition_examples": len(recognition),
             "files": {
                 name: file_hash(output / name)
                 for name in [
@@ -671,6 +699,11 @@ def materialize_line(root, identifier, line_id, cache_mb):
     if not metadata["recognition_eligible"]:
         raise ValueError("Mirrored samples are orientation-only.")
     line = next(line for line in metadata["lines"] if line["id"] == line_id)
+    references = [
+        json.loads(path.read_text()) for path in (root / "labels/provisional").glob("*.json")
+    ]
+    if line_id not in reviewed_crops(root, references):
+        raise ValueError("Review the full text crop separately before recognition training.")
     if line["state"] != "legible" or not line["text"]:
         raise ValueError("Unreadable and cropped text cannot receive a full recognition label.")
     with Image.open(page) as image:

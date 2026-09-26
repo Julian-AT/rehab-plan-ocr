@@ -104,6 +104,25 @@ def reference(i):
 
 
 class ReferenceDataTests(unittest.TestCase):
+    def test_training_crop_review_is_separate_and_bound_to_pixels_and_text(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            r = reference(0)
+            self.assertEqual(refs.reviewed_crops(root, [r]), set())
+            line = r["lines"][0]
+            refs.write(
+                root / "crop-review.json",
+                {
+                    "schema_version": 1,
+                    "reviewed_at": "2030-01-01",
+                    "lines": {line["id"]: refs.crop_hash(line)},
+                },
+            )
+            self.assertEqual(refs.reviewed_crops(root, [r]), {line["id"]})
+            line["polygon"][0]["x"] += 1
+            with self.assertRaisesRegex(ValueError, "changed"):
+                refs.reviewed_crops(root, [r])
+
     def test_overlap_is_transitive_and_capture_and_page_aliases_stay_together(self):
         r = [reference(i) for i in range(8)]
         r[1]["sources"][0]["treatment_days"] = ["2030-01-01", "2030-01-02"]
@@ -180,6 +199,24 @@ class ReferenceDataTests(unittest.TestCase):
             rec = [
                 json.loads(v) for v in (root / "export/recognition.jsonl").read_text().splitlines()
             ]
+            self.assertEqual(rec, [], "Field approval alone cannot approve training crops")
+            self.assertEqual((root / "export/detection.jsonl").read_text(), "")
+            refs.write(
+                root / "crop-review.json",
+                {
+                    "schema_version": 1,
+                    "reviewed_at": "2030-01-01",
+                    "lines": {
+                        line["id"]: refs.crop_hash(line) for r in data for line in r["lines"]
+                    },
+                },
+            )
+            refs.export(root, root / "reviewed-export", 0, 1)
+            rec = [
+                json.loads(v)
+                for v in (root / "reviewed-export/recognition.jsonl").read_text().splitlines()
+            ]
+            self.assertGreater(len(rec), 0)
             self.assertTrue(all("mirror" not in r["recipe"] for r in rec))
             table = next(
                 json.loads(v)
