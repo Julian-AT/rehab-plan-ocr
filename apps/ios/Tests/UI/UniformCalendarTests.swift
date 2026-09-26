@@ -10,7 +10,7 @@ import XCTest
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
   }
-  override func tearDown() {
+  override func tearDown() async throws {
     guard let app else { return }
     app.terminate()
     app.launchArguments = ["--agenda-fixture", "cleanup"]

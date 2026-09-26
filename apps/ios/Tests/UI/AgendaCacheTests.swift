@@ -5,7 +5,7 @@ import XCTest
   private var pager: XCUIElement { app.scrollViews["agenda-days"].firstMatch }
   private var refreshState: XCUIElement { app.buttons["agenda-today"] }
 
-  override func tearDown() {
+  override func tearDown() async throws {
     guard let app else { return }
     app.terminate()
     app.launchArguments = ["--agenda-fixture", "cleanup"]
