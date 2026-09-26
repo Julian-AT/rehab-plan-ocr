@@ -7,7 +7,44 @@ import Foundation
     var appearance = "system"
   }
   enum Failure: Error { case unavailable }
+  @MainActor static func resetDiscardsOldRead(fails: Bool, oldReturnsFirst: Bool) async {
+    var pending: [CheckedContinuation<Value, Error>] = []
+    var writes: [Value] = []
+    let store = OrderedSettings<Value>(
+      read: { try await withCheckedThrowingContinuation { pending.append($0) } },
+      write: {
+        writes.append($0)
+        return $0
+      })
+    let initialLoad = Task { await store.load() }
+    while pending.count < 1 { await Task.yield() }
+    let reset = Task { await store.reset() }
+    while pending.count < 2 { await Task.yield() }
+    let old = Value(sound: true, preview: true, appearance: "dark")
+    let oldResult: Result<Value, Error> = fails ? .failure(Failure.unavailable) : .success(old)
+    if oldReturnsFirst {
+      pending[0].resume(with: oldResult)
+      await initialLoad.value
+      precondition(store.value == nil && store.error == nil)
+      pending[1].resume(returning: Value())
+      await reset.value
+    } else {
+      pending[1].resume(returning: Value())
+      await reset.value
+      pending[0].resume(with: oldResult)
+      await initialLoad.value
+    }
+    precondition(store.value == Value() && store.error == nil)
+    store.change { $0.appearance = "light" }
+    let flushed = await store.flush()
+    precondition(flushed && writes == [Value(appearance: "light")])
+  }
   @MainActor static func main() async throws {
+    for fails in [false, true] {
+      for oldReturnsFirst in [false, true] {
+        await resetDiscardsOldRead(fails: fails, oldReturnsFirst: oldReturnsFirst)
+      }
+    }
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -71,7 +108,7 @@ import Foundation
     _ = await uncertain.flush()
     precondition(uncertain.value?.appearance == "system" && uncertain.canRetry)
     print(
-      "Settings: ordered rapid edits, optimistic display, failure rollback, retry, uncertain-write readback and restart persistence passed"
+      "Settings: ordered rapid edits, optimistic display, failure rollback, retry, uncertain-write readback, restart persistence and stale reads after erasure passed"
     )
   }
 }

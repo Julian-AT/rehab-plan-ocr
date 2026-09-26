@@ -13,6 +13,7 @@ import Observation
   private var pending: [Mutation] = []
   private var failed: [Mutation] = []
   private var worker: Task<Void, Never>?
+  private var loadGeneration = UUID()
   private let read: () async throws -> Value
   private let write: (Value) async throws -> Value
   private let describe: (Error) -> String
@@ -27,14 +28,19 @@ import Observation
   }
   func load() async {
     guard saved == nil, !isSaving else { return }
+    let generation = loadGeneration
     do {
       let actual = try await read()
+      guard generation == loadGeneration else { return }
       if saved == nil {
         saved = actual
         value = actual
       }
       error = nil
-    } catch { self.error = describe(error) }
+    } catch {
+      guard generation == loadGeneration else { return }
+      self.error = describe(error)
+    }
   }
   func change(_ mutation: @escaping Mutation) {
     guard var visible = value else { return }
@@ -64,7 +70,11 @@ import Observation
     return error == nil
   }
   func reset() async {
+    // A read started before erasure cannot restore its old snapshot or error.
+    let generation = UUID()
+    loadGeneration = generation
     await worker?.value
+    guard generation == loadGeneration else { return }
     pending = []
     failed = []
     canRetry = false
