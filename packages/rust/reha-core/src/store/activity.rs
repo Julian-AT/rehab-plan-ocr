@@ -19,12 +19,32 @@ pub struct ActivityPage {
     pub items: Vec<ActivityItem>,
     pub next_cursor: Option<String>,
 }
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RecognitionActivityDetail {
+    pub document_id: String,
+    pub status: String,
+    pub error: Option<String>,
+}
 #[derive(Serialize, Deserialize)]
 struct Cursor {
     at: i64,
     id: String,
 }
 impl Store {
+    pub fn recognition_activity_detail(&self, id: &str) -> Result<RecognitionActivityDetail> {
+        Ok(self.connection.query_row(
+            "SELECT scan_id,status,error FROM processing_attempts WHERE id=?1",
+            [id],
+            |row| {
+                Ok(RecognitionActivityDetail {
+                    document_id: row.get(0)?,
+                    status: row.get(1)?,
+                    error: row.get(2)?,
+                })
+            },
+        )?)
+    }
+
     /// One stable chronology derived from existing journals, without loading photos.
     pub fn activity_page(
         &self,

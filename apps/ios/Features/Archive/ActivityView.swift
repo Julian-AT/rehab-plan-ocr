@@ -1,24 +1,8 @@
 import RehaCore
 import SwiftUI
 
-private struct ActivityPage: Decodable {
-  let items: [ActivityItem]
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let next_cursor: String?
-}
-private struct ActivityItem: Decodable, Identifiable {
-  let id: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let created_at: Double
-  let source: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let source_id: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let document_id: String?
-  let kind: String
-  let status: String
-  let count: Int
-  var title: String {
+extension ActivityRecord {
+  fileprivate var title: String {
     switch kind {
     case "capture": "Erfassung"
     case "recognition": "Erkennung"
@@ -30,7 +14,7 @@ private struct ActivityItem: Decodable, Identifiable {
     default: "Vorgang"
     }
   }
-  var outcome: String {
+  fileprivate var outcome: String {
     switch status {
     case "saved", "completed": "Abgeschlossen"
     case "failed", "conflict": "Prüfung erforderlich"
@@ -45,27 +29,27 @@ private struct ActivityItem: Decodable, Identifiable {
 
 struct ActivityView: View {
   let core: NativeApplication
-  @State private var items: [ActivityItem] = []
+  @State private var items: [ActivityRecord] = []
   @State private var cursor: String?
-  @State private var filter = "all"
+  @State private var filter: ActivitySource?
   @State private var loading = false
   @State private var error: String?
   @State private var generation = UUID()
   var body: some View {
     List {
       Picker("Vorgänge", selection: $filter) {
-        Text("Alle").tag("all")
-        Text("Erfassungen").tag("capture")
-        Text("Erkennungen").tag("recognition")
-        Text("Importe").tag("import")
-        Text("Terminänderungen").tag("event")
+        Text("Alle").tag(nil as ActivitySource?)
+        Text("Erfassungen").tag(ActivitySource.capture)
+        Text("Erkennungen").tag(ActivitySource.recognition)
+        Text("Importe").tag(ActivitySource.calendarImport)
+        Text("Terminänderungen").tag(ActivitySource.eventMutation)
       }.accessibilityIdentifier("activity-filter")
-      ForEach(items) { item in
+      ForEach(items, id: \.id) { item in
         NavigationLink {
-          if item.source == "event" {
-            EventHistoryView(core: core, initialID: item.source_id)
-          } else if item.source == "import", let document = item.document_id {
-            ImportHistoryView(core: core, documentID: document, initialBatchID: item.source_id)
+          if item.source == .eventMutation {
+            EventHistoryView(core: core, initialID: item.sourceId)
+          } else if item.source == .calendarImport, let document = item.documentId {
+            ImportHistoryView(core: core, documentID: document, initialBatchID: item.sourceId)
           } else {
             ActivityCaptureDetail(core: core, item: item)
           }
@@ -73,13 +57,15 @@ struct ActivityView: View {
           VStack(alignment: .leading, spacing: 6) {
             Text(item.title).foregroundStyle(.primary)
             Text(
-              Date(timeIntervalSince1970: item.created_at).formatted(
+              Date(timeIntervalSince1970: Double(item.createdAt)).formatted(
                 date: .abbreviated, time: .shortened)
             ).font(.subheadline)
-            Text(item.outcome + (item.source == "import" ? " · \(item.count) Änderungen" : ""))
-              .font(.subheadline)
+            Text(
+              item.outcome + (item.source == .calendarImport ? " · \(item.count) Änderungen" : "")
+            )
+            .font(.subheadline)
           }.foregroundStyle(.secondary).padding(.vertical, 4)
-        }
+        }.accessibilityIdentifier("activity-record-\(item.id)")
       }
       if loading { ProcessingRow(text: "Verlauf laden …") }
       if let error {
@@ -108,39 +94,43 @@ struct ActivityView: View {
     error = nil
     defer { if generation == request { loading = false } }
     do {
-      var args: [String: Any] = ["limit": 50]
-      if !reset, let cursor { args["cursor"] = cursor }
-      if filter != "all" { args["source"] = filter }
-      let page = try await core.eventRequest("activityPage", args, as: ActivityPage.self)
+      let page = try await core.activityPage(
+        cursor: reset ? nil : cursor, limit: 50, source: filter)
       guard request == generation, !Task.isCancelled else { return }
       let known = Set(items.map(\.id))
       items += page.items.filter { !known.contains($0.id) }
-      cursor = page.next_cursor
+      cursor = page.nextCursor
     } catch { if request == generation, !Task.isCancelled { self.error = userMessage(error) } }
   }
 }
 
 private struct ActivityCaptureDetail: View {
   let core: NativeApplication
-  let item: ActivityItem
-  @State private var detail: [String: JSONValue] = [:]
+  let item: ActivityRecord
+  @State private var detail: RecognitionActivityDetail?
   @State private var error: String?
   var body: some View {
     Form {
       LabeledContent("Ergebnis", value: item.outcome)
-      if case .string(let message) = detail["error"] {
+      if let message = detail?.error {
         Text(message).foregroundStyle(AppPalette.destructive)
+          .accessibilityIdentifier("recognition-activity-error")
       }
-      if let document = item.document_id {
+      if let document = item.documentId {
         NavigationLink("Erkennungsdetails und Quellen") {
           DiagnosticsView(core: core, id: document)
         }
       }
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
     }.pageTitle(item.title)
-      .task {
-        do { detail = try await core.eventRequest("activityDetail", ["id": item.id]) } catch {
-          self.error = userMessage(error)
+      .task(id: item.id) {
+        guard item.source == .recognition else { return }
+        do {
+          let result = try await core.recognitionActivityDetail(id: item.sourceId)
+          guard !Task.isCancelled else { return }
+          detail = result
+        } catch {
+          if !Task.isCancelled { self.error = userMessage(error) }
         }
       }
   }

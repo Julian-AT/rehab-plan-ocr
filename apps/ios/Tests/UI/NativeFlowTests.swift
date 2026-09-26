@@ -325,6 +325,36 @@ import XCTest
     retry.tap()
     XCTAssertTrue(app.buttons["Erneut versuchen"].waitForExistence(timeout: 20))
     capture("Retryable capture failure")
+    app.tabBars.buttons["Mehr"].tap()
+    let history = app.buttons["Verlauf"]
+    for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+    history.tap()
+    let filter = app.buttons["activity-filter"]
+    XCTAssertTrue(filter.waitForExistence(timeout: 10))
+    filter.tap()
+    app.buttons["Erkennungen"].tap()
+    let recognition = app.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "activity-record-recognition:")
+    ).firstMatch
+    XCTAssertTrue(recognition.waitForExistence(timeout: 15))
+    XCTAssertTrue(recognition.label.contains("Prüfung erforderlich"))
+    recognition.tap()
+    let message = app.staticTexts["recognition-activity-error"]
+    XCTAssertTrue(message.waitForExistence(timeout: 10))
+    XCTAssertFalse(message.label.isEmpty)
+    XCTAssertTrue(app.buttons["Erkennungsdetails und Quellen"].exists)
+    capture("Recognition history retains the failed attempt")
+    app.navigationBars["Erkennung"].buttons.firstMatch.tap()
+    filter.tap()
+    app.buttons["Erfassungen"].tap()
+    let captureRow = app.buttons[
+      "activity-record-capture:55555555-5555-4555-8555-555555555555"]
+    XCTAssertTrue(captureRow.waitForExistence(timeout: 10))
+    XCTAssertFalse(recognition.exists)
+    captureRow.tap()
+    XCTAssertTrue(app.navigationBars["Erfassung"].waitForExistence(timeout: 8))
+    XCTAssertFalse(app.staticTexts["recognition-activity-error"].exists)
+    XCTAssertTrue(app.buttons["Erkennungsdetails und Quellen"].exists)
   }
   func testVoiceTabIsExplicitAndCancelEndsConversation() {
     app.tabBars.buttons["Sprechen"].tap()

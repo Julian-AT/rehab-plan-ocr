@@ -435,24 +435,52 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
   `Reference::legacy` bleibt für den älteren Platform-Hostadapter erhalten.
   Die alten JSON-Hostadapter bleiben für Integrationstests und kompatible Hosts.
 
+## Gemischter Verlauf und Erkennungsdetails
+
+`ActivityView` liest `NativeApplication.activity_page` mit dem festen Quelltyp
+`ActivitySource` und erhält `ActivityPage`/`ActivityRecord`. Erkennungsfehler
+kommen über `recognition_activity_detail` aus genau dem ausgewählten
+Verarbeitungsversuch. Alle vier Quellarten, Zeitstempel, Dokument-/Vorgangskennungen,
+Anzahl und bestehende Statusanzeigen bleiben erhalten. Der opaque Keyset-Cursor
+gehört weiterhin der Speicherung; die App interpretiert ihn nicht.
+
+Die Aufnahmeansicht benötigt keinen zusätzlichen Detailaufruf, da ihre
+Dokumentkennung bereits in der Zeile steht. Import- und Terminänderungsdetails
+verwenden die zuvor typisierten Historien. Die generische `eventRequest`-Hilfe
+ist entfernt; aktive Appansichten rufen `calendarRequest` nicht mehr auf.
+Die bisherigen `activityPage`-/`activityDetail`-Befehle bleiben als
+Kompatibilitätseingänge erhalten und lesen dieselben Journale ohne Migration.
+Unbekannte historische Anzeigezustände behalten die bisherigen Auffangtexte.
+
+Unter `.local/runs/typed-activity-20260926-s19-001/` bestehen 247 Core-/FFI-Tests,
+Workspace-Clippy, offizielle Bindings/Konsistenzprüfung und der echte native
+Rundweg. Dieser prüft alle vier Quellfilter, vollständige alte/neue Zeilenprojektion,
+Seitencursor, ungültige Cursor, zwei tatsächliche fehlgeschlagene Erkennungen,
+getrennte Versuch-/Dokumentkennungen, Wiederanlauf und unveränderte Originalbytes.
+
+Gemeinsamer App-/UI-Testbuild und der erweiterte Aufnahmefehler-Test bestehen
+in `.local/runs/activity-ui-20260926-s19-001/` mit einem tatsächlich ausgeführten
+Erfolg, null Fehlern und null Skips. Der sichtbare Ablauf prüft Quellfilter,
+Fehlertext des Erkennungsversuchs und die Aufnahmeansicht. Dessen erhaltenes
+Simulatorpaket besteht die Prüfung aller zwölf Binärdateien, Modelle, Ressourcen
+und Notices. Dies ersetzt keinen vollständigen UI-Endlauf oder eine Geräteabnahme.
+
 ## Weiterhin offen
 
-`Platform.call`, `AppleHost.calendar_event_call`,
-`NativeApplication.calendar_request` und Teile von `NativeServices.perform`
-transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
-gehören gemischte Archivseiten und deren Aufnahme-/Importdetails. Status,
-Terminverlauf, Wiederanlauf, Kalenderlink-Reparatur und manuelle Klärung ungewisser
-Terminänderungen sind bereits typisiert.
-Weitere Plattformeffekte bleiben offen; Systemeditor und Besitzmarkerprüfung
+`Platform.call`, `AppleHost.calendar_event_call` und Teile von
+`NativeServices.perform` bleiben für Plattformkompatibilität und die native
+Vision-Erkennung als String-/JSON-Grenzen vorhanden. `calendar_request` hat
+keinen aktiven Appansichtsverbraucher mehr; Integrationstests sichern seine
+bestehenden Ergebnisformen. Die kalenderbezogenen Produktpfade für Status,
+Verlauf, Änderungen, Wiederanlauf, Besitzmarker, Systemeditor und Link-Reparatur
 verwenden die oben beschriebenen typisierten Grenzen.
-Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
-`Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
-Core-Agenda-Abgleich verwendet ebenfalls typisierte Aufträge und Ergebnisse;
-`calendar_event_call("agenda", ...)` bleibt ausschließlich für den ausdrücklichen
-Legacy-Refresh erhalten. Die übrigen internen Grenzen müssen einschließlich
-Wartungswarnungen und bestehender Legacy-Ergebnisformen separat umgestellt werden.
-Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
-Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
+
+Die Core-Import-/Undo-Abläufe verwenden `Platform.import_snapshot`/`apply_import`;
+der aktive Agenda-Abgleich ebenfalls typisierte Aufträge und Ergebnisse.
+`calendar_event_call("agenda", ...)` bleibt für den ausdrücklichen Legacy-Refresh.
+Weitere interne Serialisierungen, Fehlerprojektionen und die native Erkennung
+sind noch zu prüfen. Bestehende Bereichs-, Revisions-, Bestätigungs- und
+Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
 `ServiceError::Legacy` hält die bisherige Verarbeitung von Domain-Fehlertexten
 kompatibel. Native Callback-Fehler dürfen diesen Adapter nicht benutzen. Die

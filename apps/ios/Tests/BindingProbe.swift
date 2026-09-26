@@ -120,6 +120,8 @@ final class TestHost: AppleHost, Sendable {
     try FileManager.default.copyItem(atPath: root, toPath: draftRoot)
     let pagesRoot = root + "-pages"
     try FileManager.default.copyItem(atPath: root, toPath: pagesRoot)
+    let activityRoot = root + "-activity"
+    try FileManager.default.copyItem(atPath: root, toPath: activityRoot)
     let host = TestHost()
     let core = try await openApplication(root: root, models: "/unavailable-test-model", host: host)
     let nativeFailures: [AppError] = [
@@ -602,8 +604,98 @@ final class TestHost: AppleHost, Sendable {
     precondition(reopenedPages == expectedPages)
     precondition(unchangedPage.revision == initialPage.revision)
     precondition(unchangedPage.appointments == initialPage.appointments)
+    try await verifyActivity(core: core, activityRoot: activityRoot, host: host)
     print(
       "Swift 6 integration passed: typed appointments/geometry, revisions, approvals, stable ICS, uncertain-write recovery, reopen, cancellation and artifact confinement"
     )
   }
+  static func verifyActivity(core: NativeApplication, activityRoot: String, host: TestHost)
+    async throws
+  {
+    for (source, stored) in [(ActivitySource.calendarImport, "import"), (.eventMutation, "event")] {
+      let page = try await core.activityPage(cursor: nil, limit: 100, source: source)
+      precondition(!page.items.isEmpty && page.items.allSatisfy { $0.source == source })
+      let legacyText = try await core.calendarRequest(
+        command: "activityPage", arguments: #"{"limit":100,"source":"\#(stored)"}"#)
+      let legacy = try JSONSerialization.jsonObject(with: Data(legacyText.utf8)) as! [String: Any]
+      let rows = legacy["items"] as! [[String: Any]]
+      precondition(rows.count == page.items.count)
+      for (row, typed) in zip(rows, page.items) {
+        precondition(row["id"] as? String == typed.id)
+        precondition((row["created_at"] as? NSNumber)?.int64Value == typed.createdAt)
+        precondition(row["source"] as? String == stored)
+        precondition(row["source_id"] as? String == typed.sourceId)
+        precondition(row["document_id"] as? String == typed.documentId)
+        precondition(
+          row["kind"] as? String == typed.kind && row["status"] as? String == typed.status)
+        precondition((row["count"] as? NSNumber)?.uint32Value == typed.count)
+      }
+      precondition(legacy["next_cursor"] as? String == page.nextCursor)
+    }
+    let activity = try await openApplication(
+      root: activityRoot, models: "/unavailable-test-model", host: host)
+    let source = activityRoot + "/synthetic-invalid-photo.bin"
+    let bytes = Data("synthetic invalid image".utf8)
+    try bytes.write(to: URL(fileURLWithPath: source))
+    let document = UUID().uuidString
+    _ = try await activity.stagePhoto(id: document, path: source)
+    for _ in 0..<2 {
+      let job = try activity.registerJob(id: document)
+      do {
+        _ = try await activity.retryCapture(id: document, job: job)
+        preconditionFailure("Invalid image unexpectedly recognized")
+      } catch AppError.Validation {} catch AppError.Storage {}
+      job.close()
+    }
+    let all = try await activity.activityPage(cursor: nil, limit: nil, source: nil)
+    precondition(all.items.count == 3)
+    precondition(all.items.filter { $0.source == .capture }.count == 1)
+    let recognition = try await activity.activityPage(cursor: nil, limit: nil, source: .recognition)
+    precondition(recognition.items.count == 2)
+    var details: [RecognitionActivityDetail] = []
+    for row in recognition.items {
+      precondition(row.status == "failed" && row.documentId == document)
+      let detail = try await activity.recognitionActivityDetail(id: row.sourceId)
+      precondition(detail.documentId == document && detail.status == "failed")
+      precondition(detail.error?.isEmpty == false)
+      let legacyText = try await activity.calendarRequest(
+        command: "activityDetail", arguments: #"{"id":"\#(row.id)"}"#)
+      let legacy = try JSONSerialization.jsonObject(with: Data(legacyText.utf8)) as! [String: Any]
+      precondition(legacy["document_id"] as? String == detail.documentId)
+      precondition(legacy["status"] as? String == detail.status)
+      precondition(legacy["error"] as? String == detail.error)
+      details.append(detail)
+    }
+    var cursor: String?
+    var ids: [String] = []
+    repeat {
+      let page = try await activity.activityPage(cursor: cursor, limit: 1, source: nil)
+      precondition(page.items.count == 1)
+      ids += page.items.map(\.id)
+      cursor = page.nextCursor
+    } while cursor != nil
+    precondition(ids == all.items.map(\.id) && Set(ids).count == 3)
+    for invalid in ["bad cursor", String(repeating: "x", count: 513)] {
+      do {
+        _ = try await activity.activityPage(cursor: invalid, limit: nil, source: nil)
+        preconditionFailure("Invalid activity cursor accepted")
+      } catch AppError.Validation {}
+    }
+    do {
+      _ = try await activity.recognitionActivityDetail(id: document)
+      preconditionFailure("Document ID confused with processing attempt ID")
+    } catch AppError.Storage {}
+    let reopened = try await openApplication(
+      root: activityRoot, models: "/unavailable-test-model", host: host)
+    let reopenedPage = try await reopened.activityPage(cursor: nil, limit: nil, source: nil)
+    precondition(reopenedPage == all)
+    for (row, detail) in zip(recognition.items, details) {
+      let restored = try await reopened.recognitionActivityDetail(id: row.sourceId)
+      precondition(restored == detail)
+    }
+    let retainedSource = try await reopened.artifactPath(id: document, artifact: "source.bin")
+    let retainedBytes = try Data(contentsOf: URL(fileURLWithPath: retainedSource))
+    precondition(retainedBytes == bytes)
+  }
+
 }

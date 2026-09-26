@@ -382,3 +382,15 @@ den bestandenen 68-Test-Lauf qualifiziert.
   umfasst auch eigene Terminlinks und die Prüfung tatsächlich ausgeführter
   UI-Testauswahlen. Vollständige UI-, Modell-, Geräte- und Veröffentlichungsabnahme
   bleiben separat offen.
+
+- Typisierter gemischter Verlauf: **verifiziert** für 247 Core-/FFI-Tests,
+  Workspace-Clippy, Bindings und echten nativen Rundweg. Vier Quellfilter,
+  Seitencursor, fehlgeschlagene Erkennungsversuche und Wiederanlauf bleiben
+  erhalten (`typed-activity-20260926-s19-001`). Gemeinsamer App-/UI-Testbuild,
+  ein erweiterter sichtbarer Fehler-/Verlaufsablauf ohne Fehler/Skip und dessen
+  Paketprüfung bestehen (`activity-ui-20260926-s19-001`). Aktive Appansichten
+  verwenden keinen `calendarRequest`-Aufruf mehr; Kompatibilität und bestehende
+  Journale bleiben erhalten. [Grenzen und Prüfbelege](typed-boundaries.md).
+  Der aktualisierte Bestandsbeleg ordnet 831 Dateien 17 Verbrauchergruppen zu
+  (`.local/maintenance/repository-inventory-20260926-s19-005.json`); die vollständige
+  Inhaltsprüfung bleibt offen.

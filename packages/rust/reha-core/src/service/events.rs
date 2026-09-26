@@ -65,15 +65,8 @@ pub async fn dispatch(
                 }
                 "capture" => Ok(json!({"document_id":id})),
                 "recognition" => {
-                    let result: (String, String, Option<String>) = store
-                        .connection
-                        .query_row(
-                            "SELECT scan_id,status,error FROM processing_attempts WHERE id=?1",
-                            [id],
-                            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-                        )
-                        .map_err(failure)?;
-                    Ok(json!({"document_id":result.0,"status":result.1,"error":result.2}))
+                    serde_json::to_value(store.recognition_activity_detail(id).map_err(failure)?)
+                        .map_err(failure)
                 }
                 _ => Err("Unbekannter Verlaufseintrag.".into()),
             }

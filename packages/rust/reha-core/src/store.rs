@@ -7,7 +7,7 @@ mod activity;
 mod archive;
 mod batches;
 pub mod bookkeeping;
-pub use activity::{ActivityItem, ActivityPage};
+pub use activity::{ActivityItem, ActivityPage, RecognitionActivityDetail};
 mod event_mutations;
 mod intake;
 mod migrations;

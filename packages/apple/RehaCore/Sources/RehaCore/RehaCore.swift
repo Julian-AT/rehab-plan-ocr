@@ -673,6 +673,10 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
+    func activityPage(cursor: String?, limit: UInt32?, source: ActivitySource?) async throws  -> ActivityPage
+    
+    func recognitionActivityDetail(id: String) async throws  -> RecognitionActivityDetail
+    
     func agendaSelection() async throws  -> AgendaQueryScope
     
     func queryCalendarEvents(request: AgendaQueryRequest) async throws  -> AgendaQueryResult
@@ -876,6 +880,38 @@ open class NativeApplication: NativeApplicationProtocol, @unchecked Sendable {
 
     
 
+    
+open func activityPage(cursor: String?, limit: UInt32?, source: ActivitySource?)async throws  -> ActivityPage  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_activity_page(
+                        self.uniffiCloneHandle(),FfiConverterOptionString.lower(cursor),FfiConverterOptionUInt32.lower(limit),FfiConverterOptionTypeActivitySource.lower(source)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeActivityPage_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func recognitionActivityDetail(id: String)async throws  -> RecognitionActivityDetail  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_recognition_activity_detail(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeRecognitionActivityDetail_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
     
 open func agendaSelection()async throws  -> AgendaQueryScope  {
     return
@@ -2214,6 +2250,138 @@ public func FfiConverterTypeRecognitionJob_lower(_ value: RecognitionJob) -> UIn
 }
 
 
+
+
+public struct ActivityPage: Equatable, Hashable {
+    public var items: [ActivityRecord]
+    public var nextCursor: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(items: [ActivityRecord], nextCursor: String?) {
+        self.items = items
+        self.nextCursor = nextCursor
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ActivityPage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeActivityPage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ActivityPage {
+        return
+            try ActivityPage(
+                items: FfiConverterSequenceTypeActivityRecord.read(from: &buf), 
+                nextCursor: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ActivityPage, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeActivityRecord.write(value.items, into: &buf)
+        FfiConverterOptionString.write(value.nextCursor, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivityPage_lift(_ buf: RustBuffer) throws -> ActivityPage {
+    return try FfiConverterTypeActivityPage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivityPage_lower(_ value: ActivityPage) -> RustBuffer {
+    return FfiConverterTypeActivityPage.lower(value)
+}
+
+
+public struct ActivityRecord: Equatable, Hashable {
+    public var id: String
+    public var createdAt: Int64
+    public var source: ActivitySource
+    public var sourceId: String
+    public var documentId: String?
+    public var kind: String
+    public var status: String
+    public var count: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, createdAt: Int64, source: ActivitySource, sourceId: String, documentId: String?, kind: String, status: String, count: UInt32) {
+        self.id = id
+        self.createdAt = createdAt
+        self.source = source
+        self.sourceId = sourceId
+        self.documentId = documentId
+        self.kind = kind
+        self.status = status
+        self.count = count
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ActivityRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeActivityRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ActivityRecord {
+        return
+            try ActivityRecord(
+                id: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterInt64.read(from: &buf), 
+                source: FfiConverterTypeActivitySource.read(from: &buf), 
+                sourceId: FfiConverterString.read(from: &buf), 
+                documentId: FfiConverterOptionString.read(from: &buf), 
+                kind: FfiConverterString.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                count: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ActivityRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterInt64.write(value.createdAt, into: &buf)
+        FfiConverterTypeActivitySource.write(value.source, into: &buf)
+        FfiConverterString.write(value.sourceId, into: &buf)
+        FfiConverterOptionString.write(value.documentId, into: &buf)
+        FfiConverterString.write(value.kind, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterUInt32.write(value.count, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivityRecord_lift(_ buf: RustBuffer) throws -> ActivityRecord {
+    return try FfiConverterTypeActivityRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivityRecord_lower(_ value: ActivityRecord) -> RustBuffer {
+    return FfiConverterTypeActivityRecord.lower(value)
+}
 
 
 public struct AgendaOwnedRecord: Equatable, Hashable {
@@ -7062,6 +7230,64 @@ public func FfiConverterTypeReadinessQuestion_lower(_ value: ReadinessQuestion) 
 }
 
 
+public struct RecognitionActivityDetail: Equatable, Hashable {
+    public var documentId: String
+    public var status: String
+    public var error: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(documentId: String, status: String, error: String?) {
+        self.documentId = documentId
+        self.status = status
+        self.error = error
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RecognitionActivityDetail: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRecognitionActivityDetail: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RecognitionActivityDetail {
+        return
+            try RecognitionActivityDetail(
+                documentId: FfiConverterString.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                error: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RecognitionActivityDetail, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.documentId, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterOptionString.write(value.error, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecognitionActivityDetail_lift(_ buf: RustBuffer) throws -> RecognitionActivityDetail {
+    return try FfiConverterTypeRecognitionActivityDetail.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecognitionActivityDetail_lower(_ value: RecognitionActivityDetail) -> RustBuffer {
+    return FfiConverterTypeRecognitionActivityDetail.lower(value)
+}
+
+
 public struct Region: Equatable, Hashable {
     public var id: String
     public var polygon: [Point]
@@ -7634,6 +7860,86 @@ public func FfiConverterTypeStage_lift(_ buf: RustBuffer) throws -> Stage {
 public func FfiConverterTypeStage_lower(_ value: Stage) -> RustBuffer {
     return FfiConverterTypeStage.lower(value)
 }
+
+
+
+public enum ActivitySource: Equatable, Hashable {
+    
+    case capture
+    case recognition
+    case calendarImport
+    case eventMutation
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ActivitySource: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeActivitySource: FfiConverterRustBuffer {
+    typealias SwiftType = ActivitySource
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ActivitySource {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .capture
+        
+        case 2: return .recognition
+        
+        case 3: return .calendarImport
+        
+        case 4: return .eventMutation
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ActivitySource, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .capture:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .recognition:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .calendarImport:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .eventMutation:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivitySource_lift(_ buf: RustBuffer) throws -> ActivitySource {
+    return try FfiConverterTypeActivitySource.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActivitySource_lower(_ value: ActivitySource) -> RustBuffer {
+    return FfiConverterTypeActivitySource.lower(value)
+}
+
 
 
 public 
@@ -10384,6 +10690,30 @@ fileprivate struct FfiConverterOptionTypeProposal: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeActivitySource: FfiConverterRustBuffer {
+    typealias SwiftType = ActivitySource?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeActivitySource.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeActivitySource.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFieldValue: FfiConverterRustBuffer {
     typealias SwiftType = FieldValue?
 
@@ -10498,6 +10828,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeActivityRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [ActivityRecord]
+
+    public static func write(_ value: [ActivityRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeActivityRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ActivityRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ActivityRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeActivityRecord.read(from: &buf))
         }
         return seq
     }
@@ -11534,6 +11889,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_func_normalize_speech() != 54361) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_activity_page() != 13305) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_recognition_activity_detail() != 64425) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_agenda_selection() != 50868) {

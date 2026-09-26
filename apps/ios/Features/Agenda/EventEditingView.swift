@@ -2,16 +2,6 @@ import AppleServices
 import RehaCore
 import SwiftUI
 
-extension NativeApplication {
-  @MainActor func eventRequest<T: Decodable>(
-    _ command: String, _ args: [String: Any] = [:], as type: T.Type = T.self
-  ) async throws -> T {
-    let data = try JSONSerialization.data(withJSONObject: args)
-    let result = try await calendarRequest(
-      command: command, arguments: String(decoding: data, as: UTF8.self))
-    return try JSONDecoder().decode(type, from: Data(result.utf8))
-  }
-}
 extension EventSession {
   convenience init(core: NativeApplication, origin: String = "manual") {
     self.init(
