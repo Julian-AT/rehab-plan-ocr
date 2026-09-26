@@ -23,27 +23,6 @@ pub struct Reference {
     pub expected_start_utc: String,
 }
 impl Reference {
-    pub fn from_legacy(value: &Value) -> Response<Self> {
-        let required = |key: &str| {
-            value[key]
-                .as_str()
-                .filter(|v| !v.is_empty())
-                .map(str::to_owned)
-                .ok_or_else(|| {
-                    ServiceError::Validation("Kalender oder Terminzuordnung fehlt.".into())
-                })
-        };
-        let occurrence = required("occurrence")?;
-        Ok(Self {
-            calendar_id: required("calendar_id")?,
-            external_id: required("external_id")?,
-            expected_start_utc: value["values"]["start_utc"]
-                .as_str()
-                .unwrap_or(&occurrence)
-                .into(),
-            occurrence,
-        })
-    }
     pub fn legacy(&self) -> Value {
         json!({"calendar_id":self.calendar_id,"external_id":self.external_id,
             "occurrence":self.occurrence,"values":{"start_utc":self.expected_start_utc}})
@@ -99,11 +78,20 @@ pub async fn query(platform: &Arc<dyn Platform>, request: Query) -> Response<Val
         .map_err(failure)??;
     serde_json::to_value(result).map_err(invalid_response)
 }
-pub async fn resolve(platform: &Arc<dyn Platform>, reference: &Value) -> Response<Value> {
-    let reference = Reference::from_legacy(reference)?;
+pub async fn resolve(platform: &Arc<dyn Platform>, event: &Event) -> Response<Option<Event>> {
+    if event.calendar_id.is_empty() || event.external_id.is_empty() || event.occurrence.is_empty() {
+        return Err(ServiceError::Validation(
+            "Kalender oder Terminzuordnung fehlt.".into(),
+        ));
+    }
+    let reference = Reference {
+        calendar_id: event.calendar_id.clone(),
+        external_id: event.external_id.clone(),
+        occurrence: event.occurrence.clone(),
+        expected_start_utc: event.values.start_utc.clone(),
+    };
     let platform = platform.clone();
-    let event = tokio::task::spawn_blocking(move || platform.resolve_calendar_event(reference))
+    tokio::task::spawn_blocking(move || platform.resolve_calendar_event(reference))
         .await
-        .map_err(failure)??;
-    Ok(json!({"event":event}))
+        .map_err(failure)?
 }

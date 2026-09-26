@@ -33,6 +33,8 @@
     func resolveCalendarEvent(reference: CalendarReadReference) throws -> CalendarReadEvent? {
       throw denied()
     }
+    func eventCalendars() throws -> [EventCalendarDestination] { throw denied() }
+    func mutateEvent(request: EventMutationRequest) throws -> EventMutationResult { throw denied() }
     func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
       throw denied()
     }

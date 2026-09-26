@@ -150,7 +150,7 @@ pub(super) fn finish_owned_mutation(
     let Some(id) = &proposal.owned_id else {
         return Ok(());
     };
-    if proposal.kind == "remove" {
+    if proposal.kind == crate::service::calendar_mutations::Kind::Remove {
         if let Some(raw) = connection
             .query_row("SELECT record FROM owned_events WHERE id=?1", [id], |r| {
                 r.get::<_, String>(0)

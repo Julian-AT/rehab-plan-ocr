@@ -70,6 +70,21 @@ pub trait Platform: Send + Sync {
             .ok_or_else(|| calendar_reads::invalid_response("Terminstatus fehlt."))?;
         serde_json::from_value(event.clone()).map_err(calendar_reads::invalid_response)
     }
+    /// Legacy adapters keep their journal-shaped JSON. The native host overrides
+    /// these methods and carries mutations and destinations as typed records.
+    fn event_calendars(&self) -> Response<Vec<calendar_mutations::Destination>> {
+        let response = self.call("eventCalendars", serde_json::json!({}))?;
+        serde_json::from_value(response["calendars"].clone())
+            .map_err(calendar_reads::invalid_response)
+    }
+    fn mutate_event(
+        &self,
+        request: calendar_mutations::MutationRequest,
+    ) -> Response<calendar_mutations::MutationResult> {
+        let args = serde_json::to_value(request).map_err(calendar_reads::invalid_response)?;
+        serde_json::from_value(self.call("mutateEvent", args)?)
+            .map_err(calendar_reads::invalid_response)
+    }
     /// Native adapters override this binary boundary. The default only preserves
     /// compatibility for JSON platform adapters and existing test hosts.
     fn decode_photo(&self, bytes: &[u8]) -> Response<Vec<u8>> {
@@ -128,6 +143,7 @@ impl Application {
 }
 pub mod agenda;
 pub mod calendar;
+pub mod calendar_mutations;
 pub mod calendar_reads;
 mod calendar_repair;
 pub mod inference;

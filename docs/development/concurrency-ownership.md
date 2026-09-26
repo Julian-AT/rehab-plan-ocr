@@ -17,8 +17,8 @@ MainActor-isoliert. Rusts Runtime hat zwei asynchrone Arbeitsthreads;
 Datei-, Datenbank-, Modell- und synchrone Hostoperationen wechseln auf
 `spawn_blocking` beziehungsweise eigene serielle native Queues.
 
-Die Inventarsuche erfasste 15 eigene `@unchecked Sendable`-Deklarationen und
-25 `Task.detached`-Stellen: 13 beziehungsweise 19 gehören zu Produkt- oder
+Die Inventarsuche erfasste 14 eigene `@unchecked Sendable`-Deklarationen und
+25 `Task.detached`-Stellen: 12 beziehungsweise 19 gehören zu Produkt- oder
 expliziten Diagnosepfaden, zwei beziehungsweise sechs zu Tests. Die Tabellen
 benennen auch die nur bedingt erfüllten Verträge; die Annotation allein belegt
 weder eine sichere Lebensdauer noch wirksamen Abbruch.
@@ -41,7 +41,6 @@ rg -n 'spawn_blocking|thread::scope|\.spawn\(' packages/rust
 | `VoiceActivityDetector`, `Features/Conversation/InputAudio.swift` | Die Produktionsinstanz gehört ausschließlich `SpeechInput` unter dessen Lock; die Simulatorinstanz einem einzelnen MainActor-Task. Kein interner Lock. | C-VAD, Konverter und Samples gehören derselben Instanz; `deinit` gibt das Handle frei. Neue parallele Verbraucher müssten diesen externen Besitzvertrag erhalten. |
 | `ConverterInput`, dieselbe Datei | Ein Lock erlaubt genau eine Entnahme des Audiobuffers durch den synchronen Konvertercallback. | Die lokale Instanz hält den Buffer bis zum Ende des Konvertierungsaufrufs. |
 | `VoiceRegexCache`, `Features/Conversation/VoiceRules.swift` | Lock um die Map; Kompilierung und Suche außerhalb des Locks auf unveränderlichen Ausdrücken. Erneute Prüfung vor Einfügen. | Höchstens 128 Einträge. Prozessweiter Cache enthält keine Gesprächsdaten. |
-| `RecognitionTraceHost`, `Features/PlanReview/RecognitionTraceModel.swift` | Unveränderlicher `NativeBridge`; ausschließlich Decode/Recognize erlaubt. | Gehört einer wegwerfbaren Trace-Anwendung. Kalenderwirkungen werden abgewiesen. Eine compilergeprüfte Konformität ist hier ein möglicher kleiner Folgeumbau; kein nachgewiesenes Rennen. |
 | `LocalDiagnostics`, `AppleServices/LocalDiagnostics.swift` | Eine Utility-Queue besitzt Events, Ladezustand und geplanten Flush. | Höchstens 5.000 Events und 14 Tage, koaleszierter Flush nach 200 ms. Enqueued Writes dürfen bis zum Abschluss weiterlaufen. Der Flush hält den Besitzer nur schwach. |
 | `NativeServices`, `AppleServices/NativeServices.swift` | Unveränderliche Servicebesitzer; Kalenderformatter und dedizierter Kalender nur auf `AgendaService.queue`; Präsentation auf MainActor, Bildarbeit auf Workerqueue. | Singleton. Requests behalten ihre Completion bis zur einmaligen Auflösung. Vision erhält ein eigenes abbrechbares Requestobjekt und Zeitbudget. |
 | `AgendaService`, `AppleServices/agenda-service.swift` | Serielle Queue besitzt EventKit-Store, Journal, Reservations-, Benachrichtigungs- und Snapshotzustand. Callbacks wechseln zurück auf diese Queue. | Start ist ein gesonderter Initialisierungsvertrag: AppDelegate ruft ihn vor Veröffentlichung einmal auf; Tests initialisieren ihre Instanz vor paralleler Nutzung. Der historische C-Startentry ist keine Zusage für beliebige gleichzeitige Starts. |
@@ -57,7 +56,11 @@ Pfadpräfixe der Tabelle: Appdateien liegen unter `apps/ios`, AppleServices unte
 `packages/apple/AppleServices/Sources`, LocalAssistant unter
 `packages/apple/LocalAssistant/Sources`.
 
-`NativeBridge` ist zustandslos und compilergeprüft `Sendable`. `ServiceRequest`
+`NativeBridge` ist zustandslos und compilergeprüft `Sendable`.
+`RecognitionTraceHost` besitzt ausschließlich einen unveränderlichen `NativeBridge`
+und verwendet nun ebenfalls eine reguläre `Sendable`-Konformität; die gemeinsame
+App-Kompilierung prüft diesen Adapter. Kalenderwirkungen
+bleiben dort gesperrt. `ServiceRequest`
 ist ebenfalls compilergeprüft: unveränderliche Argumentbytes und ein
 `OSAllocatedUnfairLock` besitzen die einmalige Completion. Sie wird unter dem
 Lock entnommen und außerhalb ausgeführt, damit Wiedereintritt nicht blockiert.
@@ -71,7 +74,7 @@ Lock entnommen und außerhalb ausgeführt, damit Wiedereintritt nicht blockiert.
 | `Features/Capture/ScanModel.swift`, 13 Tasks | Erasure-Gate lesen/beginnen/beenden; Foto-/Dateikopien, PDF-Erkennung, Seitenermittlung/-rendering, temporäre Sicherung und Share-Wiederaufnahme laufen außerhalb MainActor. Producer-Leases, Erasure-Tickets und Dokumentgenerationen besitzen diese Arbeit. Löschen wartet auf Producer, Jobs und `recognitionBusy`, bevor Arbeitsdateien entfernt werden. Dateiarbeit wird bewusst zu Ende geführt und anschließend verworfen, falls ihre Generation abgelaufen ist. |
 | `Features/Conversation/SystemSpeech.swift`, ein Task | Nur kopierte Samples und unveränderliche Metadaten gehen in die Konvertierung. Der Renderaufruf wartet auf das Ergebnis, reicht Cancel weiter und kontrolliert den Zustand vor Veröffentlichung; die Schleife prüft Abbruch. |
 | `Features/PlanReview/RecognitionTraceModel.swift`, ein Task | Quellenkopie in einen reservierten temporären Arbeitsbereich; danach Prüfung auf Abbruch/Schließen. `close` wartet auf den gehaltenen Trace-Task und das tatsächliche Ende des Rust-Workers, erst dann wird die Workspace-Lease freigegeben. |
-| `Features/PlanReview/SourceView.swift`, zwei Tasks | Bildthumbnail und PDF-Erkennung nehmen lokale Quellenwerte entgegen. Es gibt keine ausdrückliche Cancelweiterleitung an diese beiden Worker. Aktive Verbraucher binden Quelle/Ansicht an die Dokumentidentität; unnötige Restarbeit nach Verschwinden ist möglich, ein falsches Ergebnis für eine wechselnde Identität wurde hier nicht reproduziert. |
+| `Features/PlanReview/SourceView.swift`, zwei Tasks | Bildthumbnail und PDF-Erkennung nehmen lokale Quellenwerte entgegen. Der Besitzer reicht Abbruch an beide Worker weiter; sie prüfen davor und danach. Die Ansichten prüfen nach dem Await vor Bild-/Pfadveröffentlichung und zeigen Abbruch nicht als Fehler. Laufende Systemcodecs können weiterhin zu Ende arbeiten. Parser-/Formatprüfung liegt vor; integrierter Appbuild folgt auf dem gemeinsamen Stand. |
 | `Tests/IntakeErasureProbe.swift`, zwei Tasks | Kontrollierter Writer und Eraser, explizite Semaphorefreigabe testet tatsächliches Warten auf Writer. |
 | `Tests/IntakeReceiptProbe.swift`, zwei Tasks | Test wartet auf Recovery und Erasure; gemeinsame Datei-Gategeneration entscheidet den Gewinner. |
 | `Tests/SpeechInputChannelProbe.swift`, ein Task | Begrenzter Testproducer; Verbraucher und Producer werden beide abgewartet. |
@@ -189,7 +192,7 @@ featuregesteuert und gehört nicht zum öffentlichen App-Release.
 |---|---|---|
 | P2 | Zwei Planseiten-Ladevorgänge überlappen; der ältere `loadScan` antwortet nach dem neueren Seitenverzeichnis. | Behoben durch `PlanPagesModel`: IDs und Reviews werden gemeinsam veröffentlicht. Die kontrollierte Probe hält beide Lesegrenzen einzeln an. |
 | P2 | Ein altes `PlanModel.load` wartet in `planCalendar`, während ein neueres Laden einschließlich Vorschlag fertig wird. | Behoben: nach jedem Await Generationsprüfung und vollständige lokale Snapshotbildung. Die Probe prüft zusätzlich alte Fehler, Cancel und Inhaltserhalt. |
-| P2 | In der geprüften FFI-Version wird ein Import vor der ersten oder zweiten Cancelprüfung abgebrochen oder scheitert vor der abschließenden Cleanupzeile. | `application.rs::cancel_job` trägt die ID in `HostBridge.cancelled` ein; frühe Returns aus `import_photo_with_debug` erreichen `remove` nicht. Wiederholt neue IDs lassen diese Menge wachsen. Zur separaten Lifecycle-Korrektur gemeldet; kein TTL als Ersatz für Widerruf. |
+| P2 | In der geprüften FFI-Version wird ein Import vor der ersten oder zweiten Cancelprüfung abgebrochen oder scheitert vor der abschließenden Cleanupzeile. | Behoben in `f8a3191` durch registrierte `RecognitionJob`-Versuche mit eigener atomarer Abbruchflagge und Worker-Lease; kein Tombstone und kein TTL. `c9412b4` hält die Swift-Leases bis zum tatsächlichen Ende von Vorbereitung und Worker. Frühe Fehler, unbekannte IDs und verworfene Futures werden gezielt geprüft. |
 | Offen, kein zusätzlicher bestätigter Fehler | Ein Interpretationsanbieter ignoriert Cancel auch nach Ablauf. | Ergebnislieferung ist gesperrt; der Router besitzt keine globale Zulassungsgrenze für solche Restarbeit. LocalAssistant prüft nativ Deadline/Cancel. Apples tatsächlicher Arbeitsstopp und Ressourcenverbrauch benötigen Gerätemessung. |
 | P2 | Fremder Share-Dateiprovider antwortet dauerhaft nicht; zuvor blieb die einzige Schaltfläche deaktiviert. | Behoben durch sichtbaren Abbruch und eigene Deadline. Kontrollierte Probe prüft fehlende, späte, doppelte und synchrone Antworten, blockierte fremde Cancelhandler, atomaren Widerruf/Commit, Copy-Abbruch, erhaltene Originale und Erasure. |
 

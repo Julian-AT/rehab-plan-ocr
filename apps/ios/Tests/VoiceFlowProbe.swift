@@ -113,48 +113,40 @@ import RehaCore
       displayCalendarIds: ["visible"], recentCalendarIds: [], completionDefaults: [],
       retentionDays: nil)
   }
-  func request(_ command: String, _ arguments: [String: Any]) async throws -> Data {
-    func data(_ object: [String: Any]) throws -> Data {
-      try JSONSerialization.data(withJSONObject: object)
-    }
-    switch command {
-    case "registerEventSession":
-      let token = UUID().uuidString
-      active.insert(token)
-      return try data(["session": token])
-    case "invalidateEventSession":
-      active.remove(arguments["session"] as! String)
-      return try data([:])
-    case "previewEventMutation":
-      let session = arguments["session"] as! String
-      precondition(active.contains(session))
-      let eventData = try JSONSerialization.data(
-        withJSONObject: arguments["event"]!, options: .fragmentsAllowed)
-      let before = try JSONDecoder().decode(CalendarEvent?.self, from: eventData)
-      let patch = try JSONDecoder().decode(
-        [String: JSONValue].self,
-        from: JSONSerialization.data(withJSONObject: arguments["patch"]!))
-      let proposal = EventProposalView(
-        token: UUID().uuidString, session: session,
-        revision: arguments["revision"] as! UInt64, kind: arguments["kind"] as! String,
-        calendar_id: arguments["calendar_id"] as! String, calendar_title: "Privat",
-        before: before, patch: patch, undo_of: nil)
-      previews.append(proposal)
-      if suspendPreview { await withCheckedContinuation { previewContinuation = $0 } }
-      return try data(["proposal": jsonObject(proposal)])
-    case "confirmProposal":
-      let token = arguments["token"] as! String
-      let proposal = previews.first { $0.token == token }!
-      precondition(arguments["confirmation"] as? String == "button")
-      precondition(active.contains(arguments["session"] as! String))
-      precondition(arguments["revision"] as? UInt64 == proposal.revision)
-      precondition(!confirmed.contains { $0.token == token })
-      confirmed.append(proposal)
-      if suspendConfirm { await withCheckedContinuation { confirmContinuation = $0 } }
-      return try data(["status": "saved", "maintenance_warnings": warning ? ["reminders"] : []])
-    default: preconditionFailure("Unexpected calendar command: \(command)")
-    }
+  var client: EventMutationClient {
+    EventMutationClient(
+      register: {
+        let token = UUID().uuidString
+        self.active.insert(token)
+        return token
+      },
+      invalidate: { _ = self.active.remove($0) },
+      preview: { request in
+        precondition(self.active.contains(request.session))
+        let proposal = EventEditProposal(
+          token: UUID().uuidString, session: request.session, revision: request.revision,
+          expiresAt: 2_000_000_000, kind: request.kind, calendarId: request.calendarId,
+          calendarTitle: "Privat", before: request.event, patch: request.patch,
+          undoOf: nil, ownedId: nil, origin: request.origin)
+        self.previews.append(try EventProposalView(proposal))
+        if self.suspendPreview { await withCheckedContinuation { self.previewContinuation = $0 } }
+        return .proposal(proposal: proposal)
+      },
+      confirm: { request in
+        let proposal = self.previews.first { $0.token == request.token }!
+        precondition(request.confirmation == .button)
+        precondition(self.active.contains(request.session))
+        precondition(request.revision == proposal.revision)
+        precondition(!self.confirmed.contains { $0.token == request.token })
+        self.confirmed.append(proposal)
+        if self.suspendConfirm { await withCheckedContinuation { self.confirmContinuation = $0 } }
+        return EventMutationResult(
+          status: .saved, event: nil, operationId: request.token, message: nil,
+          maintenanceWarnings: self.warning ? ["reminders"] : [])
+      },
+      undo: { _ in preconditionFailure("Unexpected undo in voice flow") })
   }
+
 }
 
 @MainActor private struct Flow {
@@ -173,7 +165,7 @@ import RehaCore
         preferences: { calendar.preferences() }, destinations: { [] }, trace: { _ in },
         errorMessage: { $0.localizedDescription }),
       understanding: provider,
-      edits: EventSession(origin: "voice", request: { try await calendar.request($0, $1) }),
+      edits: EventSession(origin: "voice", client: calendar.client),
       recorder: input, output: output)
   }
   func spoken(_ text: String) async {

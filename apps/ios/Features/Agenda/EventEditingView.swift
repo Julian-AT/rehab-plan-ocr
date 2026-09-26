@@ -16,12 +16,12 @@ extension EventSession {
   convenience init(core: NativeApplication, origin: String = "manual") {
     self.init(
       origin: origin,
-      request: { command, args in
-        let data = try JSONSerialization.data(withJSONObject: args)
-        let result = try await core.calendarRequest(
-          command: command, arguments: String(decoding: data, as: UTF8.self))
-        return Data(result.utf8)
-      },
+      client: EventMutationClient(
+        register: { try core.registerEventSession() },
+        invalidate: { _ = try? core.invalidateEventSession(session: $0) },
+        preview: { try await core.previewEventMutation(request: $0) },
+        confirm: { try await core.confirmEventProposal(request: $0) },
+        undo: { try await core.previewEventUndo(request: $0) }),
       openSystem: { event in
         _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)])
       },
@@ -191,29 +191,28 @@ struct EventEditorView: View {
       } else {
         calendar = try await core.preferences().calendarId
       }
-      let calendars = try JSONDecoder().decode(
-        CalendarDestinations.self, from: await NativeBridge.request("eventCalendars"))
+      let calendars = try await core.eventCalendars()
       calendarName =
-        calendars.calendars.first { $0.id == calendar }.map { "\($0.title) · \($0.source)" }
+        calendars.first { $0.id == calendar }.map { "\($0.title) · \($0.source)" }
         ?? "Kalender auswählen"
     } catch { model.error = userMessage(error) }
   }
   private func preview(delete: Bool) async {
-    var patch: [String: JSONValue] = [:]
+    var patch = EventEditPatch.empty
     if !delete {
       let old = original?.values
       let iso = ISO8601DateFormatter()
-      if old?.title != title { patch["title"] = .string(title) }
-      if old?.start != start { patch["start_utc"] = .string(iso.string(from: start)) }
-      if old?.end != end { patch["end_utc"] = .string(iso.string(from: end)) }
-      if old?.location != place { patch["location"] = .string(place) }
-      if original == nil { patch["timezone"] = .string(TimeZone.current.identifier) }
+      if old?.title != title { patch.title = title }
+      if old?.start != start { patch.startUtc = iso.string(from: start) }
+      if old?.end != end { patch.endUtc = iso.string(from: end) }
+      if old?.location != place { patch.location = place }
+      if original == nil { patch.timezone = TimeZone.current.identifier }
       if old?.reminder_minutes != reminder {
-        patch["reminder_minutes"] = reminder.map { .number(Double($0)) } ?? .null
+        patch.reminder = reminder.map { .minutes(minutes: UInt32($0)) } ?? .disabled
       }
     }
     await model.preview(
-      kind: delete ? "remove" : original == nil ? "create" : "update", calendar: calendar,
+      kind: delete ? .remove : original == nil ? .create : .update, calendar: calendar,
       event: original, patch: patch)
   }
 }

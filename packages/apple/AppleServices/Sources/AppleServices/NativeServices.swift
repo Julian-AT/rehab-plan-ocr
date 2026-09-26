@@ -37,6 +37,31 @@ struct ShareArgs: Decodable {
 /// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
 public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
+  public func eventCalendars(
+    completion: @escaping @Sendable (Result<[NativeEventCalendarDestination], Error>) -> Void
+  ) {
+    read { done in
+      calendarReads.readDestinations(completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
+  public func mutateEvent(
+    _ request: NativeEventMutationRequest,
+    completion: @escaping @Sendable (Result<NativeEventMutationResult, Error>) -> Void
+  ) {
+    let correlation = request.proposal.token
+    let began = ContinuousClock.now
+    LocalDiagnostics.shared.record(.calendarWrite, .started, correlation: correlation)
+    calendarReads.writeMutation(request) { result in
+      let duration = began.duration(to: .now).components
+      let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
+      LocalDiagnostics.shared.record(
+        .calendarWrite, outcome, correlation: correlation,
+        durationMs: Int(duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000))
+      completion(result)
+    }
+  }
   public func queryCalendar(
     _ request: NativeCalendarQuery,
     completion: @escaping @Sendable (Result<NativeCalendarReadResult, Error>) -> Void

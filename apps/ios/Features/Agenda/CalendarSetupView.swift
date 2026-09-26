@@ -83,9 +83,11 @@ struct CalendarSetupView: View {
       }
       if requestAccess { _ = try await NativeBridge.request("calendars", ["dedicated": false]) }
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
-      destinations = try JSONDecoder().decode(
-        CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")
-      ).calendars
+      destinations = try await core.eventCalendars().map {
+        CalendarDestinations.Destination(
+          id: $0.id, title: $0.title, source: $0.source, writable: $0.writable,
+          color_components: $0.colorComponents)
+      }
       error = nil
     } catch { self.error = userMessage(error) }
   }
@@ -200,9 +202,11 @@ struct CalendarPreferencesView: View {
   private func load() async {
     do {
       _ = try await NativeBridge.request("calendars", ["dedicated": false])
-      destinations = try JSONDecoder().decode(
-        CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")
-      ).calendars
+      destinations = try await core.eventCalendars().map {
+        CalendarDestinations.Destination(
+          id: $0.id, title: $0.title, source: $0.source, writable: $0.writable,
+          color_components: $0.colorComponents)
+      }
       error = nil
     } catch { self.error = userMessage(error) }
   }

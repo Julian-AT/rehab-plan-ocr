@@ -1,6 +1,7 @@
 use crate::{
     recognition_jobs::RecognitionJobs, records::*, runtime, AppError, CalendarReadEvent,
-    CalendarReadQuery, CalendarReadReference, CalendarReadResult, RecognitionJob,
+    CalendarReadQuery, CalendarReadReference, CalendarReadResult, EventCalendarDestination,
+    EventMutationRequest, EventMutationResult, RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -23,12 +24,12 @@ type Result<T> = std::result::Result<T, AppError>;
 fn convert<T: Serialize, U: DeserializeOwned>(value: T) -> Result<U> {
     serde_json::from_value(serde_json::to_value(value).map_err(storage)?).map_err(storage)
 }
-fn storage(e: impl std::fmt::Display) -> AppError {
+pub(crate) fn storage(e: impl std::fmt::Display) -> AppError {
     AppError::Storage {
         message: e.to_string(),
     }
 }
-fn failure(error: service::ServiceError) -> AppError {
+pub(crate) fn failure(error: service::ServiceError) -> AppError {
     use service::ServiceError as E;
     let message = match error {
         E::Validation(message) => return AppError::Validation { message },
@@ -304,6 +305,8 @@ pub trait AppleHost: Send + Sync {
         &self,
         reference: CalendarReadReference,
     ) -> Result<Option<CalendarReadEvent>>;
+    fn event_calendars(&self) -> Result<Vec<EventCalendarDestination>>;
+    fn mutate_event(&self, request: EventMutationRequest) -> Result<EventMutationResult>;
     fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar>;
     fn apply(&self, operation: CalendarOperation, recovery_only: bool) -> Result<CalendarResult>;
     fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>>;
@@ -315,7 +318,7 @@ pub trait AppleHost: Send + Sync {
         exclude: Vec<String>,
     ) -> Result<Vec<CalendarOverlap>>;
 }
-struct HostBridge {
+pub(crate) struct HostBridge {
     host: Box<dyn AppleHost>,
     progress: Mutex<HashMap<String, JobProgress>>,
     jobs: Arc<RecognitionJobs>,
@@ -337,6 +340,21 @@ impl Platform for HostBridge {
         self.host
             .resolve_calendar_event(reference.into())
             .and_then(|event| event.map(TryInto::try_into).transpose())
+            .map_err(platform_failure)
+    }
+    fn event_calendars(&self) -> service::Response<Vec<service::calendar_mutations::Destination>> {
+        self.host
+            .event_calendars()
+            .map(|items| items.into_iter().map(Into::into).collect())
+            .map_err(platform_failure)
+    }
+    fn mutate_event(
+        &self,
+        request: service::calendar_mutations::MutationRequest,
+    ) -> service::Response<service::calendar_mutations::MutationResult> {
+        self.host
+            .mutate_event(request.into())
+            .and_then(TryInto::try_into)
             .map_err(platform_failure)
     }
     fn decode_photo(&self, bytes: &[u8]) -> service::Response<Vec<u8>> {
@@ -365,8 +383,6 @@ impl Platform for HostBridge {
         let run = || -> Result<Value> {
             match command {
                 "calendarStatus"
-                | "eventCalendars"
-                | "mutateEvent"
                 | "editSystemEvent"
                 | "resolveOwnedEvent"
                 | "inspectCalendarLinks"
@@ -428,8 +444,8 @@ impl Platform for HostBridge {
 }
 #[derive(uniffi::Object)]
 pub struct NativeApplication {
-    state: Arc<Application>,
-    bridge: Arc<HostBridge>,
+    pub(crate) state: Arc<Application>,
+    pub(crate) bridge: Arc<HostBridge>,
 }
 impl NativeApplication {
     async fn blocking<T: Send + 'static>(
@@ -1354,10 +1370,11 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
 #[cfg(test)]
 mod host_routing_tests {
     use super::*;
+    type HostCalls = Arc<Mutex<Vec<(String, Value)>>>;
     #[derive(Default)]
     pub(super) struct Host {
         failure: Option<service::ServiceError>,
-        calls: Option<Arc<Mutex<Vec<(String, Value)>>>>,
+        calls: Option<HostCalls>,
         response: Option<Value>,
     }
     impl AppleHost for Host {
@@ -1379,6 +1396,18 @@ mod host_routing_tests {
                 return Err(failure(error.clone()));
             }
             Ok(None)
+        }
+        fn event_calendars(&self) -> Result<Vec<EventCalendarDestination>> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(vec![])
+        }
+        fn mutate_event(&self, _: EventMutationRequest) -> Result<EventMutationResult> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(service::calendar_mutations::MutationResult::uncertain().into())
         }
         fn calendar_event_call(&self, command: String, arguments: String) -> Result<String> {
             if let Some(calls) = &self.calls {
@@ -1428,7 +1457,15 @@ mod host_routing_tests {
             assert_eq!(result["received_command"], command);
             assert_eq!(result["arguments"], args);
         }
-        assert!(bridge.call("unregistered-effect", json!({})).is_err());
+        for command in [
+            "unregistered-effect",
+            "queryEvents",
+            "getEvent",
+            "eventCalendars",
+            "mutateEvent",
+        ] {
+            assert!(bridge.call(command, json!({})).is_err());
+        }
     }
     #[test]
     fn every_native_failure_preserves_identity_through_service_dispatch() {
@@ -1475,6 +1512,7 @@ mod host_routing_tests {
                     .unwrap_err(),
                 expected
             );
+            assert_eq!(bridge.event_calendars().unwrap_err(), expected);
             assert_eq!(platform_failure(failure(actual.clone())), expected);
             // Journal/maintenance projections keep their original string schema.
             assert_eq!(

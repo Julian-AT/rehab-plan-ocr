@@ -328,6 +328,7 @@ def tests(portable):
             "conversation-replies",
             "calendar-answers",
             "calendar-read-contracts",
+            "calendar-mutation-contracts",
             "calendar-timezone",
             "interpretation-provider",
             "assistant-request",

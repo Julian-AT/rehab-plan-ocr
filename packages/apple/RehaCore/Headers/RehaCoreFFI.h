@@ -266,14 +266,14 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod2)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD3
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD3
-typedef void (*UniffiCallbackInterfaceAppleHostMethod3)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod3)(uint64_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
-typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -287,21 +287,35 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod5)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
-typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
-typedef void (*UniffiCallbackInterfaceAppleHostMethod7)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod7)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
-typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
+typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
+typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -314,12 +328,14 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceAppleHostMethod0 _Nonnull calendarEventCall;
     UniffiCallbackInterfaceAppleHostMethod1 _Nonnull queryCalendar;
     UniffiCallbackInterfaceAppleHostMethod2 _Nonnull resolveCalendarEvent;
-    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull snapshot;
-    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull apply;
-    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull decodePhoto;
-    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull syncAgenda;
-    UniffiCallbackInterfaceAppleHostMethod7 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod8 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull eventCalendars;
+    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull mutateEvent;
+    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull snapshot;
+    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull apply;
+    UniffiCallbackInterfaceAppleHostMethod7 _Nonnull decodePhoto;
+    UniffiCallbackInterfaceAppleHostMethod8 _Nonnull syncAgenda;
+    UniffiCallbackInterfaceAppleHostMethod9 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -546,6 +562,36 @@ uint64_t uniffi_reha_ffi_fn_method_nativeapplication_stage_photo(uint64_t ptr, R
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_TRACE_ARTIFACT_PATH
 uint64_t uniffi_reha_ffi_fn_method_nativeapplication_trace_artifact_path(uint64_t ptr, RustBuffer id, RustBuffer artifact
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_confirm_event_proposal(uint64_t ptr, RustBuffer request
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_CALENDARS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_EVENT_CALENDARS
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_event_calendars(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_INVALIDATE_EVENT_SESSION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_INVALIDATE_EVENT_SESSION
+void uniffi_reha_ffi_fn_method_nativeapplication_invalidate_event_session(uint64_t ptr, RustBuffer session, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_MUTATION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_MUTATION
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_preview_event_mutation(uint64_t ptr, RustBuffer request
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_UNDO
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_UNDO
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_preview_event_undo(uint64_t ptr, RustBuffer request
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_REGISTER_EVENT_SESSION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_REGISTER_EVENT_SESSION
+RustBuffer uniffi_reha_ffi_fn_method_nativeapplication_register_event_session(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_CLONE_RECOGNITIONJOB
@@ -1203,6 +1249,42 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path(v
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_CONFIRM_EVENT_PROPOSAL
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_confirm_event_proposal(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_CALENDARS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_EVENT_CALENDARS
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_event_calendars(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_INVALIDATE_EVENT_SESSION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_INVALIDATE_EVENT_SESSION
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_invalidate_event_session(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_MUTATION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_MUTATION
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_preview_event_mutation(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_UNDO
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_PREVIEW_EVENT_UNDO
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_preview_event_undo(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_REGISTER_EVENT_SESSION
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_REGISTER_EVENT_SESSION
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_register_event_session(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_RECOGNITIONJOB_ATTEMPT_ID
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_RECOGNITIONJOB_ATTEMPT_ID
 uint16_t uniffi_reha_ffi_checksum_method_recognitionjob_attempt_id(void
@@ -1260,6 +1342,18 @@ uint16_t uniffi_reha_ffi_checksum_method_applehost_query_calendar(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_CALENDAR_EVENT
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_CALENDAR_EVENT
 uint16_t uniffi_reha_ffi_checksum_method_applehost_resolve_calendar_event(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_EVENT_CALENDARS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_EVENT_CALENDARS
+uint16_t uniffi_reha_ffi_checksum_method_applehost_event_calendars(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_MUTATE_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_MUTATE_EVENT
+uint16_t uniffi_reha_ffi_checksum_method_applehost_mutate_event(void
     
 );
 #endif

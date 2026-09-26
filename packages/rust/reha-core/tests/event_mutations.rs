@@ -120,6 +120,95 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Calendar>) {
     (root, state, calendar)
 }
 
+/// Reject the obsolete transport at the product boundary while reusing the
+/// stateful EventKit fake underneath the typed adapter.
+struct TypedEditing(Arc<Calendar>);
+impl Platform for TypedEditing {
+    fn progress(&self, _: Value) {}
+    fn call(&self, command: &str, args: Value) -> service::Response<Value> {
+        assert!(!["mutateEvent", "eventCalendars", "getEvent"].contains(&command));
+        self.0.call(command, args)
+    }
+    fn event_calendars(&self) -> service::Response<Vec<service::calendar_mutations::Destination>> {
+        serde_json::from_value(self.0.calendars.lock().unwrap()["calendars"].clone())
+            .map_err(service::failure)
+    }
+    fn resolve_calendar_event(
+        &self,
+        reference: service::calendar_reads::Reference,
+    ) -> service::Response<Option<service::calendar_reads::Event>> {
+        let value = self
+            .0
+            .call("getEvent", json!({"event":reference.legacy()}))?;
+        serde_json::from_value(value["event"].clone()).map_err(service::failure)
+    }
+    fn mutate_event(
+        &self,
+        request: service::calendar_mutations::MutationRequest,
+    ) -> service::Response<service::calendar_mutations::MutationResult> {
+        let value = self
+            .0
+            .call("mutateEvent", serde_json::to_value(request).unwrap())?;
+        serde_json::from_value(value).map_err(service::failure)
+    }
+}
+#[tokio::test]
+async fn typed_editing_never_uses_string_host_commands_and_replays_journal_results() {
+    use service::calendar_mutations as edit;
+    let (_root, state, calendar) = fixture();
+    let host = Arc::new(TypedEditing(calendar.clone()));
+    let request = edit::PreviewRequest {
+        session: edit::register(&state).unwrap(),
+        revision: 1,
+        kind: edit::Kind::Update,
+        calendar_id: "selected".into(),
+        event: Some(serde_json::from_value(fixture_event()).unwrap()),
+        patch: edit::Patch {
+            location: Some("Raum 2".into()),
+            ..Default::default()
+        },
+        origin: "manual".into(),
+    };
+    let edit::PreviewResult::Proposal { proposal } =
+        edit::preview(host.clone(), &state, request).await.unwrap()
+    else {
+        panic!("proposal expected")
+    };
+    assert_eq!(*calendar.calls.lock().unwrap(), 0);
+    assert_eq!(
+        serde_json::to_value(&proposal.patch).unwrap(),
+        json!({"location":"Raum 2"})
+    );
+    let confirmation = edit::ConfirmRequest {
+        token: proposal.token.clone(),
+        session: proposal.session.clone(),
+        revision: 1,
+        confirmation: edit::Confirmation::Button,
+    };
+    let saved = edit::confirm(host.clone(), &state, confirmation.clone())
+        .await
+        .unwrap();
+    assert_eq!(saved.status, edit::Status::Saved);
+    assert_eq!(saved.event.unwrap().metadata["notes"], "Keep these notes");
+    edit::invalidate(&state, &proposal.session).unwrap();
+    assert_eq!(
+        edit::confirm(host, &state, confirmation)
+            .await
+            .unwrap()
+            .status,
+        edit::Status::Saved
+    );
+    assert_eq!(*calendar.calls.lock().unwrap(), 1);
+    let stored = state
+        .store
+        .lock()
+        .unwrap()
+        .event_mutation(&proposal.token)
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored["proposal"], serde_json::to_value(&proposal).unwrap());
+}
+
 #[tokio::test]
 async fn committed_mutation_survives_maintenance_failure_without_repeating_write() {
     let (_root, state, calendar) = fixture();
@@ -318,6 +407,7 @@ async fn speech_cannot_confirm_and_background_invalidates_awaiting_confirmation(
     )
     .await
     .is_err());
+    assert!(confirm(&state, calendar.clone(), &p).await.is_err());
     let p = preview(&state, calendar.clone(), "remove", json!({})).await;
     *calendar.interrupted.lock().unwrap() = true;
     assert!(confirm(&state, calendar.clone(), &p).await.is_err());

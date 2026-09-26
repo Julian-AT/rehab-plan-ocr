@@ -247,7 +247,12 @@ async fn restart_before_first_calendar_effect_preserves_the_local_marking_intent
             })
             .collect();
         let batch = store
-            .begin_batch(&[document.clone()], "synthetic-schedule", &operations, None)
+            .begin_batch(
+                std::slice::from_ref(&document),
+                "synthetic-schedule",
+                &operations,
+                None,
+            )
             .unwrap();
         assert_eq!(batch.operations.len(), 3);
         assert!(batch
@@ -468,7 +473,7 @@ async fn recovery_does_not_resurrect_expired_document_contents() {
         .store
         .lock()
         .unwrap()
-        .delete_sources(&[document.clone()])
+        .delete_sources(std::slice::from_ref(&document))
         .unwrap();
     drop(state);
 

@@ -58,7 +58,8 @@ final class EventEditingService: @unchecked Sendable {
             "event": try self.find(args["event"] as? [String: Any] ?? [:]).map(self.snapshot)
               ?? NSNull()
           ])
-        case "mutateEvent": request.resolve(try self.mutate(args))
+        case "mutateEvent":
+          request.resolve(try self.mutate(NativeEventMutationRequest(legacy: args)).journalValue)
         case "editSystemEvent":
           guard let event = try self.find(args["event"] as? [String: Any] ?? [:]) else {
             throw self.fail("Termin nicht verfügbar. Im Kalender nach Name und Datum suchen.")
@@ -80,7 +81,8 @@ final class EventEditingService: @unchecked Sendable {
       try FileManager.default.removeItem(at: directory)
     }
   }
-  func calendars() -> [[String: Any]] {
+  func calendars() -> [[String: Any]] { calendarDestinations().map(\.legacyValue) }
+  private func calendarDestinations() -> [NativeEventCalendarDestination] {
     store.calendars(for: .event).map { c in
       var red: CGFloat = 0
       var green: CGFloat = 0
@@ -89,11 +91,10 @@ final class EventEditingService: @unchecked Sendable {
       if let color = c.cgColor {
         UIColor(cgColor: color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
       }
-      return [
-        "id": c.calendarIdentifier, "title": c.title, "source": c.source.title,
-        "writable": c.allowsContentModifications,
-        "color_components": [Double(red), Double(green), Double(blue)],
-      ]
+      return NativeEventCalendarDestination(
+        id: c.calendarIdentifier, title: c.title,
+        source: c.source.title, writable: c.allowsContentModifications,
+        colorComponents: [Double(red), Double(green), Double(blue)])
     }
   }
   /// Explicit repair searches committed events by the app's exact ownership
@@ -133,6 +134,29 @@ final class EventEditingService: @unchecked Sendable {
     return ["access": "fullAccess", "calendars": calendars(), "results": results]
   }
 
+  func readDestinations(
+    completion: @escaping @Sendable (Result<[NativeEventCalendarDestination], Error>) -> Void
+  ) {
+    queue.async {
+      do {
+        try self.requireReadAccess()
+        let result = self.calendarDestinations()
+        try self.requireReadAccess()
+        completion(.success(result))
+      } catch { completion(.failure(error)) }
+    }
+  }
+  func writeMutation(
+    _ request: NativeEventMutationRequest,
+    completion: @escaping @Sendable (Result<NativeEventMutationResult, Error>) -> Void
+  ) {
+    queue.async {
+      do {
+        try self.requireReadAccess()
+        completion(.success(try self.mutate(request)))
+      } catch { completion(.failure(error)) }
+    }
+  }
   func readQuery(
     _ request: NativeCalendarQuery,
     completion: @escaping @Sendable (Result<NativeCalendarReadResult, Error>) -> Void
@@ -368,35 +392,39 @@ final class EventEditingService: @unchecked Sendable {
     try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]).write(
       to: receiptURL(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
   }
-  private func mutate(_ args: [String: Any]) throws -> [String: Any] {
-    guard let p = args["proposal"] as? [String: Any], let token = p["token"] as? String,
-      let kind = p["kind"] as? String,
-      let calendarID = p["calendar_id"] as? String, let patch = p["patch"] as? [String: Any]
-    else { throw fail("Auftrag unvollständig.") }
+  private func mutate(_ request: NativeEventMutationRequest) throws -> NativeEventMutationResult {
+    let proposal = request.proposal
+    let token = proposal.token
+    let kind = proposal.kind
+    let calendarID = proposal.calendarID
+    let patch = proposal.patch
     if let saved = try receipt(token) {
-      return saved["result"] as? [String: Any] ?? [
-        "status": "uncertain", "message": "Schreibstatus unklar. Nicht erneut ausgeführt.",
-      ]
+      if let result = saved["result"] as? [String: Any] {
+        return try NativeEventMutationResult(journal: result)
+      }
+      return NativeEventMutationResult(
+        status: .uncertain, message: "Schreibstatus unklar. Nicht erneut ausgeführt.")
     }
-    if args["recovery_only"] as? Bool == true {
-      return ["status": "failed", "message": "Auftrag hat EventKit nicht erreicht."]
+    if request.recoveryOnly {
+      return NativeEventMutationResult(
+        status: .failed, message: "Auftrag hat EventKit nicht erreicht.")
     }
     guard let calendar = store.calendar(withIdentifier: calendarID),
-      calendar.allowsContentModifications,
-      ["create", "update", "remove"].contains(kind)
+      calendar.allowsContentModifications
     else { throw fail("Kalender nicht beschreibbar.") }
-    let before = p["before"] as? [String: Any]
+    let before = try proposal.before.map { try $0.legacyValue }
     let existing = try before.flatMap(find)
-    if kind != "create" {
+    if kind != .create {
       guard let existing, let before,
         NSDictionary(dictionary: snapshot(existing)).isEqual(to: before),
         !CalendarEventProtection.requiresSystemEditor(existing)
       else {
-        return ["status": "conflict", "message": "Termin geändert. Neue Vorschau erforderlich."]
+        return NativeEventMutationResult(
+          status: .conflict, message: "Termin geändert. Neue Vorschau erforderlich.")
       }
     }
     var oldReceipt: [String: Any]?
-    if let undoID = p["undo_of"] as? String {
+    if let undoID = proposal.undoOf {
       oldReceipt = try receipt(undoID)
       guard (oldReceipt?["result"] as? [String: Any])?["status"] as? String == "saved" else {
         throw fail("Wiederherstellungsdaten fehlen.")
@@ -404,26 +432,26 @@ final class EventEditingService: @unchecked Sendable {
     }
     let event = existing ?? EKEvent(eventStore: store)
     let alarmState = try existing.flatMap { try agenda.editingAlarmState($0) }
-    if kind == "create" {
+    if kind == .create {
       event.calendar = calendar
-      if let id = p["owned_id"] as? String {
+      if let id = proposal.ownedID {
         guard UUID(uuidString: id) != nil else { throw fail("Ungültige Terminzuordnung.") }
         event.url = URL(string: "reha-calendar://event/\(id)")
       }
     }
-    if kind != "remove" {
-      if let title = patch["title"] as? String { event.title = title }
-      if let start = patch["start_utc"] as? String {
+    if kind != .remove {
+      if let title = patch.title { event.title = title }
+      if let start = patch.startUTC {
         guard let date = iso.date(from: start) else { throw fail("Beginn ungültig.") }
         event.startDate = date
       }
-      if let end = patch["end_utc"] as? String {
+      if let end = patch.endUTC {
         guard let date = iso.date(from: end) else { throw fail("Ende ungültig.") }
         event.endDate = date
       }
-      if let zone = patch["timezone"] as? String { event.timeZone = TimeZone(identifier: zone) }
-      if let place = patch["location"] as? String { event.location = place }
-      if let reminder = patch["reminder_minutes"] {
+      if let zone = patch.timezone { event.timeZone = TimeZone(identifier: zone) }
+      if let place = patch.location { event.location = place }
+      if patch.changesReminder {
         // Modify one ordinary relative reminder; unrelated alarms survive.
         var retained = event.alarms ?? []
         if let index = retained.firstIndex(where: {
@@ -431,7 +459,7 @@ final class EventEditingService: @unchecked Sendable {
         }) {
           retained.remove(at: index)
         }
-        if let minutes = reminder as? Int {
+        if let minutes = patch.reminderMinutes {
           retained.insert(EKAlarm(relativeOffset: -Double(minutes) * 60), at: 0)
         }
         event.alarms = retained
@@ -440,7 +468,7 @@ final class EventEditingService: @unchecked Sendable {
         let original = old["before"] as? [String: Any],
         let metadata = original["metadata"] as? [String: Any]
       {
-        if kind == "create" {
+        if kind == .create {
           event.notes = metadata["notes"] as? String
           event.url = (metadata["url"] as? String).flatMap(URL.init(string:))
           event.isAllDay = metadata["all_day"] as? Bool ?? false
@@ -448,10 +476,10 @@ final class EventEditingService: @unchecked Sendable {
             EKEventAvailability(rawValue: metadata["availability"] as? Int ?? -1) ?? .notSupported
           event.timeZone = (metadata["timezone"] as? String).flatMap(TimeZone.init(identifier:))
         }
-        if kind == "create" || patch["location"] != nil {
+        if kind == .create || patch.location != nil {
           event.structuredLocation = restoreLocation(metadata["structured_location"])
         }
-        if kind == "create" || patch["reminder_minutes"] != nil {
+        if kind == .create || patch.changesReminder {
           event.alarms = restoreAlarms(metadata["alarms"])
         }
       }
@@ -463,11 +491,14 @@ final class EventEditingService: @unchecked Sendable {
     // remains uncertain; absence of an event is never proof of a deletion.
     let active = isForeground()
     guard active else {
-      return ["status": "failed", "message": "Freigabe durch Unterbrechung verfallen."]
+      return NativeEventMutationResult(
+        status: .failed, message: "Freigabe durch Unterbrechung verfallen.")
     }
-    try persist(["proposal": p, "alarm_journal": alarmState ?? NSNull() as Any], id: token)
+    try persist(
+      ["proposal": proposal.journalValue, "alarm_journal": alarmState ?? NSNull() as Any], id: token
+    )
     do {
-      if kind == "remove" {
+      if kind == .remove {
         try store.remove(event, span: .thisEvent, commit: true)
       } else {
         try store.save(event, span: .thisEvent, commit: true)
@@ -475,20 +506,20 @@ final class EventEditingService: @unchecked Sendable {
       // EventKit has committed. Alarm bookkeeping is independent; preserve its
       // logical snapshot normalization while keeping failures out of write status.
       var warnings: [String] = []
-      if kind != "remove", patch["reminder_minutes"] != nil {
+      if kind != .remove, patch.changesReminder {
         do {
-          if let id = p["owned_id"] as? String,
+          if let id = proposal.ownedID,
             event.url?.absoluteString == "reha-calendar://event/\(id)"
           {
-            try agenda.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
+            try agenda.approvedAlarmChanged(id: id, minutes: patch.reminderMinutes)
           } else {
             try agenda.manuallyEditedAlarm(
               event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
           }
         } catch { warnings.append(CalendarMaintenance.alarmWarning) }
       }
-      var savedEvent: Any = NSNull()
-      if kind != "remove" {
+      var savedEvent: NativeCalendarEvent?
+      if kind != .remove {
         // EventKit may finalize detached-instance metadata during commit. Journal
         // the persisted occurrence rather than the object's pre-commit cache.
         let written = snapshot(event)
@@ -502,16 +533,20 @@ final class EventEditingService: @unchecked Sendable {
         else {
           throw fail("Termin wurde während des Speicherns erneut geändert.")
         }
-        savedEvent = checked
+        savedEvent = try NativeCalendarEvent(snapshot: checked)
       }
-      var result: [String: Any] = ["status": "saved", "event": savedEvent, "operation_id": token]
-      if !warnings.isEmpty { result["maintenance_warnings"] = warnings }
+      let result = NativeEventMutationResult(
+        status: .saved, event: savedEvent, operationID: token, maintenanceWarnings: warnings)
       try persist(
-        ["proposal": p, "result": result, "alarm_journal": alarmState ?? NSNull() as Any], id: token
+        [
+          "proposal": proposal.journalValue, "result": result.journalValue,
+          "alarm_journal": alarmState ?? NSNull() as Any,
+        ], id: token
       )
       return result
     } catch {
-      return ["status": "uncertain", "message": "Schreibstatus unklar. Kalender abgleichen."]
+      return NativeEventMutationResult(
+        status: .uncertain, message: "Schreibstatus unklar. Kalender abgleichen.")
     }
   }
 }

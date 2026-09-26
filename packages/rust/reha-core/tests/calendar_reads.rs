@@ -113,16 +113,16 @@ async fn typed_reads_keep_scope_occurrence_metadata_and_unavailable_evidence() {
     );
     assert!(result["events"][0].get("import_id").is_none());
     assert_eq!(result["unavailable_events"][0]["id"], "missing");
-    let supplied = result["events"][0].clone();
+    let supplied: read::Event = serde_json::from_value(result["events"][0].clone()).unwrap();
     let platform: Arc<dyn Platform> = host.clone();
     assert_eq!(
-        read::resolve(&platform, &supplied).await.unwrap()["event"],
-        supplied
+        read::resolve(&platform, &supplied).await.unwrap(),
+        Some(supplied.clone())
     );
     let refs = host.references.lock().unwrap();
     assert_eq!(refs[0].external_id, "native");
     assert_eq!(refs[0].occurrence, "2026-09-18T08:00:00Z");
-    assert_eq!(refs[0].expected_start_utc, supplied["values"]["start_utc"]);
+    assert_eq!(refs[0].expected_start_utc, supplied.values.start_utc);
 }
 #[tokio::test]
 async fn empty_selection_never_reads_and_scope_changes_reject_results() {
@@ -159,7 +159,7 @@ async fn typed_read_errors_are_not_reclassified_by_display_text() {
         );
         let platform: Arc<dyn Platform> = host;
         assert_eq!(
-            read::resolve(&platform, &serde_json::to_value(event("selected")).unwrap())
+            read::resolve(&platform, &event("selected"))
                 .await
                 .unwrap_err(),
             error

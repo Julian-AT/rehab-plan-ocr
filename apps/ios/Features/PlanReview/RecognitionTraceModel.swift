@@ -177,7 +177,7 @@ import RehaCore
 
 /// Recognition can decode an image and ask Vision to reread. Calendar effects
 /// are deliberately unavailable in this disposable workspace.
-private final class RecognitionTraceHost: AppleHost, @unchecked Sendable {
+private final class RecognitionTraceHost: AppleHost, Sendable {
   private let bridge = NativeBridge()
   private var forbidden: AppError { .Validation(message: "Tracing verändert keine Kalenderdaten.") }
   func decodePhoto(bytes: Data) throws -> Data { try bridge.decodePhoto(bytes: bytes) }
@@ -190,6 +190,8 @@ private final class RecognitionTraceHost: AppleHost, @unchecked Sendable {
   func resolveCalendarEvent(reference: CalendarReadReference) throws -> CalendarReadEvent? {
     throw forbidden
   }
+  func eventCalendars() throws -> [EventCalendarDestination] { throw forbidden }
+  func mutateEvent(request: EventMutationRequest) throws -> EventMutationResult { throw forbidden }
   func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
     throw forbidden
   }

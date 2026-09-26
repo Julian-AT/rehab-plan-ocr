@@ -31,6 +31,24 @@
   (lokale Revision 0); die asynchrone App-Abfrage trägt die dauerhafte
   Auswahlrevision und verwirft überholte Antworten.
 
+- Manuelle und gesprochene Terminänderungen teilen `EventSession` und
+  `EventMutationClient`. Registrierung, Widerruf, Vorschau, Button-Bestätigung
+  und Undo verwenden eigene UniFFI-Aufträge und Ergebnisse. `calendar_mutations`
+  besitzt den gemeinsamen Core-Ablauf; `events::dispatch` bietet dafür nur noch
+  den bisherigen Kompatibilitätseingang.
+- `EventEditPatch` enthält ausschließlich editierbare Felder. Erinnerungen sind
+  ausdrücklich `unchanged`, `disabled` oder `minutes`; eine leere Ortsangabe
+  bleibt eine beabsichtigte Löschung. Die Bestätigung enthält ausschließlich
+  den sichtbaren Button-Vertrag, Sitzung, Revision und Vorschlagstoken.
+- Kalenderlisten und tatsächliche Änderungen verwenden `Platform.event_calendars`
+  und `mutate_event`, die entsprechenden `AppleHost`-Callbacks und typisierte
+  `NativeServices`-Methoden. Der EventKit-Worker liest die typisierten Felder
+  direkt. `HostBridge.call` registriert diese beiden Stringeffekte nicht mehr.
+  Auch Wiederanlauf verwendet den typisierten Mutationseffekt mit `recovery_only`.
+- Die Schreibrückgabe unterscheidet `saved`, `failed`, `uncertain`, `conflict`
+  und den bereits gespeicherten Prüfabschluss `acknowledged`. Dauerhafter
+  Schreibstatus und nachgelagerte Erinnerungs-/Widgetwarnungen bleiben getrennt.
+
 ## Wiederanlauf nach bestätigten Kalenderänderungen
 
 Die SQLite-Transaktion für Import beziehungsweise Rücknahme legt zusammen mit
@@ -88,13 +106,31 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
   interpretiert. In der typisierten Leseantwort bleibt nur dieses opake
   Metadatenfeld als JSON erhalten.
 
+- `EventProposalView` bleibt eine lesende Anzeige-/Verlaufsprojektion im bisherigen
+  Codable-Format. Der Sprachplaner kann minimale Felder weiterhin als Wörterbuch
+  bilden; ein strenger Adapter überführt nur erlaubte Felder in `EventEditPatch`.
+  Weder diese Projektion noch das Wörterbuch transportieren aktive Kalenderwrites.
+- SQLite-`event_mutations` und native `event-receipts` bleiben JSON-Journale mit
+  denselben Schlüsseln. `before`-Metadaten und Fingerprints werden weiterhin zum
+  Schutz fremder Änderungen und zum Wiederherstellen von Alarmen/Notizen benutzt.
+  Neue Typen ersetzen keine Journalversion und schreiben historische Belege nicht um.
+- `calendar_reads::resolve` nimmt nun einen typisierten Termin entgegen und
+  gibt einen optionalen typisierten Termin zurück. Sowohl der Bearbeitungsablauf
+  als auch die vorhandenen Lese-Regressionen verwenden diese gemeinsame Grenze.
+  Der bisherige `Reference::from_legacy`-Decoder ist dadurch ersetzt; Identität,
+  Vorkommenszeit, erwarteter Beginn und Fehleridentität bleiben geprüft.
+  `Reference::legacy` bleibt für den älteren Platform-Hostadapter erhalten.
+  Die alten JSON-Hostadapter bleiben für Integrationstests und kompatible Hosts.
+
 ## Weiterhin offen
 
 `Platform.call`, `AppleHost.calendar_event_call`,
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
 transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
-gehören manuelle Vorschau/Bestätigung, Kalenderlisten, Reparatur,
-Wiederherstellung und Agenda-Abgleich. Die UI benutzt außerdem weiterhin den
+gehören Kalenderstatus, Reparatur, Verlaufsabfrage, manuelle Klärung ungewisser
+Schreibvorgänge, der Aufruf des Wiederanlaufs und Agenda-Abgleich. Der darunter
+liegende einzelne Wiederanlauf-Schreibauftrag ist bereits typisiert.
+Systemeditor, Berechtigungsanfrage und weitere Plattformeffekte bleiben offen. Die UI benutzt außerdem weiterhin den
 JSON-Aufrufadapter für Abfragen; darunter läuft der Plattformleseeffekt bereits
 typisiert. Diese Pfade sind **noch keine vollständig
 typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
@@ -125,5 +161,22 @@ migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
   Registrierung, Vorstart-Abbruch, eigene Versuch-ID bei Wiederholung,
   unbekannte/abgeschlossene IDs, frühe Dateifehler und verworfenes Aufruf-Future.
 
+- `make test-calendar-mutation-contracts`: Erinnerungs-Tristate, ungültige
+  Felder und historische Ergebnisformen einschließlich `acknowledged`.
+- Rust `event_mutations`: gleicher Sitzungsschutz, Bestätigungs- und Undoablauf
+  hinter beiden Eingängen, Journal-Replay und typisierter Host ohne Stringeffekte.
+- `make test-voice-flow`: echter Gesprächsautomat mit typisiertem Kalender-Fake,
+  minimale Änderungen, sichtbare Bestätigung, Unterbrechung und verspätete Antworten.
+
 Die Decoderprüfungen sind Host-Prüfungen. Sie belegen keine gemessene
 Leistungsverbesserung und ersetzen weder Geräteprüfung noch OCR-Produktabnahme.
+
+Stand 26. September 2026: Die Mutationsumstellung besteht 224 Tests aus
+`reha-core` und `reha-ffi`, `cargo clippy --all-targets -- -D warnings`, den
+offiziellen Bindingsgenerator mit anschließendem Konsistenzvergleich,
+`test-calendar-mutation-contracts`, den echten Swift–Rust–Swift-Roundtrip
+`test-native-bindings` und `test-voice-flow`. Der Roundtrip prüft zusätzlich
+Vorschau, Button-Bestätigung und Journal-Replay über die neuen Callbacks.
+Die Gesprächsprobe behält die bisherigen Auswahl-, Ordinal-, Bestätigungs-,
+Abbruch- und Wartungsassertionen. Gemeinsamer Appbuild, EventKit-Integration
+und Geräteabnahme bleiben nachgelagerte Prüfungen auf dem endgültigen Stand.

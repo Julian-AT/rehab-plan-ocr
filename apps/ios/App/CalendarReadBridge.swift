@@ -40,7 +40,7 @@ extension NativeBridge {
       return result.map(Self.readEvent)
     } catch { throw Self.appError(error) }
   }
-  private static func readEvent(_ event: NativeCalendarEvent) -> CalendarReadEvent {
+  static func readEvent(_ event: NativeCalendarEvent) -> CalendarReadEvent {
     CalendarReadEvent(
       id: event.id, externalId: event.externalID, calendarId: event.calendarID,
       calendarTitle: event.calendarTitle, source: event.source, occurrence: event.occurrence,

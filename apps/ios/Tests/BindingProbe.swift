@@ -28,8 +28,24 @@ final class TestHost: AppleHost, Sendable {
     if let error = failure.withLock({ $0 }) { throw error }
     return nil
   }
+  func eventCalendars() throws -> [EventCalendarDestination] {
+    if let error = failure.withLock({ $0 }) { throw error }
+    return [
+      EventCalendarDestination(
+        id: "selected", title: "Therapie", source: "Local", writable: true, colorComponents: nil)
+    ]
+  }
+  func mutateEvent(request: EventMutationRequest) throws -> EventMutationResult {
+    if let error = failure.withLock({ $0 }) { throw error }
+    precondition(!Thread.isMainThread)
+    return EventMutationResult(
+      status: .failed, event: nil, operationId: request.proposal.token,
+      message: "Synthetic host does not write", maintenanceWarnings: [])
+  }
   func calendarEventCall(command: String, arguments: String) throws -> String {
-    precondition(command != "queryEvents" && command != "getEvent", "Read used JSON callback")
+    precondition(
+      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent"].contains(command),
+      "Typed effect used JSON callback")
     if let error = failure.withLock({ $0 }) { throw error }
     return "{}"
   }
@@ -112,6 +128,28 @@ final class TestHost: AppleHost, Sendable {
       } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }
+    do {
+      let destinations = try await core.eventCalendars()
+      precondition(destinations.count == 1 && destinations[0].id == "selected")
+      let editSession = try core.registerEventSession()
+      let preview = try await core.previewEventMutation(
+        request: EventPreviewRequest(
+          session: editSession, revision: 7, kind: .create, calendarId: "selected", event: nil,
+          patch: EventEditPatch(
+            title: "Typed preview", startUtc: "2031-05-15T08:00:00Z",
+            endUtc: "2031-05-15T09:00:00Z", timezone: "Europe/Vienna", location: "Room",
+            reminder: .disabled), origin: "manual"))
+      guard case .proposal(let proposal) = preview else { preconditionFailure("Expected proposal") }
+      precondition(proposal.patch.reminder == .disabled && proposal.revision == 7)
+      let confirmation = EventConfirmRequest(
+        token: proposal.token, session: editSession,
+        revision: 7, confirmation: .button)
+      let mutation = try await core.confirmEventProposal(request: confirmation)
+      precondition(mutation.status == .failed && mutation.operationId == proposal.token)
+      try core.invalidateEventSession(session: editSession)
+      let replay = try await core.confirmEventProposal(request: confirmation)
+      precondition(replay == mutation)
+    }
     let history = try await core.history()
     precondition(history.scans.count == 1)
     let id = history.scans[0].id

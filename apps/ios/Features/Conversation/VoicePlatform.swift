@@ -24,9 +24,7 @@ extension VoiceModel {
             as: CalendarQueryResponse.self)
         }, preferences: { try await core.preferences() },
         destinations: {
-          try JSONDecoder().decode(
-            CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")
-          ).calendars.map {
+          try await core.eventCalendars().map {
             VoiceCalendarDestination(id: $0.id, title: $0.title, writable: $0.writable)
           }
         },

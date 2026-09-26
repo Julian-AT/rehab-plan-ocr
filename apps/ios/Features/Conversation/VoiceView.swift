@@ -643,7 +643,7 @@ struct VoiceSnapshot {
     selected = event
     failures = 0
     if intent.action == .remove {
-      await edits.preview(kind: "remove", calendar: event.calendar_id, event: event, patch: [:])
+      await edits.preview(kind: .remove, calendar: event.calendar_id, event: event, patch: .empty)
       if session == current { presentProposal() }
     } else if intent.action == .update {
       await advance()
@@ -769,8 +769,8 @@ struct VoiceSnapshot {
         patch["reminder_minutes"] = p.reminder.map { .number(Double($0)) } ?? .null
       }
       await edits.preview(
-        kind: intent.action == .create ? "create" : "update", calendar: target, event: selected,
-        patch: patch)
+        kind: intent.action == .create ? .create : .update, calendar: target, event: selected,
+        patch: try EventEditPatch(editingFields: patch))
       if session == current { presentProposal() }
     } catch { if session == current { say(dependencies.errorMessage(error)) } }
   }

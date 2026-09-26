@@ -1,12 +1,9 @@
 import Foundation
 import Observation
+import RehaCore
 
+/// The remaining reconciliation endpoint returns only maintenance information here.
 struct EventResponse: Decodable {
-  var proposal: EventProposalView?
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  var system_editor: CalendarEvent?
-  var status: String?
-  var message: String?
   // swift-format-ignore: AlwaysUseLowerCamelCase
   var maintenance_warnings: [String]?
 }
@@ -23,9 +20,8 @@ struct EventHistoryItem: Decodable, Identifiable {
   try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
 }
 @MainActor @Observable final class EventSession {
-  typealias Request = @MainActor @Sendable (String, [String: Any]) async throws -> Data
   typealias OpenSystem = @MainActor @Sendable (CalendarEvent) async throws -> Void
-  private let request: Request
+  private let client: EventMutationClient
   private let systemEditor: OpenSystem
   private let confirmationStarted: @MainActor @Sendable (String) -> Void
   private let describe: @MainActor @Sendable (Error) -> String
@@ -40,34 +36,32 @@ struct EventHistoryItem: Decodable, Identifiable {
   var conversationResult: String?
   var result: String?
   init(
-    origin: String = "manual", request: @escaping Request,
+    origin: String = "manual", client: EventMutationClient,
     openSystem: @escaping OpenSystem = { _ in throw CocoaError(.featureUnsupported) },
     confirmationStarted: @escaping @MainActor @Sendable (String) -> Void = { _ in },
     describe: @escaping @MainActor @Sendable (Error) -> String = { $0.localizedDescription }
   ) {
-    self.request = request
+    self.client = client
     self.systemEditor = openSystem
     self.confirmationStarted = confirmationStarted
     self.describe = describe
     self.origin = origin
-    registration = EventSessionRegistration(
-      register: {
-        struct Registered: Decodable { let session: String }
-        let result = try JSONDecoder().decode(
-          Registered.self, from: await request("registerEventSession", [:]))
-        return result.session
-      },
-      revoke: { token in
-        _ = try? await request("invalidateEventSession", ["session": token])
-      })
+    registration = EventSessionRegistration(register: client.register, revoke: client.invalidate)
   }
-  private func eventRequest<T: Decodable>(_ command: String, _ args: [String: Any]) async throws
-    -> T
-  {
-    try JSONDecoder().decode(T.self, from: await request(command, args))
+  private func show(_ response: EventPreviewResult) throws {
+    switch response {
+    case .proposal(let value):
+      proposal = try EventProposalView(value)
+      systemEvent = nil
+    case .systemEditor(let event):
+      proposal = nil
+      systemEvent = try CalendarEvent(event)
+    }
   }
 
-  func preview(kind: String, calendar: String, event: CalendarEvent?, patch: [String: JSONValue])
+  func preview(
+    kind: EventMutationKind, calendar: String, event: CalendarEvent?, patch: EventEditPatch
+  )
     async
   {
     guard !busy else { return }
@@ -81,16 +75,12 @@ struct EventHistoryItem: Decodable, Identifiable {
     defer { if self.session == session { busy = false } }
     do {
       let nativeSession = try await registration.acquire()
-      let response: EventResponse = try await eventRequest(
-        "previewEventMutation",
-        [
-          "origin": origin, "kind": kind, "calendar_id": calendar,
-          "event": try event.map(jsonObject) ?? NSNull(), "patch": try jsonObject(patch),
-          "session": nativeSession, "revision": revision,
-        ])
+      let response = try await client.preview(
+        EventPreviewRequest(
+          session: nativeSession, revision: revision, kind: kind, calendarId: calendar,
+          event: try event.map { try $0.nativeReadEvent }, patch: patch, origin: origin))
       guard self.session == session, self.revision == revision else { return }
-      proposal = response.proposal
-      systemEvent = response.system_editor
+      try show(response)
       error = nil
     } catch { if self.session == session { self.error = describe(error) } }
   }
@@ -103,23 +93,21 @@ struct EventHistoryItem: Decodable, Identifiable {
     confirmationStarted(proposal.token)
     defer { if session == current { busy = false } }
     do {
-      let response: EventResponse = try await eventRequest(
-        "confirmProposal",
-        [
-          "token": proposal.token, "session": proposal.session, "revision": revision,
-          "confirmation": "button",
-        ])
+      let response = try await client.confirm(
+        EventConfirmRequest(
+          token: proposal.token, session: proposal.session, revision: revision,
+          confirmation: .button))
       guard session == current else { return }
       conversationResult =
-        response.status == "saved"
+        response.status == .saved
         ? (proposal.kind == "remove"
           ? "Der Kalendereintrag ist gelöscht." : "Der Termin ist gespeichert.")
         : response.message ?? "Der Schreibstatus ist unklar. Bitte den Kalender abgleichen."
       result =
-        response.status == "saved"
+        response.status == .saved
         ? "\(proposal.kind == "remove" ? "Kalendereintrag gelöscht" : "Gespeichert") in \(proposal.calendar_title)."
         : response.message ?? "Schreibstatus unklar. Kalender abgleichen."
-      if response.maintenance_warnings?.isEmpty == false {
+      if !response.maintenanceWarnings.isEmpty {
         let warning = " Erinnerungen und Widgets konnten noch nicht aktualisiert werden."
         result = (result ?? "") + warning
         conversationResult = (conversationResult ?? "") + warning
@@ -135,10 +123,10 @@ struct EventHistoryItem: Decodable, Identifiable {
     defer { if session == current { busy = false } }
     do {
       let nativeSession = try await registration.acquire()
-      let response: EventResponse = try await eventRequest(
-        "previewEventUndo", ["id": id, "session": nativeSession, "revision": revision])
+      let response = try await client.undo(
+        EventUndoRequest(id: id, session: nativeSession, revision: revision))
       guard session == current else { return }
-      proposal = response.proposal
+      try show(response)
       error = nil
     } catch { if session == current { self.error = describe(error) } }
   }
