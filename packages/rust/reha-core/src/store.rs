@@ -38,16 +38,12 @@ pub struct ScanSummary {
 impl Store {
     pub fn open(root: &Path) -> Result<Self> {
         std::fs::create_dir_all(root.join("scans"))?;
-        let new_store = !root.join("ledger.sqlite").exists();
         let mut connection = Connection::open(root.join("ledger.sqlite"))?;
         migrations::migrate(&mut connection)?;
         let store = Self {
             connection,
             root: root.into(),
         };
-        if new_store {
-            store.set_setting("preferences", r#"{"timezone":"Europe/Vienna","reminder":10,"detailed_debug":false,"retention_days":30}"#)?;
-        }
         store.recover_source_deletions()?;
         store.recover_intakes()?;
         Ok(store)

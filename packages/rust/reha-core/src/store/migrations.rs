@@ -29,6 +29,13 @@ pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
             CREATE TABLE IF NOT EXISTS schedules(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
             PRAGMA user_version=1;")?;
+        // Creating the SQLite file is not proof that initialization completed.
+        // Commit defaults together with the first schema, preserving any values
+        // already present in an interrupted/legacy version-zero database.
+        tx.execute(
+            "INSERT INTO settings(key,value) VALUES('preferences',?1) ON CONFLICT(key) DO NOTHING",
+            [r#"{"timezone":"Europe/Vienna","reminder":10,"detailed_debug":false,"retention_days":30}"#],
+        )?;
     }
     if version < 2 {
         tx.execute_batch("CREATE TABLE IF NOT EXISTS failures(id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL, record TEXT NOT NULL); PRAGMA user_version=2;")?;

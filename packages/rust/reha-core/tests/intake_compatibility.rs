@@ -47,6 +47,66 @@ fn migration_failure_rolls_back_the_entire_upgrade() {
 }
 
 #[test]
+fn interrupted_first_creation_initializes_preferences_with_the_schema() {
+    for collision in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let db = rusqlite::Connection::open(dir.path().join("ledger.sqlite")).unwrap();
+        if collision {
+            db.execute_batch("CREATE TABLE intakes(collision TEXT)")
+                .unwrap();
+            assert!(Store::open(dir.path()).is_err());
+            assert_eq!(
+                db.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+                    .unwrap(),
+                0
+            );
+            assert_eq!(
+                db.query_row(
+                    "SELECT count(*) FROM sqlite_master WHERE name='settings'",
+                    [],
+                    |r| r.get::<_, u32>(0)
+                )
+                .unwrap(),
+                0,
+                "Default preferences roll back with the failed schema"
+            );
+            db.execute_batch("DROP TABLE intakes").unwrap();
+        }
+        drop(db);
+        let store = Store::open(dir.path()).unwrap();
+        let preferences: serde_json::Value =
+            serde_json::from_str(&store.setting("preferences").unwrap().unwrap()).unwrap();
+        assert_eq!(preferences["retention_days"], 30);
+        assert_eq!(
+            store
+                .connection
+                .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+                .unwrap(),
+            STORE_VERSION
+        );
+    }
+}
+
+#[test]
+fn version_zero_migration_preserves_explicit_preferences_byte_for_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = rusqlite::Connection::open(dir.path().join("ledger.sqlite")).unwrap();
+    let original =
+        r#"{ "timezone": "Europe/Vienna", "retention_days": null, "calendar_id": "preserve" }"#;
+    db.execute_batch("CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
+        .unwrap();
+    db.execute("INSERT INTO settings VALUES('preferences',?1)", [original])
+        .unwrap();
+    drop(db);
+    let store = Store::open(dir.path()).unwrap();
+    assert_eq!(
+        store.setting("preferences").unwrap().as_deref(),
+        Some(original)
+    );
+    assert_eq!(store.cleanup(i64::MAX).unwrap(), 0);
+}
+
+#[test]
 fn v2_upgrade_preserves_exact_serialized_records_and_hashes() {
     let dir = tempfile::tempdir().unwrap();
     let store = Store::open(dir.path()).unwrap();
@@ -218,7 +278,10 @@ async fn attempt_journal_failure_does_not_leave_recognition_locked() {
         },
     )
     .await;
-    assert!(result.unwrap_err().contains("simulated storage failure"));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("simulated storage failure"));
     assert!(state.cancel.lock().unwrap().is_empty());
     assert_eq!(
         std::fs::read(state.store.lock().unwrap().source_path(&id).unwrap()).unwrap(),
