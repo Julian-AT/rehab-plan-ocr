@@ -108,6 +108,35 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Forty development cases through the app interpretation route — 2026-09-26
+
+The isolated simulator trial now accepts the complete invented validation partition
+for rules-only, Apple or custom-provider evaluation. It records actual routing,
+provider identity, no-match/unavailable/error states and every operation. Expected
+answers stay outside the app. Extra app constraints survive serialization and fail
+compact-schema/exact comparison; malformed proposed mutations remain visible.
+Context that cannot be preserved is rejected. Source, fixture, dataset and binary
+identities are retained, and source changes during evaluation invalidate the run.
+
+Eight tool regressions and a native probe pass, including all ten valid shared
+compact-schema round trips, unique-reference resolution, extra-constraint retention
+and invalid fixtures. All 175 tool tests, repository lint and both the normal and
+experimental simulator builds pass. Forty cases run in each of three serial trials:
+rules answer four correctly and leave 36 unmatched; Apple reports available but
+all 36 model attempts fail inside the simulator's missing SensitiveContentAnalysisML
+component (the four rule answers still pass); custom routing yields 17/40 exact
+operations and 11 unsafe proposals, with one rejected interpretation. No calendar
+operation or audio session is opened and no model is promoted.
+
+Runs are `.local/runs/assistant-app-40-{rules,apple,custom}-20260926-s18-001`.
+Report SHA-256, respectively:
+`7fd415658807a6369e0dcc77b43659e17bdf653ecdfa3815910485ad25b6a097`,
+`4768325400772294cdeaa98451aff1099a2bd39b56e29c452c3b9ccef09c284c`,
+`af0622a3af739ca28e2917efa689e576b2cad7ae4636b7f0cd4fc323f25fb8d3`.
+These remain the same ten invented families connected by one speaker-group label.
+The broader compatibility check does not supply human review, an independent
+holdout, an untuned app comparison or paired physical end-to-end performance.
+
 ### Fresh read-only physical baseline — 2026-09-26
 
 The known iPhone reconnects with DDI services available. Fresh device/app queries

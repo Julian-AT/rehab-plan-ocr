@@ -41,3 +41,32 @@ The last category is deliberately conservative: a different wrong operation
 requires review even if the previous answer was also wrong. Better totals cannot
 erase these records. Real German review, unseen dialogues, paired shipping-device
 measurements and full voice/UI acceptance remain separate gates.
+
+The experimental simulator app also evaluates every validation case through its
+actual `InterpretationRouter`, selected provider and typed output boundary:
+
+```sh
+make build-assistant-trial
+make test-assistant-app-trial TEST_ARGS='--run .local/runs/<new-run> --simulator <disposable-id> --dataset .local/datasets/assistant-development-001/dataset.json --mode custom'
+```
+
+Repeat serially with distinct output directories and `--mode rules` or `--mode apple`.
+Rules mode records unmatched inputs; Apple/custom modes retain the normal complete
+rule routing before generation. Availability, errors, the actual per-case provider,
+all requested cases and dependency groups remain visible. An unavailable Apple model
+is not a measured Apple answer. No expected answer enters the app fixture.
+
+The adapter accepts only invented development data whose complete context it can
+preserve. A unique previous-page selection can resolve a rule's conversational
+reference; ambiguous selection or unsupported context is refused. App constraints
+outside the compact model schema remain extra output fields and fail the schema/
+exact-operation check instead of disappearing. An incorrect proposed mutation is
+flagged even when such extra fields make the compact representation invalid.
+
+Reports retain dataset/fixture/build/source/output hashes. Each case has a fresh
+30-second request deadline; weights may remain warm within a run. These serial
+simulator observations establish neither interleaved paired latency nor complete
+voice/calendar behavior. The probe opens no application database or audio session
+and performs no calendar operation. No result promotes a model. Human review,
+untuned-model comparison through this route, eligible Apple hardware and physical
+end-to-end measurements remain required.

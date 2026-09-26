@@ -23,6 +23,64 @@
       }
       do {
         try save()
+        if arguments.contains("--assistant-evaluation-fixture") {
+          let input = URL.documentsDirectory.appendingPathComponent(
+            "assistant-evaluation-input.json")
+          let data = try Data(contentsOf: input)
+          guard data.count <= 1_048_576 else { throw InterpretationError.invalidRequest }
+          let fixture = try JSONDecoder().decode(InterpretationEvaluation.Fixture.self, from: data)
+          try fixture.validate(runID: uuid.uuidString.lowercased())
+          let provider: any InterpretationProvider =
+            switch fixture.mode {
+            case "rules": CalendarRulesProvider()
+            case "apple": AssistantProviderSelection.make(arguments: [])
+            default: AssistantProviderSelection.make(arguments: ["--assistant-model-trial"])
+            }
+          defer { provider.discard() }
+          let router = InterpretationRouter(generation: provider)
+          report["mode"] = fixture.mode
+          report["model_identity"] = provider.identity.model
+          report["provider"] = provider.identity.provider
+          report["availability"] = String(describing: provider.availability)
+          var cases: [[String: Any]] = []
+          for sample in fixture.cases {
+            report["stage"] = "interpreting"
+            report["case_id"] = sample.id
+            try save()
+            let request = try sample.request()
+            let started = ContinuousClock.now
+            var observation: [String: Any] = ["id": sample.id]
+            do {
+              if fixture.mode == "rules",
+                router.rules.match(sample.text, now: request.now, calendar: request.calendar) == nil
+              {
+                observation["status"] = "no_match"
+              } else {
+                let result = try await router.interpret(request)
+                observation["status"] = "interpreted"
+                observation["provider"] = result.identity.provider
+                observation["model_identity"] = result.identity.model
+                observation["operation"] = try InterpretationEvaluation.operation(
+                  result.value, sample: sample)
+              }
+            } catch InterpretationError.unavailable(let reason) {
+              observation["status"] = "unavailable"
+              observation["reason"] = reason
+            } catch {
+              observation["status"] = "error"
+              observation["error"] = String(describing: error)
+            }
+            let elapsed = started.duration(to: .now).components
+            observation["interpretation_seconds"] =
+              Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
+            cases.append(observation)
+            report["cases"] = cases
+            try save()
+          }
+          report["stage"] = "evaluated"
+          try save()
+          return true
+        }
         let provider = AssistantProviderSelection.make()
         guard provider.identity.provider == "custom-qwen-trial",
           provider.availability == .available

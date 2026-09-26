@@ -310,6 +310,7 @@ def tests(portable):
             "interpretation-provider",
             "assistant-request",
             "custom-assistant-provider",
+            "interpretation-evaluation",
             "input-audio",
             "output-audio",
             "capture-preparation",

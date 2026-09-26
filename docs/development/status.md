@@ -115,6 +115,16 @@ errors, including one unsafe proposal; no calendar operation runs. Model unload
 and reload also pass on host and simulator. Normal builds retain their provider
 and dependencies; trial bundles cannot use regular release packaging. See the
 [app experiment](../../ml/experiments/2026-09-26-s18-assistant-app-provider.md).
+The actual app route now covers all 40 existing invented validation cases for
+rules-only, Apple and tuned-custom selection. Eight new tool tests, the native
+evaluation probe, all 175 tool tests, lint and both simulator builds pass. Rules
+answer four cases exactly and leave 36 unmatched. Apple advertises availability,
+but its 36 model attempts fail at a missing simulator system component; the four
+rule answers still pass. Custom routing returns 17 exact operations, 11 unsafe
+proposals and one rejected answer. No operation executes. The same correlated,
+unreviewed corpus remains development evidence; untuned app comparison and actual
+Apple/physical qualification remain open. Run identities are in the ledger.
+
 All four privacy manifests pass built-bundle verification. Privacy/support drafts
 are prepared; publisher/contact information and public distribution review remain open.
 
