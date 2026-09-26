@@ -32,6 +32,11 @@ import XCTest
     show(element)
     element.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
   }
+  private var photoPickerCancel: XCUIElement {
+    // PUPickerUnavailableView briefly exposes another "Abbrechen" with an
+    // infinite frame. Wait for the loaded Photos navigation bar's real control.
+    app.navigationBars["Fotos"].buttons["Cancel"]
+  }
   private func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: app.screenshot())
     attachment.name = name
@@ -173,8 +178,8 @@ import XCTest
     app.buttons["open-tracing"].tap()
     capture("simple-large-tracing")
     edgeTap(app.buttons["trace-photos"])
-    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
-    app.buttons["Abbrechen"].tap()
+    XCTAssertTrue(photoPickerCancel.waitForExistence(timeout: 15))
+    photoPickerCancel.tap()
     edgeTap(app.buttons["trace-files"])
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
     app.buttons["Abbrechen"].tap()
@@ -235,13 +240,13 @@ import XCTest
         photos.staticTexts.firstMatch.frame.minX, files.staticTexts.firstMatch.frame.minX,
         accuracy: 1)
       capture("simple-tracing-\(mode)")
-      for button in [photos, files] {
+      for (button, cancel) in [(photos, photoPickerCancel), (files, app.buttons["Abbrechen"])] {
         edgeTap(button)
-        XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
+        XCTAssertTrue(cancel.waitForExistence(timeout: 15))
         expectation(
-          for: NSPredicate(format: "hittable == true"), evaluatedWith: app.buttons["Abbrechen"])
+          for: NSPredicate(format: "hittable == true"), evaluatedWith: cancel)
         waitForExpectations(timeout: 10)
-        app.buttons["Abbrechen"].tap()
+        cancel.tap()
         expectation(
           for: NSPredicate(format: "hittable == true"), evaluatedWith: app.navigationBars["Tracing"]
         )
@@ -267,8 +272,8 @@ import XCTest
     show(app.buttons["open-tracing"])
     app.buttons["open-tracing"].tap()
     edgeTap(app.buttons["trace-photos"])
-    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
-    app.buttons["Abbrechen"].tap()
+    XCTAssertTrue(photoPickerCancel.waitForExistence(timeout: 8))
+    photoPickerCancel.tap()
     edgeTap(app.buttons["trace-files"])
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
     let browse = app.buttons["Durchsuchen"]

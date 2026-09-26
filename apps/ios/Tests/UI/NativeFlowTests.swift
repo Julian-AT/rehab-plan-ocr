@@ -53,9 +53,10 @@ import XCTest
     XCTAssertTrue(app.buttons["add-plan"].waitForExistence(timeout: 5))
     app.buttons["add-plan"].tap()
     app.buttons["plan-menu-photos"].tap()
-    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
+    let photoCancel = app.navigationBars["Fotos"].buttons["Cancel"]
+    XCTAssertTrue(photoCancel.waitForExistence(timeout: 8))
     capture("Photo picker opened from agenda menu")
-    app.buttons["Abbrechen"].tap()
+    photoCancel.tap()
     app.buttons["add-plan"].tap()
     app.buttons["plan-menu-files"].tap()
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
@@ -393,7 +394,7 @@ import XCTest
   func testZPhotoPickerImportsARealImage() {
     app.buttons["add-plan"].tap()
     app.buttons["plan-menu-photos"].tap()
-    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
+    XCTAssertTrue(app.navigationBars["Fotos"].buttons["Cancel"].waitForExistence(timeout: 8))
     capture("Photo picker with public sample")
     let image = app.images.matching(identifier: "PXGGridLayout-Info").firstMatch
     XCTAssertTrue(image.waitForExistence(timeout: 8))

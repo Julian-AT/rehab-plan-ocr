@@ -42,7 +42,27 @@ at `a303bc28a36da68945e9ab0c957b64fc2e2e30c4` also fails. Its console records
 65 passes and one failure, in tracing's system-picker cancellation: XCTest
 cannot compute a hit point for “Abbrechen” during the presentation transition.
 The four cases above pass in that run without these proposed test corrections.
-Complete result-bundle analysis remains pending at this record's creation.
+The downloaded result confirms **65 passes, one failure and zero skips** on
+iOS 26.5/23F77. Its 3,573 files/1,338,436,304 bytes are retained under
+`.local/runs/hosted-ci-20260926-s18-007/evidence/contents`; the receipt SHA-256 is
+`8dc4e0357c8596e1df0f60f8e56fcddd94004ac65082aa7c12aebcb79ec495a2`.
+Focused extraction preserves the source bundle; its receipt SHA-256 is
+`cc6fefe1499711f57452726f1548d1d492f0097a80291c8f23cc93ec0c20b5a8`.
+
+The failing description binds to `PUPickerUnavailableView`'s temporary cancel
+button with frame `{{inf, inf}, {0, 0}}`, while the fresh hierarchy already exposes
+the real `Cancel` button under the `Fotos` navigation bar with a 36 × 36 frame.
+Photo-picker tests now wait for that specific loaded control, so the temporary
+same-label element cannot satisfy their readiness check.
+
+Four focused local cases pass with **zero failures and zero skips**: large-text
+controls (49.696 s), light/dark tracing and diagnostics (58.131 s), recognition
+evidence with unchanged archive (97.958 s), and actual public-image photo import
+(15.098 s). The real iOS 26.4/23E244 simulator runtime was checked by the new
+preflight. Results, source hashes and summary are retained under
+`.local/runs/ci7-picker-readiness-20260926-s18-001`. The owned simulator was shut down
+after testing; its data remains intact. These focused results do not qualify the
+pending complete hosted candidate or minimum-iOS behavior.
 
 ## Verified share-test correction
 
