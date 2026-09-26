@@ -116,6 +116,63 @@ class PrivateMigrationTests(unittest.TestCase):
                 migration.apply(root, manifest)
             self.assertEqual((new / "original.bin").read_bytes(), b"exact source bytes")
 
+    def external_source_parent(self, root, external):
+        (root / "data").rename(external)
+        (root / "data").symlink_to(external, target_is_directory=True)
+
+    def assert_external_source_preserved(self, root, external):
+        self.assertFalse((external / "private").is_symlink())
+        self.assertEqual((external / "private/original.bin").read_bytes(), b"exact source bytes")
+        self.assertFalse((root / ".local/datasets/private").exists())
+
+    def test_external_source_parent_is_rejected_before_inventory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            root = base / "workspace"
+            manifest = self.setup_tree(root)
+            external = base / "external"
+            self.external_source_parent(root, external)
+            with patch.object(migration, "inventory", return_value={}) as inventory:
+                with self.assertRaisesRegex(ValueError, "Source parent"):
+                    migration.plan(root, manifest)
+                inventory.assert_not_called()
+            self.assert_external_source_preserved(root, external)
+            self.assertFalse(manifest.exists())
+
+    def test_source_parent_replaced_after_inventory_is_rejected_before_move(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            root = base / "workspace"
+            manifest = self.setup_tree(root)
+            migration.plan(root, manifest)
+            before = manifest.read_bytes()
+            external = base / "external"
+            self.external_source_parent(root, external)
+            with self.assertRaisesRegex(ValueError, "Source parent"):
+                migration.apply(root, manifest)
+            self.assert_external_source_preserved(root, external)
+            self.assertEqual(manifest.read_bytes(), before)
+
+    def test_source_parent_changed_during_preflight_is_rechecked_before_rename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            root = base / "workspace"
+            manifest = self.setup_tree(root)
+            migration.plan(root, manifest)
+            external = base / "external"
+            real = migration.inventory
+
+            def changed(path):
+                value = real(path)
+                if path == root / "data/private":
+                    self.external_source_parent(root, external)
+                return value
+
+            with patch.object(migration, "inventory", side_effect=changed):
+                with self.assertRaisesRegex(ValueError, "Source parent"):
+                    migration.apply(root, manifest)
+            self.assert_external_source_preserved(root, external)
+
 
 if __name__ == "__main__":
     unittest.main()

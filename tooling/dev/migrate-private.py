@@ -70,6 +70,19 @@ def inventory(root):
     return entries
 
 
+def source_path(root, name):
+    """Allow a completed compatibility link, but never an aliased source parent."""
+    path = root / name
+    for parent in path.parents:
+        if parent == root:
+            break
+        if parent.is_symlink():
+            raise ValueError("Source parents must be actual directories within this workspace")
+    if not path.parent.resolve().is_relative_to(root.resolve()):
+        raise ValueError("Source parent escapes this workspace")
+    return path
+
+
 def plan(root, manifest):
     if manifest.exists():
         raise ValueError("Inventory already exists; preserve it and use a new path")
@@ -79,7 +92,7 @@ def plan(root, manifest):
             raise ValueError(
                 "Destination already exists; never merge private collections implicitly"
             )
-        entries = inventory(root / source)
+        entries = inventory(source_path(root, source))
         result["moves"][source] = {"destination": destination, "entries": entries}
         print(f"Inventoried {source}: {len(entries)} entries", flush=True)
     write_json(manifest, result)
@@ -92,6 +105,7 @@ def apply(root, manifest):
     for source, destination in MOVES.items():
         if result["moves"][source]["destination"] != destination:
             raise ValueError("Unexpected destination in inventory")
+        source_path(root, source)
     journal = manifest.with_name(manifest.stem + "-progress.json")
     progress = {"manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(), "moves": {}}
     if journal.exists():
@@ -100,7 +114,7 @@ def apply(root, manifest):
             raise ValueError("Progress journal belongs to a different inventory")
         progress = saved
     for source, destination in MOVES.items():
-        old, new = root / source, root / destination
+        old, new = source_path(root, source), root / destination
         expected = result["moves"][source]["entries"]
         if new.is_symlink() or not new.parent.resolve().is_relative_to(root.resolve()):
             raise ValueError("Destination must be an actual directory within this workspace")
@@ -116,6 +130,9 @@ def apply(root, manifest):
                 raise ValueError(
                     "Private files changed since inventory; no move performed for this directory"
                 )
+            # Inventory may take time. Recheck containment before the rename;
+            # the documented quiet window must still prevent concurrent writers.
+            old = source_path(root, source)
             new.parent.mkdir(parents=True, exist_ok=True)
             # rename is atomic on this workspace volume and requires no second
             # copy of model weights or backups. Cross-volume moves fail safely.
