@@ -1,7 +1,7 @@
-#[cfg(feature = "onnx")]
+#[cfg(feature = "kokoro")]
 use crate::runtime;
 use crate::AppError;
-#[cfg(feature = "onnx")]
+#[cfg(feature = "kokoro")]
 use std::sync::Mutex;
 use std::{
     path::PathBuf,
@@ -28,7 +28,7 @@ pub struct SpeechRender {
 pub struct NativeSpeech {
     root: PathBuf,
     latest: AtomicU64,
-    #[cfg(feature = "onnx")]
+    #[cfg(feature = "kokoro")]
     engine: Mutex<Option<reha_core::speech::SpeechEngine>>,
 }
 #[uniffi::export]
@@ -38,7 +38,7 @@ impl NativeSpeech {
         Self {
             root: model_directory.into(),
             latest: AtomicU64::new(0),
-            #[cfg(feature = "onnx")]
+            #[cfg(feature = "kokoro")]
             engine: Mutex::new(None),
         }
     }
@@ -61,7 +61,7 @@ impl NativeSpeech {
         speed: f32,
         request: u64,
     ) -> Result<SpeechRender, AppError> {
-        #[cfg(feature = "onnx")]
+        #[cfg(feature = "kokoro")]
         return runtime()
             .spawn_blocking(move || {
                 if self.latest.load(Ordering::Acquire) != request {
@@ -97,7 +97,7 @@ impl NativeSpeech {
             .map_err(|_| AppError::Validation {
                 message: "Lokale Stimme konnte nicht geladen werden.".into(),
             })?;
-        #[cfg(not(feature = "onnx"))]
+        #[cfg(not(feature = "kokoro"))]
         {
             let _ = (self.root.as_path(), text, voice, speed, request);
             Err(AppError::Validation {

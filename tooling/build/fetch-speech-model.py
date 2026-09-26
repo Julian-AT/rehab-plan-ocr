@@ -78,7 +78,9 @@ def main():
 
     for name, entry in entries.items():
         if ("remote" in entry or "remote_url" in entry) and not valid(target / name, entry):
-            raise RuntimeError(f"Missing speech metadata {name}; run make restore.")
+            raise RuntimeError(
+                f"Missing speech metadata {name}; run make restore-experimental-speech."
+            )
     if not all(valid(target / name, entries[name]) for name in ["model.onnx", "voice.f32"]):
         subprocess.run(
             ["uv", "run", "--offline", "--locked", str(ROOT / "tooling/build/export-victoria.py")],
@@ -94,13 +96,13 @@ def main():
         raise RuntimeError("Invalid Victoria voice shape or values")
     for source, name in [
         ("ml/registry/runtime/kokoro-vocab.json", "vocab.json"),
-        ("docs/third-party/licenses/kokoro-apache-2.0.txt", "LICENSE"),
-        ("docs/third-party/licenses/kokoro-source.txt", "NOTICE"),
+        ("docs/third-party/licenses/apache-2.0.txt", "LICENSE"),
+        ("docs/third-party/experiments/kokoro/kokoro-source.txt", "NOTICE"),
     ]:
         shutil.copyfile(ROOT / source, target / name)
     data = ROOT / ".local/builds/phonemizer/host/espeak-ng-data"
     if not (data / "de_dict").is_file():
-        raise RuntimeError("Phonemizer data missing; run make convert.")
+        raise RuntimeError("Phonemizer data missing; run make convert-experimental-speech.")
     for name in entries:
         if name.startswith("espeak-ng-data/"):
             destination = target / name

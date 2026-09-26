@@ -97,6 +97,14 @@ class NativeAssemblyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cannot inspect"):
             assembly.check_symbols(result)
 
+    def test_experimental_phonemizer_cannot_enter_native_assembly(self):
+        for symbol in ["_espeak_Initialize", "_espeak_TextToPhonemes", "_espeak_ng_Initialize"]:
+            result = subprocess.CompletedProcess(
+                [], 0, f"000001 T _OrtGetApiBase\n000002 T {symbol}\n", ""
+            )
+            with self.subTest(symbol=symbol), self.assertRaisesRegex(ValueError, "eSpeak"):
+                assembly.check_symbols(result)
+
     def test_initial_directory_migration_rolls_back_failed_publication(self):
         destination = self.root / "package"
         destination.mkdir()

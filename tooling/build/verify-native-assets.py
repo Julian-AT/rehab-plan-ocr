@@ -53,10 +53,8 @@ def verify(root, targets):
     registry = root / "ml/registry/runtime"
     assets = root / ".local/models/runtime"
     ocr = json.loads((registry / "small.lock.json").read_text())
-    speech = json.loads((registry / "kokoro.lock.json").read_text())
     runtime = json.loads((registry / "ios-runtime.lock.json").read_text())
     model_bundle(assets / "small", ocr)
-    model_bundle(assets / speech["bundle_directory"], speech)
     for target in targets:
         pinned_file(assets / "runtime" / target / "libonnxruntime.a", runtime["libraries"][target])
     notices = root / "docs/third-party/licenses"

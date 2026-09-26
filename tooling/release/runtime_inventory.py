@@ -6,7 +6,6 @@ This inventory records declarations and evidence; it does not grant redistributi
 """
 
 import argparse
-import ast
 import hashlib
 import json
 import plistlib
@@ -15,6 +14,8 @@ import subprocess
 import tomllib
 from collections import defaultdict
 from pathlib import Path
+
+from runtime_policy import check_features
 
 ROOT = Path(__file__).resolve().parents[2]
 NOTICES = "docs/third-party/licenses"
@@ -47,15 +48,6 @@ def selected_tree(text):
     if not selected:
         raise ValueError("The iOS dependency tree is empty")
     return selected
-
-
-def constant(path, name):
-    for node in ast.parse(path.read_text()).body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == name for target in node.targets
-        ):
-            return ast.literal_eval(node.value)
-    raise ValueError(f"Missing pinned {name} in {path.name}")
 
 
 def notice_sources(package, root):
@@ -140,6 +132,7 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
     )
     if not set(normal) <= set(full):
         raise ValueError("Normal target dependencies escape the selected build closure")
+    check_features(full)
     packages = defaultdict(list)
     for package in metadata["packages"]:
         packages[(package["name"], package["version"])].append(package)
@@ -216,12 +209,16 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "packages/apple/RehaCore/Package.swift",
         "packages/apple/VoiceActivity/Package.swift",
         "packages/apple/VoiceActivity/README.md",
-        "tooling/build/build-phonemizer.py",
+        "packages/rust/reha-core/build.rs",
+        "tooling/build/build-native.sh",
+        "tooling/build/assemble-native.py",
+        "tooling/build/verify-native-assets.py",
         "tooling/release/runtime_inventory.py",
+        "tooling/release/runtime_policy.py",
         "config/toolchains/versions.json",
     ]
     locks = {}
-    for name in ["small", "kokoro", "victoria-source", "ios-runtime"]:
+    for name in ["small", "ios-runtime"]:
         path = f"ml/registry/runtime/{name}.lock.json"
         inputs.append(path)
         locks[name] = json.loads((root / path).read_text())
@@ -233,7 +230,6 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
     ]
     inputs += [f"{NOTICES}/{name}" for name in notice_manifest if name != COMBINED]
     vad = (root / "packages/apple/VoiceActivity/README.md").read_text()
-    phonemizer = root / "tooling/build/build-phonemizer.py"
     inventory = {
         "schema_version": 1,
         "target": TARGET,
@@ -245,13 +241,6 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "runtime_locks": locks,
         "native_components": [
             {
-                "name": "eSpeak-NG",
-                "version": constant(phonemizer, "VERSION"),
-                "source_archive_sha256": constant(phonemizer, "SHA256"),
-                "license_expression": "GPL-3.0-or-later",
-                "redistribution_decision": "pending",
-            },
-            {
                 "name": "libfvad/WebRTC VAD",
                 "revision": re.search(r"Commit: `([a-f0-9]{40})`", vad)[1],
                 "source_archive_sha256": re.search(r"Archive SHA-256: `([a-f0-9]{64})`", vad)[1],
@@ -262,17 +251,23 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
             "provider": "Apple operating system",
             "bundled_by_app": False,
             "model_weight_identity": "not exposed; record observable OS per evaluation",
-            "services": ["EventKit", "Speech", "FoundationModels", "AVFAudio"],
+            "services": [
+                "EventKit",
+                "Speech",
+                "FoundationModels",
+                "AVFAudio",
+                "AVSpeechSynthesizer",
+            ],
         },
         "excluded_from_app": [
             "OCR training environments",
             "assistant training/export environments",
             "unqualified custom checkpoints",
             "host listening tools",
+            "experimental Kokoro/Victoria weights, phonemizer and eSpeak-NG",
         ],
         "public_distribution_cleared": False,
         "open_distribution_items": [
-            "eSpeak-NG redistribution decision",
             "first-party publisher/rights review",
         ],
         "generated_notice_sha256": sha(combined),

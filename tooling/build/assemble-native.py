@@ -13,11 +13,16 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tooling/release"))
+from runtime_policy import MODELS, check_binary  # noqa: E402
+from runtime_policy import check_symbols as check_release_symbols  # noqa: E402
+
 VARIANTS = {"device": "aarch64-apple-ios", "simulator": "aarch64-apple-ios-sim"}
 
 
@@ -113,6 +118,7 @@ def output(*command):
 
 
 def check_symbols(result):
+    check_release_symbols(result.stdout.encode())
     # Apple's nm cannot decode some Rust 1.98 LLVM 22 bitcode attributes.
     # ONNX Runtime is native Mach-O and must still expose its API symbol.
     diagnostics = [
@@ -139,6 +145,7 @@ def assemble(root, variants):
             root / "Cargo.toml",
             root / "Cargo.lock",
             root / "config/toolchains/versions.json",
+            root / "tooling/release/runtime_policy.py",
         ]
         for package in ["reha-core", "reha-ffi"]:
             sources.extend(
@@ -146,7 +153,10 @@ def assemble(root, variants):
                 for p in (root / "packages/rust" / package).rglob("*")
                 if p.is_file() and p.suffix in {".rs", ".toml", ".udl"}
             )
-        sources.extend((root / "ml/registry/runtime").glob("*.json"))
+        sources.extend(
+            root / "ml/registry/runtime" / f"{model}.lock.json"
+            for model in [*MODELS, "ios-runtime"]
+        )
         common = {
             "version": 1,
             "builder_sha256": sha(Path(__file__)),
@@ -181,6 +191,7 @@ def assemble(root, variants):
                     ["xcrun", "nm", "-g", library], text=True, capture_output=True, check=False
                 )
                 check_symbols(symbols)
+                check_binary(library)
                 (staging / "nm-diagnostics.txt").write_text(symbols.stderr)
 
             libraries[variant] = cached_build(

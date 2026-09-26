@@ -94,6 +94,13 @@ class InventoryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 inventory.selected_tree(value)
 
+    def test_experimental_feature_cannot_enter_release_closure(self):
+        for package in ["reha-core", "reha-ffi"]:
+            self.full[(package, "0.3.0")] = {"onnx", "kokoro"}
+            with self.subTest(package=package), self.assertRaisesRegex(ValueError, "Kokoro"):
+                self.generate()
+            del self.full[(package, "0.3.0")]
+
     def test_changed_or_missing_notice_source_rejects_generation(self):
         notice = self.root / "fixture-crates/selected/LICENSE"
         notice.unlink()

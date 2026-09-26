@@ -26,7 +26,9 @@ def prepare_source(offline):
     archive = BASE / "source.tar.gz"
     if not archive.exists() or hashlib.sha256(archive.read_bytes()).hexdigest() != SHA256:
         if offline:
-            raise RuntimeError("Pinned phonemizer source missing; run make restore.")
+            raise RuntimeError(
+                "Pinned phonemizer source missing; run make restore-experimental-speech."
+            )
         temporary = archive.with_suffix(".download")
         subprocess.run(
             [

@@ -33,23 +33,37 @@ their weights are not exposed. Training environments and experimental checkpoint
 are outside this app inventory. License expressions reflect upstream declarations,
 and a checksum check does not decide redistribution compatibility. The workspace
 declares MIT but does not yet have a publisher-approved root license notice;
-publisher/rights review and the eSpeak-NG decision remain explicit release gates.
+publisher/rights review remains an explicit release gate. The native release feature
+now selects OCR only; it does not select the experimental Kokoro/eSpeak renderer.
 
 | Runtime component | Source of version/identity | Bundled notices |
 |---|---|---|
 | PP-OCRv6 recognizer/detector | `ml/registry/runtime/small.lock.json` | PaddleOCR |
 | ONNX Runtime and Rust binding | `ios-runtime.lock.json`, `Cargo.lock` | ONNX Runtime, third-party notices, ort |
-| Victoria/Kokoro and vocabulary | `kokoro.lock.json`, `victoria-source.lock.json` | Kokoro model/source and tokenizer |
-| eSpeak-NG phonemizer | `tooling/build/build-phonemizer.py` | GPL text and Kokoro source/build notice |
+| Apple system speech output | Installed voice identity and OS version | Provided by the operating system; no speech weights bundled |
 | WebRTC VAD / libfvad | `packages/apple/VoiceActivity/README.md` | LICENSE, AUTHORS and PATENTS |
 | UniFFI | `Cargo.lock` | MPL text and source notice |
-| Unicode normalization | `Cargo.lock` | MIT notice |
 
 This is an inventory of retained runtime notices, not public-distribution clearance.
-The current native binary still includes eSpeak-NG. The public release gate in the
-[ledger](../development/implementation-plan.md) remains open. Model-development
+Normal setup, conversion, linking and packaging exclude the experimental
+Victoria/eSpeak path. The dependency generator rejects its Cargo feature;
+assembly rejects eSpeak symbols, and packaging checks actual executable bytes and
+rejects its resource folders. These checks supplement each other; a text scan alone
+does not establish legal clearance. Actual final simulator/device bundles must
+still pass verification after the system-voice implementation is integrated.
+The public release gate in the [ledger](../development/implementation-plan.md)
+remains open. Model-development
 dependencies are separately locked under `ml/training` and are not app dependencies;
 Qwen development artifacts remain unqualified and unbundled.
+
+The unchanged [experimental speech notices](experiments/kokoro/README.md), model
+locks and tools remain available for explicit host comparisons. The Apache notice
+was renamed from `kokoro-apache-2.0.txt` to `apache-2.0.txt` without changing bytes:
+ort, ort-sys and static_assertions also reference it. The obsolete Unicode notice
+is retained [outside app resources](retired/README.md). Standard
+`make prepare-listening RUN=<new-local-run>` needs only installed Apple voices;
+`prepare-listening-experimental` adds Victoria after its separate setup. Neither
+command selects a winning voice or substitutes for human/device assessment.
 
 On 2026-09-26, a consumer inventory covered workspace manifests/lockfiles, Xcode
 resources, tracked JavaScript/HTML, native/Rust sources, build/release scripts and

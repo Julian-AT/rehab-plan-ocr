@@ -2,3 +2,5 @@
 * text=auto
 # Preserve upstream notice bytes used by the runtime inventory's SHA-256 checks.
 docs/third-party/licenses/* -text
+docs/third-party/experiments/**/*.txt -text
+docs/third-party/retired/*.txt -text

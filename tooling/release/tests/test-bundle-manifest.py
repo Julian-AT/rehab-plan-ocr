@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep bundled notices complete and consistent with pinned speech resources."""
+"""Separate release notices from preserved experimental speech provenance."""
 
 import hashlib
 import json
@@ -24,13 +24,20 @@ class BundleManifestTests(unittest.TestCase):
         manifest = json.loads((ROOT / "ml/registry/runtime/kokoro.lock.json").read_text())
         entries = {entry["path"]: entry for entry in manifest["files"]}
         for source, destination in [
-            ("kokoro-source.txt", "NOTICE"),
-            ("kokoro-apache-2.0.txt", "LICENSE"),
+            ("experiments/kokoro/kokoro-source.txt", "NOTICE"),
+            ("licenses/apache-2.0.txt", "LICENSE"),
         ]:
             with self.subTest(source=source):
-                data = (ROOT / "docs/third-party/licenses" / source).read_bytes()
+                data = (ROOT / "docs/third-party" / source).read_bytes()
                 self.assertEqual(hashlib.sha256(data).hexdigest(), entries[destination]["sha256"])
                 self.assertEqual(len(data), entries[destination]["bytes"])
+
+    def test_experimental_notices_retain_the_pre_separation_identity(self):
+        folder = ROOT / "docs/third-party/experiments/kokoro"
+        manifest = json.loads((folder / "manifest.json").read_text())
+        self.assertEqual(set(manifest), {p.name for p in folder.glob("*.txt")})
+        for name, expected in manifest.items():
+            self.assertEqual(hashlib.sha256((folder / name).read_bytes()).hexdigest(), expected)
 
 
 if __name__ == "__main__":

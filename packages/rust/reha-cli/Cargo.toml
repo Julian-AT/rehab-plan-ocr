@@ -22,4 +22,3 @@ path = "src/main.rs"
 
 [[example]]
 name = "voice_samples"
-required-features = ["voice"]

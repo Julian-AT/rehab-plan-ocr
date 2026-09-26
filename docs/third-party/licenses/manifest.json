@@ -1,8 +1,5 @@
 {
-  "espeak-ng-gpl-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
-  "kokoro-apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-  "kokoro-onnx-mit.txt": "f61fdd0217de9ece8fa699912848d91187d84879fc2e689f0906d0c1299e955e",
-  "kokoro-source.txt": "4a9116b1c8533ce1f110bf9acff5901e548e435b03039af28063ee7fc98e051b",
+  "apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
   "libfvad-AUTHORS": "cd9bea3aacbdb2a25763835e029f0ea34198dfc35687616a6ce29e7db1b6114a",
   "libfvad-LICENSE": "78b16d4e803975e0c5d826339c607d0676192a40e2c510c10b2cb4ab4cde416a",
   "libfvad-PATENTS": "01462e2068d1a04c2274f3389773014c14ed9bc3446b28303543bd3e3c064145",
@@ -11,7 +8,6 @@
   "ort-license-mit": "b880185add684cd1c6d24394a2e30fe08b75ba4586619b0890ce764bc4cd43a0",
   "paddle-ocr-license": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
   "rust-dependencies.txt": "b02918ef2f846e0a12c2226dc4d17d4b79516193a9968fa7cc7665cc70efcd6d",
-  "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a",
   "uniffi-mpl-2.0.txt": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
   "uniffi-source.txt": "8b099c68a03aa18b44c233f5dd8d13da159c952846276452f9aa62a43964b083"
 }

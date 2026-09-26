@@ -32,7 +32,7 @@ class OfflineAssetTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         registry = self.root / "ml/registry/runtime"
         registry.mkdir(parents=True)
-        for name in ["small", "kokoro"]:
+        for name in ["small"]:
             root = self.root / ".local/models/runtime" / name
             entry = pin(root / "model.bin") | {"path": "model.bin"}
             manifest = {"files": [entry], "bundle_directory": name}

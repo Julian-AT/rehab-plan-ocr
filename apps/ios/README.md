@@ -45,5 +45,9 @@ Speicher `Library/Application Support/at.rehakalender.personal` bleiben erhalten
 Schema 8 ergänzt gemeinsame Terminzuordnungen, Schema 9 die wiederaufnehmbare
 Quellenlöschung und Schema 10/11 kompakte, paginierte Archivabfragen. Historische
 Importbelege und vorhandene Einstellungen bleiben erhalten. Die App lädt Modelle
-aus `.local/models/runtime` in unverändert benannte Bundle-Ressourcen; Bibliotheken
-für die Phonemisierung werden unter `.local/builds/phonemizer` erzeugt.
+aus `.local/models/runtime` in die OCR-Bundle-Ressourcen. Die Sprachausgabe nutzt
+installierte Apple-Systemstimmen; das Release enthält keine Victoria-Gewichte und
+keinen eSpeak-Phonemizer. `make restore convert` benötigt nur die OCR-/ORT-Artefakte.
+Die erhaltenen [Victoria-Experimente](../../docs/third-party/experiments/kokoro/README.md)
+haben eigene Einrichtungs- und Konvertierungsziele. Stimmenqualität und tatsächliche
+Offline-Verfügbarkeit auf Testgeräten bleiben gesonderte Abnahmekriterien.

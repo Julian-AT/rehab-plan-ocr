@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "bytes": output.stat().st_size,
         "model_files_verified": contents["models"]["small"]["pinned_files"],
-        "speech_model_files_verified": contents["models"]["kokoro"]["pinned_files"],
+        "speech_model_files_verified": contents["speech"]["bundled_model_files"],
         "signatures_verified": True,
         "commonly_authorized_devices": len(common_devices),
         "physical_acceptance": "pending",

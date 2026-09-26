@@ -31,11 +31,6 @@ framework() {
   esac
   for variant in $variants; do
     python3 tooling/build/verify-native-assets.py "$variant"
-    case "$variant" in
-      device) triple=aarch64-apple-ios ;;
-      simulator) triple=aarch64-apple-ios-sim ;;
-    esac
-    python3 tooling/build/build-phonemizer.py --verify "$triple"
   done
   for variant in $variants; do
     case "$variant" in

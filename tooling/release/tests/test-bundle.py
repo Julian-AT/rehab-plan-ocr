@@ -56,8 +56,8 @@ class BundleTests(unittest.TestCase):
             write(self.root / source, data)
             write(component / "PrivacyInfo.xcprivacy", data)
             self.components[identifier] = component
-        for name in ["small", "kokoro"]:
-            folder = "kokoro-german" if name == "kokoro" else name
+        for name in ["small"]:
+            folder = name
             data = b"Synthetic model, no patient or trained data"
             digest = write(self.app / folder / "model.bin", data)
             lock = {
@@ -104,6 +104,8 @@ class BundleTests(unittest.TestCase):
         self.assertFalse(report["signatures_verified"])
         self.assertEqual(report["physical_acceptance"], "pending")
         self.assertFalse(report["runtime_inventory"]["public_distribution_cleared"])
+        self.assertEqual(set(report["models"]), {"small"})
+        self.assertEqual(report["speech"]["bundled_model_files"], 0)
 
     def test_component_identity_version_platform_and_compatibility_are_required(self):
         for component in self.components.values():
@@ -156,8 +158,6 @@ class BundleTests(unittest.TestCase):
             "small/model.bin",
             "small/dictionary.json",
             "small/manifest.json",
-            "kokoro-german/model.bin",
-            "kokoro-german/manifest.json",
             "runtime-inventory.json",
             "licenses/" + inventory.COMBINED,
             "PrivacyInfo.xcprivacy",
@@ -177,6 +177,28 @@ class BundleTests(unittest.TestCase):
         write(self.app / "small/unreviewed.bin", b"Unexpected asset")
         with self.assertRaisesRegex(ValueError, "model files differ"):
             self.verify()
+
+    def test_experimental_speech_resources_and_symbols_fail(self):
+        for name in ["kokoro-german/model.onnx", "nested/espeak-ng-data/de_dict", "libucd.a"]:
+            path = self.app / name
+            write(path, b"Experimental speech artifact")
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "speech resources"):
+                self.verify()
+            path.unlink()
+            # Empty excluded folders are rejected too.
+            if path.parent != self.app:
+                shutil.rmtree(self.app / Path(name).parts[0])
+        for component in self.components.values():
+            binary = (
+                component
+                / plistlib.loads((component / "Info.plist").read_bytes())["CFBundleExecutable"]
+            )
+            original = binary.read_bytes()
+            # Cross the streaming boundary to catch split symbol records.
+            binary.write_bytes(b"\0" * (1024 * 1024 - 5) + b"_espeak_Initialize\0")
+            with self.assertRaisesRegex(ValueError, "eSpeak symbols"):
+                self.verify()
+            binary.write_bytes(original)
 
     def test_external_and_internal_symlinks_fail_even_for_matching_bytes(self):
         path = self.app / "small/model.bin"

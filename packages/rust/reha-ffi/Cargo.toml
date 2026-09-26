@@ -9,7 +9,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
 default = []
-onnx = ["reha-core/kokoro"]
+onnx = ["reha-core/onnx"]
+# Explicit development-only renderer; never selected by the native app build.
+kokoro = ["onnx", "reha-core/kokoro"]
 bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
 
 [dependencies]

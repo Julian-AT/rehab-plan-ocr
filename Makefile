@@ -64,6 +64,7 @@ help:
 	@echo 'Accessibility: make test-reduced-motion (actual system setting, restored after the test)'
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
+	@echo 'Experimental Victoria: make restore-experimental-speech convert-experimental-speech; make prepare-listening-experimental RUN=<new-local-run>'
 	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Hosted CI: make ci-status; make test-ci-monitor; node tooling/dev/ci_monitor.cjs --help'
@@ -101,12 +102,17 @@ bindings check-bindings:
 test-agenda:
 	sh tooling/checks/test-agenda.sh
 
-.PHONY: prepare-listening refresh-listening transcribe-listening setup-speech-evaluation
+.PHONY: prepare-listening prepare-listening-experimental refresh-listening transcribe-listening setup-speech-evaluation
 SPEECH_LOCALE ?= de-AT
 prepare-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
-	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples --features voice
+	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples
 	/usr/bin/env uv run --locked python ml/evaluation/speech/listening.py --run "$(RUN)"
+
+prepare-listening-experimental:
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	/usr/bin/env cargo build --locked -p reha-cli --example voice_samples --features voice
+	/usr/bin/env uv run --locked python ml/evaluation/speech/listening.py --run "$(RUN)" --include-victoria
 
 refresh-listening:
 	@test -n "$(RUN)" || { echo 'Set RUN to an existing listening export'; exit 2; }
@@ -122,14 +128,21 @@ setup-speech-evaluation:
 
 restore:
 	/usr/bin/env uv sync --locked
-	/usr/bin/env uv sync --locked --script tooling/build/export-victoria.py
-	/usr/bin/env uv run --locked --with cmake==3.31.6 cmake --version
 	/usr/bin/env uv run --locked python tooling/build/fetch-models.py --tier small
 	/usr/bin/env uv run --locked python tooling/build/fetch-ios-runtime.py
+
+# Deployment OCR is already pinned ONNX; no speech conversion belongs to setup.
+convert:
+	python3 tooling/build/verify-native-assets.py $(TARGET)
+
+.PHONY: restore-experimental-speech convert-experimental-speech
+restore-experimental-speech:
+	/usr/bin/env uv sync --locked --script tooling/build/export-victoria.py
+	/usr/bin/env uv run --locked --with cmake==3.31.6 cmake --version
 	python3 tooling/build/build-phonemizer.py --source-only
 	python3 tooling/build/fetch-speech-model.py restore
 
-convert:
+convert-experimental-speech:
 	@case "$(TARGET)" in \
 	  simulator) python3 tooling/build/build-phonemizer.py --offline host aarch64-apple-ios-sim ;; \
 	  device) python3 tooling/build/build-phonemizer.py --offline host aarch64-apple-ios ;; \

@@ -36,9 +36,6 @@ targets:
         name: models
         type: folder
         buildPhase: resources
-      - path: ../../.local/models/runtime/kokoro-german
-        type: folder
-        buildPhase: resources
       - path: ../../docs/third-party/licenses
         type: folder
         buildPhase: resources

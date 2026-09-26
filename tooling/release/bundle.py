@@ -10,6 +10,7 @@ from pathlib import Path
 from privacy import BUNDLE
 from privacy import verify_bundle as verify_privacy
 from runtime_inventory import verify as verify_inventory
+from runtime_policy import MODELS, check_binary, check_resources
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -40,6 +41,7 @@ def verify(app, target, root=ROOT):
     require(app.is_dir() and not app.is_symlink(), "Expected a self-contained app directory")
     # A packaged iOS app must carry all of its contents, including model data.
     require(not any(p.is_symlink() for p in app.rglob("*")), "App contains a symbolic link")
+    check_resources(app)
     plugins = app / "PlugIns"
     require(
         {p.name for p in plugins.iterdir()} == {v[0] for v in COMPONENTS.values() if v[0]},
@@ -74,9 +76,10 @@ def verify(app, target, root=ROOT):
         require(not info.get("REHAExperimentalAssistant"), "Experimental assistant trial bundle")
         binary = component / executable
         require(binary.is_file() and binary.stat().st_size > 0, f"Missing executable: {identifier}")
+        check_binary(binary)
         components[identifier] = {"executable_sha256": ASSETS.sha(binary)}
     models = {}
-    for model in ["small", "kokoro"]:
+    for model in MODELS:
         lock = json.loads((root / "ml/registry/runtime" / f"{model}.lock.json").read_text())
         directory = lock.get("bundle_directory", model)
         require(
@@ -91,6 +94,12 @@ def verify(app, target, root=ROOT):
         "build": build,
         "components": components,
         "models": models,
+        "speech": {
+            "provider": "Apple operating system",
+            "bundled_model_files": 0,
+            "experimental_speech_excluded": True,
+            "device_voice_acceptance": "pending",
+        },
         "privacy_manifests_verified": verify_privacy(app, root=root),
         "runtime_inventory": verify_inventory(root, bundle=app),
         "signatures_verified": False,

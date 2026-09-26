@@ -180,13 +180,13 @@ GROUPS = [
         "notices",
         ["docs/third-party/"],
         "third-party-product",
-        "Exact runtime notices and dependency closure",
+        "Exact runtime notices, dependency closure and retained experimental notices",
         [
             "apps/ios/project.yml",
             "tooling/release/runtime_inventory.py",
             "tooling/release/bundle.py",
         ],
-        "retain; eSpeak path still prevents public clearance",
+        "retain; release excludes eSpeak, experimental provenance is outside app resources",
     ),
 ]
 

@@ -73,7 +73,7 @@ def checked_samples(folder, expected):
     return manifest
 
 
-def prepare(output, binary):
+def prepare(output, binary, include_victoria=False):
     output = output.resolve()
     if not output.is_relative_to(ROOT / ".local/runs") or output.exists():
         raise ValueError("Use a new listening run under .local/runs")
@@ -92,15 +92,10 @@ def prepare(output, binary):
         binary,
     ]
     identities = {str(p.relative_to(ROOT)): sha(p) for p in identity_paths}
-    run(
-        binary,
-        ROOT / ".local/models/runtime/kokoro-german",
-        HERE / "prompts.json",
-        output / "victoria",
-        timeout=600,
-    )
-    victoria = json.loads((output / "victoria/manifest.json").read_text())
-    expected = {record["id"]: record["spoken_text"] for record in victoria["samples"]}
+    prepared = output / "prepared-text.json"
+    run(binary, "--prepare", HERE / "prompts.json", prepared)
+    records = json.loads(prepared.read_text())["samples"]
+    expected = {record["id"]: record["spoken_text"] for record in records}
     if set(expected) != {sample["id"] for sample in prompts["samples"]}:
         raise ValueError("Prepared text omitted a listening prompt")
     apple = output / "apple-voices"
@@ -116,11 +111,22 @@ def prepare(output, binary):
     )
     inventory = json.loads(run(apple, "--inventory"))
     (output / "apple-inventory.json").write_text(json.dumps(inventory, indent=2) + "\n")
-    voices = [("victoria", checked_samples(output / "victoria", expected))]
+    voices = []
+    if include_victoria:
+        run(
+            binary,
+            ROOT / ".local/models/runtime/kokoro-german",
+            HERE / "prompts.json",
+            output / "victoria",
+            timeout=600,
+        )
+        voices.append(("victoria", checked_samples(output / "victoria", expected)))
     for index, voice in enumerate(inventory):
         folder = f"apple-{index}"
-        run(apple, voice["id"], output / "victoria/manifest.json", output / folder, timeout=600)
+        run(apple, voice["id"], prepared, output / folder, timeout=600)
         voices.append((folder, checked_samples(output / folder, expected)))
+    if not voices:
+        raise ValueError("No German system voices are installed; listening export is incomplete")
     if identities != {str(p.relative_to(ROOT)): sha(p) for p in identity_paths}:
         raise ValueError("Listening source or binary changed during rendering")
     random.Random("reha-german-listening-v1").shuffle(voices)
@@ -148,6 +154,7 @@ def prepare(output, binary):
         "offline_mode_verified": False,
         "human_listening_completed": False,
         "promoted_voice": None,
+        "includes_experimental_victoria": include_victoria,
         "key": mapping,
     }
     (output / "manifest.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
@@ -160,5 +167,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/examples/voice_samples")
+    parser.add_argument("--include-victoria", action="store_true")
     args = parser.parse_args()
-    prepare(args.run, args.binary.resolve())
+    prepare(args.run, args.binary.resolve(), args.include_victoria)
