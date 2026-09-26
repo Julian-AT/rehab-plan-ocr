@@ -357,7 +357,7 @@ import XCTest
     app.buttons["Abbrechen"].tap()
     back("Erkennung")
     app.buttons["Kalender"].tap()
-    let destination = app.buttons["Speicherziel ändern"]
+    let destination = app.buttons["calendar-destination"]
     for _ in 0..<6 where !destination.isHittable { app.swipeUp() }
     XCTAssertTrue(destination.waitForExistence(timeout: 5))
     destination.tap()

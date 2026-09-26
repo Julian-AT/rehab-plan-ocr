@@ -154,7 +154,11 @@ struct TodayView: View {
         HStack {
           Text("Kalenderdaten unvollständig").font(.footnote)
           Spacer()
-          Button("Status prüfen") { calendarStatus = true }.frame(minHeight: 44)
+          Button {
+            calendarStatus = true
+          } label: {
+            Text("Status prüfen").controlHeight()
+          }
         }.padding(.horizontal).foregroundStyle(AppPalette.text)
       }
       TimelineView(.periodic(from: .now, by: 15)) { context in

@@ -104,8 +104,14 @@ import XCTest
     openPlan("plan-33333333-3333-4333-8333-333333333333")
     if app.buttons["Kalender einrichten"].waitForExistence(timeout: 2) {
       app.buttons["Kalender einrichten"].tap()
-      app.buttons["Laßnitzhöhe-Kalender verwenden"].tap()
-      let done = app.buttons["Diesen Kalender verwenden"]
+      let access = app.buttons["Kalenderzugriff erlauben"]
+      if access.waitForExistence(timeout: 1) { access.tap() }
+      let calendar = app.buttons.matching(
+        NSPredicate(format: "identifier BEGINSWITH %@", "destination-")
+      ).firstMatch
+      XCTAssertTrue(calendar.waitForExistence(timeout: 10))
+      calendar.tap()
+      let done = app.buttons["save-calendar-destination"]
       for _ in 0..<6 where !done.isHittable { app.swipeUp() }
       expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: done)
       waitForExpectations(timeout: 10)
@@ -129,7 +135,7 @@ import XCTest
     app.tabBars.buttons["Mehr"].tap()
     app.buttons["Kalender"].tap()
     XCTAssertTrue(app.navigationBars["Kalender"].waitForExistence(timeout: 5))
-    XCTAssertTrue(app.buttons["Speicherziel ändern"].exists)
+    XCTAssertTrue(app.buttons["calendar-destination"].exists)
     XCTAssertTrue(
       app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "anzeigen und vorlesen"))
         .firstMatch.exists)
@@ -183,11 +189,17 @@ import XCTest
     openPlan(clearID)
     if app.buttons["Kalender einrichten"].waitForExistence(timeout: 3) {
       app.buttons["Kalender einrichten"].tap()
-      app.buttons["Laßnitzhöhe-Kalender verwenden"].tap()
+      let access = app.buttons["Kalenderzugriff erlauben"]
+      if access.waitForExistence(timeout: 1) { access.tap() }
+      let calendar = app.buttons.matching(
+        NSPredicate(format: "identifier BEGINSWITH %@", "destination-")
+      ).firstMatch
+      XCTAssertTrue(calendar.waitForExistence(timeout: 10))
+      calendar.tap()
       let remember = app.switches["Für neue Pläne merken"]
       for _ in 0..<6 where !remember.isHittable { app.swipeUp() }
       remember.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-      let done = app.buttons["Diesen Kalender verwenden"]
+      let done = app.buttons["save-calendar-destination"]
       for _ in 0..<6 where !done.isHittable { app.swipeUp() }
       let enabled = NSPredicate(format: "enabled == true")
       expectation(for: enabled, evaluatedWith: done)

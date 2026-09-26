@@ -267,11 +267,6 @@ struct VoiceSettingsView: View {
         }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
         if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
         if output.phase == .failed { Text(output.status).foregroundStyle(AppPalette.destructive) }
-      } header: {
-        AppSectionHeader(
-          title: "Stimme",
-          help: "Die Stimme ist bereits enthalten und funktioniert auf diesem iPhone ohne Internet."
-        )
       }
       Section {
         LabeledContent(
@@ -282,7 +277,7 @@ struct VoiceSettingsView: View {
         AppSectionHeader(
           title: "Spracherkennung",
           help:
-            "Gespräch starten und Mikrofon sowie Spracherkennung erlauben. Zusätzliche Sprachdateien sind nicht nötig. Nach etwa 1,2 Sekunden Sprechpause beginnt die Antwort automatisch. Hineinsprechen unterbricht die Wiedergabe; das Gespräch kann jederzeit pausiert werden."
+            "Nach einer Sprechpause antwortet die App. Hineinsprechen unterbricht die Wiedergabe."
         )
       }
 

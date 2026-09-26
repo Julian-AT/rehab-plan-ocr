@@ -17,10 +17,9 @@ struct RecognitionTraceView: View {
     List {
       Section {
         PhotosPicker(selection: $photo, matching: .images) {
-          Label("Bild aus Fotos auswählen", systemImage: "photo")
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(.rect)
+          AppActionLabel(title: "Bild aus Fotos auswählen", systemImage: "photo")
         }
-        .buttonStyle(.plain).labelStyle(AppControlLabelStyle())
+        .buttonStyle(.plain)
         .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
         .accessibilityIdentifier("trace-photos")
         AppFormAction(title: "Bild aus Dateien auswählen", systemImage: "doc") { files = true }
@@ -29,7 +28,7 @@ struct RecognitionTraceView: View {
         AppSectionHeader(
           title: "Bild-Tracing",
           help:
-            "Zeigt die tatsächlichen Schritte der lokalen Bilderkennung. Bilder und Ausschnitte bleiben in dieser temporären Sitzung und werden beim Verlassen entfernt. Es entstehen keine Archiveinträge oder Kalenderänderungen."
+            "Untersucht ein Bild ohne Archiveintrag. Beim Verlassen wird es gelöscht."
         )
       }
       .disabled(model.busy || loadingPhoto || scanner.running)

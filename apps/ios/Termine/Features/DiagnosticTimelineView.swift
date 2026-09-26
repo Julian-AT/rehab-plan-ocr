@@ -10,14 +10,8 @@ struct DiagnosticTimelineView: View {
   var body: some View {
     List {
       Section {
-        AppSectionHeader(
-          title: "Technisches Protokoll",
-          help:
-            "Lokales technisches Protokoll: höchstens 5.000 Einträge und 14 Tage. Keine Termininhalte, Audiodaten oder Gesprächstranskripte. Der Export entfernt Zeitstempel und ersetzt Vorgangskennungen."
-        )
-        .font(.subheadline).foregroundStyle(.secondary)
         AppFormAction(
-          title: "Bereinigten Diagnoseexport vorbereiten", systemImage: "square.and.arrow.up"
+          title: "Diagnoseexport vorbereiten", systemImage: "square.and.arrow.up"
         ) {
           guard !busy else { return }
           busy = true
@@ -33,8 +27,12 @@ struct DiagnosticTimelineView: View {
             } catch { self.error = userMessage(error) }
           }
         }.disabled(busy)
-        if let export { ShareLink("Bereinigten Export teilen", item: export) }
+        if let export { ShareLink("Export teilen", item: export) }
         if let error { Text(error).foregroundStyle(AppPalette.destructive) }
+      } header: {
+        AppSectionHeader(
+          title: "Technisches Protokoll",
+          help: "Der Export enthält keine Termine, Gespräche oder Audiodaten.")
       }
       ForEach(events.prefix(limit)) { event in
         VStack(alignment: .leading, spacing: 6) {

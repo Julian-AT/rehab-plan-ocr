@@ -1,4 +1,3 @@
-import FoundationModels
 import ImageIO
 import PDFKit
 import RehaCore
@@ -225,7 +224,7 @@ struct CorrectionView: View {
           AppSectionHeader(
             title: "Seitenecken im Originalfoto",
             help:
-              "Die Korrektur startet eine neue Erkennung. Das bisherige Foto und die Prüfdaten bleiben erhalten."
+              "Erkennt den korrigierten Ausschnitt erneut. Das Original bleibt erhalten."
           )
         }
         if let error { Text(error).foregroundStyle(AppPalette.destructive) }
@@ -269,15 +268,7 @@ struct DiagnosticsView: View {
       Section("Sprache") {
         LabeledContent("Stimme", value: "Kokoro · Victoria · Deutsch")
         LabeledContent("Audio", value: "24 kHz · lokal")
-        LabeledContent(
-          "Gesprächsmodell",
-          value: SystemLanguageModel.default.isAvailable
-            ? "Apple Intelligence bereit" : "Apple Intelligence nicht verfügbar")
-        AppSectionHeader(
-          title: "Gesprächsmodell",
-          help:
-            "Freie Gespräche verwenden das lokale Apple-Modell. Kalenderbefehle und manuelle Auswahl funktionieren auch ohne Apple Intelligence."
-        )
+        LabeledContent("Gesprächsmodell", value: "Apple Intelligence")
       }
       if let capabilities {
         Section("Verfügbarkeit") {

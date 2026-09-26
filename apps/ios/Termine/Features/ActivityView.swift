@@ -208,7 +208,7 @@ struct CalendarStatusView: View {
             AppSectionHeader(
               title: "Kalenderverfügbarkeit",
               help:
-                "Verfügbare Termine bleiben sichtbar. Lokale Zuordnungen werden erhalten, bis der Kalender wieder zugänglich ist oder eine Änderung bestätigt wird."
+                "Behält Zuordnungen bei, bis der Kalender wieder zugänglich ist."
             )
           }
         }
@@ -221,7 +221,7 @@ struct CalendarStatusView: View {
           AppSectionHeader(
             title: "Gelesener Kalenderstand",
             help:
-              "Dieser Status beschreibt den auf dem iPhone lesbaren Kalenderstand. Ein iCloud-Synchronisationsstand ist nicht verfügbar."
+              "Zeigt den lokal gelesenen Stand. Der iCloud-Abgleich ist hier nicht prüfbar."
           )
         }
         Section("Ungeklärte Schreibvorgänge") {
@@ -239,12 +239,6 @@ struct CalendarStatusView: View {
         AppFormAction(title: "Aktualisieren", systemImage: "arrow.clockwise", busy: busy) {
           Task { await load() }
         }.accessibilityIdentifier("refresh-calendar-status")
-      } header: {
-        AppSectionHeader(
-          title: "Status",
-          help:
-            "Aktualisieren liest den Zustand. Ungeklärte Änderungen werden nur im Prüfablauf bearbeitet."
-        )
       }
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
     }.pageTitle("Kalenderstatus").task { await load() }

@@ -90,7 +90,7 @@ struct AppSlider: UIViewRepresentable {
 }
 
 extension View {
-  func controlHeight() -> some View { frame(minHeight: 44) }
+  func controlHeight() -> some View { frame(minWidth: 44, minHeight: 44).contentShape(.rect) }
   func pageTitle(_ title: String) -> some View {
     navigationTitle(title).navigationBarTitleDisplayMode(.inline)
   }
@@ -122,6 +122,32 @@ struct AppPrimaryButtonStyle: ButtonStyle {
   }
 }
 
+/// Shared by native buttons and pickers so their symbols and titles align.
+struct AppActionLabel: View {
+  let title: String
+  var systemImage: String? = nil
+  var destructive = false
+  var busy = false
+  @ScaledMetric(relativeTo: .body) private var symbolSize = 20
+  var body: some View {
+    HStack(spacing: 10) {
+      if busy {
+        ProgressView().frame(width: symbolSize, height: symbolSize)
+      } else if let systemImage {
+        Image(systemName: systemImage)
+          .font(.system(size: symbolSize))
+          .frame(width: symbolSize, height: symbolSize)
+          .foregroundStyle(destructive ? AppPalette.destructive : AppPalette.tint)
+      }
+      Text(title).fixedSize(horizontal: false, vertical: true)
+    }
+    .font(.body)
+    .foregroundStyle(destructive ? AppPalette.destructive : AppPalette.text)
+    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+    .contentShape(.rect)
+  }
+}
+
 /// A native Form/List action with one consistent row height and a full-width label.
 struct AppFormAction: View {
   let title: String
@@ -131,19 +157,8 @@ struct AppFormAction: View {
   let action: () -> Void
   var body: some View {
     Button(role: role, action: action) {
-      HStack(spacing: 10) {
-        if busy {
-          ProgressView()
-        } else if let systemImage {
-          Image(systemName: systemImage).foregroundStyle(
-            role == .destructive ? AppPalette.destructive : AppPalette.tint)
-        }
-        Text(title).fixedSize(horizontal: false, vertical: true)
-      }
-      .font(.body)
-      .foregroundStyle(role == .destructive ? AppPalette.destructive : AppPalette.text)
-      .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-      .contentShape(.rect)
+      AppActionLabel(
+        title: title, systemImage: systemImage, destructive: role == .destructive, busy: busy)
     }
     .buttonStyle(.plain).controlSize(.regular)
     .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -162,7 +177,7 @@ struct AppInfoButton: View {
     } label: {
       Image(systemName: "info.circle").font(.body)
         .foregroundStyle(AppPalette.tint)
-        .frame(width: 44, height: 44).contentShape(.rect)
+        .frame(minWidth: 44, minHeight: 44).contentShape(.rect)
     }
     .buttonStyle(.plain)
     .accessibilityLabel("Information zu \(title)")
@@ -171,8 +186,10 @@ struct AppInfoButton: View {
       Group {
         if typeSize.isAccessibilitySize {
           VStack(spacing: 0) {
-            explanationHeading.padding(16)
-            Divider()
+            HStack {
+              Spacer()
+              closeButton
+            }.padding(.horizontal, 16).padding(.top, 8)
             ScrollView {
               Text(text).font(.body).fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled).padding(16)
@@ -186,25 +203,22 @@ struct AppInfoButton: View {
     }
   }
   private var explanation: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      explanationHeading
+    HStack(alignment: .top, spacing: 4) {
       Text(text).font(.body).fixedSize(horizontal: false, vertical: true)
-        .textSelection(.enabled)
+        .textSelection(.enabled).padding(.vertical, 10)
+      closeButton
     }
     .foregroundStyle(AppPalette.text).textCase(nil).padding(16)
     .frame(idealWidth: 320, maxWidth: 360)
   }
-  private var explanationHeading: some View {
-    HStack(alignment: .top) {
-      Text(title).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-      Button {
-        presented = false
-      } label: {
-        Image(systemName: "xmark").frame(width: 44, height: 44).contentShape(.rect)
-      }
-      .accessibilityLabel("Schließen")
-      .buttonStyle(.plain).accessibilityIdentifier("close-info")
+  private var closeButton: some View {
+    Button {
+      presented = false
+    } label: {
+      Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44).contentShape(.rect)
     }
+    .accessibilityLabel("Schließen")
+    .buttonStyle(.plain).accessibilityIdentifier("close-info")
   }
 }
 

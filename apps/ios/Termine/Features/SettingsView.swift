@@ -89,10 +89,6 @@ struct SettingsView: View {
               Text("Hell").tag("light")
               Text("Dunkel").tag("dark")
             }.accessibilityIdentifier("appearance-picker")
-          } header: {
-            AppSectionHeader(
-              title: "Erscheinungsbild",
-              help: "Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
           }
           Section {
             Picker("Kalendergröße", selection: $density) {
@@ -103,7 +99,7 @@ struct SettingsView: View {
             AppSectionHeader(
               title: "Kalender",
               help:
-                "Standard zeigt etwa fünf bis sechs Stunden. Übersicht zeigt mehr vom Tag, Großzügig mehr Details. Jede Stunde bleibt gleich hoch. Antippen öffnet alle Terminangaben. Bei vielen Überschneidungen oder großer Bedienungshilfenschrift erscheint die Tagesliste."
+                "Bei großer Schrift oder vielen Überschneidungen erscheint die Tagesliste."
             )
           }
           Section("Terminfarben") {
@@ -123,7 +119,7 @@ struct SettingsView: View {
           } header: {
             AppSectionHeader(
               title: "Kalendererinnerung",
-              help: "Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
+              help: "Gilt nur für neue Termine.")
           }
           Section {
             Toggle(
@@ -180,7 +176,7 @@ struct SettingsView: View {
             AppSectionHeader(
               title: "App-Erinnerungen",
               help:
-                "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst."
+                "Erinnert an Termine, die mit dieser App gespeichert wurden."
             )
           }
         case .recognition:
@@ -191,10 +187,6 @@ struct SettingsView: View {
             ) {
               ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
             }
-          } header: {
-            AppSectionHeader(
-              title: "Erkennung",
-              help: "Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
           }
           Section {
             ForEach(preferences.completionDefaults, id: \.id) { item in
@@ -209,7 +201,7 @@ struct SettingsView: View {
           } header: {
             AppSectionHeader(
               title: "Ergänzungsvorgaben",
-              help: "Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
+              help: "Schlägt fehlende Angaben vor. Du bestätigst sie vor dem Speichern.")
           }
         case .storage:
           Section {
@@ -221,7 +213,7 @@ struct SettingsView: View {
           } header: {
             AppSectionHeader(
               title: "Aufbewahrung",
-              help: "Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
+              help: "Unfertige und fehlgeschlagene Aufnahmen bleiben erhalten.")
           }
           Section {
             Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }
@@ -337,13 +329,8 @@ private struct CompletionDefaultForm: View {
           Text("Therapeut:in").tag("therapist")
           Text("Vorbereitung").tag("preparation")
         }
-        TextField(field == "duration_minutes" ? "Minuten" : "Vorgabe", text: $value)
+        TextField(field == "duration_minutes" ? "Minuten (1–1440)" : "Vorgabe", text: $value)
           .keyboardType(field == "duration_minutes" ? .numberPad : .default)
-      } header: {
-        AppSectionHeader(
-          title: "Vorgabe",
-          help:
-            "Alle Angaben sind erforderlich. Eine Dauer muss zwischen 1 und 1440 Minuten liegen.")
       }
     }.pageTitle(original == nil ? "Neue Vorgabe" : "Vorgabe")
       .toolbar {

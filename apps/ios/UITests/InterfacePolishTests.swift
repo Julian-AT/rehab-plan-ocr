@@ -49,11 +49,12 @@ import XCTest
       let actionHeight = preview.frame.height
       let help = app.buttons["info-Spracherkennung"]
       let text = app.staticTexts.matching(
-        NSPredicate(format: "label BEGINSWITH %@", "Gespräch starten und Mikrofon")
+        NSPredicate(format: "label BEGINSWITH %@", "Nach einer Sprechpause antwortet die App.")
       ).firstMatch
       XCTAssertFalse(text.exists)
       edgeTap(help)
       XCTAssertTrue(text.waitForExistence(timeout: 3))
+      XCTAssertFalse(app.staticTexts["Spracherkennung"].isHittable)
       capture("polish-tooltip-\(mode)")
       edgeTap(app.buttons["close-info"])
       XCTAssertFalse(text.exists)
@@ -92,7 +93,7 @@ import XCTest
     let send = app.buttons["voice-send"]
     XCTAssertTrue(field.waitForExistence(timeout: 5))
     XCTAssertEqual(send.frame.height, 44, accuracy: 1)
-    XCTAssertLessThan(abs(send.frame.midY - field.frame.midY), 12)
+    XCTAssertEqual(send.frame.midY, field.frame.midY, accuracy: 1)
     field.tap()
     field.typeText("Was habe ich heute?")
     let keyboardIntro = app.buttons["Continue"]
@@ -135,6 +136,112 @@ import XCTest
       .tap()
     XCTAssertFalse(close.exists)
     XCTAssertTrue(app.navigationBars["Sprache"].exists)
+  }
+  func testLargeTypeControlsRemainUsable() {
+    launch(dark: true, large: true)
+    app.tabBars.buttons["Sprechen"].tap()
+    app.buttons["voice-details"].tap()
+    let field = app.textFields["voice-message"]
+    let send = app.buttons["voice-send"]
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    XCTAssertEqual(field.frame.midY, send.frame.midY, accuracy: 1)
+    capture("simple-large-message")
+    app.tabBars.buttons["Mehr"].tap()
+    app.buttons["Kalender"].tap()
+    let destination = app.buttons["calendar-destination"]
+    show(destination)
+    capture("simple-large-calendar-settings")
+    edgeTap(destination)
+    let choice = app.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "destination-")
+    ).firstMatch
+    XCTAssertTrue(choice.waitForExistence(timeout: 8))
+    edgeTap(choice)
+    XCTAssertTrue(choice.isSelected)
+    capture("simple-large-destination")
+    app.navigationBars["Speicherziel"].buttons.firstMatch.tap()
+    app.navigationBars["Kalender"].buttons.firstMatch.tap()
+    show(app.buttons["open-tracing"])
+    app.buttons["open-tracing"].tap()
+    capture("simple-large-tracing")
+    edgeTap(app.buttons["trace-photos"])
+    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
+    app.buttons["Abbrechen"].tap()
+    edgeTap(app.buttons["trace-files"])
+    XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
+    app.buttons["Abbrechen"].tap()
+  }
+  func testSimpleDestinationPersistsAndCanBeCancelled() {
+    launch()
+    app.tabBars.buttons["Mehr"].tap()
+    app.buttons["Kalender"].tap()
+    let destination = app.buttons["calendar-destination"]
+    XCTAssertTrue(destination.waitForExistence(timeout: 8))
+    XCTAssertTrue((44...56).contains(destination.frame.height))
+    edgeTap(destination)
+    let choices = app.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "destination-"))
+    XCTAssertTrue(choices.firstMatch.waitForExistence(timeout: 8))
+    XCTAssertFalse(app.staticTexts["Neue Termine speichern in"].exists)
+    XCTAssertFalse(app.buttons["Kalenderzugriff erlauben"].exists)
+    XCTAssertFalse(app.buttons["Laßnitzhöhe-Kalender verwenden"].exists)
+    XCTAssertFalse(app.buttons["info-Speicherziel"].exists)
+    let choice = choices.allElementsBoundByIndex.first { !$0.isSelected }!
+    let selectedID = choice.identifier
+    XCTAssertTrue((44...56).contains(choice.frame.height))
+    edgeTap(choice)
+    XCTAssertTrue(choice.isSelected)
+    capture("simple-destination-selection")
+    app.buttons["save-calendar-destination"].tap()
+    XCTAssertTrue(app.navigationBars["Kalender"].waitForExistence(timeout: 5))
+    capture("simple-calendar-settings")
+    app.terminate()
+    app.launchArguments = ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT"]
+    app.launch()
+    XCTAssertTrue(app.tabBars.buttons["Mehr"].waitForExistence(timeout: 25))
+    app.tabBars.buttons["Mehr"].tap()
+    app.buttons["Kalender"].tap()
+    edgeTap(app.buttons["calendar-destination"])
+    XCTAssertTrue(app.buttons[selectedID].waitForExistence(timeout: 8))
+    XCTAssertTrue(app.buttons[selectedID].isSelected)
+    let alternative = choices.allElementsBoundByIndex.first { !$0.isSelected }!
+    edgeTap(alternative)
+    app.navigationBars["Speicherziel"].buttons.firstMatch.tap()
+    edgeTap(app.buttons["calendar-destination"])
+    XCTAssertTrue(app.buttons[selectedID].isSelected)
+    capture("simple-destination-after-restart")
+  }
+  func testTracingActionsAndDiagnosticsAreConsistent() throws {
+    for dark in [false, true] {
+      launch(dark: dark)
+      let mode = dark ? "dark" : "light"
+      app.tabBars.buttons["Mehr"].tap()
+      show(app.buttons["open-tracing"])
+      app.buttons["open-tracing"].tap()
+      let photos = app.buttons["trace-photos"]
+      let files = app.buttons["trace-files"]
+      XCTAssertTrue(photos.waitForExistence(timeout: 5))
+      XCTAssertEqual(photos.frame.height, files.frame.height, accuracy: 1)
+      XCTAssertTrue((44...56).contains(photos.frame.height))
+      XCTAssertEqual(
+        photos.staticTexts.firstMatch.frame.minX, files.staticTexts.firstMatch.frame.minX,
+        accuracy: 1)
+      capture("simple-tracing-\(mode)")
+      for button in [photos, files] {
+        edgeTap(button)
+        XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 15))
+        app.buttons["Abbrechen"].tap()
+      }
+      app.navigationBars["Tracing"].buttons.firstMatch.tap()
+      show(app.buttons["Diagnose"])
+      app.buttons["Diagnose"].tap()
+      XCTAssertTrue(
+        app.staticTexts["Gesprächsmodell, Apple Intelligence"].waitForExistence(timeout: 5))
+      XCTAssertEqual(app.staticTexts.matching(identifier: "Gesprächsmodell").count, 1)
+      XCTAssertFalse(app.buttons["info-Gesprächsmodell"].exists)
+      capture("simple-diagnostics-\(mode)")
+      app.terminate()
+    }
   }
   func testTracingShowsRealEvidenceAndLeavesArchiveUnchanged() {
     launch()

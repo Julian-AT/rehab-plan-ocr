@@ -221,8 +221,9 @@ private struct VoiceDetailsView: View {
   var body: some View {
     Form {
       Section("Nachricht") {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
           TextField("Anliegen", text: $message, axis: .vertical).lineLimit(1...4)
+            .frame(minHeight: 44)
             .accessibilityIdentifier("voice-message")
           Button {
             let text = message
@@ -230,7 +231,7 @@ private struct VoiceDetailsView: View {
             Task { await model.submitText(text) }
           } label: {
             Image(systemName: "arrow.up.circle.fill").font(.title2).foregroundStyle(AppPalette.tint)
-              .frame(width: 44, height: 44).contentShape(.rect)
+              .frame(minWidth: 44, minHeight: 44).contentShape(.rect)
           }
           .accessibilityLabel("Senden").buttonStyle(.plain)
           .disabled(

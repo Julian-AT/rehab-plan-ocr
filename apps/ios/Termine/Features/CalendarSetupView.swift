@@ -20,17 +20,8 @@ struct CalendarSetupView: View {
   private var content: some View {
     Form {
       Section {
-        Text(
-          planID == nil
-            ? "Neue Termine speichern in" : "Dieser Plan erhält genau einen Zielkalender."
-        ).font(.headline)
-        Button("Kalenderzugriff erlauben") { Task { await load(requestAccess: true) } }.disabled(
-          busy)
-        Button("Laßnitzhöhe-Kalender verwenden") { Task { await dedicated() } }.disabled(busy)
-      }
-      Section("Kalender auswählen") {
         ForEach(
-          destinations.sorted { a, b in
+          destinations.filter(\.writable).sorted { a, b in
             let x = recent.firstIndex(of: a.id) ?? Int.max
             let y = recent.firstIndex(of: b.id) ?? Int.max
             return x == y ? (a.title, a.source, a.id) < (b.title, b.source, b.id) : x < y
@@ -40,31 +31,34 @@ struct CalendarSetupView: View {
             calendarID = calendar.id
           } label: {
             CalendarChoiceRow(calendar: calendar, selected: calendarID == calendar.id)
-          }.buttonStyle(.plain).disabled(!calendar.writable || busy)
+          }.buttonStyle(.plain).disabled(busy)
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .accessibilityIdentifier("destination-\(calendar.id)")
         }
       }
       if planID != nil { Toggle("Für neue Pläne merken", isOn: $remember) }
-      AppSectionHeader(
-        title: "Speicherziel",
-        help:
-          "Ein neuer Standard verschiebt keine bestehenden Termine. Die Anzeigeauswahl wird getrennt eingestellt."
-      )
       if let error { Text(error).foregroundStyle(AppPalette.destructive) }
-      if EKEventStore.authorizationStatus(for: .event) == .denied {
+      if EKEventStore.authorizationStatus(for: .event) == .notDetermined
+        || EKEventStore.authorizationStatus(for: .event) == .writeOnly
+      {
+        AppFormAction(title: "Kalenderzugriff erlauben", systemImage: "calendar", busy: busy) {
+          Task { await load(requestAccess: true) }
+        }
+      } else if EKEventStore.authorizationStatus(for: .event) == .denied {
         Link(
           "Zugriff in Einstellungen erlauben",
           destination: URL(string: UIApplication.openSettingsURLString)!)
+      } else if !busy && destinations.allSatisfy({ !$0.writable }) {
+        Text("Kein beschreibbarer Kalender verfügbar.").foregroundStyle(AppPalette.secondaryText)
       }
       if busy { ProcessingRow(text: "Kalender laden …") }
-      Button {
-        Task { await save() }
-      } label: {
-        Text("Diesen Kalender verwenden").frame(maxWidth: .infinity)
-      }
-      .buttonStyle(AppPrimaryButtonStyle()).disabled(
-        busy || !destinations.contains { $0.id == calendarID && $0.writable })
     }.pageTitle("Speicherziel")
       .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Fertig") { Task { await save() } }
+            .disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
+            .accessibilityIdentifier("save-calendar-destination")
+        }
         if !embedded {
           ToolbarItem(placement: .cancellationAction) {
             Button("Abbrechen") { dismiss() }.disabled(busy)
@@ -93,16 +87,6 @@ struct CalendarSetupView: View {
         CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")
       ).calendars
       error = nil
-    } catch { self.error = userMessage(error) }
-  }
-  private func dedicated() async {
-    do {
-      let response = try JSONDecoder().decode(
-        CalendarDestinations.self,
-        from: await NativeBridge.request("calendars", ["dedicated": true]))
-      await load(requestAccess: false)
-      if let id = response.dedicated_id { calendarID = id }
-      if let message = response.setup_error { error = message }
     } catch { self.error = userMessage(error) }
   }
   private func save() async {
@@ -139,10 +123,11 @@ struct CalendarChoiceRow: View {
       if selected {
         Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint).accessibilityHidden(true)
       }
-    }.frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect).accessibilityElement(
-      children: .combine
-    ).accessibilityAddTraits(
-      selected ? [.isSelected] : [])
+    }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(.rect)
+      .accessibilityElement(
+        children: .combine
+      ).accessibilityAddTraits(
+        selected ? [.isSelected] : [])
   }
 }
 struct CalendarPreferencesView: View {
@@ -161,14 +146,11 @@ struct CalendarPreferencesView: View {
           ) {
             CalendarChoiceRow(calendar: calendar, selected: false)
           }
-          .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+          .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
         }
         if destinations.isEmpty { Button("Kalenderzugriff erlauben") { Task { await load() } } }
       } header: {
-        AppSectionHeader(
-          title: "Anzeigen und vorlesen",
-          help:
-            "Importierte Termine bleiben sichtbar. Weitere Kalender können hier ausgewählt werden.")
+        Text("Anzeigen und vorlesen")
       }
       if let preferences = store.value {
         let missing = preferences.displayCalendarIds.filter { id in
@@ -183,21 +165,25 @@ struct CalendarPreferencesView: View {
         }
       }
       Section {
-        LabeledContent(
-          "Speicherziel",
-          value: destinations.first { $0.id == store.value?.calendarId }.map {
-            "\($0.title) · \($0.source)"
-          } ?? "Noch nicht ausgewählt")
-        NavigationLink("Speicherziel ändern") { CalendarSetupView(core: core, embedded: true) }
+        NavigationLink {
+          CalendarSetupView(core: core, embedded: true)
+        } label: {
+          LabeledContent(
+            "Speicherziel",
+            value: destinations.first { $0.id == store.value?.calendarId }?.title
+              ?? "Auswählen"
+          )
+          .frame(minHeight: 44).contentShape(.rect)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        .accessibilityIdentifier("calendar-destination")
         if let id = store.value?.calendarId, !id.isEmpty,
           store.value?.displayCalendarIds.contains(id) == false
         {
-          Button("Auch anzeigen") { select(id, true) }
+          AppFormAction(title: "Auch anzeigen") { select(id, true) }
         }
       } header: {
-        AppSectionHeader(
-          title: "Neue Termine",
-          help: "Ein neues Speicherziel verschiebt keine bestehenden Termine.")
+        Text("Neue Termine")
       }
       SettingsSaveStatus()
       if let error { Section { Text(error).foregroundStyle(AppPalette.destructive) } }
