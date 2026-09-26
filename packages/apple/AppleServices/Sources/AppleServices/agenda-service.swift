@@ -587,27 +587,25 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     // use the same bounded read as the agenda, including selected external events.
     let start = Calendar.current.startOfDay(for: now)
     let end = Calendar.current.date(byAdding: .day, value: 90, to: start)!
-    let query = try EventEditingService(agenda: self).query([
-      "calendar_ids": state.displayCalendarIDs ?? [],
-      "records": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state.records)),
-      "start_utc": iso.string(from: start), "end_utc": iso.string(from: end),
-    ])
-    let visible: [AgendaEvent] = (query["events"] as? [[String: Any]] ?? []).compactMap { event in
-      guard let values = event["values"] as? [String: Any],
-        let rawID = event["id"] as? String,
-        let from = values["start_utc"] as? String, let to = values["end_utc"] as? String,
-        let start = iso.date(from: from), let end = iso.date(from: to)
+    let query = try EventEditingService(agenda: self).query(
+      NativeCalendarQuery(
+        calendarIDs: state.displayCalendarIDs ?? [], startUTC: iso.string(from: start),
+        endUTC: iso.string(from: end), timezone: TimeZone.current.identifier,
+        selectionRevision: 0, records: state.records.map(NativeCalendarRecord.init)))
+    let visible: [AgendaEvent] = query.events.compactMap { event in
+      guard let start = iso.date(from: event.values.startUTC),
+        let end = iso.date(from: event.values.endUTC)
       else { return nil }
-      let ownedID = event["import_id"] as? String
+      let ownedID = event.importID
       let id =
-        ownedID ?? SHA256.hash(data: Data(rawID.utf8)).map { String(format: "%02x", $0) }.joined()
+        ownedID
+        ?? SHA256.hash(data: Data(event.id.utf8)).map { String(format: "%02x", $0) }.joined()
       return AgendaEvent(
         id: id, start: start.timeIntervalSince1970, end: end.timeIntervalSince1970,
-        timezone: values["timezone"] as? String ?? TimeZone.current.identifier,
-        title: values["title"] as? String ?? "Termin", room: values["location"] as? String ?? "",
+        timezone: event.values.timezone, title: event.values.title, room: event.values.location,
         owned: ownedID != nil)
     }
-    let visibleUnavailable = !(query["unavailable_calendar_ids"] as? [String] ?? []).isEmpty
+    let visibleUnavailable = !query.unavailableCalendarIDs.isEmpty
     snapshot = AgendaSnapshot(
       updatedAt: now.timeIntervalSince1970,
       access: visibleUnavailable ? "unavailable" : visible.isEmpty ? "empty" : "available",

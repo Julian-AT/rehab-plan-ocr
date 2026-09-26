@@ -192,7 +192,18 @@ pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -
         .into_iter()
         .filter(|r| r.status == "saved" && r.external_id.is_some())
         .collect();
-    let mut result=native(&platform,"queryEvents",json!({"calendar_ids":selected,"records":records,"start_utc":args["start_utc"],"end_utc":args["end_utc"],"timezone":scope.timezone,"selection_revision":scope.revision})).await?;
+    let mut result = super::calendar_reads::query(
+        &platform,
+        super::calendar_reads::Query {
+            calendar_ids: selected.clone(),
+            records,
+            start_utc: required(&args, "start_utc")?.into(),
+            end_utc: required(&args, "end_utc")?.into(),
+            timezone: scope.timezone.clone(),
+            selection_revision: scope.revision,
+        },
+    )
+    .await?;
     if AgendaScope::current(state)? != scope {
         return Err("Kalenderauswahl wurde während des Ladens geändert. Erneut laden.".into());
     }
@@ -249,7 +260,7 @@ async fn preview(
         if supplied["calendar_id"] != calendar {
             return Err("Kalenderzuordnung geändert.".into());
         }
-        let current = native(&platform, "getEvent", json!({"event":supplied})).await?;
+        let current = super::calendar_reads::resolve(&platform, supplied).await?;
         if current["event"].is_null() {
             return Err("Termin nicht verfügbar. Kalender neu laden.".into());
         }
@@ -368,7 +379,7 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
     .await?;
     if let Some(before) = &proposal.before {
         require_selected_event(state, &proposal.calendar_id, before)?;
-        let current = native(&platform, "getEvent", json!({"event":before})).await?;
+        let current = super::calendar_reads::resolve(&platform, before).await?;
         if current["event"] != *before {
             return Err(
                 "Termin wurde geändert. Neue Vorschau und Bestätigung erforderlich.".into(),
@@ -454,7 +465,7 @@ async fn undo(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> Res
         _ => return Err("Ungültiger Verlaufseintrag.".into()),
     };
     if kind != "create" {
-        let current = native(&platform, "getEvent", json!({"event":event})).await?;
+        let current = super::calendar_reads::resolve(&platform, &event).await?;
         if current["event"] != event {
             return Err("Spätere Kalenderänderung geschützt. Rückgängig nicht möglich.".into());
         }

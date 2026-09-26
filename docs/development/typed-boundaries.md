@@ -19,6 +19,17 @@
 - `PreferencesSaveResult` trennt dauerhaft gespeicherte Einstellungen von
   nachgelagerten Wartungswarnungen. Agenda und Widgets erhalten dabei dieselbe
   explizite Kalenderauswahl; auch eine leere Auswahl bleibt leer.
+- Kalender-Leseeffekte verwenden `Platform.query_calendar` und
+  `resolve_calendar_event` über typisierte `AppleHost`-Callbacks bis zu
+  `NativeServices`. Der Query enthält Kalender-IDs, UTC-Grenzen, Zeitzone,
+  Auswahlrevision und eigene Terminreferenzen; die Antwort enthält Termine und
+  nicht lesbare Kalender/Vorkommen. Die genaue Serieninstanz wird durch
+  Kalenderkennung, externe Kennung, Vorkommenszeit und erwarteten Beginn
+  aufgelöst. Die Auswahlprüfung vor und nach dem Lesen bleibt im Core.
+- Widgets verwenden denselben typisierten Query auf ihrer seriellen
+  Kalenderqueue. Ihre Abfrage bindet sich synchron an den lokalen Auswahlstand
+  (lokale Revision 0); die asynchrone App-Abfrage trägt die dauerhafte
+  Auswahlrevision und verwirft überholte Antworten.
 
 ## Wiederanlauf nach bestätigten Kalenderänderungen
 
@@ -47,14 +58,23 @@ behält das Journal für einen weiteren Versuch.
 - Der JSON-Fotoadapter bleibt für bestehende Plattformadapter und Test-Hosts
   erhalten. Er verwendet denselben Decoder und dieselben Grenzen wie der
   Binärpfad; die native App umgeht ihn.
+- JSON-Lesecallbacks bleiben nur als Standardadapter für ältere `Platform`-Hosts
+  sowie als Kompatibilitätseingang von `NativeServices.perform`. Der native
+  `HostBridge` registriert `queryEvents`/`getEvent` nicht mehr als Stringeffekte.
+  Komplexe EventKit-Metadaten und ihr vorhandener Fingerprint behalten das
+  Journalformat: Alarme, Serien, Teilnehmer und Notizen werden nicht neu
+  interpretiert. In der typisierten Leseantwort bleibt nur dieses opake
+  Metadatenfeld als JSON erhalten.
 
 ## Weiterhin offen
 
 `Platform.call`, `AppleHost.calendar_event_call`,
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
-transportieren aktive Kalenderbefehle weiterhin als String/JSON. Dazu gehören
-Abfrage, Einzelterminauflösung, manuelle Vorschau/Bestätigung, Reparatur,
-Wiederherstellung und Agenda-Abgleich. Diese Pfade sind **noch keine vollständig
+transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
+gehören manuelle Vorschau/Bestätigung, Kalenderlisten, Reparatur,
+Wiederherstellung und Agenda-Abgleich. Die UI benutzt außerdem weiterhin den
+JSON-Aufrufadapter für Abfragen; darunter läuft der Plattformleseeffekt bereits
+typisiert. Diese Pfade sind **noch keine vollständig
 typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
@@ -76,6 +96,9 @@ migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
 - Rust-Integrationstest `calendar_bookkeeping`: Speicherfehler nach bestätigten
   Effekten, echtes Schließen/Öffnen der Datenbank, atomare Anlage vor dem ersten
   Effekt, geänderte beziehungsweise abgelaufene Zeilen und partielles Undo.
+- `make test-calendar-read-contracts` und Rust `calendar_reads`: Metadaten- und
+  Identitätserhalt, typisierte Abwesenheit/Fehler, Auswahlrevision, leere Auswahl
+  und Zurückweisung von Antworten außerhalb der aktuellen Auswahl.
 
 Die Decoderprüfungen sind Host-Prüfungen. Sie belegen keine gemessene
 Leistungsverbesserung und ersetzen weder Geräteprüfung noch OCR-Produktabnahme.

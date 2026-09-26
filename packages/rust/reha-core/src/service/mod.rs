@@ -50,6 +50,26 @@ pub struct Proposal {
 /// shared service commands and test hosts retain JSON payloads at this boundary.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
+    /// Compatibility defaults serve older JSON hosts. Native adapters override
+    /// both methods and never serialize a whole read payload across the FFI.
+    fn query_calendar(
+        &self,
+        request: calendar_reads::Query,
+    ) -> Response<calendar_reads::QueryResult> {
+        let args = serde_json::to_value(request).map_err(calendar_reads::invalid_response)?;
+        serde_json::from_value(self.call("queryEvents", args)?)
+            .map_err(calendar_reads::invalid_response)
+    }
+    fn resolve_calendar_event(
+        &self,
+        reference: calendar_reads::Reference,
+    ) -> Response<Option<calendar_reads::Event>> {
+        let response = self.call("getEvent", serde_json::json!({"event":reference.legacy()}))?;
+        let event = response
+            .get("event")
+            .ok_or_else(|| calendar_reads::invalid_response("Terminstatus fehlt."))?;
+        serde_json::from_value(event.clone()).map_err(calendar_reads::invalid_response)
+    }
     /// Native adapters override this binary boundary. The default only preserves
     /// compatibility for JSON platform adapters and existing test hosts.
     fn decode_photo(&self, bytes: &[u8]) -> Response<Vec<u8>> {
@@ -103,6 +123,7 @@ impl Application {
 }
 pub mod agenda;
 pub mod calendar;
+pub mod calendar_reads;
 mod calendar_repair;
 pub mod inference;
 pub mod scan;

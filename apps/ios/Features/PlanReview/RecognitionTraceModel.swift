@@ -176,6 +176,10 @@ private final class RecognitionTraceHost: AppleHost, @unchecked Sendable {
     return try bridge.calendarEventCall(command: command, arguments: arguments)
   }
   func snapshot(records: [ImportRecord]) throws -> LiveCalendar { throw forbidden }
+  func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult { throw forbidden }
+  func resolveCalendarEvent(reference: CalendarReadReference) throws -> CalendarReadEvent? {
+    throw forbidden
+  }
   func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
     throw forbidden
   }

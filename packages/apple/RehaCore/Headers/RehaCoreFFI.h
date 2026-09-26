@@ -259,7 +259,7 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod1)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD2
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD2
-typedef void (*UniffiCallbackInterfaceAppleHostMethod2)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod2)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -273,21 +273,35 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod3)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD4
-typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod4)(uint64_t, RustBuffer, int8_t, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD5
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD5
-typedef void (*UniffiCallbackInterfaceAppleHostMethod5)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod5)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD6
-typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod6)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD7
+typedef void (*UniffiCallbackInterfaceAppleHostMethod7)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD8
+typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -298,12 +312,14 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceFree _Nonnull uniffiFree;
     UniffiCallbackInterfaceClone _Nonnull uniffiClone;
     UniffiCallbackInterfaceAppleHostMethod0 _Nonnull calendarEventCall;
-    UniffiCallbackInterfaceAppleHostMethod1 _Nonnull snapshot;
-    UniffiCallbackInterfaceAppleHostMethod2 _Nonnull apply;
-    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull decodePhoto;
-    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull syncAgenda;
-    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod1 _Nonnull queryCalendar;
+    UniffiCallbackInterfaceAppleHostMethod2 _Nonnull resolveCalendarEvent;
+    UniffiCallbackInterfaceAppleHostMethod3 _Nonnull snapshot;
+    UniffiCallbackInterfaceAppleHostMethod4 _Nonnull apply;
+    UniffiCallbackInterfaceAppleHostMethod5 _Nonnull decodePhoto;
+    UniffiCallbackInterfaceAppleHostMethod6 _Nonnull syncAgenda;
+    UniffiCallbackInterfaceAppleHostMethod7 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod8 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -1178,6 +1194,18 @@ uint16_t uniffi_reha_ffi_checksum_constructor_nativespeech_new(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_EVENT_CALL
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_CALENDAR_EVENT_CALL
 uint16_t uniffi_reha_ffi_checksum_method_applehost_calendar_event_call(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_QUERY_CALENDAR
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_QUERY_CALENDAR
+uint16_t uniffi_reha_ffi_checksum_method_applehost_query_calendar(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_CALENDAR_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_RESOLVE_CALENDAR_EVENT
+uint16_t uniffi_reha_ffi_checksum_method_applehost_resolve_calendar_event(void
     
 );
 #endif

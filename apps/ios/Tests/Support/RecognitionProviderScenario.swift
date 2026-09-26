@@ -29,6 +29,10 @@
     }
     func decodePhoto(bytes: Data) throws -> Data { try native.decodePhoto(bytes: bytes) }
     func snapshot(records: [ImportRecord]) throws -> LiveCalendar { throw denied() }
+    func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult { throw denied() }
+    func resolveCalendarEvent(reference: CalendarReadReference) throws -> CalendarReadEvent? {
+      throw denied()
+    }
     func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
       throw denied()
     }

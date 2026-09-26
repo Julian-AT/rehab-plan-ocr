@@ -37,6 +37,42 @@ struct ShareArgs: Decodable {
 /// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
 public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
+  public func queryCalendar(
+    _ request: NativeCalendarQuery,
+    completion: @escaping @Sendable (Result<NativeCalendarReadResult, Error>) -> Void
+  ) {
+    read { done in
+      calendarReads.readQuery(request, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
+  public func resolveCalendarEvent(
+    _ reference: NativeCalendarReference,
+    completion: @escaping @Sendable (Result<NativeCalendarEvent?, Error>) -> Void
+  ) {
+    read { done in
+      calendarReads.readEvent(reference, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
+  private func read<Value: Sendable>(
+    start: (@escaping @Sendable (Result<Value, Error>) -> Void) -> Void,
+    completion: @escaping @Sendable (Result<Value, Error>) -> Void
+  ) {
+    let correlation = UUID().uuidString
+    let began = ContinuousClock.now
+    LocalDiagnostics.shared.record(.calendarRead, .started, correlation: correlation)
+    start { result in
+      let duration = began.duration(to: .now).components
+      let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
+      LocalDiagnostics.shared.record(
+        .calendarRead, outcome, correlation: correlation,
+        durationMs: Int(duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000))
+      completion(result)
+    }
+  }
   public func perform(
     _ command: String, arguments: Data,
     completion: @escaping @Sendable (Result<Data, Error>) -> Void
@@ -113,11 +149,15 @@ public final class NativeServices: @unchecked Sendable {
     } catch { request.reject(error) }
   }
   private let agendaService: AgendaService
+  private let calendarReads: EventEditingService
   private var store: EKEventStore { agendaService.store }
   private let dedicatedCalendar = DedicatedCalendar()
   private var calendarQueue: DispatchQueue { agendaService.queue }
   private let iso = ISO8601DateFormatter()
-  init(agenda: AgendaService = .shared) { agendaService = agenda }
+  init(agenda: AgendaService = .shared) {
+    agendaService = agenda
+    calendarReads = EventEditingService(agenda: agenda)
+  }
   public func start() {
     self.agendaService.start()
     Task { @MainActor in NativePresentation.shared.start() }

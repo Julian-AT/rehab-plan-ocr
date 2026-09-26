@@ -51,7 +51,8 @@ final class EventEditingService: @unchecked Sendable {
         switch command {
         case "inspectCalendarLinks": request.resolve(try self.inspectLinks(args))
         case "eventCalendars": request.resolve(["calendars": self.calendars()])
-        case "queryEvents": request.resolve(try self.query(args))
+        case "queryEvents":
+          request.resolve(try self.query(NativeCalendarQuery(legacy: args)).legacyValue)
         case "getEvent":
           request.resolve([
             "event": try self.find(args["event"] as? [String: Any] ?? [:]).map(self.snapshot)
@@ -132,15 +133,47 @@ final class EventEditingService: @unchecked Sendable {
     return ["access": "fullAccess", "calendars": calendars(), "results": results]
   }
 
-  func query(_ args: [String: Any]) throws -> [String: Any] {
-    guard let ids = args["calendar_ids"] as? [String],
-      let from = args["start_utc"] as? String, let to = args["end_utc"] as? String,
-      let start = iso.date(from: from), let end = iso.date(from: to), end > start,
-      end.timeIntervalSince(start) <= 367 * 86400
-    else { throw fail("Suchzeitraum fehlt.") }
-
-    let selectedIDs = Set(ids)
-    let calendars = ids.compactMap { store.calendar(withIdentifier: $0) }
+  func readQuery(
+    _ request: NativeCalendarQuery,
+    completion: @escaping @Sendable (Result<NativeCalendarReadResult, Error>) -> Void
+  ) {
+    queue.async {
+      do {
+        try self.requireReadAccess()
+        let result = try self.query(request)
+        try self.requireReadAccess()
+        completion(.success(result))
+      } catch { completion(.failure(error)) }
+    }
+  }
+  func readEvent(
+    _ reference: NativeCalendarReference,
+    completion: @escaping @Sendable (Result<NativeCalendarEvent?, Error>) -> Void
+  ) {
+    queue.async {
+      do {
+        try self.requireReadAccess()
+        let event = try self.find(reference).map {
+          try NativeCalendarEvent(snapshot: self.snapshot($0))
+        }
+        try self.requireReadAccess()
+        completion(.success(event))
+      } catch { completion(.failure(error)) }
+    }
+  }
+  private func requireReadAccess() throws {
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+      throw NativeServiceError.permissionDenied
+    }
+  }
+  func query(_ request: NativeCalendarQuery) throws -> NativeCalendarReadResult {
+    guard let start = iso.date(from: request.startUTC), let end = iso.date(from: request.endUTC),
+      end > start, end.timeIntervalSince(start) <= 366 * 86400,
+      TimeZone(identifier: request.timezone) != nil, request.calendarIDs.count <= 100,
+      request.calendarIDs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 1024 })
+    else { throw NativeServiceError.invalidInput("Kalenderabfrage ungültig.") }
+    let selectedIDs = Set(request.calendarIDs)
+    let calendars = request.calendarIDs.compactMap { store.calendar(withIdentifier: $0) }
     var unavailable = selectedIDs.subtracting(calendars.map(\.calendarIdentifier))
     var found =
       calendars.isEmpty
@@ -148,14 +181,9 @@ final class EventEditingService: @unchecked Sendable {
       : store.events(
         matching: store.predicateForEvents(withStart: start, end: end, calendars: calendars))
     var imports: [String: String] = [:]
-    var unavailableEvents: [[String: Any]] = []
-    for record in args["records"] as? [[String: Any]] ?? [] {
-      guard let external = record["external_id"] as? String, let id = record["id"] as? String else {
-        continue
-      }
-      _ = external
-      let owned = try JSONDecoder().decode(
-        OwnedRecord.self, from: JSONSerialization.data(withJSONObject: record))
+    var unavailableEvents: [NativeCalendarUnavailableEvent] = []
+    for record in request.records where record.externalID != nil {
+      let owned = record.ownedRecord
       let event: EKEvent
       switch agenda.lookup(owned) {
       case .found(let found): event = found
@@ -163,34 +191,29 @@ final class EventEditingService: @unchecked Sendable {
       case .unavailable:
         guard selectedIDs.contains(owned.calendar_id) else { continue }
         unavailable.insert(owned.calendar_id)
-        unavailableEvents.append([
-          "id": owned.id, "start_utc": owned.approved.start_utc,
-          "end_utc": owned.approved.end_utc,
-        ])
+        unavailableEvents.append(
+          NativeCalendarUnavailableEvent(
+            id: owned.id, startUTC: owned.approved.start_utc, endUTC: owned.approved.end_utc))
         continue
       }
       guard selectedIDs.contains(event.calendar.calendarIdentifier),
-        event.url?.absoluteString == "reha-calendar://event/\(id)", event.startDate < end,
-        event.endDate > start
+        event.url?.absoluteString == "reha-calendar://event/\(record.id)",
+        event.startDate < end, event.endDate > start
       else { continue }
-      imports[snapshot(event)["id"] as! String] = id
+      let value = try NativeCalendarEvent(snapshot: snapshot(event))
+      imports[value.id] = record.id
       found.append(event)
     }
-    var unique: [String: [String: Any]] = [:]
+    var unique: [String: NativeCalendarEvent] = [:]
     for event in found {
-      var value = snapshot(event)
-      let id = value["id"] as! String
-      if let importID = imports[id] { value["import_id"] = importID }
-      unique[id] = value
+      var value = try NativeCalendarEvent(snapshot: snapshot(event))
+      value.importID = imports[value.id]
+      unique[value.id] = value
     }
-    return [
-      "unavailable_calendar_ids": unavailable.sorted(),
-      "unavailable_events": unavailableEvents,
-      "events": unique.values.sorted {
-        (($0["values"] as? [String: Any])?["start_utc"] as? String ?? "")
-          < (($1["values"] as? [String: Any])?["start_utc"] as? String ?? "")
-      },
-    ]
+    return NativeCalendarReadResult(
+      events: unique.values.sorted {
+        $0.values.startUTC < $1.values.startUTC
+      }, unavailableCalendarIDs: unavailable.sorted(), unavailableEvents: unavailableEvents)
   }
   private func location(_ value: EKStructuredLocation?) -> Any {
     guard let value else { return NSNull() }
@@ -304,13 +327,16 @@ final class EventEditingService: @unchecked Sendable {
     ]
   }
   private func find(_ ref: [String: Any]) throws -> EKEvent? {
-    guard let calendarID = ref["calendar_id"] as? String,
-      let calendar = store.calendar(withIdentifier: calendarID),
-      let external = ref["external_id"] as? String, let occurrence = ref["occurrence"] as? String,
-      let date = iso.date(from: occurrence)
-    else { throw fail("Kalender oder Terminzuordnung fehlt.") }
-    let expectedStart =
-      ((ref["values"] as? [String: Any])?["start_utc"] as? String).flatMap(iso.date) ?? date
+    try find(NativeCalendarReference(legacy: ref))
+  }
+  private func find(_ reference: NativeCalendarReference) throws -> EKEvent? {
+    guard !reference.calendarID.isEmpty, !reference.externalID.isEmpty,
+      let calendar = store.calendar(withIdentifier: reference.calendarID),
+      let date = iso.date(from: reference.occurrence)
+    else { throw NativeServiceError.invalidInput("Kalender oder Terminzuordnung fehlt.") }
+    let external = reference.externalID
+    let occurrence = reference.occurrence
+    let expectedStart = iso.date(from: reference.expectedStartUTC) ?? date
     // For recurring instances event(withIdentifier:) may return the series master.
     // Resolve through a bounded predicate and require the exact occurrence.
     let candidates = store.events(

@@ -41,17 +41,23 @@ public enum NativeOperation: String, Sendable {
 /// thread. Completion state is owned by the lock; late replies are discarded.
 public enum NativeServiceCall {
   public typealias Completion = @Sendable (Result<Data, Error>) -> Void
-  private enum State { case waiting, completed(Result<Data, Error>), expired }
+  private enum State<Payload: Sendable> { case waiting, completed(Result<Payload, Error>), expired }
 
   public static func wait(
     for operation: NativeOperation, timeout: TimeInterval = 60,
     start: (@escaping Completion) -> Void
   ) throws -> Data {
+    try waitValue(for: operation, timeout: timeout, start: start)
+  }
+  public static func waitValue<Payload: Sendable>(
+    for operation: NativeOperation, timeout: TimeInterval = 60,
+    start: (@escaping @Sendable (Result<Payload, Error>) -> Void) -> Void
+  ) throws -> Payload {
     precondition(!Thread.isMainThread, "Native callbacks must not block the main thread")
     guard timeout.isFinite, timeout > 0 else {
       throw NativeServiceError.invalidInput("Zeitbudget ungültig.")
     }
-    let state = OSAllocatedUnfairLock<State>(initialState: .waiting)
+    let state = OSAllocatedUnfairLock<State<Payload>>(initialState: .waiting)
     let gate = DispatchSemaphore(value: 0)
     start { result in
       let accepted = state.withLock { state in
@@ -62,7 +68,7 @@ public enum NativeServiceCall {
       if accepted { gate.signal() }
     }
     _ = gate.wait(timeout: .now() + timeout)
-    let result: Result<Data, Error>? = state.withLock { state in
+    let result: Result<Payload, Error>? = state.withLock { state in
       if case .completed(let result) = state { return result }
       state = .expired
       return nil

@@ -3,7 +3,33 @@ import os
 
 final class TestHost: AppleHost, Sendable {
   let failure = OSAllocatedUnfairLock<AppError?>(initialState: nil)
+  func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult {
+    if let error = failure.withLock({ $0 }) { throw error }
+    precondition(request.calendarIds == ["selected"] && request.timezone == "Europe/Vienna")
+    precondition(request.selectionRevision > 0)
+    let event = CalendarReadEvent(
+      id: "stable-occurrence", externalId: "native",
+      calendarId: "selected", calendarTitle: "Therapie", source: "Local",
+      occurrence: "2026-09-18T08:00:00Z", recurring: true, systemOnly: true, writable: false,
+      values: CalendarReadValues(
+        title: "Termin", startUtc: "2026-09-18T08:00:00Z",
+        endUtc: "2026-09-18T09:00:00Z", timezone: "Europe/Vienna", location: "Raum 2",
+        reminderMinutes: nil),
+      metadataJson: #"{"notes":"Unverändert","alarms":[{"absolute":null}],"future":[1,true,null]}"#,
+      fingerprint: "original-fingerprint", importId: nil)
+    return CalendarReadResult(
+      events: [event], unavailableCalendarIds: ["selected"],
+      unavailableEvents: [
+        CalendarReadUnavailableEvent(
+          id: "missing", startUtc: "2026-09-18T10:00:00Z", endUtc: "2026-09-18T11:00:00Z")
+      ])
+  }
+  func resolveCalendarEvent(reference: CalendarReadReference) throws -> CalendarReadEvent? {
+    if let error = failure.withLock({ $0 }) { throw error }
+    return nil
+  }
   func calendarEventCall(command: String, arguments: String) throws -> String {
+    precondition(command != "queryEvents" && command != "getEvent", "Read used JSON callback")
     if let error = failure.withLock({ $0 }) { throw error }
     return "{}"
   }
@@ -67,6 +93,25 @@ final class TestHost: AppleHost, Sendable {
       root: root, models: "/unavailable-test-model", host: host)
     let restoredPreferences = try await preferencesReopened.preferences()
     precondition(restoredPreferences == preferences)
+    let queryArguments = #"{"start_utc":"2026-09-18T00:00:00Z","end_utc":"2026-09-19T00:00:00Z"}"#
+    let query = try await core.calendarRequest(
+      command: "queryCalendarEvents", arguments: queryArguments)
+    let response = try JSONSerialization.jsonObject(with: Data(query.utf8)) as! [String: Any]
+    let event = (response["events"] as! [[String: Any]])[0]
+    precondition(event["id"] as? String == "stable-occurrence" && event["import_id"] == nil)
+    precondition(event["fingerprint"] as? String == "original-fingerprint")
+    precondition((event["metadata"] as? [String: Any])?["notes"] as? String == "Unverändert")
+    precondition(
+      (response["unavailable_events"] as? [[String: Any]])?.first?["id"] as? String == "missing")
+    for expected in nativeFailures {
+      host.failure.withLock { $0 = expected }
+      do {
+        _ = try await core.calendarRequest(
+          command: "queryCalendarEvents", arguments: queryArguments)
+        preconditionFailure("Typed read failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
+    }
+    host.failure.withLock { $0 = nil }
     let history = try await core.history()
     precondition(history.scans.count == 1)
     let id = history.scans[0].id

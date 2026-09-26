@@ -1,4 +1,7 @@
-use crate::{records::*, runtime, AppError};
+use crate::{
+    records::*, runtime, AppError, CalendarReadEvent, CalendarReadQuery, CalendarReadReference,
+    CalendarReadResult,
+};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
     contracts as domain,
@@ -293,6 +296,11 @@ pub struct JobProgress {
 #[uniffi::export(callback_interface)]
 pub trait AppleHost: Send + Sync {
     fn calendar_event_call(&self, command: String, arguments: String) -> Result<String>;
+    fn query_calendar(&self, request: CalendarReadQuery) -> Result<CalendarReadResult>;
+    fn resolve_calendar_event(
+        &self,
+        reference: CalendarReadReference,
+    ) -> Result<Option<CalendarReadEvent>>;
     fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar>;
     fn apply(&self, operation: CalendarOperation, recovery_only: bool) -> Result<CalendarResult>;
     fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>>;
@@ -310,6 +318,24 @@ struct HostBridge {
     cancelled: Mutex<HashSet<String>>,
 }
 impl Platform for HostBridge {
+    fn query_calendar(
+        &self,
+        request: service::calendar_reads::Query,
+    ) -> service::Response<service::calendar_reads::QueryResult> {
+        self.host
+            .query_calendar(request.into())
+            .and_then(TryInto::try_into)
+            .map_err(platform_failure)
+    }
+    fn resolve_calendar_event(
+        &self,
+        reference: service::calendar_reads::Reference,
+    ) -> service::Response<Option<service::calendar_reads::Event>> {
+        self.host
+            .resolve_calendar_event(reference.into())
+            .and_then(|event| event.map(TryInto::try_into).transpose())
+            .map_err(platform_failure)
+    }
     fn decode_photo(&self, bytes: &[u8]) -> service::Response<Vec<u8>> {
         self.host
             .decode_photo(bytes.to_vec())
@@ -335,8 +361,6 @@ impl Platform for HostBridge {
             match command {
                 "calendarStatus"
                 | "eventCalendars"
-                | "queryEvents"
-                | "getEvent"
                 | "mutateEvent"
                 | "editSystemEvent"
                 | "resolveOwnedEvent"
@@ -1292,6 +1316,25 @@ mod host_routing_tests {
         response: Option<Value>,
     }
     impl AppleHost for Host {
+        fn query_calendar(&self, _: CalendarReadQuery) -> Result<CalendarReadResult> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(CalendarReadResult {
+                events: vec![],
+                unavailable_calendar_ids: vec![],
+                unavailable_events: vec![],
+            })
+        }
+        fn resolve_calendar_event(
+            &self,
+            _: CalendarReadReference,
+        ) -> Result<Option<CalendarReadEvent>> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(None)
+        }
         fn calendar_event_call(&self, command: String, arguments: String) -> Result<String> {
             if let Some(calls) = &self.calls {
                 calls
@@ -1365,8 +1408,28 @@ mod host_routing_tests {
                 progress: Mutex::new(HashMap::new()),
                 cancelled: Mutex::new(HashSet::new()),
             };
-            let actual = bridge.call("queryEvents", json!({})).unwrap_err();
+            let actual = bridge
+                .query_calendar(service::calendar_reads::Query {
+                    calendar_ids: vec![],
+                    start_utc: "2026-09-18T00:00:00Z".into(),
+                    end_utc: "2026-09-19T00:00:00Z".into(),
+                    timezone: "Europe/Vienna".into(),
+                    selection_revision: 2,
+                    records: vec![],
+                })
+                .unwrap_err();
             assert_eq!(actual, expected);
+            assert_eq!(
+                bridge
+                    .resolve_calendar_event(service::calendar_reads::Reference {
+                        calendar_id: "selected".into(),
+                        external_id: "native".into(),
+                        occurrence: "2026-09-18T08:00:00Z".into(),
+                        expected_start_utc: "2026-09-18T08:00:00Z".into(),
+                    })
+                    .unwrap_err(),
+                expected
+            );
             assert_eq!(platform_failure(failure(actual.clone())), expected);
             // Journal/maintenance projections keep their original string schema.
             assert_eq!(
