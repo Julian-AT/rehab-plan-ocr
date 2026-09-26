@@ -206,10 +206,10 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     }
     .onReceive(
       NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereResetNotification)
-    ) { _ in voice.cancelSession() }
+    ) { _ in voice.cancelSession(reason: "media-services-reset") }
     .onReceive(
       NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereLostNotification)
-    ) { _ in voice.cancelSession() }
+    ) { _ in voice.cancelSession(reason: "media-services-lost") }
     .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) {
       notification in
       if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
