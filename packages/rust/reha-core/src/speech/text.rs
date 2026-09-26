@@ -93,6 +93,8 @@ fn room_number(value: &str) -> String {
     }
 }
 pub fn normalize(text: &str) -> String {
+    // Numeric captures use ASCII digits because Rust's integer parser does.
+    // Other numeral scripts remain written as supplied instead of panicking.
     let mut text = text
         .replace(['\n', '\r', '\t', '\u{a0}'], " ")
         .replace(['“', '”', '„', '"'], " ")
@@ -122,10 +124,10 @@ pub fn normalize(text: &str) -> String {
         },
     );
     // Range punctuation only between numbers; never rewrite names or prose dashes.
-    text = replace(&text, r"(\d)(?:\s*Uhr)?\s*[-–—]\s*(\d)", |c| {
+    text = replace(&text, r"([0-9])(?:\s*Uhr)?\s*[-–—]\s*([0-9])", |c| {
         format!("{} bis {}", &c[1], &c[2])
     });
-    text = replace(&text, r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b", |c| {
+    text = replace(&text, r"\b([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{4})\b", |c| {
         let day: u32 = c[1].parse().unwrap();
         let month: u32 = c[2].parse().unwrap();
         let year: u32 = c[3].parse().unwrap();
@@ -155,7 +157,7 @@ pub fn normalize(text: &str) -> String {
     });
     text = replace(
         &text,
-        r"\b(\d{1,2})\.\s*(Januar|Jänner|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)(?:\s+(\d{4}))?",
+        r"\b([0-9]{1,2})\.\s*(Januar|Jänner|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)(?:\s+([0-9]{4}))?",
         |c| {
             let day: u32 = c[1].parse().unwrap();
             if !(1..=31).contains(&day) {
@@ -171,26 +173,30 @@ pub fn normalize(text: &str) -> String {
             )
         },
     );
-    text = replace(&text, r"\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*Uhr)?\b", |c| {
-        let hour: u32 = c[1].parse().unwrap();
-        let minute: u32 = c[2].parse().unwrap();
-        format!(
-            "{} Uhr{}",
-            if hour == 1 {
-                "ein".into()
-            } else {
-                number(hour)
-            },
-            if minute == 0 {
-                String::new()
-            } else {
-                format!(" {}", number(minute))
-            }
-        )
-    });
     text = replace(
         &text,
-        r"\b([01]?\d|2[0-3])\s+Uhr(?:\s+([0-5]?\d)\b)?",
+        r"\b([01]?[0-9]|2[0-3]):([0-5][0-9])(?:\s*Uhr)?\b",
+        |c| {
+            let hour: u32 = c[1].parse().unwrap();
+            let minute: u32 = c[2].parse().unwrap();
+            format!(
+                "{} Uhr{}",
+                if hour == 1 {
+                    "ein".into()
+                } else {
+                    number(hour)
+                },
+                if minute == 0 {
+                    String::new()
+                } else {
+                    format!(" {}", number(minute))
+                }
+            )
+        },
+    );
+    text = replace(
+        &text,
+        r"\b([01]?[0-9]|2[0-3])\s+Uhr(?:\s+([0-5]?[0-9])\b)?",
         |c| {
             let hour = c[1].parse().unwrap();
             format!(
@@ -209,7 +215,7 @@ pub fn normalize(text: &str) -> String {
     );
     text = replace(
         &text,
-        r"(?i)\b(Raum|Zimmer)\s+(\d{1,3})[.](\d{1,3})\b",
+        r"(?i)\b(Raum|Zimmer)\s+([0-9]{1,3})[.]([0-9]{1,3})\b",
         |c| {
             format!(
                 "{} {} Punkt {}",
@@ -221,7 +227,7 @@ pub fn normalize(text: &str) -> String {
     );
     text = replace(
         &text,
-        r"(?i)\b(Raum|Zimmer)\s+(\d{1,4})([A-Za-z]?)\b",
+        r"(?i)\b(Raum|Zimmer)\s+([0-9]{1,4})([A-Za-z]?)\b",
         |c| {
             format!(
                 "{} {}{}",
@@ -235,7 +241,7 @@ pub fn normalize(text: &str) -> String {
             )
         },
     );
-    text = replace(&text, r"\b(\d+),(\d+)\b", |c| {
+    text = replace(&text, r"\b([0-9]+),([0-9]+)\b", |c| {
         format!(
             "{} Komma {}",
             &c[1],
@@ -265,7 +271,7 @@ pub fn normalize(text: &str) -> String {
     }
     text = replace(
         &text,
-        r"\b(\d{1,4}) bis (\d{1,4}) (Minuten|Stunden)\b",
+        r"\b([0-9]{1,4}) bis ([0-9]{1,4}) (Minuten|Stunden)\b",
         |c| {
             format!(
                 "{} bis {} {}",
@@ -275,7 +281,7 @@ pub fn normalize(text: &str) -> String {
             )
         },
     );
-    text = replace(&text, r"\b(\d{1,4})\s+(Minuten|Stunden)\b", |c| {
+    text = replace(&text, r"\b([0-9]{1,4})\s+(Minuten|Stunden)\b", |c| {
         format!("{} {}", number(c[1].parse().unwrap()), &c[2])
     });
     text.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -356,6 +362,23 @@ mod tests {
             normalize("29.02.2024"),
             "neunundzwanzigsten Februar zweitausendvierundzwanzig"
         );
+    }
+    #[test]
+    fn unsupported_unicode_digits_remain_unchanged() {
+        for input in [
+            "Raum ١",
+            "Zimmer ００７",
+            "١٤.٠٩.٢٠٢٦",
+            "١٤. September ٢٠٢٦",
+            "０９:１５ Uhr",
+            "٩ Uhr ١٥",
+            "Raum ٢.٠١٤",
+            "1,٠٥",
+            "٢0 Minuten",
+            "١-٢ Minuten",
+        ] {
+            assert_eq!(normalize(input), input, "{input}");
+        }
     }
     #[test]
     fn umlauts_and_proper_names_survive() {
