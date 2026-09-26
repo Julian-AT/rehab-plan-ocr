@@ -8,9 +8,12 @@ extension PlanModel {
       core: core, id: id,
       calendarAccess: { EKEventStore.authorizationStatus(for: .event) == .fullAccess },
       calendars: {
-        try JSONDecoder().decode(
-          CalendarDestinations.self,
-          from: await NativeBridge.request("calendars", ["dedicated": false]))
+        try await CalendarDestinations(
+          calendars: core.eventCalendars().filter(\.writable).map {
+            CalendarDestinations.Destination(
+              id: $0.id, title: $0.title, source: $0.source, writable: $0.writable,
+              color_components: $0.colorComponents)
+          })
       })
   }
 }

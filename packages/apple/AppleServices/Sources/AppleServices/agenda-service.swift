@@ -34,7 +34,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private let center = UNUserNotificationCenter.current()
   private let notifications: any NotificationAdapter
   private var notificationState = NotificationSnapshot(
-    authorization: "notDetermined", pending: [], delivered: [])
+    authorization: .notDetermined, pending: [], delivered: [])
   private var pendingRequests: [String: UNNotificationRequest] = [:]
   private var additions: [String: UNNotificationRequest] = [:]
   private var reservations: [String: UUID] = [:]
@@ -46,7 +46,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private var confirming = false
   private var cycleID = UUID().uuidString
   private var unresolvedBatchAdds: [String: String] = [:]
-  private var completions: [(Result<[String: Any], Error>) -> Void] = []
+  private var completions: [(Result<NativeAgendaStatus, Error>) -> Void] = []
   private var state = AgendaPrivateState()
   private var privateURL: URL?
   private var started = false
@@ -158,7 +158,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   private func pending() throws -> [UNNotificationRequest] { Array(pendingRequests.values) }
   private func authorized() throws -> Bool {
-    ["authorized", "provisional"].contains(notificationState.authorization)
+    notificationState.authorization.allowsReminders
   }
   private func reserve(_ request: UNNotificationRequest) throws {
     if pendingRequests[request.identifier] == nil && additions[request.identifier] == nil {
@@ -178,7 +178,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   /// Coalesces callers. A state change during an async callback requests another
   /// pass; every waiter receives the final current state, never an older payload.
-  func requestRefresh(_ completion: ((Result<[String: Any], Error>) -> Void)? = nil) {
+  func requestRefresh(_ completion: ((Result<NativeAgendaStatus, Error>) -> Void)? = nil) {
     if let completion { completions.append(completion) }
     if refreshing {
       refreshAgain = true
@@ -300,7 +300,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     let result = Result { try response() }
     for callback in callbacks { callback(result) }
   }
-  func readStatus(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
+  func readStatus(_ completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void) {
     let version = generation
     deadline.run {
       await self.notifications.snapshot()
@@ -443,7 +443,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       title: event.title ?? "Termin", room: event.location ?? "")
   }
   func sync(
-    _ args: AgendaSyncArgs, completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void
+    _ args: AgendaSyncArgs,
+    completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
   ) throws {
     if let loadError { throw AgendaError.message(loadError) }
     generation &+= 1
@@ -468,7 +469,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func activate(
     _ preferences: ReminderPreferences,
-    completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void
+    completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
   ) {
     center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
       self.queue.async {
@@ -796,27 +797,20 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     try url.setResourceValues(resources)
     if changed { WidgetCenter.shared.reloadTimelines(ofKind: AgendaSnapshot.widgetKind) }
   }
-  func response() throws -> [String: Any] {
-    let permission = notificationState.authorization
-    let payload = try JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot))
-    return [
-      "snapshot": payload,
-      "presentation": try presentation(),
-      "reminders": [
-        "authorization": permission, "enabled": state.preferences.enabled,
-        "planned": state.journal.values.filter { ["scheduling", "app"].contains($0.phase) }.count,
-        "confirmed_pending": pendingRequests.keys.filter { $0.hasPrefix("reha.event.") }.count,
-        "observed_delivered": notificationState.delivered.filter {
+  func response() throws -> NativeAgendaStatus {
+    NativeAgendaStatus(
+      snapshot: snapshot, presentation: snapshot.presentation(at: Date()),
+      reminders: NativeReminderStatus(
+        authorization: notificationState.authorization, enabled: state.preferences.enabled,
+        planned: state.journal.values.filter { ["scheduling", "app"].contains($0.phase) }.count,
+        confirmedPending: pendingRequests.keys.filter { $0.hasPrefix("reha.event.") }.count,
+        observedDelivered: notificationState.delivered.filter {
           $0.hasPrefix("reha.event.") || ($0 == "reha.test" || $0.hasPrefix("reha.test."))
         }.count,
-        "delivery_observation":
-          "Nur noch im Mitteilungszentrum vorhandene Zustellungen sind beobachtbar.",
-        "scheduled": try pending().filter { $0.identifier.hasPrefix("reha.event.") }.count,
-        "calendar": state.journal.values.filter { $0.phase == "calendar" }.count,
-        "protected": state.journal.values.filter { $0.phase == "protected" }.count,
-        "error": lastError as Any? ?? NSNull(), "migrationVersion": state.migrationVersion,
-      ],
-    ]
+        scheduled: try pending().filter { $0.identifier.hasPrefix("reha.event.") }.count,
+        calendar: state.journal.values.filter { $0.phase == "calendar" }.count,
+        protected: state.journal.values.filter { $0.phase == "protected" }.count,
+        error: lastError, migrationVersion: state.migrationVersion))
   }
   func calendarStatus() -> [String: Any] {
     let access = EKEventStore.authorizationStatus(for: .event)
@@ -886,7 +880,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       : nil
   }
   /// A one-off notification uses the reserved slot and reports acceptance separately.
-  func testNotification(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
+  func testNotification(
+    _ completion: @escaping @Sendable (Result<NativeNotificationReceipt, Error>) -> Void
+  ) {
     scheduleOne(
       make: {
         let content = UNMutableNotificationContent()
@@ -898,7 +894,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
           trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false))
       }, completion: completion)
   }
-  func snooze(id: String, completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
+  func snooze(
+    id: String, completion: @escaping @Sendable (Result<NativeNotificationReceipt, Error>) -> Void
+  ) {
     scheduleOne(
       make: {
         guard let record = self.state.records.first(where: { $0.id == id }),
@@ -929,7 +927,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   private func scheduleOne(
     make: @escaping @Sendable () throws -> UNNotificationRequest,
-    completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void
+    completion: @escaping @Sendable (Result<NativeNotificationReceipt, Error>) -> Void
   ) {
     let version = generation
     let reservation = UUID()
@@ -983,15 +981,15 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
             let system = try result.get()
             self.install(system)
             completion(
-              .success([
-                "accepted": true,
-                "delay_seconds": (request.trigger as? UNTimeIntervalNotificationTrigger)?
-                  .timeInterval ?? 0,
-                "confirmed_pending": system.pending.contains {
-                  $0.identifier == request.identifier
-                },
-                "observed_delivered": system.delivered.contains(request.identifier),
-              ]))
+              .success(
+                NativeNotificationReceipt(
+                  accepted: true,
+                  delaySeconds: (request.trigger as? UNTimeIntervalNotificationTrigger)?
+                    .timeInterval ?? 0,
+                  confirmedPending: system.pending.contains {
+                    $0.identifier == request.identifier
+                  },
+                  observedDelivered: system.delivered.contains(request.identifier))))
           } catch {
             self.notifications.removePending([request.identifier])
             completion(.failure(error))

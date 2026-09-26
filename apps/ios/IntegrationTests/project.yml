@@ -15,6 +15,7 @@ targets:
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NativeServices.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NativePresentation.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationAdapter.swift
+      - ../../../packages/apple/AppleServices/Sources/AppleServices/ReminderContracts.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/NotificationDeadline.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/LocalDiagnostics.swift
       - ../../../packages/apple/AppleServices/Sources/AppleServices/ServiceRequest.swift

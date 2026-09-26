@@ -145,25 +145,20 @@ final class AgendaNativeTests: XCTestCase {
         status: "uncertain", id: UUID().uuidString, calendar_id: calendar.calendarIdentifier,
         external_id: event.eventIdentifier, approved: approved)
       func sync(_ preferences: ReminderPreferences, visible: [String]? = nil) async throws
-        -> [String: Any]
+        -> NativeAgendaStatus
       {
-        let data: Data = try await withCheckedThrowingContinuation { continuation in
+        let visibleIDs = visible ?? [calendar.calendarIdentifier]
+        return try await withCheckedThrowingContinuation { continuation in
           service.queue.async {
             do {
               try service.sync(
                 AgendaSyncArgs(
                   records: [record, rejected], preferences: preferences,
-                  display_calendar_ids: visible ?? [calendar.calendarIdentifier])
-              ) {
-                continuation.resume(
-                  with: $0.flatMap { result in
-                    Result { try JSONSerialization.data(withJSONObject: result) }
-                  })
-              }
+                  display_calendar_ids: visibleIDs)
+              ) { continuation.resume(with: $0) }
             } catch { continuation.resume(throwing: error) }
           }
         }
-        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
       }
       _ = try await sync(ReminderPreferences())
       var snapshot = AgendaSnapshot.read(from: root)
@@ -203,7 +198,7 @@ final class AgendaNativeTests: XCTestCase {
       let settings = await UNUserNotificationCenter.current().notificationSettings()
       XCTAssertEqual(settings.authorizationStatus, .authorized)
       let activated = try await sync(ReminderPreferences(enabled: true))
-      XCTAssertNil((activated["reminders"] as? [String: Any])?["error"] as? String)
+      XCTAssertNil(activated.reminders.error)
       let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
       XCTAssertEqual(requests.filter { $0.identifier == "reha.event.\(id)" }.count, 1)
       XCTAssertTrue((store.event(withIdentifier: event.eventIdentifier)?.alarms ?? []).isEmpty)

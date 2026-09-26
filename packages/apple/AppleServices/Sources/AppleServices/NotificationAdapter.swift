@@ -2,7 +2,7 @@ import Foundation
 @preconcurrency import UserNotifications
 
 struct NotificationSnapshot {
-  var authorization: String
+  var authorization: NativeReminderAuthorization
   var pending: [UNNotificationRequest]
   var delivered: Set<String>
 }
@@ -27,12 +27,12 @@ struct SystemNotificationAdapter: NotificationAdapter {
     async let settings = center.notificationSettings()
     async let pending = center.pendingNotificationRequests()
     async let delivered = center.deliveredNotifications()
-    let authorization: String
+    let authorization: NativeReminderAuthorization
     switch await settings.authorizationStatus {
-    case .authorized: authorization = "authorized"
-    case .provisional: authorization = "provisional"
-    case .denied: authorization = "denied"
-    default: authorization = "notDetermined"
+    case .authorized: authorization = .authorized
+    case .provisional: authorization = .provisional
+    case .denied: authorization = .denied
+    default: authorization = .notDetermined
     }
     return await NotificationSnapshot(
       authorization: authorization, pending: pending,

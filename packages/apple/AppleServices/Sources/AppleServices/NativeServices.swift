@@ -40,7 +40,7 @@ public final class NativeServices: @unchecked Sendable {
   public func eventCalendars(
     completion: @escaping @Sendable (Result<[NativeEventCalendarDestination], Error>) -> Void
   ) {
-    read { done in
+    measured(.calendarRead) { done in
       calendarReads.readDestinations(completion: done)
     } completion: {
       completion($0)
@@ -66,7 +66,7 @@ public final class NativeServices: @unchecked Sendable {
     _ request: NativeCalendarQuery,
     completion: @escaping @Sendable (Result<NativeCalendarReadResult, Error>) -> Void
   ) {
-    read { done in
+    measured(.calendarRead) { done in
       calendarReads.readQuery(request, completion: done)
     } completion: {
       completion($0)
@@ -76,26 +76,62 @@ public final class NativeServices: @unchecked Sendable {
     _ reference: NativeCalendarReference,
     completion: @escaping @Sendable (Result<NativeCalendarEvent?, Error>) -> Void
   ) {
-    read { done in
+    measured(.calendarRead) { done in
       calendarReads.readEvent(reference, completion: done)
     } completion: {
       completion($0)
     }
   }
-  private func read<Value: Sendable>(
+  private func measured<Value: Sendable>(
+    _ step: DiagnosticStep,
     start: (@escaping @Sendable (Result<Value, Error>) -> Void) -> Void,
     completion: @escaping @Sendable (Result<Value, Error>) -> Void
   ) {
     let correlation = UUID().uuidString
     let began = ContinuousClock.now
-    LocalDiagnostics.shared.record(.calendarRead, .started, correlation: correlation)
+    LocalDiagnostics.shared.record(step, .started, correlation: correlation)
     start { result in
       let duration = began.duration(to: .now).components
       let outcome: DiagnosticOutcome = if case .success = result { .completed } else { .failed }
       LocalDiagnostics.shared.record(
-        .calendarRead, outcome, correlation: correlation,
+        step, outcome, correlation: correlation,
         durationMs: Int(duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000))
       completion(result)
+    }
+  }
+  /// Permission alone never creates a calendar or changes the visible selection.
+  public func requestCalendarAccess(
+    completion: @escaping @Sendable (Result<Void, Error>) -> Void
+  ) {
+    store.requestFullAccessToEvents { granted, _ in
+      completion(granted ? .success(()) : .failure(NativeServiceError.permissionDenied))
+    }
+  }
+  public func reminderStatus(
+    completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
+  ) {
+    calendarQueue.async { self.agendaService.readStatus(completion) }
+  }
+  /// Authorization changes no reminder preferences. The settings save owns activation.
+  public func requestReminderPermission(
+    completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
+  ) {
+    measured(.reminderSettings) { done in
+      UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
+        _, error in
+        if let error { done(.failure(error)) } else { self.reminderStatus(completion: done) }
+      }
+    } completion: {
+      completion($0)
+    }
+  }
+  public func testReminder(
+    completion: @escaping @Sendable (Result<NativeNotificationReceipt, Error>) -> Void
+  ) {
+    measured(.reminderPlan) { done in
+      calendarQueue.async { self.agendaService.testNotification(done) }
+    } completion: {
+      completion($0)
     }
   }
   public func perform(
@@ -111,8 +147,7 @@ public final class NativeServices: @unchecked Sendable {
       case "apply", "mutateEvent": .calendarWrite
       case "snapshot", "queryEvents", "getEvent", "calendarStatus", "inspectCalendarLinks":
         .calendarRead
-      case "requestReminderPermission", "enableReminders": .reminderSettings
-      case "testReminder": .reminderPlan
+      case "enableReminders": .reminderSettings
       default: nil
       }
     if let step { LocalDiagnostics.shared.record(step, .started, correlation: correlation) }
@@ -212,9 +247,9 @@ public final class NativeServices: @unchecked Sendable {
   }
   func calendars(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(CalendarArgs.self)
-    store.requestFullAccessToEvents { granted, error in
-      guard granted else {
-        invoke.reject(NativeServiceError.permissionDenied)
+    requestCalendarAccess { result in
+      if case .failure(let error) = result {
+        invoke.reject(error)
         return
       }
       self.calendarQueue.async {
@@ -452,7 +487,7 @@ public final class NativeServices: @unchecked Sendable {
       do {
         try self.agendaService.sync(args) { result in
           switch result {
-          case .success(let value): invoke.resolve(value)
+          case .success(let value): Self.resolveAgenda(value, for: invoke)
           case .failure(let error): invoke.reject(error)
           }
         }
@@ -463,36 +498,28 @@ public final class NativeServices: @unchecked Sendable {
     let args = try invoke.parseArgs(ReminderPreferences.self)
     self.agendaService.activate(args) { result in
       switch result {
-      case .success(let value): invoke.resolve(value)
+      case .success(let value): Self.resolveAgenda(value, for: invoke)
       case .failure(let error): invoke.reject(error)
       }
     }
   }
-  // Permission is requested while editing, but scheduling changes only on Save.
-  // Keep enableReminders' existing immediate-activation behavior for older callers.
+  private static func resolveAgenda(_ value: NativeAgendaStatus, for invoke: ServiceRequest) {
+    do { invoke.resolve(try value.legacyValue) } catch { invoke.reject(error) }
+  }
+  // Compatibility adapters preserve the previous wire format.
   func requestReminderPermission(_ invoke: ServiceRequest) {
-    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
-      _, error in
-      self.calendarQueue.async {
-        do {
-          if let error { throw error }
-          self.agendaService.readStatus { result in
-            switch result {
-            case .success(let value): invoke.resolve(value)
-            case .failure(let error): invoke.reject(error)
-            }
-          }
-        } catch { invoke.reject(error) }
+    requestReminderPermission { result in
+      switch result {
+      case .success(let value): Self.resolveAgenda(value, for: invoke)
+      case .failure(let error): invoke.reject(error)
       }
     }
   }
   func reminderStatus(_ invoke: ServiceRequest) {
-    calendarQueue.async {
-      self.agendaService.readStatus { result in
-        switch result {
-        case .success(let value): invoke.resolve(value)
-        case .failure(let error): invoke.reject(error)
-        }
+    reminderStatus { result in
+      switch result {
+      case .success(let value): Self.resolveAgenda(value, for: invoke)
+      case .failure(let error): invoke.reject(error)
       }
     }
   }
@@ -506,12 +533,10 @@ public final class NativeServices: @unchecked Sendable {
     }
   }
   func testReminder(_ invoke: ServiceRequest) {
-    calendarQueue.async {
-      self.agendaService.testNotification { result in
-        switch result {
-        case .success(let value): invoke.resolve(value)
-        case .failure(let error): invoke.reject(error)
-        }
+    testReminder { result in
+      switch result {
+      case .success(let value): invoke.resolve(value.legacyValue)
+      case .failure(let error): invoke.reject(error)
       }
     }
   }

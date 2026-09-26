@@ -134,17 +134,8 @@ final class NativeBridge: AppleHost, Sendable {
   }
 }
 
-struct AgendaResponse: Decodable, Sendable {
-  let snapshot: AgendaSnapshot
-  let reminders: ReminderStatus
-  struct ReminderStatus: Decodable, Sendable {
-    let authorization: String
-    let enabled: Bool
-    let error: String?
-  }
-}
-struct CalendarDestinations: Decodable {
-  struct Destination: Decodable, Identifiable {
+struct CalendarDestinations {
+  struct Destination: Identifiable {
     let id: String
     let title: String
     let source: String
@@ -153,10 +144,6 @@ struct CalendarDestinations: Decodable {
     let color_components: [Double]?
   }
   let calendars: [Destination]
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let dedicated_id: String?
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let setup_error: String?
 }
 
 func userMessage(_ error: Error) -> String {

@@ -36,7 +36,7 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
   func snapshot() async -> NotificationSnapshot {
     locked {
       NotificationSnapshot(
-        authorization: "authorized", pending: Array(requests.values), delivered: [])
+        authorization: .authorized, pending: Array(requests.values), delivered: [])
     }
   }
   func add(_ request: UNNotificationRequest) async throws {
@@ -63,13 +63,6 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
   func removeDelivered(_ ids: [String]) {}
 }
 
-private struct NotificationTestResult: Sendable {
-  let data: Data
-  subscript(key: String) -> Any? {
-    (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?[key]
-  }
-}
-
 final class NotificationRaceTests: XCTestCase {
   private func fixture(_ adapter: ControlledNotifications, timeout: TimeInterval = 3) throws -> (
     AgendaService, URL
@@ -82,48 +75,60 @@ final class NotificationRaceTests: XCTestCase {
     return (service, root)
   }
   private static func testNotification(_ service: AgendaService) async throws
-    -> NotificationTestResult
+    -> NativeNotificationReceipt
   {
-    let data: Data = try await withCheckedThrowingContinuation { continuation in
+    try await withCheckedThrowingContinuation { continuation in
       service.queue.async {
-        service.testNotification {
-          continuation.resume(
-            with: $0.flatMap { result in
-              Result { try JSONSerialization.data(withJSONObject: result) }
-            })
-        }
+        service.testNotification { continuation.resume(with: $0) }
       }
     }
-    return NotificationTestResult(data: data)
   }
   private static func sync(_ service: AgendaService, records: [OwnedRecord], enabled: Bool)
-    async throws
-    -> NotificationTestResult
+    async throws -> NativeAgendaStatus
   {
-    let data: Data = try await withCheckedThrowingContinuation { continuation in
+    try await withCheckedThrowingContinuation { continuation in
       service.queue.async {
         do {
           try service.sync(
             AgendaSyncArgs(records: records, preferences: ReminderPreferences(enabled: enabled))
-          ) {
-            continuation.resume(
-              with: $0.flatMap { result in
-                Result { try JSONSerialization.data(withJSONObject: result) }
-              })
-          }
+          ) { continuation.resume(with: $0) }
         } catch { continuation.resume(throwing: error) }
       }
     }
-    return NotificationTestResult(data: data)
+  }
+  func testTypedStatusAndCompatibilityDoNotEnableReminders() async throws {
+    let (service, root) = try fixture(ControlledNotifications())
+    defer { try? FileManager.default.removeItem(at: root) }
+    let native = NativeServices(agenda: service)
+    let stateURL = root.appendingPathComponent("agenda-private-v1.json")
+    let before = try? Data(contentsOf: stateURL)
+    let status: NativeAgendaStatus = try await withCheckedThrowingContinuation { continuation in
+      native.reminderStatus { continuation.resume(with: $0) }
+    }
+    XCTAssertEqual(status.reminders.authorization, .authorized)
+    XCTAssertFalse(status.reminders.enabled)
+    XCTAssertEqual(status.reminders.confirmedPending, 0)
+    XCTAssertEqual(status.reminders.observedDelivered, 0)
+    let legacy: Data = try await withCheckedThrowingContinuation { continuation in
+      native.perform("reminderStatus", arguments: Data("{}".utf8)) {
+        continuation.resume(with: $0)
+      }
+    }
+    let object = try XCTUnwrap(JSONSerialization.jsonObject(with: legacy) as? [String: Any])
+    let reminders = try XCTUnwrap(object["reminders"] as? [String: Any])
+    XCTAssertEqual(reminders["authorization"] as? String, "authorized")
+    XCTAssertEqual(reminders["enabled"] as? Bool, false)
+    XCTAssertTrue(reminders["error"] is NSNull)
+    XCTAssertEqual(try? Data(contentsOf: stateURL), before)
   }
   func testFiveSecondAcceptanceAndImmediateFailure() async throws {
     let adapter = ControlledNotifications()
     let (service, root) = try fixture(adapter)
     defer { try? FileManager.default.removeItem(at: root) }
     let result = try await NotificationRaceTests.testNotification(service)
-    XCTAssertEqual(result["delay_seconds"] as? Double, 5)
-    XCTAssertEqual(result["confirmed_pending"] as? Bool, true)
-    XCTAssertEqual(result["observed_delivered"] as? Bool, false)
+    XCTAssertEqual(result.delaySeconds, 5)
+    XCTAssertEqual(result.confirmedPending, true)
+    XCTAssertEqual(result.observedDelivered, false)
     adapter.failAdds()
     do {
       _ = try await NotificationRaceTests.testNotification(service)
@@ -151,7 +156,7 @@ final class NotificationRaceTests: XCTestCase {
     let snapshot = await adapter.snapshot()
     XCTAssertFalse(snapshot.pending.contains { $0.identifier.hasPrefix("reha.test") })
     let retry = try await NotificationRaceTests.testNotification(service)
-    XCTAssertEqual(retry["accepted"] as? Bool, true)
+    XCTAssertEqual(retry.accepted, true)
   }
   func testLateTimedOutTestCannotRemoveItsSuccessfulReplacement() async throws {
     let adapter = ControlledNotifications()
@@ -167,7 +172,7 @@ final class NotificationRaceTests: XCTestCase {
     } catch {}
     adapter.allowNewAdds()
     let replacement = try await NotificationRaceTests.testNotification(service)
-    XCTAssertEqual(replacement["confirmed_pending"] as? Bool, true)
+    XCTAssertEqual(replacement.confirmedPending, true)
     let before = await adapter.snapshot().pending.map(\.identifier)
     adapter.resumeAdds()
     try await Task.sleep(for: .milliseconds(100))
@@ -270,18 +275,12 @@ final class NotificationRaceTests: XCTestCase {
       let held = expectation(description: "Three snoozes reserved")
       held.expectedFulfillmentCount = 3
       adapter.suspendAdds { held.fulfill() }
-      func snooze(_ id: String) async throws -> NotificationTestResult {
-        let data: Data = try await withCheckedThrowingContinuation { continuation in
+      func snooze(_ id: String) async throws -> NativeNotificationReceipt {
+        try await withCheckedThrowingContinuation { continuation in
           service.queue.async {
-            service.snooze(id: id) {
-              continuation.resume(
-                with: $0.flatMap { result in
-                  Result { try JSONSerialization.data(withJSONObject: result) }
-                })
-            }
+            service.snooze(id: id) { continuation.resume(with: $0) }
           }
         }
-        return NotificationTestResult(data: data)
       }
       let first = records.prefix(3).map { record in Task { _ = try await snooze(record.id) } }
       await fulfillment(of: [held], timeout: 2)

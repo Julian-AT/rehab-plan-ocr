@@ -166,11 +166,9 @@ struct SettingsView: View {
               Task {
                 defer { testingReminder = false }
                 do {
-                  let result =
-                    try JSONSerialization.jsonObject(
-                      with: await NativeBridge.request("testReminder")) as? [String: Any]
+                  let result = try await NativeBridge.testReminder()
                   testResult =
-                    result?["confirmed_pending"] as? Bool == true
+                    result.confirmedPending
                     ? "Testauftrag angenommen und vom System vorgemerkt. Anzeige nach fünf Sekunden angefordert."
                     : "Testauftrag angenommen. Die Zustellung wurde noch nicht beobachtet."
                 } catch { testError = userMessage(error) }
@@ -290,10 +288,9 @@ struct SettingsView: View {
   }
   private func loadReminderStatus() async {
     do {
-      let response = try JSONDecoder().decode(
-        AgendaResponse.self, from: await NativeBridge.request("reminderStatus"))
+      let response = try await NativeBridge.reminderStatus()
       reminderStatus =
-        response.reminders.authorization == "denied"
+        response.reminders.authorization == .denied
         ? "Mitteilungen sind in den iPhone-Einstellungen ausgeschaltet."
         : response.reminders.error ?? ""
     } catch { self.error = userMessage(error) }
@@ -302,9 +299,8 @@ struct SettingsView: View {
     requestingPermission = true
     defer { requestingPermission = false }
     do {
-      let response = try JSONDecoder().decode(
-        AgendaResponse.self, from: await NativeBridge.request("requestReminderPermission"))
-      let allowed = ["authorized", "provisional"].contains(response.reminders.authorization)
+      let response = try await NativeBridge.requestReminderPermission()
+      let allowed = response.reminders.authorization.allowsReminders
       store.change { $0.appRemindersEnabled = allowed }
       await loadReminderStatus()
     } catch { self.error = userMessage(error) }

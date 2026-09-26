@@ -56,6 +56,7 @@ struct AgendaPolicyChecks {
     }
   }
   static func main() throws {
+    try reminderContracts()
     let now = ISO8601DateFormatter().date(from: "2026-03-28T23:30:00Z")!
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "Europe/Vienna")!
@@ -201,5 +202,42 @@ struct AgendaPolicyChecks {
       Set(encodedEvent.keys) == Set(["id", "start", "end", "timezone", "title", "room", "status"]),
       "Payload excludes private data")
     print("\(checks) agenda, DST, ownership and crash-recovery checks passed")
+  }
+
+  static func reminderContracts() throws {
+    check(!NativeReminderAuthorization.notDetermined.allowsReminders, "No implicit permission")
+    check(!NativeReminderAuthorization.denied.allowsReminders, "Denied remains disabled")
+    check(NativeReminderAuthorization.authorized.allowsReminders, "Authorized can enable")
+    check(NativeReminderAuthorization.provisional.allowsReminders, "Provisional can enable")
+    let status = NativeAgendaStatus(
+      snapshot: .empty(now: Date(timeIntervalSince1970: 0)),
+      presentation: AgendaPresentation(next: nil, today: [], stale: false),
+      reminders: NativeReminderStatus(
+        authorization: .authorized, enabled: false, planned: 3, confirmedPending: 2,
+        observedDelivered: 1, scheduled: 2, calendar: 4, protected: 5,
+        error: nil, migrationVersion: 1))
+    let legacy = try status.legacyValue
+    let encoded = try JSONSerialization.data(withJSONObject: legacy)
+    let object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+    let reminders = object["reminders"] as! [String: Any]
+    check(
+      Set(reminders.keys) == [
+        "authorization", "enabled", "planned", "confirmed_pending", "observed_delivered",
+        "delivery_observation", "scheduled", "calendar", "protected", "error", "migrationVersion",
+      ], "Complete historical reminder response")
+    check(reminders["error"] is NSNull, "Compatibility keeps an explicit null error")
+    check(reminders["enabled"] as? Bool == false, "Permission alone does not enable reminders")
+    check(reminders["confirmed_pending"] as? Int == 2, "System reservations remain distinct")
+    check(reminders["observed_delivered"] as? Int == 1, "Only observed deliveries are reported")
+    let publicSnapshot = try JSONDecoder().decode(
+      AgendaSnapshot.self, from: JSONSerialization.data(withJSONObject: object["snapshot"]!))
+    check(publicSnapshot == status.snapshot, "Existing widget schema is unchanged")
+    let receipt = NativeNotificationReceipt(
+      accepted: true, delaySeconds: 5, confirmedPending: false, observedDelivered: false)
+    let legacyReceipt = receipt.legacyValue
+    check(legacyReceipt["accepted"] as? Bool == true, "A one-off request can be accepted")
+    check(legacyReceipt["confirmed_pending"] as? Bool == false, "Acceptance is no delivery proof")
+    check(legacyReceipt["observed_delivered"] as? Bool == false, "No fabricated observation")
+    check(legacyReceipt["delay_seconds"] as? Double == 5, "One-off scheduling delay is preserved")
   }
 }
