@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 8;
+pub const EXTRACTION_VERSION: u32 = 9;
 
 /// Robust text baselines supply table skew even when no page edge is visible.
 /// Header anchors are a fallback for old axis-aligned observations.
@@ -181,7 +181,7 @@ impl TableAlignment {
 }
 
 static DATE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b|\b(\d{4})-(\d{2})-(\d{2})\b").unwrap()
+    Regex::new(r"\b(\d{1,2})[.,/](\d{1,2})[.,/](\d{4})\b|\b(\d{4})-(\d{2})-(\d{2})\b").unwrap()
 });
 static TIME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b([01]?\d|2[0-3])[:.]([0-5]\d)\b").unwrap());
@@ -191,6 +191,11 @@ static LOCATION: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)\b(?:Raum|Zimmer|Ort|Saal|Room)\s*:?\s*(.*)").unwrap());
 static WEEKDAY: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^\s*(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*,?\s*(?:der\s*)?$").unwrap()
+});
+// An unreadable date still ends the preceding day's scope. Do not recognize
+// ordinary treatment names containing a weekday as a new day heading.
+static DAY_BOUNDARY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^\s*(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\b\s*,?\s*(?:der\s*)?(?:[\d?x.,/ _-]+|unleserlich|nicht lesbar)?\s*$").unwrap()
 });
 static NEW_MARKER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\*\s*neu\b\s*\*?").unwrap());
 
@@ -532,6 +537,10 @@ fn treatment_date(rows: &[Row<'_>]) -> (Option<String>, Vec<String>) {
         ]
         .iter()
         .any(|label| text.to_lowercase().contains(label));
+        if DAY_BOUNDARY.is_match(&text) && !DATE.is_match(&text) {
+            sources.extend(row.observations.iter().map(|o| o.id.clone()));
+            invalid = true;
+        }
         for capture in DATE.captures_iter(&text) {
             let matched = capture.get(0).unwrap();
             let weekday = WEEKDAY.captures(text[..matched.start()].trim());
@@ -1158,7 +1167,7 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
                     bottom: row.bottom,
                     height: row.height,
                 };
-                !treatment_date(&[single]).1.is_empty()
+                DATE.is_match(&o.text) && !treatment_date(&[single]).1.is_empty()
             })
             .collect();
         if !individual.is_empty() {
@@ -1897,6 +1906,48 @@ mod tests {
         assert_eq!(a[0].date.as_deref(), Some("2026-04-30"));
         assert_eq!(a[0].provenance["date"], ["o1", "o2"]);
         assert!(!issues.iter().any(|i| i.code == "date_confirmation"));
+    }
+    #[test]
+    fn unreadable_and_invalid_day_headings_never_inherit_previous_day() {
+        for heading in [
+            "Sonntag",
+            "Sonntag, der ??.09.2026",
+            "Sonntag, der unleserlich",
+            "Sonntag, der 31.09.2026",
+            "Sonntag, der 12.09.2026",
+        ] {
+            let (a, _, _) = parse(&[
+                "Samstag, der 12.09.2026",
+                "08:00 - 08:30 Erster Tag",
+                heading,
+                "09:00 - 09:30 Unklarer Tag",
+                "Montag, der 14.09.2026",
+                "10:00 - 10:30 Dritter Tag",
+            ]);
+            assert_eq!(a.len(), 3, "{heading}");
+            assert_eq!(a[0].date.as_deref(), Some("2026-09-12"), "{heading}");
+            assert_eq!(a[1].date, None, "{heading}");
+            assert_eq!(a[2].date.as_deref(), Some("2026-09-14"), "{heading}");
+            assert!(a[1]
+                .issues
+                .iter()
+                .any(|i| i.blocking && i.field.as_deref() == Some("date")));
+        }
+    }
+    #[test]
+    fn comma_separated_day_is_validated_against_weekday_and_retains_evidence() {
+        let (a, _, _) = parse(&[
+            "Samstag, der 12.09.2026",
+            "08:00 - 08:30 Erster Tag",
+            "Sonntag, der 13,09.2026",
+            "09:00 - 09:30 Zweiter Tag",
+        ]);
+        assert_eq!(a.len(), 2);
+        assert_eq!(a[0].date.as_deref(), Some("2026-09-12"));
+        assert_eq!(a[1].date.as_deref(), Some("2026-09-13"));
+        assert_eq!(a[1].provenance["date"], ["o2"]);
+        let (a, _, _) = parse(&["Montag, der 13,09.2026", "09:00 - 09:30 Therapie"]);
+        assert!(a[0].date.is_none());
     }
     #[test]
     fn inconsistent_weekday_and_competing_headings_require_review() {

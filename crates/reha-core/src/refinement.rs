@@ -9,7 +9,7 @@ pub type Reading = RefinementReading;
 /// Refresh the version-5/6 column checks from retained OCR when row identities
 /// stay unambiguous. Structural changes still require a full explicit reprocess.
 pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
-    if ![5, 6, 7].contains(&run.extraction_version) || run.observations.is_empty() {
+    if ![5, 6, 7, 8].contains(&run.extraction_version) || run.observations.is_empty() {
         return Ok(false);
     }
     let observations: Vec<_> = run
