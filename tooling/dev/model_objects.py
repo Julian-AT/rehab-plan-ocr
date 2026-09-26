@@ -1,8 +1,8 @@
 """Coalesce immutable exported assistant baselines using APFS copy-on-write clones.
 
 No checkpoint, optimizer, original, backup, app bundle or selected tuned model is
-eligible. Every legacy path retains the same bytes and its own inode. Hard links
-and symlinks are never used. Unsupported filesystems fail without a full-copy fallback.
+eligible. Every legacy path retains the same bytes and its own inode, independently
+of the canonical object. Unsupported filesystems fail without a full-copy fallback.
 """
 
 import argparse
@@ -85,6 +85,9 @@ def plan(root, destination):
 
 def verified_clone(source, destination, expected):
     temporary = destination.with_name(f".{destination.name}.clone-{uuid.uuid4().hex}")
+    previous = identity(destination) if destination.exists() else None
+    if destination.is_symlink() or (previous is not None and previous != expected):
+        raise ValueError("Destination no longer matches the reviewed identity")
     try:
         clone(source, temporary)
         if identity(temporary) != expected or temporary.stat().st_ino == source.stat().st_ino:
@@ -92,7 +95,20 @@ def verified_clone(source, destination, expected):
         temporary.chmod(0o444)
         with temporary.open("rb") as stream:
             os.fsync(stream.fileno())
-        temporary.replace(destination)
+        if previous is None:
+            # Exclusive publication links only the temporary clone, never a source
+            # model. Its temporary name is removed below, leaving a separate inode.
+            os.link(temporary, destination)
+        else:
+            if (
+                destination.is_symlink()
+                or not destination.exists()
+                or identity(destination) != previous
+            ):
+                raise ValueError("Destination changed while preparing its clone")
+            # This final check does not replace the required quiet window/lock:
+            # uncooperative writers can still race the check and atomic rename.
+            temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
 

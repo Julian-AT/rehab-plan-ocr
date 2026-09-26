@@ -86,6 +86,63 @@ class ModelObjectTests(unittest.TestCase):
                 objects.apply(self.root, self.manifest)
         self.assertEqual(objects.apply(self.root, self.manifest)["preserved_paths"], 2)
 
+    def test_change_before_clone_entry_is_not_overwritten(self):
+        objects.plan(self.root, self.manifest)
+        real = objects.verified_clone
+
+        def changed(source, destination, expected):
+            if destination == self.paths[0]:
+                destination.write_bytes(b"GGUF changed after the precheck")
+            real(source, destination, expected)
+
+        with patch.object(objects, "verified_clone", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "reviewed identity"):
+                objects.apply(self.root, self.manifest)
+        self.assertEqual(self.paths[0].read_bytes(), b"GGUF changed after the precheck")
+        self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
+
+    def test_change_during_clone_preparation_is_not_overwritten(self):
+        objects.plan(self.root, self.manifest)
+
+        def changed(source, temporary):
+            shutil.copy2(source, temporary)
+            if temporary.parent == self.paths[0].parent:
+                self.paths[0].write_bytes(b"GGUF changed during clone preparation")
+
+        with patch.object(objects, "clone", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "Destination changed"):
+                objects.apply(self.root, self.manifest)
+        self.assertEqual(self.paths[0].read_bytes(), b"GGUF changed during clone preparation")
+        self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
+
+    def test_concurrently_created_object_is_not_overwritten(self):
+        plan = objects.plan(self.root, self.manifest)
+        canonical = self.root / ".local/objects/sha256" / (plan["groups"][0]["sha256"] + ".gguf")
+
+        def changed(source, temporary):
+            shutil.copy2(source, temporary)
+            if temporary.parent == canonical.parent:
+                canonical.write_bytes(b"GGUF concurrently created foreign object")
+
+        with patch.object(objects, "clone", side_effect=changed):
+            with self.assertRaises(FileExistsError):
+                objects.apply(self.root, self.manifest)
+        self.assertEqual(canonical.read_bytes(), b"GGUF concurrently created foreign object")
+        self.assertTrue(all(p.read_bytes() == b"GGUF immutable model" for p in self.paths))
+        self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
+
+    def test_existing_foreign_object_prevents_model_replacement(self):
+        plan = objects.plan(self.root, self.manifest)
+        canonical = self.root / ".local/objects/sha256" / (plan["groups"][0]["sha256"] + ".gguf")
+        canonical.parent.mkdir(parents=True)
+        canonical.write_bytes(b"GGUF existing foreign object")
+        before = [path.stat().st_ino for path in self.paths]
+        with self.assertRaisesRegex(ValueError, "object was altered"):
+            objects.apply(self.root, self.manifest)
+        self.assertEqual([path.stat().st_ino for path in self.paths], before)
+        self.assertEqual(canonical.read_bytes(), b"GGUF existing foreign object")
+        self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
