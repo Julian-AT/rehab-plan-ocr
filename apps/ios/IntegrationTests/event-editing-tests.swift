@@ -109,6 +109,8 @@ final class EventEditingTests: XCTestCase {
       XCTAssertTrue(
         NSDictionary(dictionary: before).isEqual(to: after),
         "Opening and interpreting the system editor must not write or adopt a calendar event")
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testTypedImportRecoveryCannotCreateMissingEvents() async throws {
@@ -186,6 +188,8 @@ final class EventEditingTests: XCTestCase {
         }
       }
       XCTAssertFalse(overlaps.contains { $0.externalID == externalID })
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testImportProtectsMetadataOutsideApprovedValues() async throws {
@@ -261,6 +265,8 @@ final class EventEditingTests: XCTestCase {
         XCTAssertEqual(retained.isAllDay, allDay)
         if !allDay { XCTAssertNotNil(retained.structuredLocation?.geoLocation) }
       }
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testImportProtectionRetainsUnsupportedAvailability() {
@@ -345,6 +351,8 @@ final class EventEditingTests: XCTestCase {
           calendars: [calendar]))
       XCTAssertEqual(events.count, 2, "Receipt replay duplicated an already committed event")
       XCTAssertTrue(events.allSatisfy { $0.alarms?.first?.relativeOffset == -600 })
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testRepairFindsExactMarkersAndPreservesCalendarEvents() async throws {
@@ -483,6 +491,8 @@ final class EventEditingTests: XCTestCase {
           visibleEvents.first { $0["id"] as? String == value["id"] as? String })
         XCTAssertEqual(NSDictionary(dictionary: value), NSDictionary(dictionary: expected))
       }
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testExternalMetadataOccurrenceAndUndo() async throws {
@@ -605,6 +615,8 @@ final class EventEditingTests: XCTestCase {
       XCTAssertEqual(restoration["status"] as? String, "saved")
       let final = try await call("queryEvents", query)
       XCTAssertEqual((final["events"] as? [Any])?.count, 3)
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testManagedAlarmHandoffKeepsUndoSnapshotStable() async throws {
@@ -721,6 +733,8 @@ final class EventEditingTests: XCTestCase {
         (continuation: CheckedContinuation<Void, Error>) in
         agenda.queue.async { continuation.resume(with: Result { try agenda.forget() }) }
       }
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
 

@@ -231,6 +231,8 @@ final class NotificationRaceTests: XCTestCase {
       let snapshot = await adapter.snapshot()
       XCTAssertEqual(snapshot.pending.filter { $0.identifier.hasPrefix("reha.event.") }.count, 1)
       XCTAssertTrue(store.event(withIdentifier: event.eventIdentifier)?.alarms?.isEmpty ?? true)
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
   func testSnoozeReservationsAndDisableDuringAdd() async throws {
@@ -302,6 +304,8 @@ final class NotificationRaceTests: XCTestCase {
         XCTAssertEqual(
           store.event(withIdentifier: record.external_id!)?.alarms?.first?.relativeOffset, -600)
       }
+    #else
+      throw XCTSkip("EventKit mutation tests use simulator data only")
     #endif
   }
 }

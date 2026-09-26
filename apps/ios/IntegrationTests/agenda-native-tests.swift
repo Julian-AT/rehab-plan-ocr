@@ -342,6 +342,7 @@ final class AgendaNativeTests: XCTestCase {
       foreign.startDate = event.endDate.addingTimeInterval(600)
       foreign.endDate = foreign.startDate.addingTimeInterval(1800)
       try store.save(foreign, span: .thisEvent, commit: true)
+      defer { try? store.remove(foreign, span: .thisEvent, commit: true) }
       _ = try await sync(ReminderPreferences())
       let external = try XCTUnwrap(
         AgendaSnapshot.read(from: root).events.first { $0.title == foreign.title })
