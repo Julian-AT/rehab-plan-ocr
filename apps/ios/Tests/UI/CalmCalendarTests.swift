@@ -147,7 +147,14 @@ import XCTest
     }
   }
   override func tearDown() async throws {
-    app?.terminate()
+    guard let app else { return }
+    app.terminate()
+    // Fixture cleanup removes only its recorded calendar IDs and restores the
+    // original preferences before the app exposes its tabs.
+    app.launchArguments = ["--agenda-fixture", "cleanup"]
+    app.launch()
+    XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
+    app.terminate()
   }
   func testMutedPaletteCardsListAndLegend() {
     for dark in [false, true] {

@@ -1,6 +1,19 @@
 import XCTest
 
 @MainActor final class CalendarRepairTests: XCTestCase {
+  private var fixtureApp: XCUIApplication?
+
+  override func tearDown() async throws {
+    guard let app = fixtureApp else { return }
+    app.terminate()
+    // Fixture cleanup removes only its recorded calendar IDs and restores the
+    // original preferences before the app exposes its tabs.
+    app.launchArguments = ["--agenda-fixture", "cleanup"]
+    app.launch()
+    XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
+    app.terminate()
+  }
+
   func testVoiceSettingsPreparationPreview() {
     continueAfterFailure = false
     let app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
@@ -26,11 +39,11 @@ import XCTest
   func testUnavailableCalendarOffersRepairWithoutClaimingKnownDays() {
     continueAfterFailure = false
     let app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
+    fixtureApp = app
     app.launchArguments = [
       "-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "repair",
     ]
     app.launch()
-    defer { app.terminate() }
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
     let status = app.buttons["Status prüfen"]
     XCTAssertTrue(status.waitForExistence(timeout: 10))
