@@ -256,3 +256,27 @@ beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotatio
 Die Freischaltung des Kontos ist noch nicht bestätigt. Menschliche Daten-/Stimmen-
 und Gerätefreigaben bleiben externe Voraussetzungen; sie werden nicht durch
 synthetische Regressionen ersetzt.
+
+## Gemeinsamer Simulatornachweis vom 26. September 2026
+
+- Vollständiger UI-Lauf auf Produktquellen entsprechend `f862d5a`: **verifiziert**,
+  68 Tests, null Fehler, null Skips, einschließlich Foto-/Datei-/Share-Eingang.
+  Basis `06ae5a3`, Quellpatch und alle produktrelevanten Pfade sind abgeglichen;
+  vollständiges Result-Bundle und ausführbare Produkte bleiben unter
+  `.local/runs/ui-complete-20260926-s19-002/` erhalten. Die vorherige Unterbrechung
+  durch Host-Ruhephasen zählt weiterhin als fehlgeschlagener historischer Lauf.
+- Strenger visueller Vergleich: **fehlgeschlagen**, 14/22. Alle verbleibenden
+  Unterschiede sind auf sechs fehlende Scrollindikatoren und die beiden
+  Tagesabschluss-Rasterabweichungen begrenzt. Inhaltliche Scrollpositionen und
+  die dunkle Legende stimmen jetzt exakt. Originale und Prüfregeln unverändert.
+- Nachgelagerte Warnungen nach Kalenderbereinigung: `083f82d`, **verifiziert**
+  durch neun gezielte Rusttests; erfolgreicher lokaler Abschluss und sämtliche
+  Wartungswarnungen bleiben erhalten, auch nach erneutem Öffnen der Datenbank.
+- Typisierter Systemeditor: `8b188d2`, **implementiert**, strenge Swift-6-
+  Typprüfung, Leservertragsprobe und tatsächlicher EventKit-Lauf mit 20 Erfolgen,
+  einem erwarteten Dateischutz-Skip und null Fehlern. Gemeinsamer Appbuild und
+  neuer vollständiger Endlauf bleiben nachgelagert.
+
+Diese Nachweise ersetzen keine Modell-, physische Geräte-, menschliche Stimmen-
+oder Veröffentlichungsfreigabe. Spätere Änderungen sind nicht rückwirkend durch
+den bestandenen 68-Test-Lauf qualifiziert.

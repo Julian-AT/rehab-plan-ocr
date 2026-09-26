@@ -119,6 +119,23 @@ dem Screenshot bleiben erhalten. Damit wird der ursprüngliche noch sichtbare
 Scrollindikator zeitlich näher an der letzten Geste aufgenommen. Ein bestandener
 Bildvergleich ist daraus noch nicht abgeleitet.
 
+## Gemeinsamer UI-Lauf und Bildauswertung 003
+
+`ui-complete-20260926-s19-002` besteht 68 Tests ohne Fehler oder Skip, einschließlich
+aller drei Aufnahmetests. Die getrennte Auswertung `visual-baseline-20260926-s19-003`
+bleibt mit 14/22 **fehlgeschlagen**. Beide unteren Normallisten erreichen jetzt
+Pixel 1865; ihre übrigen Inhalte sind exakt. Die dunkle Legende stimmt ebenfalls.
+
+Alle sechs großen/normalen Scrollbildabweichungen liegen ausschließlich in der
+neun Pixel breiten rechten Indikatorspur: je 2111 Pixel bei großem Index 2,
+je 1157 bei Index 4 und je 7268 in den unteren Normallisten. Die zweite
+Rahmenwartezeit zu entfernen genügte nicht: Bereits die drei Messungen in
+`position` lassen den nativen Indikator verschwinden. Diese Ursache muss die
+nächste Aufnahme berücksichtigen; es wurden weder Indikatorpixel maskiert noch
+Nachbildungen ins Bild eingesetzt. Beide Tagesabschlussbilder behalten exakt
+ihre bisherigen 1559/87 Pixelabweichungen mit maximaler Kanalabweichung 4/1.
+Originale, historische Berichte und Vergleichsschwellen bleiben unverändert.
+
 ## Diagnose der neun historischen Abweichungen
 
 Quelle ist unverändert `.local/runs/visual-baseline-20260926-s18-002`: drei bestandene

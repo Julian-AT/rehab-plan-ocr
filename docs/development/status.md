@@ -101,6 +101,32 @@ information, physical-device tests and explicit approval of current previews and
 samples remain outstanding. No physical device was updated or public version
 released.
 
+## September 26, 2026 common simulator evidence
+
+The complete local UI run now passes **68 tests, zero failures and zero skips**
+with photo/Files fixtures enabled. The tested product sources equal `f862d5a`:
+base `06ae5a3` plus the retained capture patch, verified against all app, package,
+build and runtime input paths. The source archive, patch, complete result bundle,
+signed staging and executable products remain in
+`.local/runs/ui-complete-20260926-s19-002/`. This includes the typed core import,
+agenda synchronization and pending-notification link paths. The earlier run
+interrupted by host sleep remains preserved; its day-navigation case passes
+in 27.013 seconds in the successful run. No physical device was updated.
+
+The separate strict image comparison is still **failed at 14/22**. All six
+remaining scrolled-list differences are confined to the missing system scroll
+indicator; the normal and large content positions now match exactly. The two
+finished-day views retain 1,559/87 differing pixels with maximum channel deltas
+4/1. The dark legend now matches. References and tolerances are unchanged.
+Complete evidence is in `.local/runs/visual-baseline-20260926-s19-003/`.
+
+Later changes remain separately scoped: `083f82d` preserves all post-commit
+maintenance warnings in calendar-link cleanup (nine targeted Rust tests pass).
+`8b188d2` types system-editor occurrence identity and completion; its actual
+EventKit run passes 20 tests with one expected simulator file-protection skip and
+zero failures. This later source still needs its common app build and combined
+checks; it is not retrospectively covered by the 68-test candidate run.
+
 ## Application and data
 
 The app remains SwiftUI with Rust, SQLite, UniFFI and native Apple services, with
@@ -145,7 +171,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
 | Local audio/UI | Real playback, advancing word display and cancellation pass in runs `ui-regressions-20260926-s18-002` and `003`. Large-font week/month navigation passes in run `003`; archive editing, retained title/room, cancellation and source access pass in run `004`. Test helpers now handle native date-picker values, covered tap points and virtualized fields (`9fffab3`, `cf4e39d`). Full-suite and physical latency/audio qualification remain open. Earlier failed attempts remain preserved. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
-| Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
+| Appearance | All 22 original PNGs are unchanged. Current common-run comparison remains failed at 14/22: six missing scroll indicators and the two retained small finished-day raster differences. All normal/large content positions and the dark legend now match. The original 15/22 and 13/22 reports remain separate historical evidence. No baseline replacement, image alignment or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
 | Packaging | Signed private archive/IPA at `21ff054` passes four-component signature/profile, model, notice and privacy checks. The earliest profile expired on September 26, 2026 at 11:56:33 UTC; this is historical package evidence, not current installation eligibility. See the [package record](../releases/history/2026-09-26-s18-signed-package.md); recheck signing before any approved update. |
 
