@@ -15,6 +15,8 @@ benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiter
 | `scripts` | Gemeinsame Qualitäts-, Build-, Auslieferungs- und Erkennungswerkzeuge |
 | `tests/fixtures` | Ausschließlich synthetische Prüfdaten |
 
+Die [native Architektur](docs/architecture.md) beschreibt Zuständigkeiten, Datenhaltung und Abbruchgrenzen.
+
 Web- und Tauri-Oberflächen sind entfernt. Die [lokale Referenzprüfung](docs/reference-cli.md)
 übernimmt gespeicherte Zeilenprüfungen, ausdrückliche Freigaben und eingefrorene Datensatzgruppen.
 

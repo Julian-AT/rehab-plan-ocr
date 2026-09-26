@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Frühstück",
+    "start": 0.575,
+    "end": 0.925
+  },
+  {
+    "text": "eins,",
+    "start": 0.975,
+    "end": 1.475
+  },
+  {
+    "text": "um",
+    "start": 1.525,
+    "end": 1.65
+  },
+  {
+    "text": "sieben",
+    "start": 1.7,
+    "end": 1.925
+  },
+  {
+    "text": "Uhr",
+    "start": 1.975,
+    "end": 2.075
+  },
+  {
+    "text": "im",
+    "start": 2.1,
+    "end": 2.225
+  },
+  {
+    "text": "Speisesaal.",
+    "start": 2.3,
+    "end": 3.325
+  },
+  {
+    "text": "Frühstück",
+    "start": 3.375,
+    "end": 3.725
+  },
+  {
+    "text": "zwei,",
+    "start": 3.75,
+    "end": 4.25
+  },
+  {
+    "text": "um",
+    "start": 4.3,
+    "end": 4.4
+  },
+  {
+    "text": "sieben",
+    "start": 4.45,
+    "end": 4.7
+  },
+  {
+    "text": "Uhr",
+    "start": 4.75,
+    "end": 4.875
+  },
+  {
+    "text": "dreißig.",
+    "start": 4.925,
+    "end": 5.975
+  },
+  {
+    "text": "Danach",
+    "start": 6.025,
+    "end": 6.425
+  },
+  {
+    "text": "Behandlung",
+    "start": 6.475,
+    "end": 7.125
+  },
+  {
+    "text": "zwölf,",
+    "start": 7.175,
+    "end": 7.75
+  },
+  {
+    "text": "bei",
+    "start": 7.8,
+    "end": 7.925
+  },
+  {
+    "text": "Doktor",
+    "start": 7.975,
+    "end": 8.325
+  },
+  {
+    "text": "Muster",
+    "start": 8.375,
+    "end": 8.725
+  },
+  {
+    "text": "in",
+    "start": 8.75,
+    "end": 8.85
+  },
+  {
+    "text": "Raum",
+    "start": 8.9,
+    "end": 9.225
+  },
+  {
+    "text": "zwei",
+    "start": 9.275,
+    "end": 9.7
+  },
+  {
+    "text": "Punkt",
+    "start": 9.775,
+    "end": 10.1
+  },
+  {
+    "text": "vierzehn.",
+    "start": 10.15,
+    "end": 10.9
+  }
+]

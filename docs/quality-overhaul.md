@@ -2,142 +2,147 @@
 
 # Qualitätsüberarbeitung der nativen iPhone-App
 
-Arbeitsauftrag: Kalendergesten und gemeinsame Zeitprojektion, semantische Gestaltung,
-Verlauf/Kalenderstatus/Hilfe, gemeinsame Terminzuordnung, asynchrone Erinnerungen,
-begrenzte lokale Diagnose, gezielte Erkennungsnachprüfung, native Monorepo-Struktur,
-reproduzierbare Qualitätswerkzeuge und neue Abnahme.
+Version **0.3.0**, Build **2026092613**. Lokale Umsetzung der nativen Überarbeitung;
+Geräteabnahme dieses neuen Stands steht aus. Der aktuelle Einstieg ist die
+[Architektur](architecture.md), die [Einrichtung](../README.md) und die
+[neue Vorschau mit Victoria-Hörproben](preview/2026-09-26-s12-quality/README.md).
 
-## Abnahmegrenze
+## Umgesetzter Stand
 
-Dieser Stand erhält eine neue Simulatorvorschau und Victoria-Hörproben. Frühere
-Gerätefreigaben gelten nicht für diesen Stand. Geräteinstallation erst nach
-expliziter Freigabe, frischer Sicherung und anschließendem Vergleich dauerhafter Daten.
+- **Kalender:** Gemeinsame Zeitprojektion berücksichtigt Mindesthöhen und Überschneidungen.
+  Die Zeitspalte bleibt links fest. Die gekapselte UIKit-Steuerung entscheidet nach einer
+  Bewegungsschwelle über eine Achse; Gleichstände sind vertikal. Fingergeführte Tagesseiten,
+  Zurückgleiten, Einrasten und Uhrzeitanker teilen denselben Zustand. Leere Tage haben keine
+  Zeitspalte; der Anker bleibt über leere Tage erhalten. Ganztägige und außerhalb 06–18 Uhr
+  liegende Termine bleiben erreichbar; Tage mit ausschließlich solchen Terminen verwenden
+  die Tagesliste. Wochen-Cache und verspätete Antworten sind generationsgebunden.
+- **Darstellung und Bedienung:** Semantische Farben, dezente Hell-/Dunkel-Flächen,
+  Farbkante und Legende; Therapie grün, ärztlich blau, Mahlzeiten orange, Organisation
+  violett, mehrdeutige Begriffe neutral. Systemtext und adaptive Buttonbeschriftungen,
+  mindestens 44-Punkt-Bedienflächen sowie lokale Lade- und Fehlerzustände. Die Teilen-Erweiterung
+  verwendet ebenfalls adaptive Buttonfarben, große Bedienflächen und skalierende Statusschrift. Bei „Originale
+  löschen“ ist nur das Papierkorbsymbol rot; die Bestätigung bleibt ein eigener Schritt.
+- **Mehr:** Einstellungen, Information und Entwicklung. Verlauf führt bestehende
+  Erfassungs-, Import-, Änderungs- und Rücknahmejournale zusammen; 50 Einträge pro Seite,
+  höchstens 100. Kalenderstatus liest Zugriff, Auswahl, letzte erfolgreiche Abfrage und
+  offene Schreibvorgänge. Aktualisieren wiederholt keine Schreiboperation. Fehlende Kalender
+  sperren verfügbare Termine nicht; unvollständige Auskünfte werden in Kalender und Sprache
+  kenntlich gemacht. Ein iCloud-Synchronisationsstand wird nicht behauptet.
+- **Erinnerungen:** Additive Datenbankmigration 8 vereinigt Zuordnungen für importierte,
+  manuelle und sprachlich erstellte Termine. Bearbeiten, Löschen und Rücknahme erhalten
+  Herkunft und Vergleichsschutz. Serialisiertes EventKit, asynchroner Mitteilungsadapter,
+  zusammengefasster Abgleich, Zeitlimits und getrennte Kapazitätsreservierungen. Ein
+  Kalenderalarm bleibt erhalten, solange die Ersatzplanung nicht bestätigt ist — auch
+  bei bereits installiertem Auftrag mit ausbleibendem Abschluss. Reserven: 60 reguläre,
+  ein Test- und drei Schlummeraufträge. Aktivierung und Änderungen lösen Nachplanung aus.
+  Testmitteilung nach fünf Sekunden mit sofortigem Bearbeitungszustand und Rückmeldung.
+- **Diagnose:** Korrelierte Phasen für Erfassung, Kalender, Erinnerungen und Sprache;
+  Feldherkunft und Ausschnitte in den Erfassungsdetails. Technische Protokolle getrennt von
+  dauerhaften Fachdaten, maximal 5.000 Einträge beziehungsweise 14 Tage und bereinigter Export.
+  Keine Termininhalte, Audioaufnahmen oder Gesprächstranskripte in Standardprotokollen.
+- **Erkennung:** Gesicherter erster Entwurf, konservative Parserkorrekturen und begrenzte
+  Ausschnittprüfung mit vorhandener OCR plus Apple Vision. Quellenkonflikte bleiben sichtbar.
+  Unlesbar, nicht vorhanden und widersprüchlich bleiben getrennt. Bestätigte Werte,
+  manuelle Korrekturen und ausdrücklich leere Felder werden geschützt; Abbruch und spätere
+  Rückmeldungen überschreiben keinen neueren Stand. Vision-Anfragen werden beim Zeitlimit
+  abgebrochen; ein einzelner laufender ONNX-Aufruf endet kooperativ an der nächsten Grenze.
+- **Daten und Sprache:** Atomare Seitenzuordnung, geschlossene Erfassungsannahme mit
+  Produzenten-Drain vor vollständigem Löschen, persistenter Dateilock für Teilen-Rückmeldungen,
+  wiederherstellbare Inbox. Ein Start-Lesefehler berechtigt niemals zum Löschen. Sprachsitzungen
+  verhindern verspätete Wiedergabe nach Abbruch; Audio-Konverter und VAD werden freigegeben.
+- **Codebasis:** `apps/ios`, `packages/apple`, `crates`; Web und Tauri samt veralteten
+  Adaptern und Abhängigkeiten entfernt. Wesentliche Referenzprüfungen liegen vor Entfernung
+  in der [lokalen Referenz-CLI](reference-cli.md). 329 ungenutzte Rust-Abhängigkeitseinträge
+  entfernt, keine neue Abhängigkeitsversion hinzugefügt. Verschiebungen und reine Formatierung
+  sind eigene Commits. Swift 6, swift-format, rustfmt, Clippy, Ruff, ShellCheck und shfmt;
+  gesperrte Werkzeuge/Abhängigkeiten und gemeinsame lokale/CI-Befehle mit Speicherprüfung.
 
-## Ausgangslage
+## Nachweise
 
-Git war sauber. Native App Build 2026092612; Swift 6.3 / Xcode 26.4, Rust 1.98.1.
-Nur etwa 300 MB freier Speicher. Entfernte ausschließlich reproduzierbare Web-
-Abhängigkeiten und generierte Web-/Tauri-Buildprodukte, keine privaten Originale,
-Sicherungen oder Modellgewichte.
+| Bereich | Ergebnis und Aussagegrenze |
+| --- | --- |
+| Rust-Fachlogik und FFI | 137 Tests bestanden; Bestätigung, Revisionen, Referenzfreigabe, Quellhash/Pfadgrenzen, Rücknahme, Parser, Konflikte und erhaltene Korrekturen |
+| Python und ICS | 21 Python-Tests (einschließlich zweier neuer Lizenzmanifest-Prüfungen) sowie unabhängige ICS-Prüfung bestanden; zusätzliche Prüfung betroffener Referenzskripte mit Ressourcenwarnungen als Fehler |
+| Swift-Proben | Neun Proben bestanden: Projektion, Agenda (56 Fälle), Sprachregeln, Gesprächsregeln, geordnete Einstellungen, Diagnose, Erfassungs-Löschgrenze, VAD, echte Swift/Rust-Anbindung |
+| Native Integration | 11 bestanden, ein Dateischutztest im Simulator übersprungen; EventKit, Fremdmetadaten, Serienvorkommen, Rücknahme, fehlende Kalender, Widgets und Mitteilungsansicht |
+| Mitteilungsfehler | Fünf native Ausfalltests enthalten: Fehler und Timeout, Ausschalten während Planung, Kapazitätsgrenze, verspätete Test-Ersetzung, ungeklärter Systemabschluss mit bestehender Kalenderreserve |
+| Format und Lint | Vollständiger strikter Lauf bestanden; nach letzten Änderungen Swift, Ruff, ShellCheck und shfmt erneut bestanden; Rust seit dem vollständigen Lauf unverändert |
+| Native Rust-Archive | arm64-iOS und arm64-Simulator mit ONNX erfolgreich gebaut; aktuelle generierte FFI-Bindings geprüft |
+| Simulator und UI | Alle 39 aktuellen Testmethoden durch erfolgreiche Läufe abgedeckt: vollständiger Lauf 36 bestanden, eine Einstellung übersprungen; ergänzend reduzierte Bewegung, echte Systembestätigung der Testmitteilung und Teilen-Erweiterung bestanden |
+| iPhone-Releasebuild | Unsignierter Releasebuild mit allen drei Erweiterungen bestanden; Kennungen, Versionen und ausführbare Prüfsummen aller vier Komponenten sowie 19 Modell- und 28 Lizenzdateien geprüft; kein Geräteupdate erfolgt |
+| Victoria | Vier echte lokale WAV-Proben, 24 kHz, Wortmarken, lange Antwort, frühere Stimmenkennungen und Abbruch während Inferenz geprüft; subjektive Hörabnahme steht aus |
 
-Aus der Fachprüfung bestätigte Fehler:
-- Tagesweise Zeitprojektionen und bewegte Zeitspalte.
-- Kalenderansicht kann alte Erinnerungseinstellungen zurückschreiben.
-- Manuelle/Sprachtermine fehlen in gemeinsamer Erinnerungszuordnung.
-- PDF-Produzent läuft nach Abbruch weiter; fehlerhafte Inbox-Datei blockiert Wiederherstellung.
-- Seitengruppen werden über getrennte Lese-/Schreibaufrufe überschrieben.
-- Veraltete Sprachkontexte können nach Abbruch die Audioausgabe neu starten.
-- Bestätigte leere Erkennungsfelder und Herkunfts-IDs sind bei Nachprüfung gefährdet.
-- Referenzbewertung berücksichtigt Dauer und Enddatum nicht vollständig.
+Die Rohprotokolle und xcresult-Bündel liegen lokal unter `apps/ios/build` beziehungsweise
+`artifacts/private/quality-overhaul`. Veröffentlichte Vorschauartefakte enthalten ausschließlich
+synthetische Daten. Das [Prüfmanifest](preview/2026-09-26-s12-quality/verification.json) hält
+Versionen, Ergebnisse, Quellen und Prüfsummen der ausgewählten Artefakte fest.
 
-Prüfergebnisse werden bei Durchführung ergänzt. Unbestätigte Referenzen sind
-keine Genauigkeitsmessung; Geräteabnahme und reale Mitteilungszustellung bleiben
-bis zur Beobachtung ausdrücklich offen.
+Der vollständige UI-Lauf deckt unter anderem diagonale Gesten, feste Zeitspalte,
+Anker über leere Tage, schnelle Tages-/Wochenwechsel, Überschneidungen, ausschließlich
+ganztägige/frühe/späte Termine, Kalenderstatus, Verlauf, lokale Einstellungsfehler,
+Kalenderschreiben nach Formularbestätigung, Rücknahme, Dateieingang und Sprachabbruch ab.
+Im ergänzenden Lauf wurde reduzierte Bewegung tatsächlich in den Systemeinstellungen
+aktiviert. Der Mitteilungstest erhielt eine echte Systemberechtigung und prüfte den
+ausstehenden Testauftrag. Die Teilen-Erweiterung bestand den vollständigen Weg von
+Dateien über die iOS-Vorschau bis zum Archiv mit Dunkelmodus und größter Systemschrift.
+Die anschließende schreibgeschützte Datenprüfung ergab SQLite-Integrität `ok`, weiterhin
+sechs synthetische Erfassungen, einen als Duplikat erkannten Eingang und keine offenen
+Teilen-Belege. Das ist kein Vergleich physischer Gerätedaten.
 
-## Erster Umsetzungsschritt
+**Diagnosegrenze:** In sechs erfolgreichen Sprachtests meldete Xcodes Laufzeitprüfung
+eine mögliche Prioritätsumkehr: Ein interaktiver Thread wartet auf einen Thread mit
+Standardpriorität. Die exportierten Aufrufstapel enthalten nur Nulladressen und keine
+Symbole oder Quellpositionen; die Ursache kann weder eigenem Code noch einem Framework
+zugeordnet werden. Start/Stopp und Antwortabbruch funktionierten in diesen Tests.
+Die Warnung bleibt für die Profilierung auf dem iPhone offen. Der Releasebuild meldete
+außerdem übersprungene AppIntents-Metadatenextraktion für eine Komponente ohne
+AppIntents-Abhängigkeit. Die Diagnose wird nicht als warnungsfrei ausgewiesen.
 
-- Gemeinsame Zeitprojektion und UIKit-Richtungssperre, Zeitanker, feste Zeitspalte.
-- Atomarer Seitenanhang, Abbruchschutz für PDF-Produzenten und verspätete Sprache.
-- Gemeinsame Terminzuordnung mit additiver Datenbankmigration 8; Importbelege bleiben unabhängig.
-- Verlauf mit 50/100-Grenze und stabilem Cursor, lesender Kalenderstatus, neue Mehr-Gruppen und Hilfe.
-- Asynchroner Mitteilungsadapter, zusammengefasster Abgleich und Fünf-Sekunden-Test.
-- Getrenntes lokales Diagnoseprotokoll und bereinigter Export.
+## Erkennungs-Ausgangsmessung
 
-Prüfung am 26.09.2026: 126 Rust-Tests erfolgreich; Kalenderprojektions-, Gesprächs-
-und Diagnoseproben erfolgreich. Simulator-App kompiliert. Drei native Integrationstests
-für EventKit, Kalenderalarme, Fremdtermine, Widgets und Mitteilungsansichten bestanden.
-Die abschließende App-Laufzeitprüfung benötigt noch das neu gebaute Rust-XCFramework.
-Neue Gestenaufnahmen, umfassende Ausfallprüfungen und Geräteabnahme stehen aus.
+Die eingefrorene Fassung vom 26.09.2026 wurde nach Prüfung von Binär-, Konfigurations-,
+Modellmanifest- und Originalhashes über alle 20 vorhandenen Originale erneut ausgeführt.
+20 Durchläufe lieferten Ergebnisse. Median **4.096 ms**, Bereich **2.455–8.613 ms** auf
+macOS, während weitere Builds liefen. Dies ist keine iPhone-Laufzeitmessung.
+Die bisherigen Referenztexte sind unbestätigt: Feldrichtigkeit, Terminpräzision,
+Vollständigkeit, vollständig korrekte Pläne und notwendige Korrekturen bleiben ohne
+bestätigte Referenzen unbewertet. Qualitätsziele sind keine erreichte Genauigkeitszusage.
+Der ausgeschlossene lokale Bericht liegt unter `artifacts/private/quality-overhaul/baseline-replay`.
 
-## Zweiter Umsetzungsschritt
+Die native Foto- und Dateien-Erfassung durchlief echte OCR und Apple Vision mit dem
+öffentlichen synthetischen Plan. Beide Läufe führten sechs OCR-Ausschnittprüfungen und
+sechs Vision-Prüfungen aus. Gesamtzeit **3.337 ms** beziehungsweise **2.906 ms** im Simulator;
+Vision-Anteil **2.007 ms** beziehungsweise **1.623 ms**. Beide Erkennungen lieferten acht
+Terminzeilen. Bei der erneuten Prüfung des bereits bearbeiteten PNG-Plans blieben zusätzlich
+zwei zuvor gespeicherte Testtermine als `retained_review` erhalten; ihre neue Zuordnung
+war ausdrücklich prüfpflichtig. Zehn angezeigte Einträge bedeuten hier acht Erkennungen plus
+zwei geschützte frühere Werte. Das belegt den aktiven Nachprüfungsweg und Korrekturschutz,
+keine fachlich bestätigte Erkennungsgenauigkeit.
 
-- Kalenderinitialisierung wartet auf geladene Daten; explizite Navigation hat Vorrang
-  vor einem noch auslaufenden Wischen. Leerseiten sind oben im gemeinsamen Layout verankert.
-- Mitteilungsaufrufe haben ein Zeitlimit. Reservierungen bleiben getrennt von Systemabfragen;
-  verspätete Aufträge nach einer Einstellungsänderung werden verworfen.
-- Rücknahme vergleicht bei nachweislich appverwalteten Erinnerungen deren logischen Zustand.
-  Fremde oder nachträglich geänderte Alarme behalten ihren vollständigen Vergleichsschutz.
-- Gelöschte Terminzuordnungen behalten ihre Herkunft für die Rücknahme.
-- Bestätigte Erkennungsfelder bleiben geschützt; Herkunftsverweise folgen erhaltenen IDs.
-  Unsichere Ausschnitte können zusätzlich lokal mit Apple Vision geprüft werden.
-- Referenzbewertung zählt Dauer und Enddatum; eingefrorene Messläufe verwenden und prüfen
-  das eingefrorene Programm. Eine Genauigkeitszusage wird daraus nicht abgeleitet.
-- Fehlerpfad beim Anlegen des Audio-Konverters gibt den VAD frei; Konverterzustand ist gekapselt.
+## Abnahme und verbleibende Grenzen
 
-Prüfung: 128 Rust-Tests erfolgreich. Fünf weitere native Tests für Rücknahme,
-Fremdmetadaten, Fünf-Sekunden-Test, verzögerte/fehlerhafte Mitteilungsantworten,
-Schlummerkapazität und Ausschalten während der Planung bestanden. App-Build erfolgreich.
-Die neue iOS-Rust-Nachprüfung ist noch nicht im XCFramework gebaut oder zur Laufzeit geprüft.
+Die aktuelle Vorschau und Hörproben benötigen eine neue ausdrückliche Freigabe.
+Nach [AGENTS.md](../AGENTS.md): „Geräteupdates erst nach ausdrücklicher Freigabe der
+Simulatorvorschau und Hörproben. Vor Installation frisch sichern, ohne Deinstallation
+aktualisieren und dauerhafte Daten vergleichen.“ Frühere Freigaben gelten nicht für Build
+2026092613. Private Originale, Modelle und Sicherungen wurden nicht bereinigt oder versioniert.
 
-## Referenzwerkzeuge und Mitteilungsnavigation
+Nach Freigabe: frische Sicherung, Aktualisierung ohne Deinstallation, Datenvergleich und
+Geräteprüfung von echten Terminmitteilungen, Vorder-/Hintergrund, gesperrtem Gerät,
+Neustart, Rechteverweigerung, Schlummern, Audio-Unterbrechungen, Kopfhörerwechsel,
+Spracherkennung, Hineinsprechen, Modellfolgefragen, Teilen-Erweiterung und VoiceOver.
+Simulatorzugriff auf App-Oberfläche und Systemdienste ersetzt diese Beobachtung nicht.
+Geplant, vom System bestätigt und beobachtet zugestellt bleiben getrennte Zustände;
+fehlende Zustellbeobachtung wird nicht als Zustellfehler gewertet.
 
-Die Referenzverwaltung steht jetzt in der Rust-CLI bereit (`docs/reference-cli.md`).
-Tests decken gespeicherte Zeilenbestätigung, explizite Freigabe, Widerruf nach Änderungen
-an Werten oder Textbelegen, beschädigte Referenzen, Quellhashprüfung, Prozesslock,
-Pfadgrenzen und Versuchsarchive ab. Sie übernehmen wesentliche bisherige Web-Testfälle.
-Sieben bestehende Python-Referenztests bestanden ebenfalls.
-
-Native Terminlinks werden streng validiert und laden aktuelle EventKit-Werte.
-Gelöscht, nicht zugänglich und fehlende lokale Zuordnung sind unterschiedliche Ergebnisse.
-Die native Rücknahme-/Linkprüfung und der Simulator-App-Build bestanden.
-
-## Native Struktur und Qualitätswerkzeuge
-
-App/Erweiterungen/Tests sind nach `apps/ios`, gemeinsame Pakete nach `packages/apple`
-verschoben. Testbilder und JSON-Fixtures liegen unter `tests/fixtures`; Icon-Master und
-Herkunftsnachweis bleiben unter `assets/icon-artwork`. Die Pfadumstellung bestand die
-Rust-Regression sowie Kalender-, Gesprächs- und Diagnoseproben.
-
-Web/Tauri samt Adaptern und alten Buildskripten sind entfernt. 329 nicht mehr verwendete
-Rust-Abhängigkeiten wurden aus dem Lockfile entfernt; keine neue Abhängigkeitsversion kam hinzu.
-Makefile und `scripts/quality.py` bündeln lokale und CI-Prüfungen. Werkzeugversionen und
-Download-Prüfsummen sind festgelegt, Python-Umgebung und Modellkonvertierung getrennt gesperrt.
-ShellCheck und die portable Testsuite einschließlich unabhängiger ICS-Prüfung bestanden.
-Der iOS-spezifische Rust-Code einschließlich Vision-Nachprüfung wurde mit ONNX-Feature
-für `aarch64-apple-ios-sim` erfolgreich geprüft. Das neue XCFramework bleibt noch zu bauen.
-
-Historische Dokumente beschreiben gegebenenfalls frühere Web-/Tauri-Stände. Verbindlicher
-Einstieg sind README.md, apps/ios/README.md und die aktuelle Qualitätsübersicht.
-
-## Strikte Nebenläufigkeit und vollständige Datenbereinigung
-
-App, Widgets, Mitteilungserweiterung und AppleServices kompilieren mit Swift 6.
-Systemdialoge für Kalender und Erfassung sind von den serialisierten Kalenderdiensten
-getrennt; asynchrone Mitteilungsabschlüsse verwenden Sendable-Verträge.
-
-Vollständiges Löschen schließt die Erfassungsannahme vor Beginn, wartet auf Datei-
-und Erkennungsproduzenten und entfernt anschließend auch Inbox und gemeinsame
-Teilen-Belege. Ein persistenter generationsgebundener Dateilock verhindert, dass
-alte Teilen-Rückmeldungen Daten neu anlegen. Unvollständiges Löschen bleibt für
-Wiederholung gesperrt; ein bloßer Start-Lesefehler erlaubt ausschließlich erneutes
-Lesen, niemals ungefragtes Löschen. Angenommene Fotoübertragungen werden vor der
-Erkennung aus temporärem Speicher in die wiederherstellbare Inbox übernommen.
-
-Prüfung: Löschannahme-/Drain-/Dateilock-Probe erfolgreich; sieben EventKit-/Erinnerungs-
-Integrationstests erfolgreich; Simulator-App mit Swift 6 erfolgreich gebaut.
-Tagesliste und Zeitachse teilen nun die Richtungsentscheidung. Terminflächen haben
-Hell-/Dunkel-Varianten, gefüllte Buttons explizite adaptive Kontrastfarben und Texte
-keine persönliche Anrede. Gesten und neue Darstellung benötigen noch die visuelle
-Laufzeitprüfung mit frisch gebautem Rust-Kern.
-
-## Ausgangsmessung und verspätete Mitteilungen
-
-Die eingefrorene Fassung vom 26.09.2026 wurde mit geprüften Binär-, Konfigurations-,
-Modellmanifest- und Originalhashes über alle 20 Originale erneut ausgeführt.
-Alle Durchläufe lieferten Ergebnisse; Median 4.096 ms, Bereich 2.455–8.613 ms auf
-MacOS, während weitere Builds liefen. Dies ist keine iPhone-Laufzeitmessung und
-keine Feldgenauigkeitsmessung. Referenzen bleiben unbestätigt. Der lokale Bericht
-liegt ausgeschlossen unter artifacts/private/quality-overhaul/baseline-replay.
-`scripts/replay-baseline.py` bewahrt JSON-Ergebnisse und nutzt je Original einen
-begrenzten temporären Bildspeicher; zwei Isolationstests bestanden.
-
-Test- und Schlummeraufträge verwenden pro Versuch eine eigene Systemkennung.
-Für reguläre Termine bleibt eine ungeklärte ältere Systemantwort gesperrt, auch
-nach dem Zeitlimit; bis zu ihrem Abschluss wird kein Kalenderalarm übergeben.
-Fünf native Ausfalltests einschließlich verspäteter Test-Ersetzung und bereits
-installierter Mitteilung mit ausbleibendem Abschluss bestanden.
-
-Beide nativen Rust-Archive und das neue XCFramework sind vollständig erstellt.
-`REHA_LOW_DISK=1` entfernt nach jedem fertig zusammengeführten Archiv ausschließlich
-die reproduzierbaren Rust-Zwischenprodukte dieser Zielplattform. Der Lizenzbeipack
-hat nach der Pfadumstellung eine aktualisierte Prüfsumme; Modellgewichte sind unverändert.
+Remote-CI wurde in dieser Sitzung nicht ausgeführt. Der anfängliche volle UI-Lauf war
+fehlgeschlagen: zeitweise voller Datenträger, nicht isolierte synthetische Kalenderdaten,
+ein tatsächlicher Lesefehler bei fehlendem Kalender und unvollständige UI-Testselektoren.
+Die Fehler wurden untersucht; dieser Lauf zählt nicht als erfolgreiche Abnahme.
+Auch fehlgeschlagene ergänzende Teilen-Testläufe bleiben im Nachweis erkennbar:
+Die Teststeuerung musste den Wechsel zur separaten iOS-Vorschau, die App-Aktivierung
+und das Scrollen bei größter Schrift berücksichtigen. Die abschließende Fassung dieses
+Tests bestand. Die Angabe „39 bestanden“ zählt jede aktuelle Testmethode einmal mit
+ihrem letzten Ergebnis; sie bedeutet nicht, dass jeder Zwischenlauf erfolgreich war.
+Die Überarbeitung gilt erst nach erfolgreicher Geräteprüfung und dokumentierter
+Abnahme als vollständig abgeschlossen.

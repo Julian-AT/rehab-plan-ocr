@@ -1,39 +1,93 @@
 > Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
 
-# Architecture decisions
+# Native Architektur
 
-## ADR 001 — local shared semantics
+Die SwiftUI-App und ihre Erweiterungen liegen unter `apps/ios`. Es gibt keine Webview,
+keinen Webserver und keinen Tauri-Adapter mehr. Einstieg und verbindliche Werkzeuge:
+[README](../README.md), [iOS-Build](../apps/ios/README.md), [Prüfstand](quality-overhaul.md).
 
-Tauri 2 hosts a Next.js App Router static export with React and shadcn/ui. The packaged webview loads `out/`; no Next.js server runs on desktop or iOS. Browser APIs and IPC are confined to client components, with a server-safe native-environment snapshot. System fonts avoid network font loading. `crates/reha-core` is independently executable Rust with no platform or network imports. It owns contracts, image preparation, parser, validation, calendar proposals, ICS, evaluator and SQLite ledger. `src-tauri` orchestrates IPC and background workers; `plugins/calendar` bridges iOS camera, photo picker, HEIC decoding, optional Vision, EventKit and sharing.
+## Zuständigkeiten und Grenzen
 
-No document data is sent to a server. Model downloads happen only through explicit development scripts reading public URLs; runtime inference has no download path. The release webview CSP restricts connections to local packaged resources and IPC. The packaged application loads no remote fonts, analytics, or hosted inference SDK.
+```mermaid
+flowchart LR
+    UI[SwiftUI · App und Formularbestätigung] --> FFI[RehaCore · UniFFI]
+    FFI --> Core[Rust · Fachlogik und SQLite]
+    Core --> Bridge[NativeBridge · lokale Effekte]
+    Bridge --> Apple[AppleServices · EventKit und Mitteilungen]
+    Bridge --> Vision[Apple Vision · Ausschnittprüfung]
+    Apple --> Shared[Begrenzter App-Group-Terminstand]
+    Shared --> Extensions[Widget und Mitteilungsansicht]
+    Share[Teilen-Erweiterung] --> Intake[Dateilock und Erfassungsticket]
+    Intake --> UI
+```
 
-## ADR 002 — source evidence and engine boundary
+`crates/reha-core` enthält Bildaufbereitung, Parser, Validierung, Quellenzuordnung,
+Kalendervorschläge, Rücknahme, ICS und die Referenz-CLI. `crates/reha-ffi` stellt die
+native Schnittstelle und synthetische Prüfdaten bereit. `packages/apple/AppleServices`
+kapselt Kalender, Mitteilungen, Bild-/Dokumenteingang, Dateischutz und lokale Diagnose.
+Die UI erstellt keine beliebigen Kalender-Schreibaufträge: bestätigte Vorschläge,
+Revisionen und Journalprüfung bleiben im Rust-Kern verbindlich.
 
-The original byte hash survives image conversion. The display's original-coordinate frame is the EXIF-upright original; `source.bin` preserves the exact imported bytes. Region polygons use corrected-page coordinates. `original_to_page` and its inverse are recorded, and overlays map back to the displayed upright original. User-selected page corners are expressed in that same original frame. Crops inherit their page polygon. Engine-internal stages that are unavailable are labeled as such.
+## Nebenläufigkeit und Abbruch
 
-Portable recognition pins checkpoint hashes, config and dictionary with native ORT. One pipeline at a time, two CPU intra-op threads, and cached sessions limit memory/concurrency. On cancellation/backgrounding, cooperative cancellation is checked before processing and between crops; a single native inference call is not currently preempted. Peak memory is explicitly unavailable until measured. No calibrated confidence percentages are shown.
+App und Erweiterungen verwenden Swift 6. UI und Systemdialoge sind am MainActor;
+EventKit-Dienste besitzen serialisierte Queues. UniFFI-Aufrufe laufen außerhalb der
+UI, während die Plattformbrücke synchrone Rust-Effekte in native Aufträge übersetzt.
+Mitteilungssnapshots und Systemplanung sind asynchron und zeitlich begrenzt.
 
-## ADR 003 — review is authoritative
+Ein Erkennungslauf belegt die Pipeline. Abbruch wird vor Stufen und zwischen
+Ausschnitten geprüft; ein einzelner ONNX-Aufruf ist nicht vorzeitig unterbrechbar.
+Generationstickets verhindern die Übernahme alter Kamera-, Foto-, PDF- und
+Sprachrückmeldungen. Vollständiges Löschen sperrt die Annahme, wartet auf alle
+Produzenten und löscht erst danach. Die Teilen-Erweiterung nutzt zusätzlich einen
+persistenten Dateilock; alte Rückmeldungen können gelöschte Daten nicht neu anlegen.
 
-Editable drafts preserve field provenance and validation issues. Therapist is an additive, default-empty field for older stored runs and annotations; calendar notes include the value. Extraction version 2 invalidates cached recognition results from earlier parsing. Weekday headings must agree with their numeric date; ambiguous dates require confirmation. Standalone `*Neu` markers are removed only from structured values. Header-derived column boundaries keep therapist continuations out of rooms and titles. Essential-field/timezone validation runs in Rust at export/write preparation regardless of frontend controls. Additional recognition issues must be explicitly reviewed. Review confirmation is invalidated on edits. No appointment end is inferred from neighboring rows. Potentially missed text remains visible.
+## Kalender und Erinnerungen
 
-## ADR 004 — calendar operations are a recoverable local transaction
+Vorschau, Bestätigung und Ausführung sind getrennt. Der Kern schreibt die Absicht
+vor dem EventKit-Aufruf ins Journal; unklare Ergebnisse sperren weitere Änderungen
+und benötigen einen bestätigten Prüfablauf. Aktualisieren liest ausschließlich.
+Aktuelle Kalenderwerte werden vor einer Änderung erneut mit dem Vorschlag verglichen.
+Fremde Notizen, Kalenderalarme, Serien und Einladungen bleiben geschützt.
 
-Rust matches exact events as a multiset first, then uniquely attributable moves/changes. Three-way merge preserves independent calendar edits; start/end/timezone merge atomically. User resolves competing changes. Only complete replacements may propose removals, and removals require separate approval.
+Schema 8 führt gemeinsame Zuordnungen für Importe, manuelle und sprachlich erstellte
+Termine. Historische Importbelege bleiben unabhängig. Löschungen behalten Herkunft
+und Rücknahmebezug. Ein Terminlink löst die aktuelle Kalenderinstanz auf und
+unterscheidet fehlende Zuordnung, fehlenden Zugriff und gelöschten Termin.
 
-The backend retains the proposal, hashes the reviewed draft and uses an opaque token for confirmation. The frontend cannot submit arbitrary write payloads. Each write intent is committed to SQLite before EventKit; results are recorded individually. Native updates compare current values to the preview's before-values and enforce an app marker URL plus destination identity. Unknown outcomes remain pending; reconciliation never creates. Outstanding uncertainty blocks new proposals. This favors duplicate prevention over speculative recovery.
+App-Erinnerungen übergeben einen Kalenderalarm erst nach bestätigter Systemplanung.
+Bei ungeklärtem Abschluss bleibt die Kalenderreserve bestehen. Kapazitäten sind auf
+60 reguläre Aufträge sowie einen Test und drei Schlummeraufträge begrenzt. Ein
+verspäteter Testabschluss kann eine neuere Testmitteilung nicht entfernen. Aktivierung
+und relevante Änderungen lösen Nachplanung aus; Hintergrundaktualisierung ist eine
+zusätzliche Gelegenheit. Geplant, im System ausstehend und beobachtet zugestellt sind
+unterschiedliche Zustände.
 
-iOS calendar setup creates or reuses **Reha Calendar** for new imports. A dedicated native helper runs on the serial EventKit queue. It remembers the calendar identifier and name/account metadata in app preferences, reuses the identifier after a rename, and attempts only unambiguous recovery after identifier changes. An unavailable previously configured calendar produces an explicit error instead of another calendar. Creation prefers the system default calendar's local/CalDAV account, then a local source or the sole eligible account. Provider errors never silently redirect imports to the default calendar. The selector shows the account and permits an explicit alternative. Existing import destinations and event ownership checks remain authoritative. Deleting app data clears the local calendar reference but does not remove calendars or events.
+## Erkennung und fachliche Daten
 
-## ADR 005 — retention versus research
+Der Bytehash des Originals und die Abbildung zwischen Original, korrigierter Seite
+und Ausschnitt bleiben erhalten. Jeder Feldwert behält seine Quelle; fehlend,
+unlesbar und widersprüchlich sind getrennte Zustände. Extraktionsversion 7 verwirft
+veraltete Parser-Caches. Bestätigte und manuell bearbeitete Werte sind vor automatischer
+Nachprüfung geschützt; Konflikte werden nicht allein nach Konfidenz entschieden.
 
-Application storage holds `ledger.sqlite` and `scans/<uuid>/`. Detailed records and all scan files expire at 30×86400 seconds from original import, with launch/resume cleanup and injected-time tests. SHA256 hashes and approved import snapshots survive. SQLite secure deletion is enabled; app-owned data deletion leaves external calendars/Photos untouched. The iOS root is excluded from backup and uses file protection. Research data in repository `data/private/` is separately retained and ignored by Git.
+Der erste Entwurf wird vor optionaler Nachprüfung gesichert. Unsichere Felder lösen
+begrenzte Ausschnittprüfungen mit der vorhandenen OCR und Apple Vision aus. Fehler
+oder Zeitlimit lassen den Entwurf erhalten. Referenzen benötigen ausdrückliche
+Papierprüfung und Freigabe; aktuelle Originaldurchläufe ohne bestätigte Referenzen
+belegen Ausführbarkeit, keine erreichte Genauigkeit.
 
-## ADR 006 — experiments precede adaptation
+## Speicherung und Datenschutz
 
-Canonical versioned references are paper-verified, grouped by day and frozen before tuning. The evaluator rejects provisional references and ordinary holdout access. A one-shot batch runner requires frozen config/model selection for final holdout. Reports include raw counts and explicit unavailable workflow/device metrics. No adapted model or ensemble exists at this stage.
+App-Kennung und dauerhafter Speicherpfad bleiben unverändert. `ledger.sqlite` und
+`scans/<uuid>` enthalten Fachdaten; Inbox und App-Group-Belege dienen der Wiederherstellung.
+Aufbewahrung folgt den Einstellungen; unfertige und fehlgeschlagene Aufnahmen werden
+nicht automatisch entfernt. SQLite verwendet Fremdschlüssel, vollständige
+Synchronisation und `secure_delete`. Externe Kalender und Fotos bleiben beim Löschen
+lokaler App-Daten bestehen.
 
-## Current boundaries
-
-The browser build is a labeled, ephemeral synthetic preview; real OCR, persistence and calendar export require the native app or Rust CLI. It must never pretend to process an uploaded photo. Desktop HEIC decoding is not in the shared image crate; convert locally for CLI experiments or use the iPhone import path. Automatic robust page detection, advanced blur/handwriting classifiers, preemptible native inference and memory-pressure tuning need further work/evidence.
+Technische Diagnose wird getrennt gespeichert: maximal 5.000 Einträge, 14 Tage,
+begrenzte Dateigröße, bereinigter Export. Standardprotokolle enthalten keine
+Termininhalte, Audioaufnahmen oder Gesprächstranskripte. Modelle sind gebündelt;
+Downloadwerkzeuge dienen ausschließlich der Entwicklung. Private Originale,
+Referenzen, Modelle, Sicherungen und Buildprodukte bleiben aus Git ausgeschlossen.
