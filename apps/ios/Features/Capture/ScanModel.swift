@@ -457,7 +457,8 @@ struct StagedPhoto: Transferable, Sendable {
     producer(attempt) { [self] in await ingestFile(url, attempt: attempt, navigate: navigate) }
   }
   private func ingestFile(
-    _ url: URL, attempt: ScanAttemptRegistry.Attempt, navigate: Bool
+    _ url: URL, attempt: ScanAttemptRegistry.Attempt, navigate: Bool,
+    alreadyRetained: Bool = false
   ) async {
     guard canRetain(attempt), let owner = attempts.begin(attempt) else { return }
     attempts.finishInput(attempt)
@@ -469,21 +470,24 @@ struct StagedPhoto: Transferable, Sendable {
       release(owner)
     }
     do {
-      let staged = try await Task.detached {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        try IntakeStaging.validateSize(url)
-        let root = try AppStorage.prepare().appendingPathComponent("inbox")
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let destination = root.appendingPathComponent(id).appendingPathExtension(url.pathExtension)
-        if destination != url && !FileManager.default.fileExists(atPath: destination.path) {
-          try FileManager.default.copyItem(at: url, to: destination)
-        }
-        return destination
-      }.value
-      guard canRetain(attempt) else { return }
-      _ = try await core.stagePhoto(id: id, path: staged.path)
-      try? FileManager.default.removeItem(at: staged)
+      if !alreadyRetained {
+        let staged = try await Task.detached {
+          let scoped = url.startAccessingSecurityScopedResource()
+          defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+          try IntakeStaging.validateSize(url)
+          let root = try AppStorage.prepare().appendingPathComponent("inbox")
+          try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+          let destination = root.appendingPathComponent(id).appendingPathExtension(
+            url.pathExtension)
+          if destination != url && !FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.copyItem(at: url, to: destination)
+          }
+          return destination
+        }.value
+        guard canRetain(attempt) else { return }
+        _ = try await core.stagePhoto(id: id, path: staged.path)
+        try? FileManager.default.removeItem(at: staged)
+      }
       guard canProcess(attempt), !Task.isCancelled else { return }
       let path = try await core.artifactPath(id: id, artifact: "source.bin")
       guard canProcess(attempt), !Task.isCancelled else { return }
@@ -571,14 +575,23 @@ struct StagedPhoto: Transferable, Sendable {
         else { continue }
         attempts.finishInput(attempt)
         defer { release(owner) }
-        await ingestFile(url, attempt: attempt, navigate: false)
-        // Receipt cleanup follows shared-core persistence, even if PDF
-        // decoding failed. The archive can retry the retained original.
-        if canRetain(attempt),
-          (try? await core.artifactPath(id: receipt.id, artifact: "source.bin")) != nil,
-          canRetain(attempt)
-        {
-          try? FileManager.default.removeItem(at: folder)
+        do {
+          // Bypass the inbox: a crash during its old non-atomic copy may have
+          // left different bytes under this same ID. Core verifies this exact
+          // receipt against the immutable original before acknowledging it.
+          let retained = try await IntakeStaging.retainReceipt(
+            receipt, source: url, folder: folder,
+            canRetain: { self.canRetain(attempt) },
+            retain: { [core] id, source in
+              _ = try await core.stagePhoto(id: id, path: source.path)
+              let path = try await core.artifactPath(id: id, artifact: "source.bin")
+              return URL(fileURLWithPath: path)
+            })
+          if let retained {
+            await ingestFile(retained, attempt: attempt, navigate: false, alreadyRetained: true)
+          }
+        } catch {
+          if canRetain(attempt) { self.error = userMessage(error) }
         }
       }
       if let warning = pending.warning, admission.accepts(ticket), generation == documentGeneration
@@ -596,6 +609,10 @@ struct StagedPhoto: Transferable, Sendable {
     defer { admission.end(lease) }
     let generation = documentGeneration
     do {
+      // A complete share receipt is authoritative over a legacy inbox copy
+      // that may have been interrupted before its final bytes reached disk.
+      await recoverShares()
+      guard admission.accepts(ticket), generation == documentGeneration else { return }
       let urls = try await Task.detached {
         let folder = try AppStorage.prepare().appendingPathComponent("inbox")
         return
@@ -623,8 +640,6 @@ struct StagedPhoto: Transferable, Sendable {
           }
         }
       }
-      guard admission.accepts(ticket), generation == documentGeneration else { return }
-      await recoverShares()
       guard admission.accepts(ticket), generation == documentGeneration else { return }
       let history = try await core.history()
       for intake in history.intakes where intake.status == "document" {

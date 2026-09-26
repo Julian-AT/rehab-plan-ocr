@@ -113,6 +113,19 @@ enum IntakeStaging {
     return receipt
   }
   static func pending() throws -> Pending { try pending(gate: gate()) }
+  /// Only the acknowledgement of this exact original can release its receipt.
+  /// A pre-existing archive path may belong to an interrupted, shorter inbox copy.
+  @MainActor static func retainReceipt(
+    _ receipt: IntakeReceipt, source: URL, folder: URL,
+    canRetain: () -> Bool,
+    retain: (String, URL) async throws -> URL
+  ) async throws -> URL? {
+    guard canRetain() else { return nil }
+    let original = try await retain(receipt.id, source)
+    guard canRetain() else { return nil }
+    try FileManager.default.removeItem(at: folder)
+    return original
+  }
   static func pending(gate: IntakeGate) throws -> Pending {
     let state = try gate.snapshot()
     guard !state.erasing else { return Pending(receipts: [], preservedIssues: 0) }

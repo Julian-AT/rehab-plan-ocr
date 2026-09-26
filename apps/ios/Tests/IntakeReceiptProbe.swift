@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 @main struct IntakeReceiptProbe {
-  static func main() async throws {
+  @MainActor static func main() async throws {
     let files = FileManager.default
     let root = files.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? files.removeItem(at: root) }
@@ -66,6 +66,59 @@ import Foundation
     let repeated = try IntakeStaging.pending(gate: gate)
     precondition(repeated.receipts.count == 1 && repeated.preservedIssues == 6)
 
+    // A prior app could crash while copying this receipt into the inbox and
+    // promote only its prefix on restart. Existence of that archive path must
+    // never acknowledge the complete receipt or overwrite the immutable bytes.
+    let archive = root.appendingPathComponent("retained-original")
+    let prefix = Data(bytes.prefix(8))
+    try prefix.write(to: archive)
+    do {
+      _ = try await IntakeStaging.retainReceipt(
+        receipt, source: published.appendingPathComponent("original"), folder: published,
+        canRetain: { true },
+        retain: { id, original in
+          precondition(id == receipt.id)
+          let incoming = try Data(contentsOf: original)
+          precondition(incoming == bytes, "Recovery substituted the truncated inbox copy")
+          guard try Data(contentsOf: archive) == incoming else {
+            throw CocoaError(.fileWriteFileExists)
+          }
+          return archive
+        })
+      fatalError("Mismatching immutable original was acknowledged")
+    } catch CocoaError.fileWriteFileExists {}
+    let preservedReceipt = try Data(contentsOf: published.appendingPathComponent("original"))
+    let preservedArchive = try Data(contentsOf: archive)
+    precondition(preservedReceipt == bytes && preservedArchive == prefix)
+
+    // Exact persistence acknowledgement releases the receipt even when later
+    // PDF decoding cannot succeed. The archive now owns all original bytes.
+    try files.removeItem(at: archive)
+    let acknowledged = try await IntakeStaging.retainReceipt(
+      receipt, source: published.appendingPathComponent("original"), folder: published,
+      canRetain: { true },
+      retain: { _, original in
+        try files.copyItem(at: original, to: archive)
+        return archive
+      })
+    precondition(acknowledged == archive && !files.fileExists(atPath: published.path))
+    let completeArchive = try Data(contentsOf: archive)
+    precondition(completeArchive == bytes)
+
+    // Erasure invalidating admission during the await owns receipt cleanup.
+    // A late successful handoff must not consume or restart that old receipt.
+    let late = try IntakeStaging.stage(source, generation: generation, gate: gate)
+    let lateFolder = receipts.appendingPathComponent(late.id)
+    var admitted = true
+    let lateResult = try await IntakeStaging.retainReceipt(
+      late, source: lateFolder.appendingPathComponent("original"), folder: lateFolder,
+      canRetain: { admitted },
+      retain: { _, _ in
+        admitted = false
+        return archive
+      })
+    precondition(lateResult == nil && files.fileExists(atPath: lateFolder.path))
+
     // Recovery may finish before erasure or be fenced out; it cannot publish afterwards.
     let recovery = Task.detached { try? IntakeStaging.pending(gate: gate) }
     let erasure = Task.detached { try gate.beginErasure() }
@@ -84,7 +137,7 @@ import Foundation
     let reopened = try IntakeStaging.pending(gate: gate)
     precondition(reopened.receipts.count == 1 && reopened.warning == nil)
     print(
-      "Intake receipts: partial recovery, replay, preserved corrupt/oversized originals, publication collision and erasure fencing passed"
+      "Intake receipts: partial recovery, replay, preserved originals, interrupted inbox handoff, exact acknowledgement and erasure fencing passed"
     )
   }
 }
