@@ -60,10 +60,11 @@ def embedded_code(app):
             yield path
 
 
-def check_resources(app):
+def check_resources(app, *, private_victoria=False):
     for path in app.rglob("*"):
         parts = {part.lower() for part in path.relative_to(app).parts}
-        if parts & EXCLUDED_RESOURCE_PARTS:
+        private_model = private_victoria and path.relative_to(app).parts[0] == "kokoro-german"
+        if parts & EXCLUDED_RESOURCE_PARTS and not private_model:
             raise ValueError("Experimental speech resources are forbidden in release bundles")
         if parts & EXCLUDED_ASSISTANT_PARTS:
             raise ValueError("Experimental assistant resources are forbidden in release bundles")

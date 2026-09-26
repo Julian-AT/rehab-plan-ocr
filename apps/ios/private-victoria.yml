@@ -1,0 +1,22 @@
+# Personal-device build explicitly requested by the user. Public release checks
+# reject this marker; model hashes and notices are verified by its own build path.
+include: [project.yml]
+packages:
+  RehaCore:
+    path: ../../.local/builds/private-victoria/RehaCore
+targets:
+  Termine:
+    sources:
+      - path: ../../.local/models/runtime/kokoro-german
+        type: folder
+        buildPhase: resources
+      - path: ../../.local/builds/private-victoria/private-speech
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) REHA_PRIVATE_VICTORIA"
+    info:
+      path: ../../.local/builds/private-victoria/Info.plist
+      properties:
+        REHAPrivateVictoria: true

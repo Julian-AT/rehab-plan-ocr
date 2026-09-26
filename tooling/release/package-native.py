@@ -27,7 +27,7 @@ def run(*args):
     return result.stdout
 
 
-def package(run_value, existing_archive=None):
+def package(run_value, existing_archive=None, *, private_victoria=False):
     if existing_archive is not None:
         release_artifacts.reserve(run_value, archive=existing_archive)
     release_root, archive_root, provenance = release_artifacts.load(run_value)
@@ -52,7 +52,11 @@ def package(run_value, existing_archive=None):
         # Clear extended attributes in a temporary copy without changing signed files.
         run("xattr", "-cr", str(app))
         run("codesign", "--verify", "--deep", "--strict", str(app))
-        contents = verify(app, "device")
+        contents = (
+            verify(app, "device", private_victoria=True)
+            if private_victoria
+            else verify(app, "device")
+        )
         profiles = []
         common_devices = None
         for component in [app, *sorted(app.glob("PlugIns/*.appex"))]:
@@ -144,10 +148,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, help="Reserved archive run below .local/releases")
     parser.add_argument(
+        "--private-victoria", action="store_true", help="Explicit personal-device Victoria profile"
+    )
+    parser.add_argument(
         "--archive", type=pathlib.Path, help="Explicit historical archive; --run must be new"
     )
     args = parser.parse_args()
-    package(args.run, args.archive)
+    package(args.run, args.archive, private_victoria=args.private_victoria)
 
 
 if __name__ == "__main__":

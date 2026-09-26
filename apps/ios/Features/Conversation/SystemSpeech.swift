@@ -25,11 +25,16 @@ struct RenderedSpeech: Sendable {
 /// Prepared text enters here; playback, progress and interruption remain owned
 /// by SpeechOutput and its shared microphone/output graph.
 @MainActor protocol LocalSpeechRendering: AnyObject {
+  var preferenceKey: String { get }
   var voices: [LocalVoice] { get }
   func selectedVoice(_ identifier: String?) -> LocalVoice?
   func render(text: String, voice: LocalVoice, rate: Float, request: UInt64) async throws
     -> RenderedSpeech
   func setRequest(_ request: UInt64)
+}
+
+extension LocalSpeechRendering {
+  var preferenceKey: String { "voice.system.id" }
 }
 
 enum SystemSpeechError: LocalizedError {

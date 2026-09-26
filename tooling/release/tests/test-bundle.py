@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tooling/release"))
 import bundle  # noqa: E402
 import privacy  # noqa: E402
+import private_speech  # noqa: E402
 import runtime_inventory as inventory  # noqa: E402
 
 
@@ -106,6 +107,77 @@ class BundleTests(unittest.TestCase):
         self.assertFalse(report["runtime_inventory"]["public_distribution_cleared"])
         self.assertEqual(set(report["models"]), {"small"})
         self.assertEqual(report["speech"]["bundled_model_files"], 0)
+
+    def test_private_voice_cannot_enter_public_packaging_or_self_authorize(self):
+        info = self.app / "Info.plist"
+        original = info.read_bytes()
+        info.write_bytes(plistlib.dumps(plistlib.loads(original) | {"REHAPrivateVictoria": True}))
+        with self.assertRaisesRegex(ValueError, "explicit packaging"):
+            self.verify()
+        info.write_bytes(original)
+        with self.assertRaisesRegex(ValueError, "explicit packaging"):
+            bundle.verify(self.app, "simulator", self.root, private_victoria=True)
+
+    def test_private_voice_requires_pins_notices_native_code_and_explicit_profile(self):
+        info = self.app / "Info.plist"
+        info.write_bytes(
+            plistlib.dumps(plistlib.loads(info.read_bytes()) | {"REHAPrivateVictoria": True})
+        )
+        binary = self.app / "Termine"
+        write(binary, b"Synthetic _espeak_Initialize native symbol")
+        data = b"Synthetic Victoria model"
+        lock = {
+            "files": [
+                {
+                    "path": "model.bin",
+                    "bytes": len(data),
+                    "sha256": write(self.app / "kokoro-german/model.bin", data),
+                }
+            ]
+        }
+        write(self.root / "ml/registry/runtime/kokoro.lock.json", encoded(lock))
+        write(self.app / "kokoro-german/manifest.json", encoded(lock))
+        for source in private_speech.SOURCES:
+            if not (self.root / source).exists():
+                write(self.root / source, b"Synthetic reviewed private source")
+        notices = {
+            "license.txt": write(
+                self.root / private_speech.NOTICES / "license.txt", b"Synthetic notice"
+            )
+        }
+        write(self.root / private_speech.NOTICES / "manifest.json", encoded(notices))
+        write(self.app / "private-speech/license.txt", b"Synthetic notice")
+        manifest = {
+            "profile": "personal-victoria",
+            "public_distribution": False,
+            "cargo_features": ["kokoro"],
+            "sources": {s: private_speech.sha(self.root / s) for s in private_speech.SOURCES},
+            "base_inventory_sha256": private_speech.sha(self.root / inventory.INVENTORY),
+            "phonemizer": {},
+        }
+        for target in ["aarch64-apple-ios", "aarch64-apple-ios-sim"]:
+            base = self.root / ".local/builds/phonemizer" / target
+            record = {
+                "artifacts": {"library.a": write(base / "library.a", b"Synthetic static library")}
+            }
+            write(base / "build-identity.json", encoded(record))
+            manifest["phonemizer"][target] = record
+        write(self.app / "private-speech/manifest.json", encoded(manifest))
+        report = bundle.verify(self.app, "simulator", self.root, private_victoria=True)
+        self.assertEqual(report["speech"]["voice"], "victoria")
+        self.assertFalse(report["speech"]["public_distribution"])
+        with self.assertRaisesRegex(ValueError, "explicit packaging"):
+            self.verify()
+        for path in [
+            self.app / "kokoro-german/model.bin",
+            self.app / "private-speech/license.txt",
+            binary,
+        ]:
+            original = path.read_bytes()
+            path.write_bytes(b"Incorrect replacement")
+            with self.assertRaises(ValueError):
+                bundle.verify(self.app, "simulator", self.root, private_victoria=True)
+            path.write_bytes(original)
 
     def test_component_identity_version_platform_and_compatibility_are_required(self):
         for component in self.components.values():

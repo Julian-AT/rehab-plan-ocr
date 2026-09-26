@@ -28,7 +28,7 @@ struct PlaybackWord: Identifiable {
     }
     set {
       preferredVoiceID = newValue
-      UserDefaults.standard.set(newValue, forKey: "voice.system.id")
+      UserDefaults.standard.set(newValue, forKey: renderer.preferenceKey)
     }
   }
   var availableVoices: [LocalVoice] { renderer.voices }
@@ -45,9 +45,13 @@ struct PlaybackWord: Identifiable {
   }
   private let renderer: any LocalSpeechRendering
   private var preferredVoiceID: String?
-  init(renderer: any LocalSpeechRendering = SystemSpeechRenderer()) {
-    self.renderer = renderer
-    preferredVoiceID = UserDefaults.standard.string(forKey: "voice.system.id")
+  init(renderer: (any LocalSpeechRendering)? = nil) {
+    #if REHA_PRIVATE_VICTORIA
+      self.renderer = renderer ?? VictoriaSpeechRenderer()
+    #else
+      self.renderer = renderer ?? SystemSpeechRenderer()
+    #endif
+    preferredVoiceID = UserDefaults.standard.string(forKey: self.renderer.preferenceKey)
   }
   private var generation: UInt64 = 0
   private var task: Task<Void, Never>?

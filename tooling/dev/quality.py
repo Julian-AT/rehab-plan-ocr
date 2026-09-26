@@ -412,6 +412,7 @@ def tests(portable):
             "interpretation-evaluation",
             "input-audio",
             "system-speech",
+            "victoria-pcm",
             "capture-preparation",
             "native-photo",
             "native-text-recognition",
