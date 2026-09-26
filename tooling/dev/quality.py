@@ -207,6 +207,7 @@ def tests(portable):
         "packages/rust/reha-cli/tests/verify-ics.py",
         env=dict(ENV, REHA_BINARY=str(ROOT / "target/debug/reha")),
     )
+    run("sh", "tooling/checks/test-vad.sh")
     if APPLE and not portable:
         for probe in [
             "agenda-projection",
@@ -230,7 +231,6 @@ def tests(portable):
             "ordered-settings",
             "diagnostics",
             "intake-erasure",
-            "vad",
             "native-bindings",
         ]:
             run("sh", f"tooling/checks/test-{probe}.sh")

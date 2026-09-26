@@ -57,6 +57,9 @@ establish current device behavior or authorize an update.
   actual simulator and fresh unsigned device builds pass, as do 142 tool tests
   and lint. The first current hosted run passes the portable job; Apple reveals a
   clean-PATH Make failure now reproduced and fixed locally (143 tool tests pass).
+  The second hosted run confirms the restore fix and passes all tests up to an old
+  VAD probe's private-recording/ffmpeg dependency. Its default now uses reproducible
+  C signals on both platforms; local detector and native-binding probes pass.
   Full Apple hosted and signed-release evidence remain pending.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one

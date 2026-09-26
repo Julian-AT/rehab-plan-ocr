@@ -139,6 +139,17 @@ is pinned to its verified v7.0.1 commit. No app binaries, model assets or privat
 working storage are selected. Local checks parse the workflow and actual emitted
 bundle JSON; successful hosted artifact capture remains to be observed.
 
+The second [hosted run](archive:github/run-35284918453)
+at `4b765d0` again passes Linux and confirms the Apple restore fix. Apple then
+passes Rust, all tool tests, ICS and the first 21 Swift probes, stopping at a legacy
+VAD probe that assumes ffmpeg and a private local preview recording. A clean-PATH
+local reproduction fails identically. The default VAD test now synthesizes harmonic
+bursts in C, checks initial/final silence and invalid frames, and is included on
+both platforms. Its 164/350 positive frames and the optional retained local audio's
+504/547 frames pass; these are detector regressions, not speech-quality evidence.
+The remaining native-binding integration and repository lint pass locally. The
+second run's logs and identities are retained in `.local/runs/hosted-ci-20260926-s18-002`.
+
 ### One civil clock through interpretation and confirmation — 2026-09-26
 
 Each voice/text turn now captures its civil calendar and instant before awaiting

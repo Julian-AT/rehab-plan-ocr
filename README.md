@@ -50,6 +50,12 @@ mit einem Hinweis auf den nötigen Einrichtungsschritt ab.
 
 `make help` zeigt die Einstiegspunkte. Einzelne Prüfungen sind beispielsweise
 `make test-agenda-cache`, `make test-voice-rules` und `make test-tools`.
+`make test-vad` prüft den eingebundenen Detektor mit erfundenen harmonischen
+Signalen, Stille und ungültigen Zeitfenstern; dafür reichen C-Compiler und
+Standard-Mathematikbibliothek. Der Test läuft auch in Linux-CI. Eine zusätzliche
+lokale Aufnahme lässt sich mit `make test-vad TEST_ARGS="/Pfad/Aufnahme.wav"`
+prüfen; nur diese optionale Konvertierung benötigt ffmpeg. Der synthetische
+Test bewertet keine echte Sprachqualität oder natürlichen Sprechpausen.
 `make ci-status` zeigt gehostete Läufe für den konfigurierten GitHub-Remote.
 Das optionale CI-Werkzeug benötigt Node.js ab Version 22 und eine angemeldete
 GitHub CLI; `node tooling/dev/ci_monitor.cjs --help` beschreibt die Befehle.
