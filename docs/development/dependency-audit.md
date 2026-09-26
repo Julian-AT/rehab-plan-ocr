@@ -127,3 +127,14 @@ The immutable database, raw report and receipt are retained at
 `.local/audits/advisories-20260926-s20-001` and `review-20260926-s20-001`; the separate
 `.local/maintenance/dependency-review-summary-20260926-s20-001.json` records scope and
 unchanged lockfile identity after integration. Earlier reports remain unchanged.
+
+On 2026-09-26 a fresh explicit retrieval produced RustSec commit
+[`a26d8486932e36fc3dd0f3bb7073233ed524baee`](https://github.com/RustSec/advisory-db/tree/a26d8486932e36fc3dd0f3bb7073233ed524baee).
+The offline review completed successfully across 231 lockfile dependencies and
+1,252 advisories, with zero reported vulnerabilities and the same two unmaintained
+warnings. No dependency was changed. Its immutable inputs, raw output and receipt
+are under `.local/audits/advisories-20260926-s21-001` and
+`.local/audits/review-20260926-s21-001`. The receipt binds the inventory present at the
+time of that run; subsequent inventory or package changes require their own
+verification. Native libraries, Python environments and registry yanks are outside
+this RustSec result.
