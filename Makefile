@@ -85,6 +85,18 @@ benchmark-voice-rules:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
 	python3 tooling/dev/probes.py voice-rules --run "$(RUN)"
 
+.PHONY: restore-vlm-runtime restore-vlm-models build-vlm
+restore-vlm-runtime:
+	python3 ml/experiments/vlm/build.py restore
+
+restore-vlm-models:
+	/usr/bin/env uv run --locked python ml/experiments/vlm/fetch-vlm.py
+
+build-vlm: PEAK_GIB = 4
+build-vlm: check-storage
+	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
+	python3 ml/experiments/vlm/build.py build --run "$(RUN)"
+
 .PHONY: inventory-artifacts clean-artifacts check-storage
 inventory-artifacts:
 	python3 tooling/dev/artifacts.py plan --manifest "$(CLEANUP_MANIFEST)"
@@ -112,6 +124,7 @@ build test-ios build-assistant-native build-assistant-runtime build-assistant-tr
 train-ocr resume-ocr train-assistant resume-assistant export-ocr export-assistant assistant-smoke: check-storage
 
 help:
+	@echo 'Isolated VLM experiment: make restore-vlm-runtime; make build-vlm RUN=<new-local-run>; model download is separate: make restore-vlm-models'
 	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
 	@echo 'Checkpoints: make inventory-checkpoints RUN=<training-run>; plan-checkpoints/clean-checkpoints CHECKPOINT_MANIFEST=<new-plan>'

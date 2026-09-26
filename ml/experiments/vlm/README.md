@@ -13,14 +13,25 @@ Check every model file before invoking the library. `mtmd_init_from_file` checks
 projector/text embedding compatibility; an image smoke test is also required.
 Model-family support alone does not establish checkpoint compatibility.
 
-Build from a clean checkout at the lock's revision:
+The supported host build separates network restoration from offline compilation:
 
 ```sh
-cmake -S ml/experiments/vlm -B .local/builds/vlm \
-  -DLLAMA_SOURCE="$PWD/.local/upstream/llama.cpp" -DCMAKE_BUILD_TYPE=Release
-cmake --build .local/builds/vlm --parallel 4
-python3 ml/experiments/vlm/fetch-vlm.py
+make restore-vlm-runtime
+make build-vlm RUN=.local/runs/vlm-build-example
+# Optional model download is a separate action:
+make restore-vlm-models
 ```
+
+The runtime source is shared with the assistant only while both registry pins
+match. Restoration refuses a divergent pin or modified checkout. The offline
+build uses CMake 3.31.6, checks the source revision, and retains compiler/SDK/source
+identities and logs in the new run. Its `receipt.json` identifies the executable
+under `.local/builds/vlm/products/<identity>/reha-vlm-read`; later builds verify
+every cached output byte. Temporary compiler products are removed on completion.
+A build requires the 20 GiB reserve plus 4 GiB peak allowance. Eight CLI smoke
+checks run on the actual executable without loading weights, including the input
+size limit, missing models and preservation of existing reports. These checks
+establish executable behavior, not checkpoint compatibility.
 
 Convert the pinned Paddle checkpoint with that checkout's
 `convert_hf_to_gguf.py --outtype f16`, once for the text model and once with
@@ -32,7 +43,12 @@ with a 60-second cooperative deadline including loading, up to 1,024 image token
 and 256 greedy output tokens. There is no hosted service. The wrapper runner
 additionally terminates the child at its wall-clock deadline. Limited or failed
 readings cannot become approved fields. Checkpoint load and inference failures
-are recorded; they do not replace the portable draft.
+are recorded; they do not replace the portable draft. The CLI checks the 40 MiB
+image limit before allocation and rejects a changed read. Result files are created
+exclusively with private permissions; existing reports and symlinks are preserved,
+and a failed write returns a nonzero exit. Qualification requires an explicitly
+selected executable and a new output directory; it cannot overwrite old conversions
+or their compatibility manifests.
 
 `build-xcframework.sh` in the pinned runtime includes libmtmd for Apple builds.
 This is a future packaging path, not evidence of iPhone qualification. Models
@@ -49,10 +65,13 @@ Runtime and model references: [libmtmd documentation](https://github.com/ggml-or
 Prepare a compatibility manifest using the pinned converter environment:
 
 ```sh
+VLM_BINARY=$(python3 -c 'import json; print(json.load(open(".local/runs/vlm-build-example/receipt.json"))["binary"])')
 uv run --python 3.12 --with torch==2.11.0 --with numpy==2.2.6 \
   --with transformers==4.57.6 --with sentencepiece==0.2.1 \
   --with protobuf==4.25.8 --with pillow==12.1.1 \
-  python ml/experiments/vlm/qualify-vlm.py
+  python ml/experiments/vlm/qualify-vlm.py \
+  --binary "$VLM_BINARY" \
+  --output .local/models/runtime/experiments/conversion-example
 python3 ml/evaluation/recognition/compare-regions.py /path/to/retained/run.json \
   .local/runs/my-comparison
 ```
@@ -82,8 +101,10 @@ available, so neither additional model is shipped.
 
 For an offline side-by-side report, run `python3 ml/evaluation/recognition/report-regions.py .local/runs/my-batch .local/runs/refinement-v3-baseline`. The generated `review.html` escapes readings and uses only local images.
 
-Build output now defaults to `.local/builds/vlm`; conversion outputs and the
-`candidates.json` consumed by the comparison stay under
-`.local/models/runtime/experiments`. Use `--output` to isolate a new conversion.
-Existing verified models, run manifests and compatibility aliases are preserved;
-this path cleanup does not re-convert or re-qualify an existing checkpoint.
+Historical models, manifests and compatibility aliases remain unchanged.
+A new conversion needs a unique `--output`; pass its `candidates.json` to
+`compare-regions.py --manifest` when selecting that experiment. The historical
+comparison default still selects the retained historical manifest. A host build
+neither re-converts nor re-qualifies an existing checkpoint. The CLI's eight
+failure-path smoke checks and five source/evidence guards can be repeated through
+`make build-vlm RUN=<new-local-run>` and `make test-tools`, respectively.

@@ -22,6 +22,10 @@ def sha(path):
 
 
 def qualify(args):
+    if args.output.exists() or args.output.is_symlink():
+        raise ValueError(
+            "Use a new output directory; existing conversion and review evidence is preserved."
+        )
     lock_path = ROOT / "ml/registry/runtime/vlm-experiments.lock.json"
     lock = json.loads(lock_path.read_text())
     revision = subprocess.check_output(
@@ -46,7 +50,7 @@ def qualify(args):
             items.append({**item, "sha256": digest})
         source_hashes[candidate["id"]] = items
     output = args.output
-    output.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=False)
     converter = args.runtime / "convert_hf_to_gguf.py"
     text = output / "paddle-f16.gguf"
     projector = output / "mmproj-paddle-f16.gguf"
@@ -64,21 +68,20 @@ def qualify(args):
         if mmproj:
             command += ["--mmproj"]
         converter_commands.append(command)
-        if not path.exists() or args.reconvert:
-            with (output / ("convert-projector.log" if mmproj else "convert-text.log")).open(
-                "w"
-            ) as log:
-                subprocess.run(
-                    command,
-                    check=True,
-                    stdout=log,
-                    stderr=log,
-                    env={
-                        **__import__("os").environ,
-                        "HF_HUB_OFFLINE": "1",
-                        "TRANSFORMERS_OFFLINE": "1",
-                    },
-                )
+        with (output / ("convert-projector.log" if mmproj else "convert-text.log")).open(
+            "x"
+        ) as log:
+            subprocess.run(
+                command,
+                check=True,
+                stdout=log,
+                stderr=log,
+                env={
+                    **__import__("os").environ,
+                    "HF_HUB_OFFLINE": "1",
+                    "TRANSFORMERS_OFFLINE": "1",
+                },
+            )
     candidates = [
         ("glm-ocr", args.glm / "GLM-OCR-Q8_0.gguf", args.glm / "mmproj-GLM-OCR-Q8_0.gguf"),
         ("paddleocr-vl-1.6", text, projector),
@@ -175,7 +178,7 @@ def qualify(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--runtime", type=Path, default=ROOT / ".local/upstream/llama.cpp")
-    p.add_argument("--binary", type=Path, default=ROOT / ".local/builds/vlm/reha-vlm-read")
+    p.add_argument("--binary", type=Path, required=True)
     p.add_argument(
         "--glm", type=Path, default=ROOT / ".local/models/runtime/experiments/checkpoints/glm-ocr"
     )
@@ -184,6 +187,5 @@ if __name__ == "__main__":
         type=Path,
         default=ROOT / ".local/models/runtime/experiments/checkpoints/paddleocr-vl-1.6",
     )
-    p.add_argument("--output", type=Path, default=ROOT / ".local/models/runtime/experiments")
-    p.add_argument("--reconvert", action="store_true")
+    p.add_argument("--output", type=Path, required=True)
     qualify(p.parse_args())

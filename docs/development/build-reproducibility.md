@@ -270,3 +270,51 @@ dateiweise geprüft und benötigt den temporären Checkout nicht. Dieser bleibt
 vorerst zusätzlich erhalten. Neuere Quellstände, signierte Gerätepakete,
 menschliche Sprach-/Bedienungsabnahme und öffentliche Vertriebsfreigabe benötigen
 eigene Nachweise; die Paketprüfung weist diese Freigaben weiterhin als offen aus.
+
+
+## Isolierter VLM-Hostbuild am 26. September 2026
+
+`make restore-vlm-runtime` stellt ausschließlich die gemeinsam gepinnte
+llama.cpp-Quelle und CMake 3.31.6 bereit. Abweichende VLM-/Assistenten-Pins oder
+ein veränderter Checkout werden abgewiesen. `make build-vlm RUN=<neuer-lokaler-lauf>`
+baut offline, überprüft die Quellidentität und führt acht Prüfungen an der echten
+CLI aus. Modelle werden getrennt mit `make restore-vlm-models` heruntergeladen.
+Der Ausgabeordner muss neu sein; Quellkopien, Compiler-/SDK-/CMake-Identität und
+Logs bleiben erhalten. Der bestehende native Assembly-Cache verwaltet das
+fertige Programm nach Inhalt und prüft bei Wiederverwendung alle Ausgabebytes.
+Compilerzwischenprodukte sind auf den einzelnen Build begrenzt und werden danach
+entfernt. Geerbte Compiler-/SDK-/Linkeroptionen sind Bestandteil der Cacheidentität.
+
+Der erste Offline-Versuch `vlm-rebuild-20260926-s19-001` scheiterte vor Kompilierung
+an dem nach Bereinigung fehlenden CMake-Paket. Die getrennte Einrichtung stellte
+es wieder her. Der vollständige Neubau `002` und die Wiederholung `003` bestanden
+mit äußerer Netzsperre; beide führen die acht CLI-Prüfungen erfolgreich aus.
+Nach Ergänzung der geerbten Buildoptionen bestehen auch Neubau `004` und
+Wiederholung `005` mit äußerer Netzsperre und je acht CLI-Erfolgen. Das Programm
+ist bytegleich zum ersten erfolgreichen Build (SHA-256
+`e4a2fb11f8a86fc466f4ded85fef3789cc349caa72781519f3bcd9c1848aa7c8`).
+Vor der letzten Wiederholung sind 46,54 GiB frei; dies ist eine Volumenmessung,
+keine ausschließlich dem Build zugerechnete Speicherersparnis.
+
+Die CLI weist ein 64-GiB-Sparse-Bild vor dem Einlesen zurück und akzeptiert die
+40-MiB-Grenze bis zur Modellprüfung. Fehlende Modelle liefern keine Freigabe;
+fehlgeschlagene Berichtsschreibvorgänge sind Fehler. Vorhandene Berichte und
+Symlink-Ziele werden nicht überschrieben. Auch die Konvertierung verlangt jetzt
+einen neuen Ausgabeordner und eine ausdrücklich ausgewählte Binärdatei.
+Fünf zusätzliche Quell-/Nachweisschutzprüfungen, acht bestehende Assembly-
+Wiederanlauftests, vier Dokumentationsprüfungen und Ruff bestehen. Das neue
+Bestandsinventar ordnet 823 Dateien 17 Verbrauchergruppen zu; die vollständige
+Inhaltsprüfung bleibt offen. Der anschließende vollständige Werkzeuglauf besteht
+mit 393 Fällen in 68 Gruppen und neun ausdrücklichen Umgebungs-Skips. Quellen,
+Befehle und Belege dieses Schritts liegen unter
+`.local/runs/vlm-development-20260926-s19-001/`.
+
+`vlm-compatibility-20260926-s19-001` prüft das neu gebaute Programm gegen beide
+bisherigen Modelle und das vorab hashgebundene synthetische Kontrollbild.
+GLM-OCR und PaddleOCR-VL-1.6 liefern jeweils den unveränderten erwarteten Text
+vollständig innerhalb der 60-Sekunden-Frist. Protokoll, konkrete Befehle, Bild,
+Antworten, Binäridentität und vier geprüfte Gewichtshashes bleiben privat erhalten.
+Die Modelle und das historische Kandidatenmanifest sind nachher bytegleich.
+Das sind zwei Lade-/Ausführungsfälle desselben erfundenen Bildes, keine zwei
+unabhängigen Pläne. Weder Qualitäts-, Leistungs-, Geräte- noch App-Freigabe wird
+daraus abgeleitet; kein Anbieter und kein Releaseinhalt wurde geändert.

@@ -319,3 +319,14 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Befehle und vollständige Logs bleiben unter
   `.local/runs/combined-verification-20260926-s19-002/` erhalten. Die Produkt-,
   Modell-, Geräte- und Veröffentlichungsabnahme bleibt offen.
+
+- Isolierter VLM-Versuch: **verifiziert** für Offline-Hostbuild und vorhandenen
+  synthetischen Kontrollfall, weiterhin **nicht zur App-Auslieferung qualifiziert**.
+  Getrennte Make-Einstiege für Runtime-Einrichtung, Build und Modelldownload;
+  acht echte CLI-Regressionsfälle und fünf Quell-/Nachweisschutzprüfungen bestehen.
+  Größenprüfung erfolgt vor dem Einlesen; vorhandene Berichte, Konvertierungen
+  und Symlink-Ziele bleiben geschützt. Der gesamte Werkzeuglauf besteht mit
+  393 Fällen in 68 Gruppen (neun Umgebungs-Skips). Neubau und Offline-Wiederholung sind
+  bytegleich, beide vorhandenen Modelle lesen denselben vorab festgelegten Text
+  korrekt. Gewichtshashes und altes Kandidatenmanifest unverändert. Details und
+  private Laufidentitäten: [Buildnachweis](build-reproducibility.md).
