@@ -7,6 +7,7 @@ struct RecognitionTraceView: View {
   let core: NativeApplication
   @Environment(ScanModel.self) private var scanner
   @State private var model = RecognitionTraceModel()
+  @State private var transfer = TracePhotoTransfer()
   @State private var photo: PhotosPickerItem?
   @State private var files = false
   @State private var selection: RecognitionTrace.Step?
@@ -98,19 +99,14 @@ struct RecognitionTraceView: View {
         self.photo = nil
       }
       do {
-        guard let transferred = try await photo.loadTransferable(type: StagedPhoto.self)
-        else { throw AppError.Validation(message: "Bitte ein Bild bis 40 MB auswählen.") }
-        var adopted = false
-        defer {
-          if !adopted { try? FileManager.default.removeItem(at: transferred.url) }
+        let source = try await transfer.load {
+          guard let transferred = try await photo.loadTransferable(type: StagedPhoto.self)
+          else { throw AppError.Validation(message: "Bitte ein Bild bis 40 MB auswählen.") }
+          return transferred.url
         }
         try Task.checkCancellation()
         inputError = nil
-        model.start(transferred.url, timezone: timezone)
-        // The file representation checks size before copying. Keep its bounded
-        // copy until the model finishes or the view closes; never load full Data here.
-        stagedPhoto = transferred.url
-        adopted = true
+        model.start(source, timezone: timezone)
       } catch is CancellationError {
       } catch { inputError = userMessage(error) }
     }
@@ -125,20 +121,15 @@ struct RecognitionTraceView: View {
     }
     .task { timezone = (try? await core.preferences().timezone) ?? TimeZone.current.identifier }
     .onDisappear {
-      let captured = stagedPhoto
       Task {
         await model.close()
-        if let captured { try? FileManager.default.removeItem(at: captured) }
+        await transfer.close()
       }
     }
     .onChange(of: model.busy) {
-      if !model.busy, let stagedPhoto {
-        try? FileManager.default.removeItem(at: stagedPhoto)
-        self.stagedPhoto = nil
-      }
+      if !model.busy { Task { await transfer.close() } }
     }
   }
-  @State private var stagedPhoto: URL?
 }
 
 private struct RecognitionTraceStepView: View {
