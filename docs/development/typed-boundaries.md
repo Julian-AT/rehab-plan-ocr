@@ -435,6 +435,39 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
   `Reference::legacy` bleibt für den älteren Platform-Hostadapter erhalten.
   Die alten JSON-Hostadapter bleiben für Integrationstests und kompatible Hosts.
 
+## Lebensdauer von Terminlink-Aufträgen
+
+`AgendaLinkRequests` besitzt die laufende Aufgabe auf dem Main Actor und bindet
+Antwort, Fehleranzeige und Quittierung an eine Navigationsrevision. Ein neuer Link,
+manueller Tabwechsel, eine neue Plananzeige, Hintergrund oder Datenlöschung
+widerruft den alten Auftrag. Auch ein nativer Lesevorgang, der erst nach dem
+Abbruch zurückkehrt, kann keine alte Ansicht oder Fehlermeldung mehr veröffentlichen.
+Gleichzeitige Öffnungsversuche desselben Termins teilen den laufenden Auftrag.
+
+Die Revision wird vor Start-/Share-Wiederherstellung erfasst. Ein später
+abgeschlossener Wiederanlauf ersetzt damit keine zwischenzeitliche Navigation.
+Nur ein weiterhin aktueller, tatsächlich dargestellter Termin-/Fehlerzustand
+quittiert seine konkrete Mitteilungskennung. Eine bereits begonnene Quittierung
+bleibt an diese Kennung gebunden; ein verspäteter Fehler überschreibt keine neuere
+Navigation. „Heute“ schließt eine vorherige Linkfehlermeldung. Kalenderänderungen,
+Bestätigungen und gespeicherte Mitteilungsjournale bleiben unverändert.
+
+`make test-agenda-links` ist Teil von `make test` und besteht unter Swift 6 mit
+vollständiger Nebenläufigkeitsprüfung und Warnungen als Fehler. Zehn gesteuerte
+Abläufe prüfen vertauschte Antworten, alte Fehler, doppelte Öffnungen, abgebrochene
+Lesevorgänge, verzögerte Wiederherstellung, ungültige Kennungen und Quittierungen.
+Die isolierte Gegenprobe ohne Auslieferungsschutz scheitert am erwarteten
+„alter Termin nach Heute“-Fall. Quellen, Befehle und Belege bleiben unter
+`.local/runs/agenda-link-ordering-20260926-s19-001/` erhalten.
+
+Gemeinsamer App-/UI-Testbuild sowie drei tatsächlich ausgeführte Linktests
+bestehen in `agenda-link-ordering-ui-20260926-s19-001`/`002` ohne Fehler oder Skip.
+Die beiden bisherigen Tests laufen diesmal auch gemeinsam vollständig; der neue
+Fall prüft die Rückkehr zu „Heute“ bei bereits sichtbarer Linkfehlermeldung.
+Beide Läufe verwenden denselben Quellpatch; das erhaltene Paket aus `002` besteht
+die zwölfteilige Binär-/Ressourcen-/Modell-/Notice-Prüfung. Vollständiger UI-Endlauf
+und physische Geräteabnahme bleiben getrennte Nachweise.
+
 ## Gemischter Verlauf und Erkennungsdetails
 
 `ActivityView` liest `NativeApplication.activity_page` mit dem festen Quelltyp

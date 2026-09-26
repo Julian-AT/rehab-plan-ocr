@@ -84,14 +84,26 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   @State private var voice: VoiceModel
   @State private var openError: String?
   @State private var linkedEvent: CalendarEvent?
+  @State private var linkRequests: AgendaLinkRequests<OwnedEventResolution>
   init(core: NativeApplication) {
     self.core = core
     _preferences = State(initialValue: PreferencesStore(core: core))
     _scanner = State(initialValue: ScanModel(core: core))
     _voice = State(initialValue: VoiceModel(core: core))
+    _linkRequests = State(
+      initialValue: AgendaLinkRequests(
+        resolve: { try await core.resolveOwnedEvent(id: $0) },
+        pending: { try await NativeBridge.pendingEventOpen(acknowledge: $0) }))
   }
   var body: some View {
-    TabView(selection: $tab) {
+    TabView(
+      selection: Binding(
+        get: { tab },
+        set: { selected in
+          if selected != tab { linkRequests.invalidate() }
+          tab = selected
+        })
+    ) {
       Tab("Termine", systemImage: "calendar", value: AppTab.appointments) { todayTab }
       Tab("Sprechen", systemImage: "waveform", value: AppTab.voice) {
         NavigationStack { VoiceView(core: core, model: voice) }
@@ -137,11 +149,15 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     }
     .onChange(of: scanner.isErasing) { _, erasing in
       if erasing {
+        linkRequests.invalidate()
+        linkedEvent = nil
+        openError = nil
         voice.cancelSession(reason: "erase")
         SpeechOutput.shared.eraseSession()
       }
     }
     .onChange(of: scanner.erasedID) { _, _ in
+      linkRequests.invalidate()
       todayPath = []
       plansPath = []
       linkedEvent = nil
@@ -164,9 +180,14 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       preferences.value?.appearance == "dark"
         ? .dark : preferences.value?.appearance == "light" ? .light : nil
     )
-    .onOpenURL { url in Task { await openEvent(url) } }
+    .onOpenURL { url in
+      guard !scanner.isErasing, let link = AgendaLink(url) else { return }
+      linkRequests.open(link, deliver: showLink, failed: linkFailed)
+    }
+    .onDisappear { linkRequests.invalidate() }
     .onChange(of: scanner.presentedID) { _, id in
       if let id {
+        linkRequests.invalidate()
         let normalized = id.replacingOccurrences(of: "plan:", with: "")
         if tab == .appointments {
           if todayPath.last?.replacingOccurrences(of: "plan:", with: "") != normalized {
@@ -194,13 +215,17 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     }
     .onChange(of: scenePhase) { _, phase in
       if phase == .background { voice.cancelSession(reason: "background") }
-      if phase == .background { scanner.suspend() }
+      if phase == .background {
+        linkRequests.invalidate()
+        scanner.suspend()
+      }
       if phase == .active {
         scanner.resume()
         refreshID += 1
+        let request = linkRequests.revision
         Task {
           await scanner.recoverShares()
-          await pendingOpen()
+          pendingOpen(expectedRevision: request)
         }
       }
     }
@@ -228,12 +253,13 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       }
     }
     .task {
+      let request = linkRequests.revision
       await scanner.initialize(preferences)
       guard scanner.isReady else { return }
       await preferences.load()
       await scanner.recoverInbox()
       refreshID += 1
-      await pendingOpen()
+      pendingOpen(expectedRevision: request)
     }
     .alert(
       "Termin öffnen",
@@ -261,28 +287,21 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     }
   }
   private func refresh() { refreshID += 1 }
-  private func pendingOpen() async {
-    do {
-      if let id = try await NativeBridge.pendingEventOpen(), UUID(uuidString: id) != nil {
-        await openEvent(.event(id))
-      }
-    } catch { openError = userMessage(error) }
+  private func pendingOpen(expectedRevision: UUID) {
+    guard scanner.isReady, !scanner.isErasing else { return }
+    linkRequests.openPending(
+      expectedRevision: expectedRevision, deliver: showLink, failed: linkFailed)
   }
-  private func openEvent(_ url: URL) async {
-    guard let link = AgendaLink(url) else { return }
-    await openEvent(link)
-  }
-  private func openEvent(_ link: AgendaLink) async {
-    if link == .today {
+  private func linkFailed(_ error: Error) { openError = userMessage(error) }
+  private func showLink(_ delivery: AgendaLinkDelivery<OwnedEventResolution>) throws {
+    openError = nil
+    linkedEvent = nil
+    switch delivery {
+    case .today:
       todayPath = []
-      linkedEvent = nil
       todayRequestID += 1
       tab = .appointments
-      return
-    }
-    guard case .event(let id) = link else { return }
-    do {
-      let resolved = try await core.resolveOwnedEvent(id: id)
+    case .event(let resolved):
       tab = .appointments
       switch resolved {
       case .found(let event): linkedEvent = try CalendarEvent(event)
@@ -292,8 +311,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
           "Der Kalender ist derzeit nicht zugänglich. Zugriffsrechte und Kalenderauswahl unter Kalenderstatus prüfen."
       case .missing: openError = "Die lokale Zuordnung zu diesem Termin ist nicht mehr vorhanden."
       }
-      _ = try await NativeBridge.pendingEventOpen(acknowledge: id)
-    } catch { openError = userMessage(error) }
+    }
   }
 
 }

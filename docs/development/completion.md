@@ -394,3 +394,11 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Der aktualisierte Bestandsbeleg ordnet 831 Dateien 17 Verbrauchergruppen zu
   (`.local/maintenance/repository-inventory-20260926-s19-005.json`); die vollständige
   Inhaltsprüfung bleibt offen.
+
+- Lebensdauer von Terminlinks: **verifiziert** durch zehn gesteuerte native
+  Abläufe und eine erwartungsgemäß scheiternde Gegenprobe. Alte Antworten und
+  Fehler können neue Navigation, Hintergrund oder Datenlöschung nicht mehr
+  überholen; doppelte Öffnungen teilen den laufenden Auftrag. Drei tatsächliche
+  Simulatorfälle und die Paketprüfung bestehen ohne Fehler/Skip unter
+  `agenda-link-ordering-ui-20260926-s19-001`/`002`; native Belege unter
+  `agenda-link-ordering-20260926-s19-001`. [Vertrag und Grenzen](typed-boundaries.md).

@@ -316,6 +316,7 @@ def tests(portable):
             "preview-fixtures",
             "agenda-projection",
             "agenda-cache",
+            "agenda-links",
             "event-session",
             "archive",
             "plan-loading",

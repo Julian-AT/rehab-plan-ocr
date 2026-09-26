@@ -121,6 +121,24 @@ import XCTest
     capture("missing-owned-event-link")
   }
 
+  func testTodayLinkDismissesPreviousLinkError() throws {
+    launch("readable")
+    let selection = NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")
+    let today = app.buttons.matching(selection).firstMatch.label
+    app.swipeLeft()
+    XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
+    XCUIDevice.shared.system.open(
+      try XCTUnwrap(URL(string: "reha-calendar://event/\(UUID().uuidString)")))
+    let alert = app.alerts["Termin öffnen"]
+    XCTAssertTrue(alert.waitForExistence(timeout: 10))
+    XCUIDevice.shared.system.open(try XCTUnwrap(URL(string: "reha-calendar://today")))
+    expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: alert)
+    waitForExpectations(timeout: 8)
+    XCTAssertTrue(app.buttons["agenda-today"].exists)
+    XCTAssertEqual(app.buttons.matching(selection).firstMatch.label, today)
+    capture("today-dismisses-previous-link-error")
+  }
+
   func testSwipingAndCompleteAppointmentLabels() {
     launch("readable")
     // Left advances, including on the resting/empty state; no arrow needed.
