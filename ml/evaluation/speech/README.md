@@ -38,29 +38,51 @@ and separate [asset installation request](https://developer.apple.com/documentat
 
 ## Listening previews
 
-Generate private host previews with the shared Rust Victoria renderer and every
-German voice returned by the Mac's local `AVSpeechSynthesisVoice.speechVoices()`:
+Generate private host previews for every German voice enumerated by the same
+`SystemSpeechRenderer` used by the app:
 
 ```sh
 make prepare-listening RUN=.local/runs/listening-example
 open .local/runs/listening-example/listening.html
 ```
 
-Initial setup needs the pinned Victoria assets and host eSpeak/ONNX libraries.
-The optional CLI `voice` feature builds this evaluation example; it does not add
-training packages or a voice selector to the app. System synthesis uses
-`AVSpeechSynthesizer.write(_:toBufferCallback:)`, without microphone access or
-playback. No explicit voice download is requested. Airplane-mode verification on
-the shipping iOS route is a separate gate, not implied by successful Mac exports.
+The CLI compiles the product's `SystemSpeech.swift` and `OutputAudio.swift`, then
+passes each prepared text unchanged into that renderer at the app's rate multiplier
+0.95. It uses the same conversion to mono 24 kHz PCM as playback. Export writes
+PCM16 little-endian WAV with quantization/clipping only, without gain normalization.
+It does not request microphone access, playback or an explicit voice download.
+The inventory records locally enumerated identities; completed synthesis establishes
+their availability on this Mac for this run. Installed assets and airplane-mode
+behavior on an iPhone remain separate checks.
+
+Victoria is available only as an explicit development comparison:
+
+```sh
+make restore-experimental-speech convert-experimental-speech
+make prepare-listening-experimental RUN=.local/runs/listening-experimental-example
+```
+
+That optional path needs the pinned Victoria assets and host eSpeak/ONNX libraries.
+Its Cargo `voice` feature remains outside the public app's release path. A comparison
+run records `includes_experimental_victoria`; no generated export promotes a voice.
 
 The ten texts cover dates, times, room numbers, names, abbreviations, missing facts,
 confirmation, correction, repetition and longer replies. They are invented,
 machine-authored development prompts and remain marked `human_reviewed: false`.
-Victoria applies the shipping Rust speech normalization; the resulting prepared
-text is passed unchanged to every system voice. Each export records rate, platform,
-voice identity, complete audio checksums, durations and synthesis timings.
-Victoria uses the app's default 0.95 speed; system voices use their native default.
-No loudness normalization or other postprocessing is applied.
+The Rust preparation command uses the shared speech normalization; the resulting
+text is passed unchanged to every system voice and remains identical to the
+previous development prompts. Each export records rate, platform, voice identity,
+audio checksums, durations, preparation timings and the renderer's word-progress
+marks. These marks use system delegate/PCM buffer boundaries, not phoneme alignment.
+They must cover the prepared text once, stay ordered and lie inside the audio.
+
+Per-case manifests retain completed samples and errors after each attempt. Each
+voice also has process logs, and a failed voice does not prevent attempts for the
+remaining inventory. Only complete, validated voices enter the anonymous form;
+any failed voice makes the overall generation command fail and remains listed in
+`failed_voices`. Source, preparation, compiler and binary hashes are recorded and
+rechecked after rendering. A source change rejects the comparison. Use a fresh run
+directory; historical manifests and recordings are never rewritten.
 
 The browser form uses anonymous labels in a fixed versioned random order. Its key
 is in `manifest.json`, separate from the form. Keep the key away from listeners;
