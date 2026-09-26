@@ -56,6 +56,20 @@ jobs:
         shell: bash
         run: |
           make test-native-ui TEST_ARGS="--built -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 300 -resultBundlePath apps/ios/build/ci-ui.xcresult" 2>&1 | tee apps/ios/build/ci-ui.log
+      - name: Collect focused native failure evidence
+        if: ${{ always() }}
+        timeout-minutes: 5
+        run: python3 tooling/checks/collect-native-triage.py --bundle apps/ios/build/ci-ui.xcresult --output apps/ios/build/ci-native-triage --commit "${{ github.sha }}"
+      - name: Retain focused native failure evidence
+        if: ${{ always() }}
+        timeout-minutes: 5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-triage-${{ github.sha }}-${{ github.run_attempt }}
+          path: apps/ios/build/ci-native-triage
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: false
       - name: Retain synthetic native test evidence
         if: ${{ always() }}
         timeout-minutes: 10

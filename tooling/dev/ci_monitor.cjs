@@ -25,6 +25,7 @@ Options:
   --file PATH         Workflow for read-only action-pin verification
   --job ID            Download this completed job's full log while other jobs run
   --output PATH       New local evidence directory (its parent must exist)
+  --kind KIND         evidence: complete (default) or focused triage attachments
   --help              Show this help without invoking GitHub
 
 Requires Node.js 22+ and an authenticated GitHub CLI. Read commands never dispatch
@@ -69,7 +70,7 @@ function main(args, run = execute, read = readFileSync) {
     options: {
       help: { type: 'boolean' }, repo: { type: 'string' }, branch: { type: 'string' },
       commit: { type: 'string' }, file: { type: 'string' }, job: { type: 'string' }, output: { type: 'string' },
-      target: { type: 'string' },
+      target: { type: 'string' }, kind: { type: 'string' },
     },
   });
   if (values.help || positionals.length === 0) return HELP;
@@ -96,6 +97,9 @@ function main(args, run = execute, read = readFileSync) {
     throw new Error('Dispatch requires --branch and --commit.');
   }
   if (values.output && command !== 'evidence') throw new Error('--output is only supported by evidence.');
+  if (values.kind && (command !== 'evidence' || !['complete', 'triage'].includes(values.kind))) {
+    throw new Error('--kind accepts complete or triage for evidence only.');
+  }
   if (command === 'evidence' && (!values.commit || !values.output)) {
     throw new Error('Evidence requires --commit and a new --output directory.');
   }
@@ -112,10 +116,10 @@ function main(args, run = execute, read = readFileSync) {
     const result = { repository: repo, run: id, commit: workflow.head_sha,
       attempt: workflow.run_attempt, conclusion: workflow.conclusion, artifacts: artifacts.artifacts };
     if (command === 'artifacts') return JSON.stringify(result, null, 2);
-    const name = `native-checks-${workflow.head_sha}-${workflow.run_attempt}`;
+    const name = `native-${values.kind === 'triage' ? 'triage' : 'checks'}-${workflow.head_sha}-${workflow.run_attempt}`;
     const matches = artifacts.artifacts.filter(artifact => artifact.name === name);
     if (workflow.status !== 'completed' || matches.length !== 1) {
-      throw new Error('Expected one native-checks artifact from the completed run attempt.');
+      throw new Error('Expected one requested native artifact from the completed run attempt.');
     }
     const artifact = matches[0];
     if (artifact.expired !== false || String(artifact.workflow_run?.id) !== id
@@ -133,7 +137,7 @@ function main(args, run = execute, read = readFileSync) {
     const contents = join(output, 'contents');
     mkdirSync(contents);
     const receipt = { ...result, selectedArtifact: artifact.id, status: 'download-started',
-      archiveDigestVerified: false, downloadTimeoutMs };
+      archiveDigestVerified: false, downloadTimeoutMs, kind: values.kind || 'complete' };
     const record = () => writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
     record();
     try {

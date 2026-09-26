@@ -115,6 +115,22 @@ test('artifact listing is read-only and retains failed run identity', () => {
   assert.ok(fixture.calls.every(args => args[0] === 'api'));
 });
 
+test('focused evidence requires its own exact artifact without falling back to complete results', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'reha-ci-focused-'));
+  try {
+    const fixture = evidenceFixture((_, artifact) => { artifact.name = `native-triage-${sha}-2`; });
+    const args = ['evidence', '123', '--repo', 'owner/repo', '--commit', sha,
+      '--output', join(directory, 'focused'), '--kind', 'triage'];
+    const result = JSON.parse(main(args, fixture.run));
+    assert.equal(result.kind, 'triage');
+    assert.ok(fixture.calls[2].includes(`native-triage-${sha}-2`));
+    assert.throws(() => main([...args.slice(0, -2), '--kind', 'complete'], fixture.run), /requested native artifact/);
+    for (const invalid of [['view', '123', '--kind', 'triage'], ['evidence', '123', '--kind', 'unknown']]) {
+      assert.throws(() => main(invalid, () => { throw new Error('Unexpected subprocess'); }), /--kind/);
+    }
+  } finally { rmSync(directory, { recursive: true }); }
+});
+
 test('evidence download validates the exact attempt and records local file hashes', () => {
   const directory = mkdtempSync(join(tmpdir(), 'reha-ci-evidence-'));
   try {

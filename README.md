@@ -73,6 +73,11 @@ dessen vollständigen Commit-Hash. Er lädt keine lokalen Änderungen hoch.
 --commit <vollständiger Hash> --output <neues Verzeichnis>` lädt die synthetischen
 nativen Prüfergebnisse des abgeschlossenen Laufversuchs und protokolliert die
 Dateiprüfsummen. Vorhandene Zielverzeichnisse werden nicht überschrieben.
+Mit `--kind triage` lädt derselbe Befehl die getrennte Fehlerauswertung neuerer
+Läufe: Zusammenfassung, Testbaum, Aktivitäten und Anhänge fehlgeschlagener Tests.
+Videos bleiben im vollständigen Ergebnisordner; ihre ausgelassenen Prüfsummen
+stehen im Beleg. Beide Artefakte sind an Commit und Laufversuch gebunden.
+Fehlende oder abgebrochene Auswertungen werden ausdrücklich gekennzeichnet.
 
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus

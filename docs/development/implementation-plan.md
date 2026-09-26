@@ -109,6 +109,22 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Focused native failure evidence — 2026-09-26
+
+CI now prepares a separate `native-triage` artifact after the UI step, retaining
+the complete result bundle independently. Summary, test tree and each failed
+case's activities, screenshots, UI descriptions and crash attachments are copied;
+videos stay in the complete source and their omitted hashes are recorded.
+Source-bundle hashes must remain unchanged. Missing/failed collection has an
+explicit incomplete status. `ci_monitor.cjs evidence --kind triage` checks the
+requested artifact's run, commit and attempt without falling back to another kind.
+
+An actual export from the retained two-failure local reproduction collects 79
+files/890,945 bytes and omits two copied videos totaling 38,177,785 bytes. Original
+results are unchanged. Three collector tests, fourteen monitor tests, formatting,
+documentation/project-path checks and current action-pin verification pass. Hosted
+execution of this new collection step remains pending.
+
 ### Completed larger OCR comparison — 2026-09-26
 
 Both adaptation modes complete on the same 512/91 pixel-verified synthetic crop
