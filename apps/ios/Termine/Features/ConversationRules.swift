@@ -58,12 +58,7 @@ struct StableSpeechPhrases {
       guard let range = Range(match.range, in: rest) else { continue }
       let prefix = rest[..<range.lowerBound]
       let word = prefix.split(separator: " ").last.map(String.init) ?? ""
-      guard prefix.last?.isNumber != true,
-        ![
-          "Dr", "Prof", "Min", "Std", "ca", "bzw", "z", "B", "d", "h", "u", "a", "ev", "evtl",
-          "Tel",
-        ].contains(word)
-      else { continue }
+      guard prefix.last?.isNumber != true, !SpeechPhrasing.isAbbreviation(word) else { continue }
       boundary = range.upperBound
     }
     guard let boundary else { return [] }
@@ -74,6 +69,13 @@ struct StableSpeechPhrases {
 }
 
 enum SpeechPhrasing {
+  static func isAbbreviation(_ word: String) -> Bool {
+    let compact = word.lowercased().replacingOccurrences(of: ".", with: "")
+    return [
+      "dr", "prof", "min", "std", "ca", "bzw", "z", "b", "zb", "d", "h", "dh",
+      "u", "a", "ua", "ev", "evtl", "tel",
+    ].contains(compact)
+  }
   static func phrases(_ text: String) -> [String] {
     var chunks: [String] = []
     var current = ""
@@ -83,10 +85,7 @@ enum SpeechPhrasing {
       if current.count > 40
         && (word.hasSuffix("!") || word.hasSuffix("?")
           || (word.hasSuffix(".") && word.dropLast().last?.isNumber == false
-            && ![
-              "Dr.", "Prof.", "Min.", "Std.", "ca.", "bzw.", "z.", "B.", "d.", "h.", "u.", "a.",
-              "ev.", "evtl.", "Tel.",
-            ].contains(String(word))))
+            && !isAbbreviation(String(word))))
       {
         chunks.append(current)
         current = ""

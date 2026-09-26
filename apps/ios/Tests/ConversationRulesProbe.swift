@@ -27,6 +27,10 @@ import Foundation
     endpoint = SpeechEndpoint()
     for _ in 0..<3 { _ = endpoint.append(voice: true, transcript: "") }
     for _ in 0..<300 { precondition(!endpoint.append(voice: false, transcript: "")) }
+    var abbreviations = StableSpeechPhrases()
+    let unfinished = "Heute folgt nach dem Frühstück beispielsweise z.B. Physiotherapie"
+    precondition(abbreviations.append(snapshot: unfinished).isEmpty)
+    precondition(SpeechPhrasing.phrases(unfinished).count == 1)
     var phrases = StableSpeechPhrases()
     precondition(
       phrases.append(snapshot: "Am 14. September ist Dr. Muster da. Danach").joined().contains(
