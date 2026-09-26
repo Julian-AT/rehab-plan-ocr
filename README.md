@@ -58,8 +58,8 @@ ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
-Auf dem iPhone ist nach dem freigegebenen [Hotspot-Update](docs/calm-voice-device-update.md) Build 2026092621 installiert; der Datenerhalt ist geprüft.
-Die neue [Kalenderpalette Greens-7](docs/preview/2026-09-26-s14-greens/README.md) steht als Simulatorvorschau bereit. [Du/Sie und die überarbeitete Mikrofonaufnahme](docs/preview/2026-09-26-s14-calm-voice/README.md) sind mit Victoria-Hörproben und Prüfprotokoll dokumentiert. Der erste App-Start wurde vom gesperrten iPhone blockiert; die Prüfung mit echter Sprache steht noch aus.
+Auf dem iPhone ist nach dem freigegebenen [Hotspot-Update](docs/greens-device-update.md) Build 2026092622 installiert; App-Start und Datenerhalt sind geprüft.
+Die [Kalenderpalette Greens-7](docs/preview/2026-09-26-s14-greens/README.md) ist mit Simulatoraufnahmen dokumentiert. [Du/Sie und die überarbeitete Mikrofonaufnahme](docs/preview/2026-09-26-s14-calm-voice/README.md) sind mit Victoria-Hörproben und Prüfprotokoll dokumentiert. Die Prüfung mit echter Sprache steht noch aus.
 
 Die vorherige gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mitblättern](docs/preview/2026-09-26-s13-page-axis/README.md).
 Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) dokumentiert den verworfenen Versuch

@@ -39,4 +39,4 @@ Alle Aufnahmen stammen aus dem iPhone-17-Simulator mit iOS 26.4 und öffentliche
 
 Simulatorbuild und beide gezielten UI-Prüfungen sind erfolgreich: Terminkarten einschließlich kurzer und überlappender Termine, Tagesliste, Farblegende und alle Kategorien mit größter Schrift, jeweils in Hell und Dunkel. Textkontrast, Farbtreue zur JSON-Datei sowie Swift-Formatierung sind geprüft. Die UI-Läufe liegen unter `/tmp/reha-greens-preview.xcresult` und `/tmp/reha-greens-large.xcresult`. Der zweite Lauf bestätigt die Großschriftprüfung mit besser ausgerichteten Titelaufnahmen.
 
-Diese Änderung betrifft ausschließlich Kalenderkarten, Tagesliste und Farblegende. Der installierte Gerätebuild bleibt im [Gerätebericht](../../calm-voice-device-update.md) dokumentiert; diese neue Farbversion ist zunächst eine Simulatorvorschau.
+Diese Änderung betrifft ausschließlich Kalenderkarten, Tagesliste und Farblegende. Nach ausdrücklicher Freigabe wurde Build 2026092622 über den Hotspot auf dem iPhone installiert. Frische Sicherung, Datenerhalt vor und nach dem ersten Start sowie erfolgreiches Öffnen sind im [Gerätebericht](../../greens-device-update.md) dokumentiert.
