@@ -10,7 +10,7 @@ from pathlib import Path
 from privacy import BUNDLE
 from privacy import verify_bundle as verify_privacy
 from runtime_inventory import verify as verify_inventory
-from runtime_policy import MODELS, check_binary, check_resources
+from runtime_policy import MODELS, check_binary, check_resources, embedded_code
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -50,6 +50,7 @@ def verify(app, target, root=ROOT):
     version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
     build = None
     components = {}
+    checked_executables = set()
     for identifier, (name, executable, extension) in COMPONENTS.items():
         component = plugins / name if name else app
         info = plistlib.loads((component / "Info.plist").read_bytes())
@@ -77,7 +78,13 @@ def verify(app, target, root=ROOT):
         binary = component / executable
         require(binary.is_file() and binary.stat().st_size > 0, f"Missing executable: {identifier}")
         check_binary(binary)
+        checked_executables.add(binary)
         components[identifier] = {"executable_sha256": ASSETS.sha(binary)}
+    embedded = {}
+    for binary in embedded_code(app):
+        if binary not in checked_executables:
+            check_binary(binary)
+            embedded[str(binary.relative_to(app))] = {"sha256": ASSETS.sha(binary)}
     models = {}
     for model in MODELS:
         lock = json.loads((root / "ml/registry/runtime" / f"{model}.lock.json").read_text())
@@ -93,6 +100,7 @@ def verify(app, target, root=ROOT):
         "version": version,
         "build": build,
         "components": components,
+        "embedded_code": embedded,
         "models": models,
         "speech": {
             "provider": "Apple operating system",

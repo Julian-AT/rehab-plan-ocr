@@ -213,6 +213,30 @@ class BundleTests(unittest.TestCase):
                 path.unlink()
                 path.write_bytes(data)
 
+    def test_embedded_native_code_is_checked_by_header_and_recorded_without_writes(self):
+        header = bytes.fromhex("cffaedfe")
+        path = self.app / "Frameworks/Renderer.framework/Renderer"
+        digest = write(path, header + b"synthetic native code")
+        before = self.snapshot()
+        report = self.verify()
+        self.assertEqual(
+            report["embedded_code"], {str(path.relative_to(self.app)): {"sha256": digest}}
+        )
+        self.assertEqual(before, self.snapshot())
+        path.unlink()
+        for name, signature in [
+            ("Termine.debug.dylib", header),
+            ("Frameworks/Renderer.framework/Renderer", header),
+            ("PlugIns/RehaShare.appex/Renderer.payload", bytes.fromhex("cafebabf")),
+            ("renamed-static-library.data", b"!<arch>\n"),
+        ]:
+            with self.subTest(name=name):
+                artifact = self.app / name
+                write(artifact, signature + b"\0_espeak_ng_Initialize\0")
+                with self.assertRaisesRegex(ValueError, "eSpeak symbols"):
+                    self.verify()
+                artifact.unlink()
+
     def test_pinned_model_paths_cannot_escape_or_alias_existing_entries(self):
         manifest = self.app / "small/manifest.json"
         lock = self.root / "ml/registry/runtime/small.lock.json"
