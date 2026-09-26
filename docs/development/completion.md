@@ -63,12 +63,46 @@ Protokoll erwähnten 61 GiB waren ein früherer Messstand.
 | Verbraucherzuordnung und erste Kandidaten | **verifiziert** für Zuordnung und dokumentierte Entscheidungen; **offen** für vollständige Inhaltsprüfung. [Bestand](inventory.md), Commit `364e166`. |
 | Wiederaufnehmbare Bereinigung | **verifiziert** für geprüfte Compilerzwischenprodukte und Schutzprüfung. `78048f6`, `344b658`, `fe42f17`; insgesamt 5.102 Dateien entfernt. Neuer Probe-Lauf räumt seinen Modulcache wieder auf; [Bestands-/Löschbelege](artifact-retention.md). |
 | Modellobjekte | **verifiziert** für die identische registrierte Basis-GGUF; `a1c115a`. Bisherige Pfade/Hashes und eigener Inode je Kopie erhalten; nativer Wiederanlauf bestanden. Keine messbare Speicherersparnis. |
-| Große Arbeitsläufe | **implementiert/verifiziert**: Vorabprüfung stoppt bei weniger als Reserve plus Spitzenbudget. **extern blockiert**: 20 GiB Arbeitsreserve weiterhin nicht vorhanden. |
+| Große Arbeitsläufe | **implementiert/verifiziert**: Vorabprüfung stoppt bei weniger als Reserve plus Spitzenbudget. Nach externer Bereinigung am 26.09.2026 wieder 93,12 GiB frei; `make check-storage PEAK_GIB=8` bestanden. Speicherblockade aufgehoben. |
 | Native Rückmeldungen | **verifiziert**: atomarer einmaliger Abschluss ohne eigenes unchecked Sendable; `3500baa`. Konkurrenz, Wiedereintritt, Fehler sowie Paket-Typprüfung bestanden. Vollständige Produktabnahme bleibt offen. |
 | Gemeinsamer Werkzeugstand | **verifiziert**: 232 Werkzeugtests, 16 Monitorfälle, aktuelle Verweise/Referenzhashes und Laufzeitinventar. Kein vollständiger App-/UI-/CI-Nachweis. |
 
 Die obigen Ergebnisse schließen A–K nicht pauschal. Insbesondere bleiben die
 vollständig typisierten Plattformgrenzen, Pfadmigration aller Entwicklungsprodukte,
 visuelle und assistive Abnahme, Datenprüfung, Modellverbesserung, Stimmenauswahl,
-eSpeak-freier Releasepfad und Geräte-/Pilotqualifizierung offen. Große Änderungen
-werden bei fehlender Buildreserve nicht als ungetesteter Kandidat ausgegeben.
+gemeinsame Abnahme des eSpeak-freien Releasepfads und Geräte-/Pilotqualifizierung
+offen. Große Änderungen werden erst mit ihren konkreten Build-/Testbelegen als
+verifiziert geführt.
+
+## Fortsetzung nach Freigabe der Speicherreserve
+
+Die vollständige lokale Ausgangsprüfung an `9b5eef3` bestand erneut: 178 Rusttests,
+232 Werkzeugtests, native Swiftprobes und generierte Bindings einschließlich
+Wiederherstellungsabläufen (`/tmp/reha-test-20260926-s18-resume.log`). Das ist die
+Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstands.
+
+- Archiv-/Duplikatstatus, atomare Erstpräferenzen und Integrität bestehender
+  Originaldateien: `108577d`, `297f5f1`, `a08b8f7`, `12000c3`; 30 gezielte Rusttests.
+- Alte Settingsantworten und abgebrochene Kontextvorbereitung: `4b9f601`,
+  `db27e35`; deterministische Swiftregressionen.
+- Unterbrochene Share-Eingänge und atomare Runtime-Wiederherstellung: `ba3f995`,
+  `f9ce001`; synthetische Fehler-/Neustarttests.
+- Foto-/PDF-Grenzen, reduzierte Bewegung und temporäre Patientendaten:
+  `9b8fbd4`, `a202f80`, `bc2a2da`; Hostprobes und Plattform-Typprüfung.
+- Typisierte native Fehler, echte Timeout-Unterscheidung und binäre Bildübergabe:
+  `ef2add8`, `9582a7d`; vollständiger Fehler-Rundweg und acht Bildorientierungen.
+- Headerfallback und Abbruchpunkte: `ba51cb0`; 65 relevante Rusttests und
+  [separater Host-Mikrobenchmark](archive:workspace/.local/runs/parser-header-complexity-20260926-s18-001/evidence.json).
+- Große Schrift und fester Aufnahmevertrag: `557eba0`, `c7da4df`;
+  [visuelle Diagnose und unveränderte Referenzen](../product/visual-baseline/capture-contract.md).
+- Releaseabhängigkeiten: `d76f22e`; OCR aktiviert kein Kokoro/eSpeak mehr,
+  experimentelle Nachweise bleiben erhalten. Neue [Systemsprachausgabe](system-speech.md)
+  und deren Hostprobes: `c746a2d`. Gemeinsame App-/Stimmenabnahme läuft noch.
+- Reproduzierbare Werkzeugauswahl und zentraler Workspace-Vertrag: `ae0cae2`,
+  `e8f7e37`; tatsächlicher Bestandsumzug und frischer Offline-Build folgen getrennt.
+
+Der zuletzt vorhandene CI-Lauf `35316081873` an `8d81c4c` wurde erneut lesend geprüft:
+beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.
+Die Freischaltung des Kontos ist noch nicht bestätigt. Menschliche Daten-/Stimmen-
+und Gerätefreigaben bleiben externe Voraussetzungen; sie werden nicht durch
+synthetische Regressionen ersetzt.
