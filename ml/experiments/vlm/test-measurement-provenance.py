@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +15,7 @@ SPEC = importlib.util.spec_from_file_location(
 )
 qualifier = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(qualifier)
+ACTUAL_RUN = qualifier.vlm_process.run
 
 
 class MeasurementProvenanceTests(unittest.TestCase):
@@ -34,6 +37,7 @@ class MeasurementProvenanceTests(unittest.TestCase):
         self.converter = self.args.runtime / "convert_hf_to_gguf.py"
         self.converter.write_bytes(b"converter")
         self.calls = []
+        self.call_options = []
         self.mutation = None
         candidates = []
         for family, directory, names in [
@@ -70,8 +74,8 @@ class MeasurementProvenanceTests(unittest.TestCase):
         for manager in [
             patch.object(qualifier, "ROOT", self.root),
             patch.object(qualifier, "FONT_PATHS", [font]),
-            patch.object(qualifier.subprocess, "check_output", side_effect=self.git),
-            patch.object(qualifier.subprocess, "run", side_effect=self.child),
+            patch.object(qualifier.vlm_process, "check_output", side_effect=self.git),
+            patch.object(qualifier.vlm_process, "run", side_effect=self.child),
             patch.object(qualifier.importlib.metadata, "version", return_value="fixture"),
             patch.object(qualifier.platform, "system", return_value="Fixture"),
             patch.dict("sys.modules", {"PIL": pil}),
@@ -84,6 +88,7 @@ class MeasurementProvenanceTests(unittest.TestCase):
 
     def child(self, command, **kwargs):
         self.calls.append(command)
+        self.call_options.append(kwargs)
         if "--outfile" in command:
             Path(command[command.index("--outfile") + 1]).write_bytes(b"converted")
         else:
@@ -102,6 +107,36 @@ class MeasurementProvenanceTests(unittest.TestCase):
         self.assertEqual([item["compatible"] for item in result["candidates"]], [True, True])
         self.assertFalse(result["packaging_eligible"])
         self.assertEqual(len(self.calls), 4)
+
+    def test_conversion_processes_have_finite_declared_deadlines(self):
+        qualifier.qualify(self.args)
+        for options in self.call_options[:2]:
+            self.assertGreater(options["timeout"], 0)
+            self.assertLessEqual(options["timeout"], 900)
+
+    def test_real_hanging_fake_converter_retains_failed_evidence_and_log(self):
+        def hang(command, **kwargs):
+            return ACTUAL_RUN(
+                [
+                    sys.executable,
+                    "-c",
+                    "import time; print('invented converter',flush=True); time.sleep(60)",
+                ],
+                **kwargs,
+            )
+
+        self.args.phase_timeout_seconds = 0.3
+        with (
+            patch.object(qualifier.vlm_process, "run", side_effect=hang),
+            self.assertRaises(subprocess.TimeoutExpired),
+        ):
+            qualifier.qualify(self.args)
+        receipt = self.receipt()
+        self.assertEqual(receipt["status"], "failed")
+        self.assertIn("TimeoutExpired", receipt["error"])
+        self.assertEqual(receipt["candidates"], [])
+        self.assertFalse(receipt["packaging_eligible"])
+        self.assertIn("invented converter", (self.args.output / "convert-text.log").read_text())
 
     def test_conversion_source_change_is_rejected_before_any_reader(self):
         self.mutation = lambda _: (self.args.paddle / "config.json").write_bytes(b"replaced")

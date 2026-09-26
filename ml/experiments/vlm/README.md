@@ -41,10 +41,29 @@ build uses CMake 3.31.6, checks the source revision, and retains compiler/SDK/so
 identities and logs in the new run. Its `receipt.json` identifies the executable
 under `.local/builds/vlm/products/<identity>/reha-vlm-read`; later builds verify
 every cached output byte. Temporary compiler products are removed on completion.
-A build requires the 20 GiB reserve plus 4 GiB peak allowance. Eight CLI smoke
+A build requires the 20 GiB reserve plus 4 GiB peak allowance, including when
+invoked directly with `python3 ml/experiments/vlm/build.py build --run ...`.
+This is a disk-space check, independent of the cleanup lock; it is repeated after
+waiting for the VLM product lock. Insufficient space stops before tools or new
+build evidence are created. Eight CLI smoke
 checks run on the actual executable without loading weights, including the input
 size limit, missing models and preservation of existing reports. These checks
 establish executable behavior, not checkpoint compatibility.
+
+Every external VLM tool phase has a finite wall-clock limit. Git/toolchain
+queries use 30 seconds; restoration, each download, configure, compilation and
+each conversion use 900 seconds by default. The `build.py`, `fetch-vlm.py` and
+`qualify-vlm.py` CLIs accept a positive finite `--phase-timeout-seconds` for those
+long phases. Build and conversion receipts record that choice. The VLM product
+lock uses the same phase deadline. Reader and individual CLI smoke limits remain
+60 and 10 seconds respectively.
+
+Tools run in isolated process groups. A timeout or interruption terminates the
+group, allows up to ten seconds for nested wrappers to clean their own children,
+then kills remaining members and reaps the direct child. Build/conversion logs
+and failed receipts remain; old products and compatibility manifests are never
+replaced by failed work. Download partials and interrupted restore staging remain
+available for inspection, without becoming successful provenance receipts.
 
 Convert the pinned Paddle checkpoint with that checkout's
 `convert_hf_to_gguf.py --outtype f16`, once for the text model and once with
@@ -119,5 +138,5 @@ A new conversion needs a unique `--output`; pass its `candidates.json` to
 `compare-regions.py --manifest` when selecting that experiment. The historical
 comparison default still selects the retained historical manifest. A host build
 neither re-converts nor re-qualifies an existing checkpoint. The CLI's eight
-failure-path smoke checks and five source/evidence guards can be repeated through
+failure-path smoke checks and portable source/evidence/process guards can be repeated through
 `make build-vlm RUN=<new-local-run>` and `make test-tools`, respectively.

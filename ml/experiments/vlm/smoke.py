@@ -2,10 +2,11 @@
 
 import argparse
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+import vlm_process
 
 ROOT = Path(__file__).resolve().parents[3]
 BINARY = None
@@ -24,7 +25,7 @@ class ReaderSmoke(unittest.TestCase):
         self.output = self.root / "report.json"
 
     def invoke(self, image=None):
-        return subprocess.run(
+        return vlm_process.run(
             [
                 str(BINARY),
                 str(self.root / "missing.gguf"),
@@ -39,7 +40,7 @@ class ReaderSmoke(unittest.TestCase):
         )
 
     def test_usage(self):
-        result = subprocess.run([str(BINARY)], capture_output=True, timeout=10)
+        result = vlm_process.run([str(BINARY)], capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 2)
 
     def test_missing_empty_and_directory_inputs_do_not_load_models(self):

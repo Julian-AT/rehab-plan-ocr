@@ -9,8 +9,9 @@ import argparse
 import hashlib
 import json
 import re
-import subprocess
 from pathlib import Path
+
+import vlm_process
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -65,7 +66,8 @@ def verify_candidate(directory, candidate):
         ) from error
 
 
-def fetch(lock, destination):
+def fetch(lock, destination, *, phase_timeout=vlm_process.PHASE_SECONDS):
+    vlm_process.deadline(phase_timeout)
     for candidate in lock["candidates"]:
         if Path(candidate["id"]).name != candidate["id"]:
             raise ValueError("Unsafe candidate directory")
@@ -92,7 +94,7 @@ def fetch(lock, destination):
 
             if not valid(target):
                 partial = target.with_suffix(target.suffix + ".part")
-                subprocess.run(
+                vlm_process.run(
                     [
                         "curl",
                         "--fail",
@@ -106,6 +108,7 @@ def fetch(lock, destination):
                         str(partial),
                     ],
                     check=True,
+                    timeout=phase_timeout,
                 )
                 if not valid(partial):
                     raise ValueError(f"Checkpoint integrity failed: {name}")
@@ -122,8 +125,10 @@ if __name__ == "__main__":
     p.add_argument(
         "--destination", type=Path, default=ROOT / ".local/models/runtime/experiments/checkpoints"
     )
+    p.add_argument("--phase-timeout-seconds", type=float, default=vlm_process.PHASE_SECONDS)
     a = p.parse_args()
     fetch(
         json.loads((ROOT / "ml/registry/runtime/vlm-experiments.lock.json").read_text()),
         a.destination,
+        phase_timeout=a.phase_timeout_seconds,
     )

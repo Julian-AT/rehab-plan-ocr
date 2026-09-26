@@ -15,6 +15,8 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+import vlm_process
+
 ROOT = Path(__file__).resolve().parents[3]
 FONT_PATHS = [
     Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
@@ -56,7 +58,7 @@ def verify_inputs(bindings):
 
 def checked_run(command, bindings, **kwargs):
     try:
-        return subprocess.run(command, **kwargs)
+        return vlm_process.run(command, **kwargs)
     finally:
         verify_inputs(bindings)
 
@@ -68,10 +70,10 @@ def evidence(output, result, bindings, runtime, revision):
             yield
         finally:
             verify_inputs(bindings)
-            current = subprocess.check_output(
+            current = vlm_process.check_output(
                 ["git", "-C", str(runtime), "rev-parse", "HEAD"], text=True
             ).strip()
-            dirty = subprocess.check_output(
+            dirty = vlm_process.check_output(
                 ["git", "-C", str(runtime), "status", "--porcelain"], text=True
             ).strip()
             if current != revision or dirty:
@@ -89,6 +91,9 @@ def evidence(output, result, bindings, runtime, revision):
 
 
 def qualify(args):
+    phase_timeout = vlm_process.deadline(
+        getattr(args, "phase_timeout_seconds", vlm_process.PHASE_SECONDS)
+    )
     if args.output.exists() or args.output.is_symlink():
         raise ValueError(
             "Use a new output directory; existing conversion and review evidence is preserved."
@@ -97,10 +102,10 @@ def qualify(args):
     lock_bytes = lock_path.read_bytes()
     lock = json.loads(lock_bytes)
     bindings = {str(lock_path.absolute()): hashlib.sha256(lock_bytes).hexdigest()}
-    revision = subprocess.check_output(
+    revision = vlm_process.check_output(
         ["git", "-C", str(args.runtime), "rev-parse", "HEAD"], text=True
     ).strip()
-    dirty = subprocess.check_output(
+    dirty = vlm_process.check_output(
         ["git", "-C", str(args.runtime), "status", "--porcelain"], text=True
     ).strip()
     if revision != lock["runtime"]["revision"] or dirty:
@@ -122,10 +127,23 @@ def qualify(args):
             }
             bindings[str(manifest.absolute())] = source_manifests[candidate["id"]]["sha256"]
     converter = args.runtime / "convert_hf_to_gguf.py"
-    pin_inputs(bindings, [converter, args.binary, Path(__file__).with_name("fetch-vlm.py")])
+    pin_inputs(
+        bindings,
+        [
+            converter,
+            args.binary,
+            Path(__file__).with_name("fetch-vlm.py"),
+            Path(__file__).with_name("vlm_process.py"),
+        ],
+    )
     output = args.output
     output.mkdir(parents=True, exist_ok=False)
-    result = {"schema_version": 1, "candidates": [], "packaging_eligible": False}
+    result = {
+        "schema_version": 1,
+        "candidates": [],
+        "packaging_eligible": False,
+        "phase_timeout_seconds": phase_timeout,
+    }
     with evidence(output, result, bindings, args.runtime, revision):
         convert_and_measure(
             args, converter, revision, source_hashes, source_manifests, bindings, result
@@ -169,6 +187,7 @@ def convert_and_measure(
                 command,
                 bindings,
                 check=True,
+                timeout=result["phase_timeout_seconds"],
                 stdout=log,
                 stderr=log,
                 env={
@@ -238,12 +257,14 @@ def convert_and_measure(
         status = None
         try:
             with (check / (family + ".log")).open("w") as log:
-                subprocess.run(command, check=True, timeout=60, stdout=log, stderr=log)
+                vlm_process.run(command, check=True, timeout=60, stdout=log, stderr=log)
             raw = path.read_bytes()
             bindings[str(path.absolute())] = hashlib.sha256(raw).hexdigest()
             status = json.loads(raw)
-        except (subprocess.SubprocessError, OSError, ValueError):
-            pass
+        except (subprocess.SubprocessError, OSError, ValueError) as error:
+            failure = f"{type(error).__name__}: {error}"
+        else:
+            failure = None
         finally:
             # Integrity failures must escape the ordinary incompatible-reader fallback.
             verify_inputs(measured)
@@ -260,6 +281,7 @@ def convert_and_measure(
                 "model_sha256": measured[str(model.absolute())],
                 "projector_sha256": measured[str(projection.absolute())],
                 "compatible": compatible,
+                "error": failure,
                 "smoke_sha256": bindings.get(str(path.absolute())),
                 "smoke_input_sha256": measured[str((check / "synthetic.png").absolute())],
                 "packaging_eligible": False,
@@ -280,4 +302,5 @@ if __name__ == "__main__":
         default=ROOT / ".local/models/runtime/experiments/checkpoints/paddleocr-vl-1.6",
     )
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--phase-timeout-seconds", type=float, default=vlm_process.PHASE_SECONDS)
     qualify(p.parse_args())

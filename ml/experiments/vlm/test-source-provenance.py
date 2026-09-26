@@ -51,7 +51,7 @@ class SourceProvenanceTests(unittest.TestCase):
 
     def test_existing_unpinned_file_without_receipt_cannot_be_newly_attested(self):
         self.existing(manifest=False)
-        with patch.object(fetcher.subprocess, "run") as download:
+        with patch.object(fetcher.vlm_process, "run") as download:
             with self.assertRaisesRegex(ValueError, "new.*destination"):
                 fetcher.fetch(self.lock, self.destination)
         download.assert_not_called()
@@ -62,7 +62,7 @@ class SourceProvenanceTests(unittest.TestCase):
         self.existing()
         original = (self.directory / "source-manifest.json").read_bytes()
         (self.directory / "config.json").write_bytes(b"EVIL")
-        with patch.object(fetcher.subprocess, "run") as download:
+        with patch.object(fetcher.vlm_process, "run") as download:
             with self.assertRaisesRegex(ValueError, "new.*destination"):
                 fetcher.fetch(self.lock, self.destination)
         download.assert_not_called()
@@ -72,7 +72,7 @@ class SourceProvenanceTests(unittest.TestCase):
         self.existing()
         receipt = self.directory / "source-manifest.json"
         before = receipt.read_bytes(), receipt.stat().st_mtime_ns
-        with patch.object(fetcher.subprocess, "run") as download:
+        with patch.object(fetcher.vlm_process, "run") as download:
             fetcher.fetch(self.lock, self.destination)
         download.assert_not_called()
         self.assertEqual((receipt.read_bytes(), receipt.stat().st_mtime_ns), before)
@@ -82,7 +82,7 @@ class SourceProvenanceTests(unittest.TestCase):
             self.assertIn("/resolve/" + "a" * 40 + "/config.json?download=true", command[-3])
             Path(command[-1]).write_bytes(b"GOOD")
 
-        with patch.object(fetcher.subprocess, "run", side_effect=download) as command:
+        with patch.object(fetcher.vlm_process, "run", side_effect=download) as command:
             fetcher.fetch(self.lock, self.destination)
         command.assert_called_once()
         manifest = json.loads((self.directory / "source-manifest.json").read_text())
@@ -92,7 +92,7 @@ class SourceProvenanceTests(unittest.TestCase):
     def test_upstream_pinned_file_can_be_verified_without_creating_a_manifest(self):
         self.existing(manifest=False)
         self.candidate["files"][0]["sha256"] = hashlib.sha256(b"GOOD").hexdigest()
-        with patch.object(fetcher.subprocess, "run") as download:
+        with patch.object(fetcher.vlm_process, "run") as download:
             fetcher.fetch(self.lock, self.destination)
         download.assert_not_called()
         self.assertFalse((self.directory / "source-manifest.json").exists())
@@ -130,8 +130,8 @@ class SourceProvenanceTests(unittest.TestCase):
         )
         with (
             patch.object(qualifier, "ROOT", self.root),
-            patch.object(qualifier.subprocess, "check_output", side_effect=["b" * 40, ""]),
-            patch.object(qualifier.subprocess, "run") as command,
+            patch.object(qualifier.vlm_process, "check_output", side_effect=["b" * 40, ""]),
+            patch.object(qualifier.vlm_process, "run") as command,
             self.assertRaisesRegex(ValueError, "new.*destination"),
         ):
             qualifier.qualify(args)
