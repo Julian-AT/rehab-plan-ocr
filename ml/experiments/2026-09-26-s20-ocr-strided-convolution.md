@@ -48,3 +48,27 @@ before execution. Execution requires 20 GiB free reserve plus four GiB planned
 peak and a quiet window without simulator or other model work. The source inputs
 are hash-bound and checked again on exit, including failures. Existing reports,
 originals, weights and deployed models remain unchanged.
+
+## Observed result (20 September 2026)
+
+Execution at clean source `b00f3a8` completed in the quiet window after the four
+UI regressions. All four original controls reproduced byte for byte, including
+the 737,280-value input, 41,472 weights and both 92,160-value primitive outputs.
+This confirms that the runtime difference also exists in an isolated operation
+with identical inputs and weights. It does not establish the cause of the final
+full-graph tolerance failure.
+
+All eight integer-geometry comparisons and all ten optimized-graph reloads pass
+byte for byte. The retained MatMul candidate differs from Paddle at both levels:
+maximum absolute error 7.62939453125e-05, with zero values outside the unchanged
+numeric tolerance. The predeclared byte gate therefore **fails**. This lowering
+is stopped; no full-graph candidate was generated or selected. A smaller maximum
+error alone does not establish a valid deployment export.
+
+All 106 frozen sources and 27 generated artifacts were rechecked.
+The private run is `.local/runs/ocr-strided-convolution-20260926-s20-001`, with
+protocol SHA-256 `bc19e3fae350fe038870307abfe49e5f217b8e5ee893b1336dfef28805caff59` and
+report SHA-256 `aebaedfa6d8d0d2ca4ace1702376d64323070243570b5b20abb2fa40fa1a46a9`.
+The development directory retains the clean source archive, six successful
+geometry/gate tests, documentation checks and execution log. Model qualification
+remains failed/open; historical model weights and reports were not changed.
