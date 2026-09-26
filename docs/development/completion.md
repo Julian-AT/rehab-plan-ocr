@@ -80,7 +80,8 @@ echtem Modell, Bestätigungsbutton und Audio stehen noch aus; ein erneut
 abgefragter bekannter Titel bleibt dabei ein Bedienfehler.
 
 Der abgeschlossene neue OCR-Lauf mit eingefrorenem Backbone wählt nach fünf
-Epochen den zweiten Stand: **112/128** exakte Validierungscrops gegenüber
+Epochen den zweiten Stand. Unter seiner festen OpenCV-Vorverarbeitung mit Breite
+320 erreicht er **112/128** exakte Validierungscrops gegenüber
 **114/128** beim vortrainierten Vergleich, jeweils null Fehler in 110 kritischen
 Crops. Alle 16 Fehler des ausgewählten Kandidaten betreffen Notizen. Die
 Exportprüfung umfasst alle 640 Crops in zwei Breiten: **1.266/1.280** numerische
@@ -88,8 +89,9 @@ Erfolge, 1.280 gleiche Tokenfolgen. Die unveränderte numerische Freigabeschrank
 ist damit nicht bestanden. Es handelt sich um bekannte synthetische
 Entwicklungsdaten; weder Verbesserung noch Auslieferung ist qualifiziert.
 Auch die vollständige Anpassung ist abgeschlossen: fünf Epochen, ausgewählte
-Epoche zwei, **111/128** exakte Crops, ein neuer kritischer Fehler im
-Therapeutenfeld und 16 Notizfehler. Ihr Export besteht **1.261/1.280** numerische
+Epoche zwei, unter derselben 320er-Vorverarbeitung **111/128** exakte Crops,
+ein neuer kritischer Fehler im Therapeutenfeld und 16 Notizfehler. Ihr Export
+besteht **1.261/1.280** numerische
 Fälle bei 1.280 gleichen Tokenfolgen. Beide Kandidaten verfehlen die Freigabe;
 die [registrierten Ergebnisse](../../ml/experiments/2026-09-26-s21-ocr-field-coverage-results.md)
 enthalten auch die bisherigen Modelle auf demselben Validierungsbestand.
@@ -102,8 +104,16 @@ Die anschließende [kumulative Gesamtgraphprüfung](../../ml/experiments/2026-09
 bleibt negativ: 17/24 numerische Erfolge, 33/36 erhaltene frühere BN-Erfolgszellen.
 Der vollständige Korpus ist dafür noch nicht freigegeben. Eine separate statische
 Prüfung findet vollständig lesbare synthetische Notizen, aber stark gestauchte
-Trainings-/Validierungseingaben und unterschiedliche Längenverteilungen. Die
-Messung mit der tatsächlichen proportionalen App-Vorverarbeitung steht noch aus.
+Trainings-/Validierungseingaben und unterschiedliche Längenverteilungen.
+
+Der danach abgeschlossene [Vergleich mit gemeinsamer Rust-App-Vorverarbeitung](../../ml/experiments/2026-09-26-s21-ocr-app-preprocessing-results.md)
+reproduziert zuerst alle 640 alten Texte. Mit nativen Eingabetensoren erreichen
+der vortrainierte und beide eingefrorenen Stände **128/128**, beide vollständig
+angepassten Stände **127/128** mit je einem unveränderten kritischen Fehler.
+Alle fünf erkennen **18/18 Notizen**. Breite und Interpolation ändern sich gemeinsam;
+kein eigenes Modell übertrifft hier die Baseline. Das sind bekannte synthetische
+Crops im Paddle-Lauf, keine ausgeführte iOS-/ONNX-Planerkennung. Alte 320er-Ergebnisse
+und numerische Exportfehler bleiben erhalten.
 
 Der reproduzierbare Python-Abhängigkeitsaudit ist auf seinem gebundenen Stand
 vollständig ausgeführt, mit **sieben betroffenen Paketversionen / 24 Advisorygruppen**

@@ -144,6 +144,14 @@ augmentation: variants are prepared with the data exporter. To change learning
 rate, batch size, width or seed, use the same `train.py start --help` CLI directly.
 Resume accepts only operational options and always uses its recorded settings.
 
+This trainer's crop scores use OpenCV linear resizing and padding to the recorded
+fixed width (320 in the completed v3 study). They do not measure the Rust app's
+proportional-width/Triangle input policy. Compare checkpoints under the same
+explicit preprocessing contract; changing that contract requires a separate
+bound evaluation. The [later native-input comparison](../../experiments/2026-09-26-s21-ocr-app-preprocessing-results.md)
+preserves the historical training scores and finds no adapted-model advantage
+over the pretrained checkpoint under the shared app preprocessing policy.
+
 Validation first minimizes critical-field crop errors, then mean group error and
 character errors. Each group has equal weight in mean group error; derivative counts
 are disclosed. Original crops and augmented robustness cases have separate reports.

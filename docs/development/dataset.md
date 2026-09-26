@@ -194,9 +194,12 @@ The [adaptation trainer](../../ml/training/ocr/README.md) now supports frozen-ba
 and lower-rate full fine-tuning, the exact dictionary, label-derived sequence
 lengths, atomic optimizer checkpoints and validation stopping. A forced mid-epoch
 interruption reproduced the uninterrupted tensors exactly. The former eight-hour
-cap is removed. Its synthetic comparison passes export parity for the frozen
-candidate; the full-adaptation candidate fails two numerical parity cases and is
-rejected. Real-photo adaptation, critical-field/correction evaluation and device
+cap is removed. The earlier small smoke comparison passes export parity for its
+frozen candidate; its full-adaptation candidate fails two numerical cases.
+Both later [v3 field-coverage exports](../../ml/experiments/2026-09-26-s21-ocr-field-coverage-results.md)
+fail their numerical gate. The separate [native-input crop comparison](../../ml/experiments/2026-09-26-s21-ocr-app-preprocessing-results.md)
+does not change those failures or qualify an app model.
+Real-photo adaptation, critical-field/correction evaluation and device
 parity remain open. Detection training stays conditional on measured errors.
 
 An adapted model may replace the unchanged pipeline only after group-wide gains,

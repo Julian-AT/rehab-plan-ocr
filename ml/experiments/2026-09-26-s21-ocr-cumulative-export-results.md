@@ -44,7 +44,7 @@ actual difference nor proof that this operation causes the final failing values.
 The next bounded proposal compares the original isolated operators and fixed
 integer geometry controls; no replacement kernel is selected.
 
-## Separate synthetic-data and preprocessing review
+## Static preprocessing review before the native-input comparison
 
 All 18 validation note crops and the new critical therapist-error crop are
 visually complete and match their synthetic source polygons and target glyphs.
@@ -59,7 +59,8 @@ to 3200 and pads to a multiple of eight, with a minimum padded width of 320.
 OpenCV linear and Rust Triangle interpolation also differ; their pixel equality
 has not been established. There are only 40 output positions at fixed width 320,
 while the note targets require 33–38 CTC positions including repeated-character
-blanks. This is a plausible source of errors, not yet a causal measurement.
+blanks. At that stage this was a plausible source of errors, without a controlled
+preprocessing measurement.
 
 All 73 training notes have 18–29 characters; all 18 validation notes have 32–38.
 Held-out wording and length are therefore confounded. The validation notes cover
@@ -72,5 +73,10 @@ The private source-bound review is
 `dfa243182a290180e255a028e73d255f4fd06ff8f7ed9d02131a9480e4f5a92d`.
 Its prospective two-arm comparison fixes five existing checkpoints and all 128
 validation targets, including all 110 critical fields. It first requires legacy
-text replay, then app-generated tensors from a shared Rust helper. Inference and
-new training have not run. Historical scores remain the fixed-width-320 results.
+text replay, then app-generated tensors from a shared Rust helper. Inference had
+not run at the time of that review. The [later completed comparison](2026-09-26-s21-ocr-app-preprocessing-results.md)
+reproduces all 640 historical strings and makes all 18 notes correct for every
+checkpoint with native preprocessing, without new training. The pretrained and
+both frozen models reach 128/128; both full models retain one distinct critical
+error. Width and interpolation change jointly, so width-only causality remains
+unidentified. Historical 320 scores and numerical export failures stay unchanged.

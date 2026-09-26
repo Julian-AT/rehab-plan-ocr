@@ -7,6 +7,12 @@ epoch two by the unchanged validation policy. Neither improves the pretrained
 control on these 128 known synthetic validation crops. Neither export passes its
 numerical gate. No application asset or provider selection was changed.
 
+The following training/validation scores use the historical OpenCV linear
+preprocessing at fixed width 320. They are not measurements of the app's native
+input policy. A [later comparison with shared Rust preprocessing](2026-09-26-s21-ocr-app-preprocessing-results.md)
+reproduces all historical strings before evaluating that separate policy;
+the original scores and generated model card remain unchanged.
+
 The [prospective protocol](2026-09-26-s21-ocr-field-coverage.md) and
 [generated model card](../registry/ocr-synthetic-development-002.json) bind the
 dataset, selected checkpoints, complete training states and export evidence.
@@ -22,8 +28,9 @@ training. Best and latest checkpoints, including optimizers, remain retained.
 | New frozen adaptation | 112 | 0 | 0.146825 | 56 |
 | New full adaptation | 111 | 1 | 0.150204 | 45 |
 
-The new frozen model misses 16 of 18 notes. The new full model misses the same
-number of notes and one therapist field that the pretrained control gets right.
+Under that fixed-width-320 policy, the new frozen model misses 16 of 18 notes.
+The new full model misses the same number of notes and one therapist field that
+the pretrained control gets right.
 Thus its lower character-error total than the frozen model does not make it safe
 to select. Date, start, end, location and title validation fields are all exact
 for both new candidates. The old full control's critical error is an end time;
@@ -64,4 +71,6 @@ This is one isolated operation with fixed tile size 16. It does not repair or
 qualify either complete export. The subsequent [cumulative complete-graph comparison](2026-09-26-s21-ocr-cumulative-export-results.md)
 also fails its numerical gate. It preserves exact tokens but introduces regressions
 against earlier successful cells. No full-corpus promotion follows. The same
-report records a separate, still unmeasured preprocessing concern for long notes.
+report records the earlier static preprocessing review for long notes. The later
+native-input comparison linked above measures that concern separately and does
+not repair either numerical export.
