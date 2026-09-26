@@ -68,6 +68,33 @@
   und den bereits gespeicherten Prüfabschluss `acknowledged`. Dauerhafter
   Schreibstatus und nachgelagerte Erinnerungs-/Widgetwarnungen bleiben getrennt.
 
+## Kalenderberechtigung und Mitteilungszustand
+
+`NativeBridge.requestCalendarAccess` fordert ausschließlich die Berechtigung an.
+Es erstellt keinen Kalender und verändert keine gespeicherte oder sichtbare Auswahl.
+Speicherziel- und Kalenderauswahlansicht verwenden anschließend die vorhandene
+typisierte Kalenderliste. Der Planeditor liest sie ebenfalls direkt.
+
+`NativeAgendaStatus`, `NativeReminderStatus` und `NativeNotificationReceipt`
+übertragen die Antworten als `Sendable`-Werte. Auch die serialisierten Arbeitsabläufe
+in `AgendaService` geben diese Typen zurück. Eine erlaubte Mitteilungsberechtigung
+aktiviert noch keine Erinnerungen; die gespeicherten Einstellungen bestimmen die
+Aktivierung. Angenommene Aufträge, bestätigte Systemvormerkungen und tatsächlich
+beobachtete Zustellungen bleiben getrennte Eigenschaften.
+
+Die bisherigen `NativeServices.perform`-Eingänge verwenden explizite
+Kompatibilitätsprojektionen mit unveränderten Schlüsseln, einschließlich `error: null`.
+Private Alarmjournale, Wiederanlaufdaten und der eingeschränkte Widget-Snapshot
+werden dadurch nicht migriert. Die bestehenden Konkurrenztests für verzögerte,
+doppelte oder überholte Mitteilungsaufträge verwenden jetzt die typisierten Antworten.
+
+Commit `662f84f` besteht 71 Agenda-/Vertragsprüfungen und die vollständige native
+iOS-26-Typprüfung einschließlich beider geänderter Integrationstestdateien,
+Widget und Mitteilungsansicht: Swift 6, vollständige Nebenläufigkeitsprüfung,
+Warnungen als Fehler. Ausführung der Integrationstests im Simulator und der
+anschließende gemeinsame Appbuild bleiben separate Nachweise. Rohlogs und
+Quellhashes liegen unter `.local/runs/reminder-contracts-20260926-s18-001/`.
+
 ## Wiederanlauf nach bestätigten Kalenderänderungen
 
 Die SQLite-Transaktion für Import beziehungsweise Rücknahme legt zusammen mit
@@ -149,7 +176,10 @@ transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
 gehören Kalenderstatus, Reparatur, Verlaufsabfrage, manuelle Klärung ungewisser
 Schreibvorgänge, der Aufruf des Wiederanlaufs und Agenda-Abgleich. Der darunter
 liegende einzelne Wiederanlauf-Schreibauftrag ist bereits typisiert.
-Systemeditor, Berechtigungsanfrage und weitere Plattformeffekte bleiben offen.
+Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
+Auch unterhalb der bereits typisierten Import-FFI verwendet `NativeBridge` für
+Snapshot, Importoperation, Überschneidungen und Agenda-Abgleich noch den
+String-/JSON-Adapter zu `NativeServices`.
 Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
