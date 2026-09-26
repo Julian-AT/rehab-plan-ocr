@@ -12,8 +12,8 @@ make restore
 make convert TARGET=all
 make build
 make test-ios
-python3 tooling/dev/quality.py build check-bindings
-python3 tooling/dev/quality.py build device
+make check-bindings
+make build TARGET=device
 ```
 
 Die App verwendet UniFFI ohne die standardmäßig aktivierte Cargo-Metadatensuche.
@@ -35,8 +35,12 @@ Jeder erfolgreiche Vorabcheck schreibt eine neue `simulator-environment-*.json`
 unter `.local/builds/ios`; CI bewahrt diese Identität mit dem Testergebnis auf.
 Diese beiden Profile ersetzen keine Prüfung der Mindestversion iOS 26.0.
 
-`sh tooling/build/build-native.sh archive` erzeugt ein signiertes privates Archiv und führt die
-Paketprüfung aus. Das ist keine Geräteinstallation. Für Installation gilt die Freigabegrenze
+`make archive RELEASE_RUN=.local/releases/<neuer-lauf>` reserviert einen neuen
+geschützten Lauf, erzeugt darin ein signiertes privates Archiv und führt die
+Paketprüfung einschließlich Binär-/dSYM-Identitäten aus. Bestehende Archive und
+Paketnachweise werden nicht überschrieben; eine ausdrücklich angegebene alte
+Archivquelle kann nur in einen neuen Lauf paketiert werden. Details stehen im
+[Buildvertrag](../../docs/development/build-reproducibility.md). Das ist keine Geräteinstallation. Für Installation gilt die Freigabegrenze
 in AGENTS.md: neue Vorschau und Hörproben, ausdrückliche Freigabe, frische Sicherung, Update
 ohne Deinstallation und Vergleich dauerhafter Daten.
 
