@@ -50,6 +50,16 @@ import XCTest
     attachment.lifetime = .keepAlways
     add(attachment)
   }
+  private func applicationPixels(_ screenshot: XCUIScreenshot) throws -> Data {
+    // voice-state ignores safe areas, so XCTest includes the changing system
+    // clock. Use the same 160-pixel status-bar exclusion as the visual baseline.
+    // Every app pixel below it still participates; no image tolerance is applied.
+    let image = try XCTUnwrap(screenshot.image.cgImage)
+    XCTAssertGreaterThan(image.height, 160)
+    let content = try XCTUnwrap(
+      image.cropping(to: CGRect(x: 0, y: 160, width: image.width, height: image.height - 160)))
+    return try XCTUnwrap(UIImage(cgImage: content).pngData())
+  }
   private func row(_ title: String) -> XCUIElement {
     app.buttons.matching(
       NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", title)
@@ -620,7 +630,7 @@ import XCTest
     app.navigationBars["Termin bearbeiten"].buttons["Fertig"].tap()
     XCTAssertFalse(row("Test Gespräch bestätigt").exists)
   }
-  func testRealAudioDrivesOrbAndStopEndsIt() {
+  func testRealAudioDrivesOrbAndStopEndsIt() throws {
     launch("one", extra: ["--audio-evidence"])
     app.tabBars.buttons["Sprechen"].tap()
     app.buttons["voice-details"].tap()
@@ -628,10 +638,10 @@ import XCTest
     back("Gesprächsdetails")
     expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: voiceState)
     waitForExpectations(timeout: 45)
-    let initialOrb = voiceState.screenshot().pngRepresentation
+    let initialOrb = try applicationPixels(voiceState.screenshot())
     // Keep genuine playback visible long enough to review the recorded motion.
     Thread.sleep(forTimeInterval: 3)
-    XCTAssertNotEqual(initialOrb, voiceState.screenshot().pngRepresentation)
+    XCTAssertNotEqual(initialOrb, try applicationPixels(voiceState.screenshot()))
     capture("24-sprechen-echte-wiedergabe")
     app.buttons["stop-speech"].tap()
     XCTAssertEqual(voiceState.value as? String, "idle")
@@ -684,9 +694,18 @@ import XCTest
     app.tabBars.buttons["Sprechen"].tap()
     XCTAssertTrue(app.buttons["speak"].isHittable)
     XCTAssertEqual(voiceState.value as? String, "idle")
-    let stillOrb = voiceState.screenshot().pngRepresentation
+    let stillOrb = voiceState.screenshot()
     Thread.sleep(forTimeInterval: 1)
-    XCTAssertEqual(stillOrb, voiceState.screenshot().pngRepresentation)
+    let laterOrb = voiceState.screenshot()
+    for (name, screenshot) in [
+      ("reduced-motion-before", stillOrb), ("reduced-motion-after", laterOrb),
+    ] {
+      let attachment = XCTAttachment(screenshot: screenshot)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+    XCTAssertEqual(try applicationPixels(stillOrb), try applicationPixels(laterOrb))
     capture("26-bewegung-reduziert")
   }
 }

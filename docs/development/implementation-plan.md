@@ -154,6 +154,14 @@ failures/skips in 30.106 seconds, including restoration from on to off. Evidence
 format checks pass. This closes the formerly skipped isolated setting check, not
 the separate real-audio, whole-suite or physical usability gates.
 
+A subsequent run exposed that the voice-state screenshot includes the system
+clock: its failing one-second comparison crossed a minute boundary. Both stationary
+and moving-orb comparisons now exclude the same top 160 system pixels as the visual
+baseline, retaining strict equality for all remaining app pixels. Full before/after
+images remain attached. Instrumented runs 005 and three iterations in 006 pass;
+the final corrected comparison passes run 007 with the 300-second XCTest ceiling.
+Run 004 remains a recorded failure. No production appearance or animation changed.
+
 ### Custom OCR in the actual app import pipeline — 2026-09-26
 
 The normal Debug simulator app now has an isolated recognition probe that forbids
