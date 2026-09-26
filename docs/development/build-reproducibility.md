@@ -196,3 +196,77 @@ contract changes, ordinary cache reuse, active consumers, exclusive build leases
 interrupted rename/marker publication and recovery refusal after corruption. A
 successful helper test is not a final app/bundle acceptance; the resulting actual
 product still needs the usual build, resource and release checks.
+
+## Vollständiger isolierter Offline-Appbuild vom 26. September 2026
+
+Kandidat `026430ab810accb27d03b3fec32b99f3ebad672f` wurde außerhalb des
+iCloud-Dokumentenordners in einem eigenständigen Git-Checkout unter
+`/private/tmp/reha-clean-checkout-20260926-s18-e30e3068/checkout` geprüft. Vor dem
+ersten Compilerstart waren die Rust- und Xcode-Buildverzeichnisse nicht vorhanden.
+462 Übernahmebelege erfassen 3.595 erneut geprüfte Werkzeug-/Downloadeinträge.
+Cargo erhielt ausschließlich gegen `Cargo.lock` geprüfte Archive und
+Registryeinträge; fremde Compilerprodukte und entpackte Cargo-Quellcaches wurden
+nicht übernommen. Python, UV, XcodeGen einschließlich Presets sowie Cargo-/UV-
+Caches liegen im neuen Checkout unter `.local`. Neun absolute Links des kopierten
+UV-Caches wurden mit getrenntem Vorher-/Nachherbeleg auf lokale relative Ziele
+umgestellt. Rust 1.98.1 und Xcode 26.4 sind ausdrücklich erfasste Hostvoraussetzungen.
+
+Mit `CARGO_NET_OFFLINE=true`, `UV_OFFLINE=true` und einer echten macOS-
+Netzwerksperre bestanden seriell `make bootstrap`, `make doctor`, `make restore`,
+`make convert TARGET=simulator`, `make check-runtime-inventory`, der vollständige
+`make build TARGET=simulator`, dessen Wiederholung und `make check-bindings`.
+Die echten Release-Symboltests bestätigten passende dSYM-UUIDs und Quellzeilen.
+Nach jedem erfolgreichen Schritt waren sämtliche versionierten Dateien weiterhin
+identisch zum Kandidaten. Es fand keine Geräteinstallation statt.
+
+Der erste Aufbau wurde nach drei erhaltenen Fehlerläufen fortgesetzt. macOS
+verweigert zunächst das setuid-Systemprogramm `/bin/ps` in der Sandbox und danach
+die erneute Sandboxinitialisierung von Swift-Paketmanifesten sowie Apples
+Compiler-Makros. Der private Prüfrahmen verwendet deshalb diese dokumentierte
+Regel:
+
+```text
+(version 1)
+(allow default)
+(deny network*)
+(allow process-exec (literal "/bin/ps") (with no-sandbox))
+```
+
+Die Ausnahme gilt ausschließlich für das unveränderte Apple-Systemprogramm zur
+lesenden Prozessprüfung; Hash, Modus und der Vergleich der Prozesssicht sind
+erfasst. Der lokale `xcodebuild`-Wrapper leitet an `/usr/bin/xcodebuild` weiter und
+ergänzt prozesslokal `-IDEPackageSupportDisableManifestSandbox=YES` sowie das
+einzelne Argument `OTHER_SWIFT_FLAGS=$(inherited) -disable-sandbox`. Dadurch
+entfallen nur die verschachtelten Sandboxinitialisierungen. Manifest-, Makro-
+und Compilerprozesse erben weiterhin die äußere Netzsperre. Erneute Verbindungs-
+versuche im Prüfprozess und seinem Kindprozess scheiterten mit `EPERM`.
+Globale Xcode-Einstellungen und Produktquellen wurden dafür nicht geändert.
+Die genaue Orchestrierung, Argumente und verworfenen Ansätze liegen beim Beleg.
+Der Manifestschalter ist auch im installierten SwiftPM vorhanden und wird im
+[Swift-Quellkompatibilitätstest verwendet](https://github.com/swiftlang/swift/issues/86672);
+der installierte Compiler beschreibt `-disable-sandbox` in seiner Hilfe.
+
+Der erfolgreiche fortgesetzte App-Build dauerte 23,55 Sekunden, die anschließende
+Offline-Wiederholung 3,17 Sekunden. Die früheren Schritte des Erstaufbaus bleiben
+separat ausgewiesen; diese Zeiten sind kein ununterbrochener Kaltstartvergleich
+und kein Nachweis der App-Laufzeitleistung. Der niedrigste während der Schritte
+beobachtete freie Speicher betrug 96,49 GiB. Volumenänderungen werden nicht
+ausschließlich dem Build zugerechnet; APFS-Kopien haben eigene beschreibbare
+Inodes, ihre logische Größe ist kein zusätzlicher garantierter Platzbedarf.
+
+Beide vollständigen Simulator-Apps sind nach Dateien, Bytes, Modi und Links
+identisch: je 104.325.857 Bytes. App und drei Erweiterungen, alle zwölf Mach-O-
+Dateien, vier Datenschutzmanifeste, elf Lizenznachweise, das Inventar mit 135
+Paketen sowie die gepinnten OCR-Ressourcen bestanden die Bundleprüfungen.
+Kokoro-/eSpeak-Ressourcen und verbotene Symbole sind ausgeschlossen. Die Kennungen
+und die Mindestversion iOS 26.0 bleiben erhalten.
+
+Der dauerhafte private Bestand
+`.local/runs/fresh-offline-app-20260926-s18-001/` enthält das vollständige Quellarchiv,
+alle Protokolle einschließlich Abbrüchen, Hash-/Quell-/Umgebungsbelege,
+`artifact-index.json` und beide tatsächlichen App-Bundles. Für Vorschauen dient
+`products/repeat/Laßnitzhöhe.app` innerhalb dieses Bestands. Die Übernahme wurde
+dateiweise geprüft und benötigt den temporären Checkout nicht. Dieser bleibt
+vorerst zusätzlich erhalten. Neuere Quellstände, signierte Gerätepakete,
+menschliche Sprach-/Bedienungsabnahme und öffentliche Vertriebsfreigabe benötigen
+eigene Nachweise; die Paketprüfung weist diese Freigaben weiterhin als offen aus.
