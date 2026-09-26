@@ -3,10 +3,16 @@
 # Aufnahmevertrag für die erhaltenen Kalenderbilder
 
 Stand: 26. September 2026. Dieser Vertrag wird vor einem neuen Kandidatenlauf
-festgelegt. Die ursprünglichen 22 PNGs, ihr Katalog und die exakte Pixelprüfung
-unterhalb der oberen 160 Systempixel bleiben unverändert. Die folgenden
+festgelegt. Die ursprünglichen 22 PNGs, ihr Katalog und der Ausschluss der oberen
+160 Systempixel bleiben unverändert. Der Bildvergleich bleibt exakt und ohne Toleranz. Die folgenden
 Messungen erklären historische Unterschiede; sie erklären keine fehlgeschlagene
 Gesamtbildprüfung nachträglich für bestanden.
+
+Seit dem 26. September 2026 prüft der Vergleich alle vier RGBA-Kanäle. Zuvor wurde
+Alpha verworfen; sichtbare Transparenzunterschiede werden nun ebenfalls erkannt.
+RGB-Bilder erhalten beim Vergleich volle Deckkraft, sodass Ergebnisse für RGB
+und vollständig deckende RGBA-Aufnahmen identisch bleiben. Diese Korrektur vor
+neuen Kandidaten verändert weder die Originalbilder noch historische Berichte.
 
 ## Feste Positionen
 

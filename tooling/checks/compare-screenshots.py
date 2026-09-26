@@ -15,10 +15,11 @@ def compare(baseline, candidate, *, ignore_top=0):
             raise ValueError(f"Screenshot dimensions differ: {original.size} / {current.size}")
         if not 0 <= ignore_top < original.height:
             raise ValueError("Excluded status bar must leave app content for comparison")
-        difference = ImageChops.difference(original.convert("RGB"), current.convert("RGB"))
-        mask = ImageChops.lighter(
-            ImageChops.lighter(*difference.split()[:2]), difference.split()[2]
-        )
+        difference = ImageChops.difference(original.convert("RGBA"), current.convert("RGBA"))
+        channels = difference.split()
+        mask = channels[0]
+        for channel in channels[1:]:
+            mask = ImageChops.lighter(mask, channel)
         if ignore_top:
             ImageDraw.Draw(mask).rectangle((0, 0, original.width - 1, ignore_top - 1), fill=0)
         return {
