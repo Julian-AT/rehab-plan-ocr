@@ -96,6 +96,21 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Hosted CI access and exact-revision monitoring — 2026-09-26
+
+The configured GitHub repository is reachable. The latest existing run,
+`35263622297` at `683ce5f`, failed formatting on both hosts before tests began;
+the affected files are already corrected and locally lint-clean in the current
+implementation. The pinned checkout action resolves to its recorded commit.
+
+`tooling/dev/ci_monitor.cjs` provides observable repository/run/commit identities,
+job results and failed logs. Manual dispatch checks the remote branch against a
+required full commit first. Six isolated tests cover read-only commands, argument
+isolation, stale-branch rejection and pinned action verification. The helper is
+optional developer tooling (Node.js 22+ and authenticated GitHub CLI), available
+through `make ci-status` and `make test-ci-monitor`; no app dependency is added.
+Hosted qualification of the newer commits is still pending.
+
 ### One civil clock through interpretation and confirmation — 2026-09-26
 
 Each voice/text turn now captures its civil calendar and instant before awaiting

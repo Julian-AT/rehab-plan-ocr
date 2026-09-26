@@ -50,6 +50,11 @@ mit einem Hinweis auf den nötigen Einrichtungsschritt ab.
 
 `make help` zeigt die Einstiegspunkte. Einzelne Prüfungen sind beispielsweise
 `make test-agenda-cache`, `make test-voice-rules` und `make test-tools`.
+`make ci-status` zeigt gehostete Läufe für den konfigurierten GitHub-Remote.
+Das optionale CI-Werkzeug benötigt Node.js ab Version 22 und eine angemeldete
+GitHub CLI; `node tooling/dev/ci_monitor.cjs --help` beschreibt die Befehle.
+Ein manueller CI-Start erfordert einen ausdrücklich genannten Remote-Branch und
+dessen vollständigen Commit-Hash. Er lädt keine lokalen Änderungen hoch.
 
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus

@@ -18,6 +18,7 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 tooling/dev/quality.py bootstrap
+      - run: make test-ci-monitor
       - run: python3 tooling/dev/quality.py lint --portable
       - run: python3 tooling/dev/quality.py test --portable
   apple:

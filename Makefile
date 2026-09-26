@@ -11,6 +11,7 @@ help:
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
 	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
+	@echo 'Hosted CI: make ci-status; make test-ci-monitor; node tooling/dev/ci_monitor.cjs --help'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
 	@echo 'Native assistant trial: make build-assistant-native; make test-assistant-native TEST_ARGS="--run .local/runs/<new-run> [--simulator <disposable-id>]"'
@@ -21,6 +22,13 @@ bootstrap doctor format lint test:
 
 test-tools:
 	python3 tooling/dev/quality.py test-tools
+
+.PHONY: ci-status test-ci-monitor
+ci-status:
+	node tooling/dev/ci_monitor.cjs runs
+
+test-ci-monitor:
+	node --test tooling/dev/tests/ci_monitor.test.cjs
 
 test-ios:
 	python3 tooling/dev/quality.py test-ios
