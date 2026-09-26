@@ -39,8 +39,19 @@ liefern entsprechend 774 und 686. Die Zeile `Physiotherapie kurz` wird ausdrück
 gewählt; der bisherige Teiltext `Physiotherapie` bezeichnet auch einen zweiten
 Termin und genügt hier nicht als Identität.
 
+Aufnahmevertrag v2 korrigiert ausschließlich die Zuordnung der Koordinaten:
+Der native List-Button umfasst den 15-Punkte-Innenabstand vor der farbigen Karte.
+Im Original `large-light-0` beginnt die weiße Listzeile bei Pixel 1124, die
+Farbfläche bei 1169; der tatsächliche Accessibility-Rahmen im Lauf
+`visual-baseline-20260926-s18-003` beginnt bei 374⅔ Punkten, also ebenfalls Pixel 1124.
+V1 verwechselte die Kartenkante mit der Buttonkante und versuchte erfolglos,
+die bereits oberste Zeile um 15 Punkte über ihren Ruhepunkt hinauszuziehen.
+Die festen Farbkoordinaten oben bleiben erhalten; ihre Buttonziele liegen
+45 Pixel darüber. V2 protokolliert Rahmen und Karteninnenabstand getrennt.
+Die vollständige neue Pixelprüfung muss diese Zuordnung noch bestätigen.
+
 Die Aufnahme sucht die konkrete Zeile, nähert ihre Accessibility-Oberkante mit
-begrenzten Drag-Gesten an den dokumentierten Punktwert an und verlangt drei
+begrenzten Drag-Gesten an den so abgeleiteten Punktwert an und verlangt drei
 aufeinanderfolgende identische Rahmenmessungen. Die Position muss innerhalb
 eines halben physischen Pixels liegen. Diese Grenze betrifft ausschließlich die
 Gestensteuerung; der spätere Bildvergleich bleibt pixelgenau. Nach dem Screenshot
@@ -54,7 +65,13 @@ Auch Karten-, normale Listen-, Legenden- und Tagesabschlussaufnahmen verlangen
 einen stabilen sichtbaren Anker. Jede dieser Aufnahmen erhält einen zusätzlichen
 JSON-Anhang mit Termin/Beschriftung, tatsächlich gemessenem Rahmen, Faktor 3 und
 gegebenenfalls festgelegter Oberkante. Ihre bisherigen Navigationsgesten bleiben
-erhalten. Die Reproduzierbarkeit des neuen Verfahrens und die Zuordnung zwischen
+erhalten. Die beiden ursprünglichen unteren Listenaufnahmen enthalten noch den
+Scrollindikator: Im Lauf 003 fehlte er nach der zusätzlichen Rahmenwartezeit;
+alle 7268 abweichenden Pixel liegen jeweils in `[1188,1556,1197,2364)`.
+Diese beiden Aufnahmen erfolgen deshalb wieder unmittelbar nach der bisherigen
+Geste. Ihr Ankerrahmen wird vor und nach dem Screenshot auf exakte Gleichheit
+geprüft, ohne vorher auf das Verschwinden des Indikators zu warten. Es gibt
+weiterhin weder Bildmasken für Scrollindikatoren noch eine Pixeltoleranz. Die Reproduzierbarkeit des neuen Verfahrens und die Zuordnung zwischen
 visueller Kartenkante und Accessibility-Rahmen sind im nächsten Simulatorlauf zu
 prüfen; bisher liegen Typprüfung und die historischen Bildmessungen vor.
 
