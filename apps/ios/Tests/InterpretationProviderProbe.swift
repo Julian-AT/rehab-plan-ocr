@@ -143,6 +143,45 @@ import Foundation
       } catch CalendarUnderstandingError.invalidRequest {}
     }
 
+    // A timed-out native request still owns its generation slot until it returns.
+    // Repeated attempts must not accumulate uncooperative model operations.
+    let heldProvider = FixtureProvider()
+    let heldRouter = InterpretationRouter(generation: heldProvider)
+    var held: [CheckedContinuation<ConversationInterpretation, Never>] = []
+    heldProvider.operation = { _ in
+      await withCheckedContinuation { held.append($0) }
+    }
+    do {
+      _ = try await heldRouter.interpret(request("Ausführliche freie Frage", seconds: 0.05))
+      preconditionFailure("Uncooperative provider escaped its deadline")
+    } catch InterpretationError.deadlineExceeded {}
+    precondition(held.count == 1)
+    var blocked = 0
+    for _ in 0..<20 {
+      do {
+        _ = try await heldRouter.interpret(request("Neue ausführliche Frage", seconds: 0.05))
+      } catch InterpretationError.unavailable {
+        blocked += 1
+      } catch InterpretationError.deadlineExceeded {}
+    }
+    let heldCalls = heldProvider.calls
+    let simpleWhileHeld = try await heldRouter.interpret(request("Termine morgen"))
+    precondition(simpleWhileHeld.identity.provider == "complete-rules")
+    for completion in held {
+      completion.resume(returning: ConversationInterpretation(action: .create))
+    }
+    held.removeAll()
+    print("Uncooperative admission: provider calls=\(heldCalls), blocked repeats=\(blocked)")
+    precondition(heldCalls == 1 && blocked == 20, "Repeated timeouts accumulated model work")
+    let drained = ContinuousClock.now + .seconds(2)
+    while heldRouter.availability != .available && ContinuousClock.now < drained {
+      await Task.yield()
+    }
+    precondition(heldRouter.availability == .available)
+    heldProvider.operation = { _ in ConversationInterpretation(action: .clarify) }
+    _ = try await heldRouter.interpret(request("Aktuelle freie Frage"))
+    precondition(heldProvider.calls == 2, "Provider was not admitted after actual drain")
+
     // Simulate a native implementation that ignores cancellation until C inference returns.
     var late: CheckedContinuation<ConversationInterpretation, Never>?
     let started = AsyncStream<Void>.makeStream()
@@ -163,6 +202,11 @@ import Foundation
     late?.resume(returning: ConversationInterpretation(action: .create))
     late = nil
 
+    let deadlineDrained = ContinuousClock.now + .seconds(2)
+    while router.availability != .available && ContinuousClock.now < deadlineDrained {
+      await Task.yield()
+    }
+    precondition(router.availability == .available)
     let cancellationTask = Task { try await router.interpret(request("Andere freie Frage")) }
     await iterator.next()
     cancellationTask.cancel()
@@ -170,13 +214,37 @@ import Foundation
       _ = try await cancellationTask.value
       preconditionFailure("Canceled response delivered")
     } catch is CancellationError {}
+    let callsDuringCancel = provider.calls
+    for _ in 0..<20 {
+      do {
+        _ = try await router.interpret(request("Weitere freie Frage"))
+        preconditionFailure("Canceled but active model admitted more work")
+      } catch InterpretationError.unavailable {}
+    }
+    let immediateCancel = try await router.interpret(request("Abbrechen"))
+    precondition(immediateCancel.value.action == .cancel && provider.calls == callsDuringCancel)
     late?.resume(returning: ConversationInterpretation(action: .remove))
     late = nil
     provider.operation = { _ in
       ConversationInterpretation(action: .conversation, reply: "Neue Antwort")
     }
+    let cancellationDrained = ContinuousClock.now + .seconds(2)
+    while router.availability != .available && ContinuousClock.now < cancellationDrained {
+      await Task.yield()
+    }
+    precondition(router.availability == .available)
     let fresh = try await router.interpret(request("Neues Thema"))
     precondition(fresh.value.reply == "Neue Antwort")
+
+    provider.operation = { _ in throw InterpretationError.invalidRequest }
+    do {
+      _ = try await router.interpret(request("Fehlerhafte freie Frage"))
+      preconditionFailure("Provider error was lost")
+    } catch InterpretationError.invalidRequest {}
+    precondition(router.availability == .available, "Provider failure retained its slot")
+    provider.operation = { _ in
+      ConversationInterpretation(action: .conversation, reply: "Neue Antwort")
+    }
 
     // Cancellation while context is being prepared must precede provider admission.
     // Let a newer request complete before the old, uncooperative context arrives.

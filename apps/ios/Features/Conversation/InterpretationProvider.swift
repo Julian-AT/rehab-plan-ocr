@@ -157,9 +157,14 @@ extension InterpretationProvider {
 @MainActor final class InterpretationRouter {
   let rules = CalendarRulesProvider()
   private let generation: any InterpretationProvider
+  private var generationActive = false
+  private static let drainingMessage =
+    "Die vorherige Anfrage wird noch beendet. Bitte gleich erneut versuchen."
   init(generation: any InterpretationProvider) { self.generation = generation }
 
-  var availability: InterpretationAvailability { generation.availability }
+  var availability: InterpretationAvailability {
+    generationActive ? .unavailable(Self.drainingMessage) : generation.availability
+  }
 
   /// Context preparation belongs to the same cancellable task as generation.
   /// A late context response must never start a provider for an ended turn.
@@ -176,17 +181,26 @@ extension InterpretationProvider {
     try request.validate()
     try Task.checkCancellation()
     guard ContinuousClock.now < request.deadline else { throw InterpretationError.deadlineExceeded }
-    let provider: any InterpretationProvider =
+    let usesGeneration =
       rules.immediate(request) == nil
-        && rules.match(request.text, now: request.now, calendar: request.calendar) == nil
-      ? generation : rules
+      && rules.match(request.text, now: request.now, calendar: request.calendar) == nil
+    let provider: any InterpretationProvider = usesGeneration ? generation : rules
     if case .unavailable(let reason) = provider.availability {
       throw InterpretationError.unavailable(reason)
     }
     let identity = provider.identity
     let started = ContinuousClock.now
     let value = try await InterpretationDeadline.run(until: request.deadline) {
-      try await provider.interpret(request)
+      guard usesGeneration else { return try await provider.interpret(request) }
+      // Admission and release belong to the actual worker, not its caller's
+      // deadline. A native operation may continue after cancellation; retain
+      // its slot until it returns, without admitting another model or retry.
+      guard !self.generationActive else {
+        throw InterpretationError.unavailable(Self.drainingMessage)
+      }
+      self.generationActive = true
+      defer { self.generationActive = false }
+      return try await provider.interpret(request)
     }
     try Task.checkCancellation()
     try value.validate()
