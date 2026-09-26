@@ -282,3 +282,24 @@ Abschluss- und Nachprüfbeleg liegen neben dem Plan als `.receipt.json` und
 und `0438b8cb254c4397d21426158dcbb17827657d6daf5e16854a072cac45fce85b`.
 Der separate Vorprüfbeleg `.review.json` erhält die Identitäten der fünf
 Einzelarchive. Historische Laufberichte bleiben unverändert.
+
+## Abgeschlossene Kalender- und Import-Arbeitsbäume
+
+Die Arbeitsbäume `local-calendar-refresh` und `bounded-photo-input` wurden nach
+Commit, Integration, Quellenabgleich und Prüfung auf offene Dateien entfernt.
+861 beziehungsweise 862 Dateiinhalte stimmen mit den tatsächlich getesteten
+Quellen überein. Die 3.344 erzeugten Build-/Werkzeugdateien des Kalender-Arbeitsbaums
+wurden aus dem aktiven Bestand entfernt; im zweiten gab es keine zusätzlichen
+generierten Dateien. Vollständige EventKit-Testprodukte, Ergebnisbündel und die
+Simulator-Umgebungsbeschreibung bleiben im jeweiligen privaten Lauf erhalten.
+
+Die ursprünglichen Quellarchive und Patches wurden anschließend in unabhängigen
+temporären Verzeichnissen wiederhergestellt und nochmals vollständig mit den
+geprüften Dateihashes verglichen. Beide Wiederherstellungen bestanden. Die
+Branches bleiben erhalten. Die separaten Belege liegen unter
+`.local/maintenance/local-calendar-refresh-worktree-retirement-20260926-s20-001.json`,
+`bounded-photo-input-worktree-retirement-20260926-s20-001.json` und
+`worktree-source-reconstruction-20260926-s20-001.json`. Historische Laufberichte bleiben
+unverändert. Wegen paralleler Builds und APFS-Teilung wird aus den protokollierten
+freien Bytes kein zurechenbarer Speichergewinn abgeleitet. Originale, Checkpoints,
+Gerätesicherungen und fremde Simulatoren waren nicht im Umfang.

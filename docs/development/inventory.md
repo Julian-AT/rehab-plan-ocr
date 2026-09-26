@@ -45,6 +45,15 @@ und der getrennte Prüfabschluss
 Alle geprüften Dateien blieben während `make lint` und `make test` an `4ea7fd2`
 unverändert; beide Befehle bestanden. Die Gesamtinhaltsprüfung bleibt offen.
 
+Der jüngste Bestandsbeleg
+`.local/maintenance/repository-inventory-20260926-s20-004.json` erfasst 862 Dateien in
+17 Gruppen. Der gemeinsame Leser `photo_source.rs` wird von Import, Vormerken,
+Wiederaufnahme und Referenzanzeige sowie den Größenprüfungen der Speicherung und
+Bildvorbereitung verwendet. Seine Inhalts- und Grenzprüfungen stehen unter
+`.local/runs/bounded-photo-input-20260926-s20-001`. Die beiden neuen nativen
+Erkennungsdateien sind nun auch ausdrücklich im separaten EventKit-Testziel
+registriert; dessen tatsächlicher Build und 21 erfolgreiche Fälle sind belegt.
+
 ## Geprüfte Kandidaten ab 8d81c4c
 
 | Kandidat | Verbraucher/Prüfung | Entscheidung |
