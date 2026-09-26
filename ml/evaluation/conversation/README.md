@@ -64,6 +64,9 @@ MLX worker only after exact model/source/request identity checks and unchanged
 worker/helper implementations; historical files remain untouched. No tolerance,
 original report, model weight or release decision is changed. See the
 [token diagnosis](../../experiments/2026-09-26-s18-assistant-token-parity.md).
+The completed full comparison has 38/40 identical answers: five old differences
+disappear, one remains and one previously matching case diverges. Both remaining
+differences reproduce on identical prefixes, so the strict parity gate still fails.
 
 The audit checks model-card/run/settings/dataset hashes, verifies the original
 decoder/contract, covers every validation case exactly once and redecodes every

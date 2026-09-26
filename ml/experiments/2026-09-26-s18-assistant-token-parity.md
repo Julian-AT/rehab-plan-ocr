@@ -72,37 +72,92 @@ difference to those values. Source identities remain:
 - GGUF: `c522352314c4291de620ec947653c272ab7622eb477edca8cac422d157f2651d`.
 - Runtime: `07285dd33e2ade112ae1ced29183afb5f77dd6b57fa0d935b7b5b9fcd9592c86`.
 
-## Full-corpus result
+## Full-corpus result — verified comparison, failed parity
 
-The corrected full-corpus CLI comparison is still pending. Run
-`assistant-token-trace-20260926-s18-002` completed all 40 MLX controls: ordinary and
-instrumented generation agree for every case; all 40 also reproduce the retained
-fused answers. Host peak RSS was 1,521,893,376
-bytes; MLX peak memory was 1,741,343,268 bytes. The subsequent C-API worker was
-stopped during sustained host memory/I/O pressure; its unfinished trace is not a
-full-corpus result and the run remains failed/incomplete.
+Run `assistant-token-trace-20260926-s18-004` completed the corrected comparison on
+all 40 original development cases. All 40 actual CLI input-token arrays match
+the retained MLX inputs exactly. All six historical controls reproduce their
+old complete answers and the last-input-token change from 271 to 198. The
+orchestrator rechecked all 85 source/evidence identities before writing its
+successful diagnostic report; weights and runtime retain the hashes above.
 
-The revised orchestration checks complete CLI answers and actual input token IDs
-first, then traces only remaining disagreements. Optional `REUSE_MLX` validates
-all retained model, environment, non-orchestrator source and request identities,
-plus AST-identical MLX worker/helper implementations. It requires a complete
-ordered worker result, retains the original report/source bytes, and records the
-reused evidence hashes. A changed model, worker, prompt or incomplete result
-forces fresh generation. CPU traces run in small packages; completed CLI cases
-are written separately so an infrastructure interruption does not erase them.
+| Complete-answer comparison | Matches | Differences |
+| --- | ---: | ---: |
+| Historical CLI file boundary | 34/40 | 6/40 |
+| Corrected identical prompt bytes | 38/40 | 2/40 |
 
-The original six-case trace already identifies a candidate remaining difference
-on `invalid-april-0002`: after 23 shared generated tokens, MLX chooses token 19
-(`4`), with tokens 19 and 22 tied at BF16 logit 20.875. CPU chooses token 22 (`7`),
-whose raw score is 20.880859375 versus 20.720703125 for token 19. This still needs
-the corrected full-corpus CLI control and matched-prefix replay. It neither
-establishes which arithmetic operation first differs nor justifies changing
-precision, tie-breaking or the complete-answer gate. Both date answers are
-incorrect for the intended invalid-date clarification.
+Five historical differences disappear. `invalid-april-0002` remains different;
+`invalid-april-0000` becomes a new **parity** failure. That second case was already
+an incorrect update instead of the required invalid-date clarification in both
+providers; its former text agreement never meant it was a correct answer. The
+new difference is retained explicitly rather than hidden by the improved total.
+These are the same selected development cases, not 40 newly independent examples.
 
-Ten focused token/prompt/reuse regressions and two existing CLI/intent diagnostic
-regressions cover source reuse, changed models/requests, incomplete evidence,
-actual token identities, exact shared prefixes, request limits and EOS handling.
-The C++ helper compiled against the pinned libraries with
-`-Wall -Wextra -Werror`. A successful diagnostic command will remain distinct
-from passing parity or qualifying the model.
+## First differing token and raw logits
+
+For both remaining cases, the unchanged CPU CLI and the instrumented C-API
+reproduce the corrected desktop answer. The CPU trace receives exactly the same
+prompt IDs. Teacher-forced replay uses only the identical shared prefix and
+reproduces the free-generation top logits exactly on both sides.
+
+| Case | Prompt tokens | First differing generated position (zero based) | MLX token | CPU token | MLX scores for those two tokens | CPU scores for those two tokens |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `invalid-april-0000` | 582 | 27 | 30975, JSON closing suffix | 2198, JSON field separator | 20.375 / 20.0 | 19.5234375 / 20.9609375 |
+| `invalid-april-0002` | 583 | 23 | 19, `4` | 22, `7` | 20.875 / 20.875 | 20.720703125 / 20.880859375 |
+
+For `invalid-april-0000`, MLX ends the update after date `2031-05-15`; the corrected
+CLI continues with time `08:00`. Both should instead ask for a valid date. This
+is a reversed ranking with a single MLX maximum, not an MLX tie. The maximum
+absolute difference across that full next-token logit vector is 0.9609375.
+
+For `invalid-april-0002`, the two highest BF16 MLX logits are exactly tied; MLX
+chooses `4` and subsequently proposes the impossible date `2031-04-31`. CPU
+chooses `7` and proposes `2031-07-28`. Both fail the expected clarification. The
+maximum absolute logit difference is 0.216552734375.
+
+This reaches the first differing generated token/logit on the identical context.
+It does not identify the first differing internal arithmetic operation. The
+untied first case rules out treating all remaining failures as only a final
+BF16 argmax tie. No change to precision, tie-breaking, weights or the complete-
+answer contract is justified by this evidence. **The export parity gate remains
+failed at 2/40; the model remains unqualified.**
+
+## Resource and evidence checks
+
+The successful orchestration took 53.78 seconds, excluding the reused MLX run.
+Maximum process RSS was 1,589,805,056 bytes (1.48 GiB). The earlier complete MLX
+worker used 1,521,893,376 bytes peak RSS and 1,741,343,268 bytes peak MLX allocation
+(1.62 GiB); the new two-case MLX replay peaked at 1,735,871,016 bytes allocation.
+These host diagnostics under different load conditions are not paired latency,
+energy, iPhone or shipping-runtime measurements. The 8-GiB expected peak plus
+20-GiB storage reserve passed before execution.
+
+`REUSE_MLX` accepted run `assistant-token-trace-20260926-s18-002` only after identical
+model, environment, non-orchestrator source and request identities plus
+AST-identical MLX worker/helper implementations. All 40 retained worker cases
+reproduce both ordinary `generate` and the historical fused answers. CPU traces
+were restricted to the two actual remaining differences. No model processes ran
+in parallel. At 15:37:08 UTC on 2026-09-26, the process check found no remaining
+model or diagnostic worker.
+
+A separate post-run metadata audit reread all 40 actual CLI token arrays, raw
+answers and per-case receipts, and checked the exact remaining-case set. Private
+logs, prompts, source snapshots, binary identity and the four full logit vectors
+remain in the new run. Evidence hashes:
+
+- `report.json`: `728e1ba5e8b9b4375470590c4709262aa359da991303dd68464506c05a0256fe`.
+- `sources.json`: `61c4f609b9a9e335230546fc13219a3045b90c9e48401e2624f21bd5a3dc3107`.
+- `controls.json`: `e06ac5e49a89e6931a6689cc6bbcd46769e81e73829a9058b4f2585d5ba5b4b7`.
+- `artifact-audit.json`: `4dce98a32b73ab4ad301b03f4ce62f8a00fb3811842e63091f140856a96022eb`.
+
+Runs 001–003 remain unchanged: 001 exposed the prompt-boundary control failure;
+002 completed MLX but its unnecessary full-corpus C-API trace was stopped under
+host pressure; 003 preserved a parser failure on prefixed CLI INFO token logs.
+Commit `e7313c2` added that exact pinned logging format while retaining strict
+ID/count checks; the captured 579-token input was checked before run 004.
+
+Eleven focused token/prompt/reuse regressions plus two CLI/intent diagnostic
+regressions pass. The C++ helper compiled with `-Wall -Wextra -Werror`. Packages
+were MLX 0.32.2, MLX-LM 0.31.3, NumPy 2.5.3 and Transformers 5.17.0. A successful
+diagnostic command means the evidence was collected and checked; it does not
+mean parity or product qualification passed.
