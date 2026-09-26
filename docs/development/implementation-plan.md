@@ -109,6 +109,20 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Complete critical-field definition — 2026-09-26
+
+A regression reproduces swapped rooms receiving no critical-error entry. Metric
+version 2 now includes title, room and therapist alongside date/time/duration,
+matching the crop-training objective. Accuracy exposes correct and total assessed
+printed-field counts; blanks and unknowns do not inflate its denominator. Invented
+values in approved blank critical fields still trigger error/false-acceptance
+records. Time-only historical metrics require rescoring before comparison.
+
+Swapped rooms, wrong titles, invented people in blank cells and old-report decoding
+are covered. All 178 Rust workspace tests, 197 tool tests and repository lint pass.
+This changes evaluation only; app recognition, calendar data and model selection
+remain unchanged.
+
 ### Synthetic tables connected to OCR training — 2026-09-26
 
 `make prepare-ocr-synthetic` now converts the pixel-verified generator's tables

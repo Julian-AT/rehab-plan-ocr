@@ -18,6 +18,7 @@ spec.loader.exec_module(comparison)
 def result(*, errors=(), corrections=2, elapsed=100, repeat=0):
     metrics = defaultdict(int)
     metrics.update(
+        critical_field_version=2,
         row_identity_version=1,
         missed_reference_ids=[],
         invented_appointments={},
@@ -159,6 +160,8 @@ class ComparisonTests(unittest.TestCase):
 
     def test_incomplete_row_identity_evidence_is_rejected(self):
         for change in [
+            {"critical_field_version": 0},
+            {"critical_field_version": True},
             {"row_identity_version": 0},
             {"row_identity_version": True},
             {"missed_count": 1},

@@ -5,6 +5,17 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 
+const CRITICAL_FIELDS: [&str; 8] = [
+    "date",
+    "start",
+    "end",
+    "end_date",
+    "duration_minutes",
+    "title",
+    "location",
+    "therapist",
+];
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReferenceSource {
@@ -286,6 +297,13 @@ pub fn development_groups(references: &[Annotation]) -> Result<serde_json::Value
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Metrics {
+    /// Version 2 includes appointment identity, room and therapist, not only time.
+    #[serde(default)]
+    pub critical_field_version: u32,
+    #[serde(default)]
+    pub critical_printed_fields: usize,
+    #[serde(default)]
+    pub correct_critical_printed_fields: usize,
     /// Versioned row identities distinguish relocated omissions/hallucinations
     /// from aggregate counts. Older reports must be rescored before comparison.
     #[serde(default)]
@@ -353,6 +371,7 @@ pub fn compare(
         return Err(Error::Invalid("Final holdout is locked. Use the explicit final-evaluation command after freezing configuration.".into()));
     }
     let mut m = Metrics {
+        critical_field_version: 2,
         row_identity_version: 1,
         reference_count: reference.appointments.len(),
         predicted_count: predicted.len(),
@@ -431,6 +450,11 @@ pub fn compare(
             let tv = crate::review::value(truth, field);
             let pv = matched.map(|p| crate::review::value(p, field));
             let correct = pv.as_ref() == Some(&tv);
+            let critical = CRITICAL_FIELDS.contains(&field);
+            if critical && state == Some(&PrintedState::Legible) {
+                m.critical_printed_fields += 1;
+                m.correct_critical_printed_fields += usize::from(correct);
+            }
             full &= correct;
             if state == Some(&PrintedState::NotPrinted) {
                 *m.empty_fields.entry(field.into()).or_default() += 1;
@@ -448,8 +472,6 @@ pub fn compare(
             }
             if !correct {
                 m.field_corrections_needed += 1;
-                let critical =
-                    ["date", "start", "end", "end_date", "duration_minutes"].contains(&field);
                 let error_key = format!("{}:{field}", truth.id);
                 if critical {
                     m.critical_errors.push(error_key.clone());
@@ -566,29 +588,8 @@ pub fn compare(
         (m.predicted_count > 0).then(|| m.matched_count as f64 / m.predicted_count as f64);
     m.appointment_recall =
         (m.reference_count > 0).then(|| m.matched_count as f64 / m.reference_count as f64);
-    let critical_total: usize = reference
-        .appointments
-        .iter()
-        .map(|a| {
-            let printed = |field: &str| {
-                a.fields
-                    .get(field)
-                    .is_some_and(|f| f.state == PrintedState::Legible)
-            };
-            usize::from(printed("date"))
-                + usize::from(printed("start"))
-                + usize::from(
-                    printed("end")
-                        || (a.end.is_none()
-                            && a.duration_minutes.is_some()
-                            && printed("duration_minutes")),
-                )
-        })
-        .sum();
-    m.critical_field_accuracy = (critical_total > 0).then(|| {
-        (m.date_correct + m.start_correct + m.end_or_duration_correct) as f64
-            / critical_total as f64
-    });
+    m.critical_field_accuracy = (m.critical_printed_fields > 0)
+        .then(|| m.correct_critical_printed_fields as f64 / m.critical_printed_fields as f64);
     Ok(m)
 }
 pub fn compare_run(
@@ -873,6 +874,35 @@ mod tests {
         assert_eq!(m.printed_fields["location"], 2);
         assert_eq!(m.empty_fields["notes"], 2);
         assert_eq!(m.notes_correct, 0);
+        assert_eq!(m.critical_errors, ["a0:location", "a1:location"]);
+        assert_eq!(m.critical_false_acceptances, m.critical_errors);
+        assert_eq!(m.critical_field_accuracy, Some(10. / 12.));
+        assert_eq!(m.critical_field_version, 2);
+        assert_eq!(m.critical_printed_fields, 12);
+        assert_eq!(m.correct_critical_printed_fields, 10);
+    }
+    #[test]
+    fn critical_field_counts_exclude_blanks_but_flag_invented_people_and_wrong_titles() {
+        let mut r = approved_fixture();
+        r.appointments[0].therapist.clear();
+        let state = r.appointments[0].fields.get_mut("therapist").unwrap();
+        state.state = PrintedState::NotPrinted;
+        state.confirmed_value = Some(serde_json::json!(""));
+        r.lines
+            .retain(|line| !(line.appointment_id == "a0" && line.field == "therapist"));
+        r.approval_hash = Some(reference_hash(&r));
+        let mut predicted = r.appointments.clone();
+        predicted.iter_mut().for_each(|row| row.fields.clear());
+        predicted[0].therapist = "Erfundene Person".into();
+        predicted[1].title = "Falscher Termin".into();
+        let metrics = compare(&r, &predicted, false).unwrap();
+        assert_eq!(metrics.critical_errors, ["a0:therapist", "a1:title"]);
+        assert_eq!(metrics.critical_false_acceptances, metrics.critical_errors);
+        assert_eq!(metrics.critical_printed_fields, 11);
+        assert_eq!(metrics.correct_critical_printed_fields, 10);
+        assert_eq!(metrics.critical_field_accuracy, Some(10. / 11.));
+        assert_eq!(metrics.empty_fields["therapist"], 1);
+        assert_eq!(metrics.correct_empty_fields["therapist"], 0);
     }
     #[test]
     fn missing_predictions_remain_in_denominators_and_edits_revoke_approval() {
@@ -933,6 +963,9 @@ mod tests {
         let mut json = serde_json::to_value(compare(&r, &[], false).unwrap()).unwrap();
         let object = json.as_object_mut().unwrap();
         for key in [
+            "critical_field_version",
+            "critical_printed_fields",
+            "correct_critical_printed_fields",
             "row_identity_version",
             "missed_reference_ids",
             "invented_appointments",
@@ -941,6 +974,7 @@ mod tests {
         }
         let legacy: Metrics = serde_json::from_value(json).unwrap();
         assert_eq!(legacy.row_identity_version, 0);
+        assert_eq!(legacy.critical_field_version, 0);
         assert_eq!(legacy.missed_count, 2);
         assert!(legacy.missed_reference_ids.is_empty());
     }

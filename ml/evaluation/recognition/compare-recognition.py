@@ -138,7 +138,9 @@ def validate_row_identities(metrics):
     missing = metrics.get("missed_reference_ids")
     invented = metrics.get("invented_appointments")
     if (
-        type(metrics.get("row_identity_version")) is not int
+        type(metrics.get("critical_field_version")) is not int
+        or metrics["critical_field_version"] != 2
+        or type(metrics.get("row_identity_version")) is not int
         or metrics["row_identity_version"] != 1
         or not isinstance(missing, list)
         or any(not isinstance(row, str) or not row for row in missing)
@@ -157,7 +159,7 @@ def validate_row_identities(metrics):
         or sum(invented.values()) != metrics["invented_count"]
     ):
         raise ValueError(
-            "Complete version-1 row identities required; rescore retained predictions."
+            "Complete row identities and critical-field version 2 required; rescore retained predictions."
         )
 
 

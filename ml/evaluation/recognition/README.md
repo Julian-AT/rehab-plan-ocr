@@ -1,5 +1,13 @@
 # Recognition evaluation
 
+Critical-field metric version 2 covers date, start, end, overnight end date,
+duration, title, location and therapist, consistent with the training objective.
+Accuracy reports its explicit correct/printed-field counts. Each assessed printed
+field contributes once; unknown fields and correctly empty cells do not inflate
+that denominator. Inventing a value in an approved blank critical field still
+produces a critical error and, if unflagged, a false acceptance. Historical
+time-only accuracy is a different metric and must not be compared as equivalent.
+
 `compare-recognition.py` retains case-level regressions even when overall scores
 improve. The evaluator's version-1 row identities list missing reference IDs and
 count unmatched predicted appointments by a hash of their calendar values.

@@ -188,6 +188,8 @@ def summarize(results):
         "incorrect_unflagged_fields",
         "automatically_correct_count",
         "field_corrections_needed",
+        "critical_printed_fields",
+        "correct_critical_printed_fields",
     ]
     counts = {key: sum(r["metrics"][key] for r in results) for key in keys}
     for key in [
@@ -213,6 +215,10 @@ def summarize(results):
             for r in results
         ),
         "counts": counts,
+        "critical_field_accuracy": counts["correct_critical_printed_fields"]
+        / counts["critical_printed_fields"]
+        if counts["critical_printed_fields"]
+        else None,
         "whole_plan_correctness": {
             "numerator": sum(
                 r["metrics"]["schedule_without_correction"]
