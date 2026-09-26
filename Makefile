@@ -153,11 +153,15 @@ help:
 	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package RELEASE_RUN=<reserved-run>'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Dependency audit: make download-dependency-audit setup-dependency-audit; update-dependency-advisories AUDIT_DB=<new-snapshot>; audit-dependencies additionally requires AUDIT_COMMIT and AUDIT_RUN'
+	@echo 'Python advisory download (online): make download-python-advisories PYTHON_AUDIT_SNAPSHOT=<new-.local/audits-snapshot>'
+	@echo 'Python audit (offline): make audit-python-dependencies PYTHON_AUDIT_SNAPSHOT=<snapshot> PYTHON_AUDIT_SHA256=<receipt-sha256> PYTHON_AUDIT_RUN=<new-.local/audits-result>; make test-python-dependency-audit'
 	@echo 'Hosted CI: make ci-status; make test-ci-monitor; node tooling/dev/ci_monitor.cjs --help'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
 	@echo 'Native assistant trial: make build-assistant-native; make test-assistant-native TEST_ARGS="--run .local/runs/<new-run> [--simulator <disposable-id>]"'
 	@echo 'Common provider app trial: make build-assistant-trial; make test-assistant-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>"'
+	@echo 'Integrated voice trial build (tuned-v2 only): make build-assistant-voice-trial (44 GiB free: 24 peak + 20 reserve)'
+	@echo 'Integrated voice trial test (already built, serial): make test-assistant-voice-trial RUN=<new-local-run> SIMULATOR=<owned-fresh-uuid> SOURCE_COMMIT=<exact-clean-commit>; see docs/development/assistant-voice-trial.md'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
 	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
 	@echo 'Isolated OCR convolution fixture: make prepare-ocr-convolution-lowering DIAGNOSTIC_RUN=.local/runs/<new-experiment> (preparation only)'
@@ -208,6 +212,19 @@ audit-dependencies:
 
 test-dependency-audit:
 	/usr/bin/env uv run --locked python tooling/release/tests/test-audit-dependencies.py
+
+# Python retrieval and replay use the existing tools interpreter without env sync.
+.PHONY: download-python-advisories audit-python-dependencies test-python-dependency-audit
+download-python-advisories:
+	@test -n "$(strip $(PYTHON_AUDIT_SNAPSHOT))" || { echo 'Set PYTHON_AUDIT_SNAPSHOT to a new directory below .local/audits (explicit online download)'; exit 2; }
+	"$(UV_PROJECT_ENVIRONMENT)/bin/python" tooling/release/audit_python.py download --output "$(PYTHON_AUDIT_SNAPSHOT)"
+
+audit-python-dependencies:
+	@test -n "$(strip $(PYTHON_AUDIT_SNAPSHOT))" -a -n "$(strip $(PYTHON_AUDIT_SHA256))" -a -n "$(strip $(PYTHON_AUDIT_RUN))" || { echo 'Set PYTHON_AUDIT_SNAPSHOT, its exact PYTHON_AUDIT_SHA256 and a new PYTHON_AUDIT_RUN below .local/audits'; exit 2; }
+	"$(UV_PROJECT_ENVIRONMENT)/bin/python" tooling/release/audit_python.py offline --snapshot "$(PYTHON_AUDIT_SNAPSHOT)" --snapshot-sha256 "$(PYTHON_AUDIT_SHA256)" --output "$(PYTHON_AUDIT_RUN)"
+
+test-python-dependency-audit:
+	"$(UV_PROJECT_ENVIRONMENT)/bin/python" tooling/release/tests/test-audit-python.py
 
 .PHONY: ci-status test-ci-monitor
 ci-status:
@@ -355,6 +372,21 @@ build-assistant-native:
 
 build-assistant-trial:
 	python3 tooling/build/build-assistant-trial.py --model "$(or $(ASSISTANT_TRIAL_MODEL),tuned)"
+
+# Integrated development-002 voice UI trial: 24 GiB peak + 20 GiB reserve.
+# Keep this fixed budget even if a caller supplies a lower generic PEAK_GIB.
+.PHONY: build-assistant-voice-trial test-assistant-voice-trial
+build-assistant-voice-trial test-assistant-voice-trial: override PEAK_GIB = 24
+build-assistant-voice-trial test-assistant-voice-trial: check-storage
+
+build-assistant-voice-trial:
+	@test -z "$(strip $(ASSISTANT_TRIAL_MODEL))" -o "$(ASSISTANT_TRIAL_MODEL)" = tuned-v2 || { echo 'The integrated voice trial supports only tuned-v2'; exit 2; }
+	python3 tooling/build/build-assistant-trial.py --model tuned-v2 --voice-ui-tests
+
+test-assistant-voice-trial:
+	@test -n "$(strip $(RUN))" -a -n "$(strip $(SIMULATOR))" -a -n "$(strip $(SOURCE_COMMIT))" || { echo 'Set a new RUN below .local/runs, an owned fresh SIMULATOR UUID and the exact clean SOURCE_COMMIT'; exit 2; }
+	@test -z "$(strip $(ASSISTANT_TRIAL_MODEL))" -o "$(ASSISTANT_TRIAL_MODEL)" = tuned-v2 || { echo 'The integrated voice trial supports only tuned-v2'; exit 2; }
+	python3 ml/evaluation/conversation/voice_trial.py --run "$(RUN)" --simulator "$(SIMULATOR)" --source-commit "$(SOURCE_COMMIT)"
 
 assistant-smoke:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }

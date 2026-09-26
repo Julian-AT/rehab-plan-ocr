@@ -179,6 +179,26 @@ retain that value for the offline command.
   --output .local/audits/python-review-YYYYMMDD-01
 ```
 
+After workspace/tools setup, the equivalent Make entries use the existing tools
+interpreter directly; they do not install or synchronize an environment:
+
+```sh
+make download-python-advisories \
+  PYTHON_AUDIT_SNAPSHOT=.local/audits/python-osv-YYYYMMDD-01
+make audit-python-dependencies \
+  PYTHON_AUDIT_SNAPSHOT=.local/audits/python-osv-YYYYMMDD-01 \
+  PYTHON_AUDIT_SHA256=SHA256_PRINTED_BY_DOWNLOAD \
+  PYTHON_AUDIT_RUN=.local/audits/python-review-YYYYMMDD-01
+make test-python-dependency-audit
+```
+
+The first target is explicitly online; the replay and synthetic-test targets have
+no download/setup prerequisites. All named parameters are required, and both
+output directories must be new. Make reports a nonzero result for both findings
+and audit failure; distinguish them through the retained report's `status` and
+`complete` fields. Use the direct CLI when its separate exit codes 1 and 2 are
+needed by a caller. No entry accepts findings or qualifies a release automatically.
+
 Offline replay performs no network requests. It verifies the explicit receipt
 hash, exact file closure, source, current and archived locks, inventory and the
 complete ordered request/response sequence before producing a report. Inputs are
