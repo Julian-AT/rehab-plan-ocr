@@ -7,14 +7,8 @@ import RehaCore
   var hasAccess: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
 
   func selection() async throws -> AgendaSelection {
-    struct Ownership: Decodable {
-      struct Record: Decodable { let id: String }
-      let records: [Record]
-    }
-    let owned = try await core.eventRequest("ownedEventRecords", [:], as: Ownership.self)
     let preferences = try await core.preferences()
-    return AgendaSelection(
-      calendarIDs: Set(preferences.displayCalendarIds), hasOwnedEvents: !owned.records.isEmpty)
+    return AgendaSelection(calendarIDs: Set(preferences.displayCalendarIds))
   }
 
   func synchronize() async throws {

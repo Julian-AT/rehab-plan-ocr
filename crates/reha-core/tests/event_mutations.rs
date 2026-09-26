@@ -252,6 +252,36 @@ async fn query_is_bounded_and_excludes_unselected_calendar() {
         1
     );
     calendar.event.lock().unwrap()["calendar_id"] = json!("private-not-selected");
+    assert!(events::dispatch(
+        calendar.clone(),
+        &state,
+        "queryCalendarEvents",
+        query.clone()
+    )
+    .await
+    .is_err());
+    // Import ownership must not override the user's display/read selection.
+    let owned = json!({"id":"owned-hidden","status":"saved","origin":"import",
+        "import_id":"original","operation_id":"save","calendar_id":"private-not-selected",
+        "external_id":"native","approved":{"title":"Ergo","start_utc":"2026-09-15T07:00:00Z",
+        "end_utc":"2026-09-15T07:30:00Z","timezone":"Europe/Vienna","location":"",
+        "notes":"","reminder_minutes":10}});
+    state
+        .store
+        .lock()
+        .unwrap()
+        .connection
+        .execute(
+            "INSERT INTO owned_events VALUES(?1,?2,?3,?4)",
+            rusqlite::params![
+                "owned-hidden",
+                "private-not-selected",
+                "native",
+                owned.to_string()
+            ],
+        )
+        .unwrap();
+    calendar.event.lock().unwrap()["import_id"] = json!("owned-hidden");
     assert!(
         events::dispatch(calendar.clone(), &state, "queryCalendarEvents", query)
             .await

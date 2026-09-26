@@ -3,13 +3,33 @@ import Foundation
 struct CalendarQueryResponse: Decodable {
   let events: [CalendarEvent]
   let unavailableCalendarIDs: [String]?
+  var unavailableEvents: [UnavailableCalendarEvent]? = nil
   enum CodingKeys: String, CodingKey {
     case events
     case unavailableCalendarIDs = "unavailable_calendar_ids"
+    case unavailableEvents = "unavailable_events"
   }
   var warning: String {
     unavailableCalendarIDs?.isEmpty == false
       ? "Einige Kalenderdaten sind nicht verfügbar. Die Auskunft umfasst nur lesbare Termine. " : ""
+  }
+}
+
+struct UnavailableCalendarEvent: Decodable {
+  let id: String
+  let start: String
+  let end: String
+  enum CodingKeys: String, CodingKey {
+    case id
+    case start = "start_utc"
+    case end = "end_utc"
+  }
+  func overlaps(_ day: Date, calendar: Calendar = .current) -> Bool {
+    let iso = ISO8601DateFormatter()
+    guard let start = iso.date(from: start), let end = iso.date(from: end), end > start,
+      let interval = calendar.dateInterval(of: .day, for: day)
+    else { return false }
+    return start < interval.end && end > interval.start
   }
 }
 

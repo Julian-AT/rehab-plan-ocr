@@ -31,7 +31,7 @@ struct VoiceSettingsView: View {
               ))
           }
         }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
-        if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
+        if output.phase == .preparing { ProcessingRow(text: "Stimme vorbereiten …") }
         if output.phase == .failed { Text(output.status).foregroundStyle(AppPalette.destructive) }
       }
       Section {

@@ -198,6 +198,14 @@ struct CalendarStatusView: View {
             LabeledContent(
               "Kalender mit nicht lesbaren Daten", value: String(status.unavailableCount))
           }
+          NavigationLink("Kalender bereinigen") {
+            CalendarRepairView(core: core) {
+              Task {
+                await load()
+                changed()
+              }
+            }
+          }.accessibilityIdentifier("calendar-repair")
         }
         Section {
           LabeledContent(

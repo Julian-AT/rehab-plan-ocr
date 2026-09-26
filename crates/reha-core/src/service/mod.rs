@@ -83,6 +83,7 @@ impl Application {
 }
 pub mod agenda;
 pub mod calendar;
+mod calendar_repair;
 pub mod inference;
 pub mod scan;
 pub mod settings;

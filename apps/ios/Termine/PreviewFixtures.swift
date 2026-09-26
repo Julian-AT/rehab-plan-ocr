@@ -75,6 +75,9 @@ import Foundation
       var preferences = try await core.preferences()
       preferences.displayCalendarIds =
         mode == "no-selection" ? [] : calendars.map(\.calendarIdentifier)
+      if mode == "repair" {
+        preferences.displayCalendarIds.append("preview-unavailable-calendar")
+      }
       preferences.calendarId = calendars[0].calendarIdentifier
       preferences.appearance = arguments.contains("--preview-dark") ? "dark" : "light"
       _ = try await core.savePreferences(value: preferences)

@@ -3,7 +3,6 @@ import Observation
 
 struct AgendaSelection {
   let calendarIDs: Set<String>
-  let hasOwnedEvents: Bool
 }
 
 @MainActor protocol AgendaDataSource {
@@ -41,6 +40,11 @@ struct AgendaSelection {
 
   func events(on date: Date) -> [CalendarEvent]? {
     cache[AgendaWeek(containing: date, calendar: calendar).start]?.response.events
+  }
+
+  func hasKnownGap(on date: Date) -> Bool {
+    cache[AgendaWeek(containing: date, calendar: calendar).start]?
+      .response.unavailableEvents?.contains { $0.overlaps(date, calendar: calendar) } == true
   }
 
   /// Used for changed display selection, local erasure and civil-time changes.
@@ -95,7 +99,7 @@ struct AgendaSelection {
         epoch = UUID()
         availability = .loading
       }
-      guard !selection.calendarIDs.isEmpty || selection.hasOwnedEvents else {
+      guard !selection.calendarIDs.isEmpty else {
         clearSnapshots()
         availability = .noSelection
         return

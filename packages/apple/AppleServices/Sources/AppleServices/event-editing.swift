@@ -49,6 +49,7 @@ final class EventEditingService: @unchecked Sendable {
         let args =
           try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
         switch command {
+        case "inspectCalendarLinks": request.resolve(try self.inspectLinks(args))
         case "eventCalendars": request.resolve(["calendars": self.calendars()])
         case "queryEvents": request.resolve(try self.query(args))
         case "getEvent":
@@ -94,6 +95,43 @@ final class EventEditingService: @unchecked Sendable {
       ]
     }
   }
+  /// Explicit repair searches committed events by the app's exact ownership
+  /// marker. A matching title or time is never sufficient to adopt an event.
+  private func inspectLinks(_ args: [String: Any]) throws -> [String: Any] {
+    store.refreshSourcesIfNecessary()
+    let records = try JSONDecoder().decode(
+      [OwnedRecord].self,
+      from: JSONSerialization.data(withJSONObject: args["records"] ?? []))
+    let readable = store.calendars(for: .event)
+    var results: [[String: Any]] = []
+    for record in records {
+      let marker = "reha-calendar://event/\(record.id)"
+      var candidate: EKEvent?
+      if case .found(let event) = agenda.lookup(record) { candidate = event }
+      var ambiguous = false
+      if candidate == nil, let date = iso.date(from: record.approved.start_utc), !readable.isEmpty {
+        let matches = store.events(
+          matching: store.predicateForEvents(
+            withStart: date.addingTimeInterval(-366 * 86400),
+            end: date.addingTimeInterval(366 * 86400), calendars: readable)
+        ).filter { $0.url?.absoluteString == marker }
+        if matches.count == 1 { candidate = matches[0] }
+        ambiguous = matches.count > 1
+      }
+      if let candidate {
+        results.append(["id": record.id, "status": "found", "event": snapshot(candidate)])
+      } else {
+        let missing = !readable.contains { $0.calendarIdentifier == record.calendar_id }
+        let reason = ambiguous ? "ambiguous" : missing ? "calendar_missing" : "event_missing"
+        results.append(["id": record.id, "status": "unavailable", "reason": reason])
+      }
+    }
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+      throw fail("Kalenderzugriff fehlt. Bitte erneut prüfen.")
+    }
+    return ["access": "fullAccess", "calendars": calendars(), "results": results]
+  }
+
   private func query(_ args: [String: Any]) throws -> [String: Any] {
     guard let ids = args["calendar_ids"] as? [String],
       let from = args["start_utc"] as? String, let to = args["end_utc"] as? String,
@@ -101,14 +139,16 @@ final class EventEditingService: @unchecked Sendable {
       end.timeIntervalSince(start) <= 367 * 86400
     else { throw fail("Suchzeitraum fehlt.") }
 
+    let selectedIDs = Set(ids)
     let calendars = ids.compactMap { store.calendar(withIdentifier: $0) }
-    var unavailable = Set(ids).subtracting(calendars.map(\.calendarIdentifier))
+    var unavailable = selectedIDs.subtracting(calendars.map(\.calendarIdentifier))
     var found =
       calendars.isEmpty
       ? []
       : store.events(
         matching: store.predicateForEvents(withStart: start, end: end, calendars: calendars))
     var imports: [String: String] = [:]
+    var unavailableEvents: [[String: Any]] = []
     for record in args["records"] as? [[String: Any]] ?? [] {
       guard let external = record["external_id"] as? String, let id = record["id"] as? String else {
         continue
@@ -121,10 +161,16 @@ final class EventEditingService: @unchecked Sendable {
       case .found(let found): event = found
       case .deleted: continue
       case .unavailable:
+        guard selectedIDs.contains(owned.calendar_id) else { continue }
         unavailable.insert(owned.calendar_id)
+        unavailableEvents.append([
+          "id": owned.id, "start_utc": owned.approved.start_utc,
+          "end_utc": owned.approved.end_utc,
+        ])
         continue
       }
-      guard event.url?.absoluteString == "reha-calendar://event/\(id)", event.startDate < end,
+      guard selectedIDs.contains(event.calendar.calendarIdentifier),
+        event.url?.absoluteString == "reha-calendar://event/\(id)", event.startDate < end,
         event.endDate > start
       else { continue }
       imports[snapshot(event)["id"] as! String] = id
@@ -139,6 +185,7 @@ final class EventEditingService: @unchecked Sendable {
     }
     return [
       "unavailable_calendar_ids": unavailable.sorted(),
+      "unavailable_events": unavailableEvents,
       "events": unique.values.sorted {
         (($0["values"] as? [String: Any])?["start_utc"] as? String ?? "")
           < (($1["values"] as? [String: Any])?["start_utc"] as? String ?? "")

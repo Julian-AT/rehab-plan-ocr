@@ -48,6 +48,42 @@ type EventMutationRow = (
 );
 
 impl Store {
+    /// Change local ownership only; preserve the original import evidence and
+    /// reject a stale inspection atomically before applying any selected change.
+    pub(crate) fn repair_owned_links(
+        &mut self,
+        changes: &[(OwnedEventRecord, OwnedEventRecord)],
+    ) -> Result<()> {
+        if self.has_unresolved_calendar_writes()? {
+            return Err(Error::Invalid(
+                "Zuerst ungeklärte Kalendervorgänge prüfen.".into(),
+            ));
+        }
+        let tx = self.connection.transaction()?;
+        for (expected, replacement) in changes {
+            let raw: Option<String> = tx
+                .query_row(
+                    "SELECT record FROM owned_events WHERE id=?1",
+                    [&expected.id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            let current = raw
+                .map(|r| serde_json::from_str::<OwnedEventRecord>(&r))
+                .transpose()?;
+            if current.as_ref().map(serde_json::to_value).transpose()?
+                != Some(serde_json::to_value(expected)?)
+            {
+                return Err(Error::Invalid(
+                    "Die Terminzuordnung wurde geändert. Bitte erneut prüfen.".into(),
+                ));
+            }
+            upsert(&tx, replacement)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn owned_records(&self) -> Result<Vec<OwnedEventRecord>> {
         let mut query = self
             .connection

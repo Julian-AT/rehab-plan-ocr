@@ -11,6 +11,101 @@ final class EventEditingTests: XCTestCase {
     }
     return try JSONSerialization.jsonObject(with: response) as? [String: Any] ?? [:]
   }
+  func testRepairFindsExactMarkersAndPreservesCalendarEvents() async throws {
+    #if targetEnvironment(simulator)
+      guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        throw XCTSkip("Simulator runner calendar access required")
+      }
+      let store = AgendaService.shared.store
+      let source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+      let calendar = EKCalendar(for: .event, eventStore: store)
+      calendar.title = "Erfundene Kalenderbereinigung"
+      calendar.source = source
+      try store.saveCalendar(calendar, commit: true)
+      defer { try? store.removeCalendar(calendar, commit: true) }
+      let id = UUID().uuidString
+      let missingID = UUID().uuidString
+      let ambiguousID = UUID().uuidString
+      let date = Date(
+        timeIntervalSince1970: floor(Date().addingTimeInterval(86400).timeIntervalSince1970))
+      let iso = ISO8601DateFormatter()
+      func makeEvent(_ marker: String) throws -> EKEvent {
+        let event = EKEvent(eventStore: store)
+        event.calendar = calendar
+        event.title = "Erfundene Therapie"
+        event.startDate = date
+        event.endDate = date.addingTimeInterval(1800)
+        event.notes = "Original bleibt erhalten"
+        event.url = URL(string: marker)
+        event.alarms = [EKAlarm(relativeOffset: -600)]
+        try store.save(event, span: .thisEvent, commit: true)
+        return event
+      }
+      let event = try makeEvent("reha-calendar://event/\(id)")
+      _ = try makeEvent("https://example.org/unrelated")
+      _ = try makeEvent("reha-calendar://event/\(ambiguousID)")
+      _ = try makeEvent("reha-calendar://event/\(ambiguousID)")
+      let records = [id, missingID, ambiguousID].map { value in
+        [
+          "id": value, "status": "saved", "calendar_id": "old-calendar",
+          "external_id": "old-event",
+          "approved": [
+            "title": "Erfundene Therapie", "start_utc": iso.string(from: date),
+            "end_utc": iso.string(from: date.addingTimeInterval(1800)),
+            "timezone": "Europe/Vienna", "location": "", "notes": "", "reminder_minutes": 10,
+          ],
+        ] as [String: Any]
+      }
+      let inspected = try await call("inspectCalendarLinks", ["records": records])
+      let results = try XCTUnwrap(inspected["results"] as? [[String: Any]])
+      XCTAssertEqual(results.count, 3)
+      XCTAssertEqual(results[0]["status"] as? String, "found")
+      XCTAssertEqual(
+        (results[0]["event"] as? [String: Any])?["calendar_id"] as? String,
+        calendar.calendarIdentifier)
+      XCTAssertEqual(
+        results[1]["status"] as? String, "unavailable",
+        "Same title and time must not adopt unrelated events")
+      XCTAssertEqual(results[2]["reason"] as? String, "ambiguous")
+      let refreshed = try XCTUnwrap(store.event(withIdentifier: event.eventIdentifier))
+      XCTAssertEqual(refreshed.notes, "Original bleibt erhalten")
+      XCTAssertEqual(refreshed.alarms?.first?.relativeOffset, -600)
+      XCTAssertEqual(refreshed.url, event.url)
+      let query = try await call(
+        "queryEvents",
+        [
+          "calendar_ids": [calendar.calendarIdentifier, "old-calendar"],
+          "records": [records[1]], "start_utc": iso.string(from: date.addingTimeInterval(-3600)),
+          "end_utc": iso.string(from: date.addingTimeInterval(3600)),
+        ])
+      XCTAssertEqual((query["events"] as? [Any])?.count, 4)
+      let gaps = try XCTUnwrap(query["unavailable_events"] as? [[String: Any]])
+      XCTAssertEqual(gaps.count, 1)
+      XCTAssertEqual(gaps[0]["id"] as? String, missingID)
+      XCTAssertEqual(gaps[0]["start_utc"] as? String, iso.string(from: date))
+
+      var linked = records[0]
+      linked["calendar_id"] = calendar.calendarIdentifier
+      linked["external_id"] = event.eventIdentifier
+      var selection: [String: Any] = [
+        "calendar_ids": [], "records": [linked, records[1]],
+        "start_utc": iso.string(from: date.addingTimeInterval(-3600)),
+        "end_utc": iso.string(from: date.addingTimeInterval(3600)),
+      ]
+      let hidden = try await call("queryEvents", selection)
+      XCTAssertEqual(
+        (hidden["events"] as? [Any])?.count, 0,
+        "Imported events must obey the display/read selection")
+      XCTAssertEqual(hidden["unavailable_calendar_ids"] as? [String], [])
+      XCTAssertEqual((hidden["unavailable_events"] as? [Any])?.count, 0)
+      selection["calendar_ids"] = [calendar.calendarIdentifier]
+      let visible = try await call("queryEvents", selection)
+      let visibleEvents = try XCTUnwrap(visible["events"] as? [[String: Any]])
+      XCTAssertEqual(visibleEvents.count, 4)
+      XCTAssertEqual(visibleEvents.filter { $0["import_id"] as? String == id }.count, 1)
+      XCTAssertEqual((visible["unavailable_events"] as? [Any])?.count, 0)
+    #endif
+  }
   func testExternalMetadataOccurrenceAndUndo() async throws {
     #if targetEnvironment(simulator)
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {

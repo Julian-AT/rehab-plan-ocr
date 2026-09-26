@@ -266,15 +266,20 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "calendarStatus" | "eventCalendars" | "queryEvents" | "getEvent"
-                | "mutateEvent" | "editSystemEvent" | "resolveOwnedEvent" | "recognize" => {
-                    serde_json::from_str(
-                        &self
-                            .host
-                            .calendar_event_call(command.into(), args.to_string())?,
-                    )
-                    .map_err(storage)
-                }
+                "calendarStatus"
+                | "eventCalendars"
+                | "queryEvents"
+                | "getEvent"
+                | "mutateEvent"
+                | "editSystemEvent"
+                | "resolveOwnedEvent"
+                | "inspectCalendarLinks"
+                | "recognize" => serde_json::from_str(
+                    &self
+                        .host
+                        .calendar_event_call(command.into(), args.to_string())?,
+                )
+                .map_err(storage),
                 "snapshot" => {
                     let live = self.host.snapshot(convert(args["records"].clone())?)?;
                     Ok(json!({"current":live.current, "protected_ids":live.protected_ids}))

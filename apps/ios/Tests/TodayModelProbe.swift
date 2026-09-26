@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor private final class Source: AgendaDataSource {
   var hasAccess = true
-  var selected = AgendaSelection(calendarIDs: ["therapy"], hasOwnedEvents: false)
+  var selected = AgendaSelection(calendarIDs: ["therapy"])
   var responses: [Date: CalendarQueryResponse] = [:]
   var queries: [Date] = []
   var synchronizations = 0
@@ -59,11 +59,44 @@ import Foundation
 
   static func main() async {
     await retainsAndRevalidates()
+    await marksOnlyKnownDaysAndClearsRepairedGaps()
     await rejectsSupersededAndCancelledLoads()
     await invalidatesSensitiveContexts()
     await boundsCacheAndReusesRecentWeeks()
     print(
       "Agenda cache: refresh, empty weeks, errors, cancellation, invalidation and eviction passed")
+  }
+
+  private static func marksOnlyKnownDaysAndClearsRepairedGaps() async {
+    let model = TodayModel()
+    let source = Source()
+    let iso = ISO8601DateFormatter()
+    let second = Calendar.current.date(byAdding: .day, value: 1, to: week.start)!
+    let third = Calendar.current.date(byAdding: .day, value: 2, to: week.start)!
+    let fourth = Calendar.current.date(byAdding: .day, value: 3, to: week.start)!
+    source.responses[week.start] = CalendarQueryResponse(
+      events: [event("Weiterhin lesbar")], unavailableCalendarIDs: ["gone"],
+      unavailableEvents: [
+        UnavailableCalendarEvent(
+          id: "missing",
+          start: iso.string(from: second.addingTimeInterval(-3600)), end: iso.string(from: third))
+      ])
+    await refresh(model, source, key: "gap")
+    precondition(model.hasKnownGap(on: week.start) && model.hasKnownGap(on: second))
+    precondition(!model.hasKnownGap(on: third) && !model.hasKnownGap(on: fourth))
+    precondition(model.events(on: week.start)?.count == 1, "Readable events must not be hidden")
+    source.responses[week.start] = CalendarQueryResponse(
+      events: [], unavailableCalendarIDs: ["unknown-calendar"])
+    await refresh(model, source, key: "unknown-days")
+    precondition(
+      !model.hasKnownGap(on: week.start),
+      "A missing whole calendar does not identify particular days")
+    precondition(!model.unavailableCalendars.isEmpty)
+    source.responses[week.start] = response("Bereinigt")
+    await refresh(model, source, key: "repaired")
+    precondition(!model.hasKnownGap(on: second) && model.unavailableCalendars.isEmpty)
+    model.invalidate()
+    precondition(!model.hasKnownGap(on: week.start))
   }
 
   private static func retainsAndRevalidates() async {
@@ -143,7 +176,7 @@ import Foundation
     await erased.value
     precondition(model.events(on: week.start) == nil)
     await refresh(model, source, key: "after-erase")
-    source.selected = AgendaSelection(calendarIDs: ["other"], hasOwnedEvents: false)
+    source.selected = AgendaSelection(calendarIDs: ["other"])
     source.responses[week.start] = response("Andere Auswahl")
     source.holdNext = true
     let changed = Task { await refresh(model, source, key: "selection") }
@@ -159,12 +192,14 @@ import Foundation
     await revoked.value
     precondition(model.events(on: week.start) == nil && model.availability == .noAccess)
     source.hasAccess = true
-    source.selected = AgendaSelection(calendarIDs: [], hasOwnedEvents: false)
+    source.selected = AgendaSelection(calendarIDs: [])
     await refresh(model, source, key: "no-selection")
     precondition(model.events(on: week.start) == nil && model.availability == .noSelection)
-    source.selected = AgendaSelection(calendarIDs: [], hasOwnedEvents: true)
-    await refresh(model, source, key: "owned-only")
-    precondition(model.events(on: week.start) != nil)
+    let queryCount = source.queries.count
+    await refresh(model, source, key: "still-no-selection")
+    precondition(model.events(on: week.start) == nil && model.availability == .noSelection)
+    precondition(source.queries.count == queryCount)
+    source.selected = AgendaSelection(calendarIDs: ["other"])
     var calendar = Calendar.current
     calendar.timeZone = TimeZone(
       secondsFromGMT: calendar.timeZone.secondsFromGMT() == 0 ? 3600 : 0)!

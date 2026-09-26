@@ -52,6 +52,7 @@ private struct CalendarPager<Content: View>: View {
 }
 
 private struct CalendarStatusBanner: View {
+  var title = "Kalenderdaten unvollständig"
   let openStatus: () -> Void
 
   var body: some View {
@@ -78,7 +79,7 @@ private struct CalendarStatusBanner: View {
   }
 
   private var message: some View {
-    Text("Kalenderdaten unvollständig")
+    Text(title)
   }
 
   private var statusButton: some View {
@@ -124,10 +125,14 @@ struct TodayView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
+      WeekSelector(
+        selection: $selectedDate, visibleWeek: $visibleWeek, hasKnownGap: model.hasKnownGap)
       Divider()
       if !model.unavailableCalendars.isEmpty {
-        CalendarStatusBanner { calendarStatus = true }
+        CalendarStatusBanner(
+          title: model.hasKnownGap(on: selectedDate)
+            ? "Dieser Tag ist unvollständig" : "Kalenderdaten unvollständig"
+        ) { calendarStatus = true }
       }
       if model.error != nil && model.events(on: selectedDate) != nil {
         HStack {
@@ -249,7 +254,7 @@ struct TodayView: View {
           )
           .foregroundStyle(AppPalette.secondaryText)
         }
-      } else if agenda.isComplete && !showPast {
+      } else if agenda.isComplete && !showPast && model.unavailableCalendars.isEmpty {
         ContentUnavailableView {
           Label("Zeit zum Erholen", systemImage: "leaf")
         } description: {
@@ -286,7 +291,7 @@ struct TodayView: View {
     let selected = agendas[1]
     let visible =
       !usesList(selected, layout: layouts[1]) && !windows[1].timed.isEmpty
-      && !(selected.isComplete && !showPast)
+      && !(selected.isComplete && !showPast && model.unavailableCalendars.isEmpty)
       && model.events(on: selectedDate) != nil
     return VStack(spacing: 0) {
       if !usesList(selected, layout: layouts[1]) && !selected.allDay.isEmpty {
@@ -399,6 +404,7 @@ struct TodayView: View {
 private struct WeekSelector: View {
   @Binding var selection: Date
   @Binding var visibleWeek: Date
+  let hasKnownGap: (Date) -> Bool
   @Environment(\.dynamicTypeSize) private var typeSize
   var body: some View {
     VStack(spacing: 8) {
@@ -440,9 +446,19 @@ private struct WeekSelector: View {
                     .frame(width: 40, height: 40)
                     .foregroundStyle(selected ? .white : AppPalette.text)
                     .background(selected ? AppPalette.tint : .clear, in: .circle)
+                    .overlay(alignment: .bottomTrailing) {
+                      if hasKnownGap(date) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                          .font(.caption2).symbolRenderingMode(.palette)
+                          .foregroundStyle(.white, Color(red: 0.72, green: 0.12, blue: 0.12))
+                          .background(AppPalette.background, in: .circle)
+                          .accessibilityHidden(true)
+                      }
+                    }
                 }.frame(maxWidth: .infinity).padding(.vertical, 4).contentShape(.rect)
               }.buttonStyle(.plain)
                 .accessibilityLabel(date.formatted(.dateTime.weekday(.wide).day().month().year()))
+                .accessibilityValue(hasKnownGap(date) ? "Unvollständige Termindaten" : "")
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .accessibilityIdentifier(
                   "weekday-\(Calendar.current.component(.weekday, from: date))")

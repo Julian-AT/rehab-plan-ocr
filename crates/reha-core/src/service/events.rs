@@ -160,12 +160,8 @@ pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -
         .collect();
     let result=native(&platform,"queryEvents",json!({"calendar_ids":selected,"records":records,"start_utc":args["start_utc"],"end_utc":args["end_utc"]})).await?;
     if result["events"].as_array().is_none_or(|a| {
-        a.iter().any(|e| {
-            !selected.contains(&e["calendar_id"].as_str().unwrap_or_default().to_string())
-                && !records
-                    .iter()
-                    .any(|r| Some(r.id.as_str()) == e["import_id"].as_str())
-        })
+        a.iter()
+            .any(|e| !selected.contains(&e["calendar_id"].as_str().unwrap_or_default().to_string()))
     }) {
         return Err("Kalenderantwort außerhalb der Auswahl.".into());
     }
@@ -494,6 +490,9 @@ pub async fn dispatch(
                 Some(_) => Ok(json!({"status":"deleted"})),
                 None => Ok(json!({"status":"missing"})),
             }
+        }
+        "inspectCalendarRepair" | "confirmCalendarRepair" => {
+            super::calendar_repair::run(platform, state, command, args).await
         }
         "calendarStatus" => {
             let mut status = native(&platform, "calendarStatus", json!({})).await?;

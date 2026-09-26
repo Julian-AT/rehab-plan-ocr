@@ -48,7 +48,8 @@ public final class NativeServices: @unchecked Sendable {
       case "camera", "photos", "decodePhoto": .intake
       case "recognize": .ocr
       case "apply", "mutateEvent": .calendarWrite
-      case "snapshot", "queryEvents", "getEvent", "calendarStatus": .calendarRead
+      case "snapshot", "queryEvents", "getEvent", "calendarStatus", "inspectCalendarLinks":
+        .calendarRead
       case "requestReminderPermission", "enableReminders": .reminderSettings
       case "testReminder": .reminderPlan
       default: nil
@@ -68,7 +69,7 @@ public final class NativeServices: @unchecked Sendable {
     do {
       switch command {
       case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent",
-        "resolveOwnedEvent":
+        "resolveOwnedEvent", "inspectCalendarLinks":
         EventEditingService.shared.perform(command, request)
       case "calendarStatus":
         calendarQueue.async { request.resolve(AgendaService.shared.calendarStatus()) }
