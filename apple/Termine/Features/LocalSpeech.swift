@@ -1,91 +1,24 @@
 import SwiftUI
 import AVFoundation
-import Speech
-import FoundationModels
+@preconcurrency import Speech
 
-@MainActor @Observable final class LocalSpeechAssets {
-    var status = "Sprachdateien prüfen"
-    var ready = false
-    var busy = false
-    var progress = 0.0
-    private var task: Task<Void, Never>?
-    private var progressTask: Task<Void, Never>?
-    static func transcriber() async throws -> SpeechTranscriber {
-        let austrian = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "de-AT"))
-        let german = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "de-DE"))
-        guard SpeechTranscriber.isAvailable, let locale = austrian ?? german else {
-            throw LocalSpeechError.message("Lokale deutsche Spracherkennung ist auf diesem Gerät nicht verfügbar.")
-        }
-        return SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
+/// Audio requests are swapped under the same lock used by the audio tap.
+/// No microphone buffers or recognition results are stored on disk.
+private final class SpeechInput: @unchecked Sendable {
+    private let lock = NSLock()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+    func replace(_ next: SFSpeechAudioBufferRecognitionRequest?) {
+        lock.lock(); defer { lock.unlock() }
+        request?.endAudio(); request = next
     }
-    func check() async {
-        do {
-            let module = try await Self.transcriber()
-            ready = await AssetInventory.status(forModules: [module]) == .installed
-            if ready {
-                let analyzer = SpeechAnalyzer(modules: [module]); let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module])
-                try await analyzer.prepareToAnalyze(in: format); await analyzer.cancelAndFinishNow()
-            }
-            try Task.checkCancellation()
-            status = ready ? "Offline bereit" : "Sprachdateien einrichten. Dafür wird einmalig Internet benötigt."
-        } catch { ready = false; status = error.localizedDescription }
+    func append(_ buffer: AVAudioPCMBuffer) {
+        lock.lock(); defer { lock.unlock() }
+        request?.append(buffer)
     }
-    func prepareAssets() {
-        guard !busy else { return }; busy = true; ready = false; progress = 0; status = "Sprachdateien werden eingerichtet …"
-        task = Task {
-            defer { busy = false; progressTask?.cancel(); progressTask = nil }
-            do {
-                let module = try await Self.transcriber()
-                for locale in module.selectedLocales { try await AssetInventory.reserve(locale: locale) }
-                if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
-                    progressTask = Task { while !Task.isCancelled { progress = request.progress.fractionCompleted; try? await Task.sleep(for: .milliseconds(200)) } }
-                    try await request.downloadAndInstall()
-                }
-                try Task.checkCancellation(); await check()
-            } catch { ready = false; status = Task.isCancelled ? "Einrichtung abgebrochen. Du kannst sie wiederholen." : error.localizedDescription }
-        }
-    }
-    func cancel() { task?.cancel(); progressTask?.cancel(); ready = false; status = "Einrichtung abgebrochen." }
 }
 enum LocalSpeechError: LocalizedError {
     case message(String)
     var errorDescription: String? { if case .message(let text) = self { text } else { nil } }
-}
-/// The converter consumes one tap buffer synchronously. The lock also makes
-/// the input block's single-delivery state safe under its Sendable contract.
-private final class ConverterInput: @unchecked Sendable {
-    private let buffer: AVAudioPCMBuffer
-    private let lock = NSLock()
-    private var supplied = false
-    init(_ buffer: AVAudioPCMBuffer) { self.buffer = buffer }
-    func next() -> AVAudioPCMBuffer? {
-        lock.lock(); defer { lock.unlock() }
-        guard !supplied else { return nil }
-        supplied = true; return buffer
-    }
-}
-/// AVAudioConverter is confined to the audio tap's serial callback. Each yielded
-/// output buffer is fresh and no longer mutated after the callback returns.
-private final class AudioInputConverter: @unchecked Sendable {
-    let converter: AVAudioConverter
-    let target: AVAudioFormat
-    let continuation: AsyncStream<AnalyzerInput>.Continuation
-    let failed: @Sendable () -> Void
-    init(source: AVAudioFormat, target: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation, failed: @escaping @Sendable () -> Void) throws {
-        guard let converter = AVAudioConverter(from: source, to: target) else { throw LocalSpeechError.message("Audioformat nicht verfügbar.") }
-        self.converter = converter; self.target = target; self.continuation = continuation; self.failed = failed
-    }
-    func append(_ buffer: AVAudioPCMBuffer) {
-        let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * target.sampleRate / buffer.format.sampleRate) + 32)
-        guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { failed(); return }
-        let input = ConverterInput(buffer); var error: NSError?
-        converter.convert(to: output, error: &error) { _, status in
-            guard let buffer = input.next() else { status.pointee = .noDataNow; return nil }
-            status.pointee = .haveData; return buffer
-        }
-        if error != nil { failed(); return }
-        if output.frameLength > 0, case .dropped = continuation.yield(AnalyzerInput(buffer: output)) { failed() }
-    }
 }
 /// Confined to the serial input tap; publishes at most 25 scalar levels/second.
 private final class InputLevelMeter: @unchecked Sendable {
@@ -103,96 +36,128 @@ private final class InputLevelMeter: @unchecked Sendable {
             for frame in 0..<Int(buffer.frameLength) { let value = Double(channels[channel][frame]); sum += value * value }
         }
         let rms = sqrt(sum / Double(buffer.frameLength) / Double(buffer.format.channelCount))
-        let level = min(1, pow(rms, 0.65))
+        let level = min(1, pow(rms * 8, 0.65))
         smoothed += (level - smoothed) * 0.4
         publish(smoothed)
     }
 }
+
 @MainActor @Observable final class LocalSpeechRecorder {
     enum State { case idle, preparing, recording, finishing }
-    var state: State = .idle
-    var transcript = ""
+    private(set) var state: State = .idle
+    private(set) var transcript = ""
     private(set) var level = 0.0
-    var failure: String?
+    private(set) var failure: String?
     private var committed = ""
     private var generation = UUID()
+    private var segment = UUID()
     private var engine: AVAudioEngine?
-    private var analyzer: SpeechAnalyzer?
-    private var continuation: AsyncStream<AnalyzerInput>.Continuation?
-    private var results: Task<Void, Error>?
+    private let input = SpeechInput()
+    private var recognizer: SFSpeechRecognizer?
+    private var recognition: SFSpeechRecognitionTask?
+    private var finished = false
+    private var recognitionFailed = false
+
+    static func makeRecognizer() -> SFSpeechRecognizer? {
+        ["de-AT", "de-DE"].compactMap { SFSpeechRecognizer(locale: Locale(identifier: $0)) }
+            .first { $0.supportsOnDeviceRecognition }
+    }
     func beginTurn() async throws {
         guard state == .idle else { return }
         SpeechOutput.shared.stop(); state = .preparing; transcript = ""; committed = ""; failure = nil
-        generation = UUID(); let generation = generation
+        generation = UUID(); let current = generation
         do {
-            guard await AVAudioApplication.requestRecordPermission() else { throw LocalSpeechError.message("Mikrofonzugriff fehlt. Erlaube ihn in den Einstellungen.") }
-            let module = try await LocalSpeechAssets.transcriber()
-            guard await AssetInventory.status(forModules: [module]) == .installed else { throw LocalSpeechError.message("Sprachdateien fehlen. Bitte unter Sprechen → Einstellungen einrichten.") }
-            guard self.generation == generation else { throw CancellationError() }
+            guard await AVAudioApplication.requestRecordPermission() else { throw LocalSpeechError.message("Erlaube den Mikrofonzugriff in den iPhone-Einstellungen.") }
+            guard generation == current else { throw CancellationError() }
+            let authorization = await withCheckedContinuation { continuation in
+                SFSpeechRecognizer.requestAuthorization { @Sendable status in continuation.resume(returning: status) }
+            }
+            guard generation == current else { throw CancellationError() }
+            guard authorization == .authorized else { throw LocalSpeechError.message("Erlaube die Spracherkennung in den iPhone-Einstellungen. Du kannst dein Anliegen auch in den Gesprächsdetails eingeben.") }
+            guard let recognizer = Self.makeRecognizer() else {
+                throw LocalSpeechError.message("Die deutsche Spracherkennung ist auf diesem Gerät noch nicht verfügbar. Aktiviere Deutsch unter Einstellungen → Allgemein → Tastatur → Diktierfunktion. In den Gesprächsdetails kannst du auch schreiben.")
+            }
+            self.recognizer = recognizer
             let audio = AVAudioSession.sharedInstance()
             try audio.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP]); try audio.setActive(true)
-            let engine = AVAudioEngine(); let source = engine.inputNode.outputFormat(forBus: 0)
-            guard source.sampleRate > 0, source.channelCount > 0,
-              let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module], considering: source) else { throw LocalSpeechError.message("Mikrofon ist nicht bereit.") }
-            guard self.generation == generation else { throw CancellationError() }
-            let stream = AsyncStream<AnalyzerInput>.makeStream(bufferingPolicy: .bufferingNewest(256))
-            let analyzer = SpeechAnalyzer(modules: [module])
-            self.analyzer = analyzer; self.continuation = stream.continuation; self.engine = engine
-            try await analyzer.prepareToAnalyze(in: format)
-            guard self.generation == generation else { await analyzer.cancelAndFinishNow(); throw CancellationError() }
-            results = Task {
-                for try await result in module.results {
-                    guard self.generation == generation else { return }
-                    let text = String(result.text.characters)
-                    if result.isFinal { committed += text + " "; transcript = committed }
-                    else { transcript = committed + text }
-                }
-            }
-            try await analyzer.start(inputSequence: stream.stream)
-            let converter = try AudioInputConverter(source: source, target: format, continuation: stream.continuation) { [weak self] in
-                Task { @MainActor in
-                    guard let self, self.generation == generation else { return }
-                    self.cancelTurn(); self.failure = "Audio wurde unterbrochen. Bitte noch einmal sprechen oder antippen."
-                }
-            }
+            let engine = AVAudioEngine(); let format = engine.inputNode.outputFormat(forBus: 0)
+            guard format.sampleRate > 0, format.channelCount > 0 else { throw LocalSpeechError.message("Das Mikrofon ist gerade nicht verfügbar. Bitte erneut versuchen.") }
             let meter = InputLevelMeter { [weak self] value in
                 Task { @MainActor in
-                    guard let self, self.generation == generation, self.state == .recording else { return }
+                    guard let self, self.generation == current, self.state == .recording else { return }
                     self.level = value
                 }
             }
-            engine.inputNode.installTap(onBus: 0, bufferSize: 2048, format: source) { buffer, _ in
-                meter.append(buffer); converter.append(buffer)
-            }
+            let input = input
+            engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { @Sendable buffer, _ in meter.append(buffer); input.append(buffer) }
+            self.engine = engine
+            state = .recording; startSegment()
             engine.prepare(); try engine.start()
-            guard self.generation == generation else { throw CancellationError() }
-            state = .recording
-        } catch { if self.generation == generation { cancelTurn() }; throw error }
+        } catch { if generation == current { cancelTurn() }; throw error }
+    }
+    private func startSegment() {
+        guard let recognizer, state == .recording else { return }
+        segment = UUID(); let segment = segment, current = generation
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.requiresOnDeviceRecognition = true
+        request.shouldReportPartialResults = true
+        request.taskHint = .dictation
+        request.addsPunctuation = true
+        finished = false; recognitionFailed = false
+        input.replace(request)
+        recognition = recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
+            let text = result?.bestTranscription.formattedString
+            let final = result?.isFinal ?? false
+            let noSpeech = (error as NSError?)?.code == 1110
+            let failed = error != nil
+            Task { @MainActor in
+                guard let self, self.generation == current, self.segment == segment else { return }
+                if let text { self.transcript = self.committed + text }
+                guard final || failed else { return }
+                self.finished = true
+                if self.state == .finishing { self.recognitionFailed = failed && !final && !noSpeech; return }
+                if final || noSpeech {
+                    // Silence and native task boundaries don't end the user's turn.
+                    self.committed = self.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !self.committed.isEmpty { self.committed += " " }
+                    self.recognition?.cancel(); self.startSegment()
+                } else {
+                    self.cancelTurn()
+                    self.failure = "Die Spracherkennung wurde unterbrochen. Bitte erneut sprechen. Du kannst dein Anliegen auch in den Gesprächsdetails eingeben."
+                }
+            }
+        }
     }
     func endTurn() async throws -> String {
-        guard state == .recording, let analyzer else { return "" }
-        state = .finishing; level = 0; let generation = generation
-        engine?.stop(); engine?.inputNode.removeTap(onBus: 0); engine = nil; continuation?.finish(); continuation = nil
-        do {
-            try await analyzer.finalizeAndFinishThroughEndOfInput(); try await results?.value
-            guard self.generation == generation else { throw CancellationError() }
-            let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-            self.analyzer = nil; results = nil; state = .idle
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            return text
-        } catch { if self.generation == generation { cancelTurn() }; throw error }
+        guard state == .recording else { return "" }
+        state = .finishing; level = 0; let current = generation
+        stopMicrophone(); input.replace(nil)
+        // Wait for the final transcription, bounded if Apple's service stops responding.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(4))
+        while !finished && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(40))
+            guard generation == current else { throw CancellationError() }
+        }
+        guard generation == current else { throw CancellationError() }
+        let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let failed = recognitionFailed || !finished
+        recognition?.cancel(); recognition = nil; recognizer = nil; segment = UUID(); state = .idle
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if failed { throw LocalSpeechError.message("Die Aufnahme konnte nicht vollständig erkannt werden. Bitte erneut sprechen.") }
+        return text
+    }
+    private func stopMicrophone() {
+        engine?.stop(); engine?.inputNode.removeTap(onBus: 0); engine = nil
     }
     func cancelTurn() {
-        generation = UUID(); engine?.stop()
-        if engine != nil { engine?.inputNode.removeTap(onBus: 0) }
-        engine = nil; continuation?.finish(); continuation = nil; results?.cancel(); results = nil
-        if let analyzer { Task { await analyzer.cancelAndFinishNow() } }; analyzer = nil
+        generation = UUID(); segment = UUID(); stopMicrophone(); input.replace(nil)
+        recognition?.cancel(); recognition = nil; recognizer = nil
         state = .idle; level = 0; transcript = ""; committed = ""; failure = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
 struct VoiceSettingsView: View {
-    @State private var assets = LocalSpeechAssets()
+
     @State private var rate = SpeechOutput.shared.rate
     @State private var output = SpeechOutput.shared
     var body: some View {
@@ -211,15 +176,12 @@ struct VoiceSettingsView: View {
                 if output.phase == .failed { Text(output.status).foregroundStyle(.red) }
             } footer: { Text("Die Stimme ist bereits enthalten und funktioniert auf diesem iPhone ohne Internet.") }
             Section {
-                LabeledContent("Spracherkennung", value: assets.ready ? "Bereit" : "Einrichtung")
-                Text(assets.status).foregroundStyle(.secondary)
-                if assets.busy { ProgressView(value: assets.progress); Button("Abbrechen") { assets.cancel() } }
-                else if !assets.ready { Button("Spracherkennung einrichten") { assets.prepareAssets() } }
-            } footer: { Text("Für die Einrichtung ist eventuell einmalig Internet nötig. Aufnahme und Gespräch werden nicht gespeichert.") }
+                LabeledContent("Spracherkennung", value: LocalSpeechRecorder.makeRecognizer() == nil ? "Nicht verfügbar" : "Auf diesem iPhone")
+            } footer: { Text("Sprechen antippen und Mikrofon sowie Spracherkennung erlauben. Du brauchst keine Sprachdateien in der App einzurichten. Die Aufnahme bleibt auf dem iPhone und endet mit Fertig.") }
+
         }.pageTitle("Sprache")
             .onAppear { rate = output.rate }
-            .task { await assets.check() }
             .onChange(of: rate) { output.stop(); output.rate = rate }
-            .onDisappear { assets.cancel(); output.stop() }
+            .onDisappear { output.stop() }
     }
 }

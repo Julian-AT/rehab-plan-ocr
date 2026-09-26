@@ -2,6 +2,8 @@
 
 Private rehabilitation-plan app with on-device recognition. Current implementation and remaining release gates: [Laßnitzhöhe release](docs/lassnitzhoehe-release.md).
 
+**Build 2026092610** ergänzt Wischgesten, vollständige Orts-/Therapeutenangaben und einstellbare Kalendergrößen, den grünen fließenden Orb, direkte iOS-Spracherkennung ohne zusätzliche Sprachdatei-Einrichtung sowie Apples native Kamera. [Umsetzung und Abnahme](docs/fluid-calendar-voice.md) · [Simulatorvorschau](docs/preview/2026-09-26-s12-fluid/README.md). Das Geräteupdate wartet auf die Freigabe dieser Vorschau.
+
 **Build 2026092609** ergänzt die lokale **Victoria-Stimme**, grüne Terminblöcke und eine Tageszeitachse von **06:00 bis 18:00 Uhr**. [Umsetzung und Prüfung](docs/victoria-calendar-update.md) · [Simulatorbilder und Hörproben](docs/preview/2026-09-26-s12-victoria/README.md). Dieser Build ist auf dem iPhone 17 installiert; frische Sicherung, App-Start und vollständiger Datenerhalt sind geprüft.
 
 Die neue **native Oberfläche, Build 2026092608**, ergänzt Wochenzeitachse, reduzierte Sprachansicht und sofort gespeicherte Einstellungen. [Umsetzung und Prüfung](docs/native-minimal-iphone.md) · [Bilder und Hörproben](docs/preview/2026-09-26-s12-native/README.md). Nach ausdrücklicher Freigabe wurde dieser Build auf dem iPhone 17 installiert; [frische Sicherung und Datenerhalt sind geprüft](docs/native-minimal-device-update.md).

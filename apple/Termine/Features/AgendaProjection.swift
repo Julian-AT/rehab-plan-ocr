@@ -150,3 +150,55 @@ enum AgendaLayout {
         return result
     }
 }
+
+/// A deliberate right swipe advances the selected civil day, including DST.
+enum AgendaNavigation {
+    static func swipedDate(_ date: Date, horizontal: Double, vertical: Double, calendar: Calendar = .current) -> Date? {
+        guard abs(horizontal) >= 40, abs(horizontal) > abs(vertical) * 1.5 else { return nil }
+        return calendar.date(byAdding: .day, value: horizontal > 0 ? 1 : -1, to: calendar.startOfDay(for: date))
+    }
+}
+
+enum AgendaDensity: String, CaseIterable {
+    case overview, standard, spacious
+    var title: String { switch self { case .overview: "Übersicht"; case .standard: "Standard"; case .spacious: "Großzügig" } }
+    var pointsPerHour: Double { switch self { case .overview: 44; case .standard: 72; case .spacious: 112 } }
+}
+
+/// Preserve chronological positions and genuine overlaps, stretching only the
+/// intervals that need room for complete labels. Short appointments never hide
+/// their location/therapist or collide with a following appointment's hit area.
+struct ReadableAgendaLayout {
+    struct Item: Identifiable {
+        let placement: TimelinePlacement
+        let top: Double
+        let height: Double
+        var id: String { placement.id }
+    }
+    let items: [Item]
+    let knots: [Double]
+    let positions: [Double]
+    var height: Double { positions.last ?? 0 }
+    func y(_ minute: Double) -> Double {
+        guard let upper = knots.firstIndex(where: { $0 >= minute }) else { return height }
+        guard upper > 0 else { return 0 }
+        let fraction = (minute - knots[upper - 1]) / (knots[upper] - knots[upper - 1])
+        return positions[upper - 1] + fraction * (positions[upper] - positions[upper - 1])
+    }
+    init(_ segments: [DayAgenda.Segment], minutes: Double = 720, pointsPerHour: Double, heights: [String: Double] = [:]) {
+        let placements = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0)
+        let knots = Set([0, minutes] + segments.flatMap { [$0.start, $0.start + $0.duration] }).sorted()
+        var positions = knots.map { $0 / 60 * pointsPerHour }
+        for item in placements.sorted(by: { $0.segment.start + $0.segment.duration < $1.segment.start + $1.segment.duration }) {
+            let start = knots.firstIndex(of: item.segment.start)!
+            let end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
+            let missing = max(0, max(100, heights[item.id] ?? 100) + 4 - (positions[end] - positions[start]))
+            if missing > 0 { for index in end..<positions.count { positions[index] += missing } }
+        }
+        self.knots = knots; self.positions = positions
+        self.items = placements.map { item in
+            let start = knots.firstIndex(of: item.segment.start)!, end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
+            return Item(placement: item, top: positions[start], height: positions[end] - positions[start] - 4)
+        }
+    }
+}

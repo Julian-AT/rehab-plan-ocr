@@ -99,7 +99,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
             refreshID += 1
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { voice.cancelSession() }
+            if phase == .background { voice.cancelSession() }
             if phase == .background { scanner.suspend() }
             if phase == .active { scanner.resume(); refreshID += 1; Task { await scanner.recoverShares(); await pendingOpen() } }
         }

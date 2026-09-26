@@ -1,0 +1,136 @@
+{
+  "build": "2026092610",
+  "synthetic_data_only": true,
+  "files": {
+    "README.md": {
+      "sha256": "47873792f12a349336a176b3025edb87db18c4d68a629a0f642b0b5281de35d9",
+      "bytes": 3094
+    },
+    "abgebrochene-wiedergabe.png": {
+      "sha256": "807447cf91db1bf797c0ae77b84d9d12101bc5b916d5494da418e4f0a0c0d5a7",
+      "bytes": 653445
+    },
+    "antwort-aus-kalender.png": {
+      "sha256": "68f3eb8082b2637b1fe8e6b759e5ff649da22efe0e393f543282d60139535e48",
+      "bytes": 366996
+    },
+    "archiv-groesste-schrift.png": {
+      "sha256": "c308ae08eb5f68bd87f22e562499e6ae5047d5688bee7ffeea29f43f57b2de93",
+      "bytes": 184602
+    },
+    "audio-meter.json": {
+      "sha256": "411ae4050d2856d82b2ff2ecc65c4fe4f8f1abf7ff501c3fce21bd789aaca641",
+      "bytes": 195
+    },
+    "bewegung-reduziert.png": {
+      "sha256": "3366db31918355ffe25d53972b6b7e3e3d37319748396dec4d7ee95af7dfb99b",
+      "bytes": 637047
+    },
+    "foundation-status.json": {
+      "sha256": "1a9cab7708b6635a8e75f57df4c255b4d204270365793f2354686f5970d846ff",
+      "bytes": 838
+    },
+    "freies-gespraech-modellstatus.png": {
+      "sha256": "c01fe618f07bcbc89f1fe91656e2a33bf3d65342cababc80013d27b1ee39fd3c",
+      "bytes": 354198
+    },
+    "gespraechsdetails.png": {
+      "sha256": "5627ae4cabe7814a08db28dc6c1bff69f8309b8b985298af62ecbd1969d9aa2b",
+      "bytes": 243998
+    },
+    "gruener-orb-und-sprechen.png": {
+      "sha256": "41bc03b03f9512161928bf797c151ddea3754a620cdb1820d2e0ecfd8b87e12e",
+      "bytes": 621191
+    },
+    "kalender-dunkel.png": {
+      "sha256": "3a138d0d352858559c15586e7afeea2ffd8d3481a7020e6eb6126af5be9fae73",
+      "bytes": 223756
+    },
+    "kalender-ueberlappende-termine.png": {
+      "sha256": "f8bc83695340c9a0f4f785a514ce15a9d9201188a83b40af021bd972141dde05",
+      "bytes": 199766
+    },
+    "kalender-uebersicht-ort-therapeut.png": {
+      "sha256": "4b7398677b0194c0c6d76a9b22753b65d7eae924562a31ae5ed180a73cc5196b",
+      "bytes": 245855
+    },
+    "kalenderdarstellung-einstellbar.png": {
+      "sha256": "02e4b28e75351ea1789acadc49fc6b44e98af76febdfa7fcb74b6c46825e0904",
+      "bytes": 196776
+    },
+    "mehr-groesste-schrift.png": {
+      "sha256": "7e0882e93a3d82b1f3ff8cfb045ea9d8237ac0b6129d8a18d9ab6930710bca37",
+      "bytes": 219180
+    },
+    "native-apple-kamera.png": {
+      "sha256": "9efb348c937ff950443c8fcdd86da99eeea8b1c0942ec6c44f0de6c8cae37f04",
+      "bytes": 145074
+    },
+    "orb-victoria.mp4": {
+      "sha256": "125776d1946df66eb259eefaea04883451b5cf8b5610b2194538e88324eed8dd",
+      "bytes": 347913
+    },
+    "sprache-ohne-dateieinrichtung.png": {
+      "sha256": "1cccbc353dfe65096e94a4d75015da6866040f034da904f9d233c7d39b165bd4",
+      "bytes": 224006
+    },
+    "spracheinstellungen.png": {
+      "sha256": "5b86cb49c82ddae2cbca01c7f614192b6e9c1d897e7fdaa5749240949835e084",
+      "bytes": 224061
+    },
+    "spracherkennung-nativer-hinweis.png": {
+      "sha256": "b0dd77263d4d794834bbcdb39893d9f5871f6c53f14bfeb09d75f5942a88c87b",
+      "bytes": 654498
+    },
+    "sprachvorschlag-gespeichert.png": {
+      "sha256": "954cdf5b6a33105c905d1b59b9fb91608653936fe6765203ceee8bf4ce153785",
+      "bytes": 289962
+    },
+    "sprachvorschlag-vor-bestaetigung.png": {
+      "sha256": "302cbbddc88e134e130ad4adb1db9052aadb226bba12302a473b2e6b08511e64",
+      "bytes": 226556
+    },
+    "sprechen-dunkel.png": {
+      "sha256": "5814fbd303b32d83d9928e2dff0a33bfe251c36822822cf500693084378f43bf",
+      "bytes": 499211
+    },
+    "sprechen-echte-wiedergabe.png": {
+      "sha256": "0b06505c2e978b4be6ab88a83935343d43f55d792882c65f8e29a192834e62c9",
+      "bytes": 707054
+    },
+    "sprechen-groesste-schrift.png": {
+      "sha256": "415354357d8f294eb9fd9ed13765feeb3997aff29ffb3ce0aba1346bb937d2a4",
+      "bytes": 553135
+    },
+    "sprechen-ruhe.png": {
+      "sha256": "0ca2497fe427f6c10596ee4b3c66a031115c6642c792177f6369b0a4f7bd0ebc",
+      "bytes": 635395
+    },
+    "tagesliste-groesste-schrift.png": {
+      "sha256": "15c4ea09259db6221631fa19e878898475d7190c2b4c30ca7e034f93afcd764a",
+      "bytes": 298485
+    },
+    "tagesliste-nach-neustart.png": {
+      "sha256": "04b964589b60cc1433c91b1b7ac8f974d78e4c2400fc854fd0d718fdf0951348",
+      "bytes": 337706
+    },
+    "ueberlappung-dunkel.png": {
+      "sha256": "14e8c91f0de6528e45e29403a625a50f36d322275d58b2b410836a58fd626c5e",
+      "bytes": 240701
+    },
+    "verification.json": {
+      "sha256": "a530a2a9fb5787fb4d29b2bf65a8179ea8da2c392d88a3252ca95bc32fec101d",
+      "bytes": 3203
+    },
+    "video-origin.json": {
+      "sha256": "037829195aa7ca5874e669555b5615ab7ccc22d95de2d2755bcbe6e63a3dfa8a",
+      "bytes": 306
+    },
+    "wischen-ueber-wochengrenze.png": {
+      "sha256": "346aadc49e3e41468f6f04d484b14cd91c60424ba57d8a8604e4b170ee1b21aa",
+      "bytes": 248217
+    }
+  },
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

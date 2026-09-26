@@ -2,6 +2,7 @@ import SwiftUI
 import ImageIO
 import PDFKit
 import RehaCore
+import FoundationModels
 
 enum DisplayImage {
     static func load(_ url: URL, maximum: Int = 2048) async throws -> UIImage {
@@ -202,7 +203,8 @@ struct DiagnosticsView: View {
                 Section("Sprache") {
                     LabeledContent("Stimme", value: "Kokoro · Victoria · Deutsch")
                     LabeledContent("Audio", value: "24 kHz · lokal")
-                    Text("Apple Intelligence kann die Einordnung unterstützen. Befehle und manuelle Auswahl funktionieren auch ohne sie.")
+                    LabeledContent("Gesprächsmodell", value: SystemLanguageModel.default.isAvailable ? "Apple Intelligence bereit" : "Apple Intelligence nicht verfügbar")
+                    Text("Freie Gespräche verwenden das lokale Apple-Modell. Kalenderbefehle und manuelle Auswahl funktionieren auch ohne Apple Intelligence.")
                 }
                 if let capabilities {
                     Section("Verfügbarkeit") {

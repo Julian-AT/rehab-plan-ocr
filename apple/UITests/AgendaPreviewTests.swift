@@ -33,6 +33,83 @@ import UIKit
     }
     private func back(_ title: String) { app.navigationBars[title].buttons.firstMatch.tap() }
 
+    func testSwipingAndCompleteAppointmentLabels() {
+        launch("readable")
+        // Right advances, including on the resting/empty state; no arrow needed.
+        app.swipeRight()
+        let next = row("Physiotherapie Tag 1")
+        XCTAssertTrue(next.waitForExistence(timeout: 8))
+        XCTAssertTrue(next.label.contains("Anna Beispiel"))
+        XCTAssertTrue(next.label.contains("Laßnitzhöhe"))
+        XCTAssertTrue(next.label.contains("Raum 2.14"))
+        let short = row("Kontrolle Tag 1")
+        XCTAssertTrue(short.exists); XCTAssertTrue(short.label.contains("Erdgeschoss"))
+        XCTAssertGreaterThanOrEqual(short.frame.height, 100)
+        XCTAssertFalse(short.frame.intersects(next.frame))
+        capture("01-kalender-uebersicht-ort-therapeut")
+        let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch
+        week.swipeRight()
+        XCTAssertTrue(row("Physiotherapie Tag 2").waitForExistence(timeout: 8))
+        week.swipeLeft()
+        XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
+        let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch.label
+        app.scrollViews["day-timeline"].swipeUp()
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch.label, selected)
+        let training = row("Training Tag 1"), ergo = row("Ergotherapie Tag 1")
+        XCTAssertEqual(training.frame.minY, ergo.frame.minY, accuracy: 1)
+        XCTAssertFalse(training.frame.intersects(ergo.frame))
+        capture("02-kalender-ueberlappende-termine")
+        for _ in 0..<7 { week.swipeRight() }
+        XCTAssertTrue(row("Physiotherapie Tag 8").waitForExistence(timeout: 8))
+        week.swipeLeft()
+        XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
+        capture("03-wischen-ueber-wochengrenze")
+    }
+    func testCalendarDensityAndListPersistAfterRestart() {
+        launch("readable")
+        app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
+        app.buttons["agenda-density"].tap(); app.buttons["Großzügig"].tap()
+        app.buttons["agenda-density"].tap(); app.buttons["Standard"].tap()
+        toggle(app.switches["agenda-list-setting"])
+        capture("04-kalenderdarstellung-einstellbar")
+        app.terminate()
+        app.launchArguments = ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT"]
+        app.launch(); XCTAssertTrue(app.tabBars.buttons["Mehr"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
+        XCTAssertTrue(app.buttons["agenda-density"].label.contains("Standard"))
+        XCTAssertEqual(app.switches["agenda-list-setting"].value as? String, "1")
+        app.tabBars.buttons["Termine"].tap(); app.swipeRight()
+        XCTAssertTrue(app.descendants(matching: .any)["agenda-accessible-list"].waitForExistence(timeout: 8))
+        XCTAssertTrue(row("Physiotherapie Tag 1").label.contains("Anna Beispiel"))
+        capture("05-tagesliste-nach-neustart")
+    }
+    func testConversationWithoutAssetSetup() {
+        launch("one")
+        app.tabBars.buttons["Sprechen"].tap()
+        XCTAssertLessThan(app.buttons["stop-speech"].frame.maxY, voiceState.frame.minY)
+        XCTAssertEqual(app.buttons["speak"].frame.midX, app.frame.midX, accuracy: 12)
+        capture("06-gruener-orb-und-sprechen")
+        app.buttons["voice-settings"].tap()
+        XCTAssertFalse(app.buttons["Spracherkennung einrichten"].exists)
+        XCTAssertTrue(app.buttons["preview-voice"].exists)
+        capture("07-sprache-ohne-dateieinrichtung")
+        back("Sprache")
+        app.buttons["voice-details"].tap()
+        let message = app.textFields["voice-message"].exists ? app.textFields["voice-message"] : app.textViews["voice-message"]
+        message.tap(); message.typeText("Nächster Termin")
+        app.buttons["voice-send"].tap()
+        XCTAssertTrue(app.buttons["repeat-speech"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Ergotherapie")).firstMatch.exists)
+        capture("08-antwort-aus-kalender")
+        message.tap(); message.typeText("Hallo, erzähl mir einen Witz")
+        app.buttons["voice-send"].tap()
+        let freeReply = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "Apple Intelligence", "Die Antwort konnte")).firstMatch
+        XCTAssertTrue(freeReply.waitForExistence(timeout: 30)) // Simulator has no Foundation Models runtime.
+        capture("10-freies-gespraech-modellstatus")
+        back("Gesprächsdetails"); app.buttons["stop-speech"].tap()
+        XCTAssertEqual(voiceState.value as? String, "idle")
+        XCTAssertTrue(app.buttons["speak"].isEnabled)
+    }
     func testEmptyAndNoSelectionAreDistinct() {
         launch("empty")
         XCTAssertTrue(app.staticTexts["Heute keine Termine"].waitForExistence(timeout: 8))
@@ -103,10 +180,19 @@ import UIKit
         XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
         XCTAssertTrue(row("Übernacht-Beobachtung").exists)
         XCTAssertTrue(row("Aufenthalt Laßnitzhöhe").exists)
-        XCTAssertFalse(row("Physiotherapie").frame.intersects(row("Ärztliches Gespräch").frame))
+        if app.scrollViews["day-timeline"].exists {
+            XCTAssertFalse(row("Physiotherapie").frame.intersects(row("Ärztliches Gespräch").frame))
+        } else {
+            for _ in 0..<5 where !row("Ärztliches Gespräch").exists { app.swipeUp() }
+            XCTAssertTrue(row("Ärztliches Gespräch").exists)
+        }
         capture("09-ueberlappung-dunkel")
         app.tabBars.buttons["Sprechen"].tap(); capture("10-sprechen-dunkel")
         XCTAssertEqual(voiceState.value as? String, "idle")
+        app.terminate(); launch("readable", extra: ["--preview-dark"])
+        app.swipeRight()
+        XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
+        capture("11-kalender-dunkel")
     }
     func testLargestTypeUsesDayListAndNativeSettings() throws {
         launch("full", extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL", "--preview-dark"])
@@ -187,15 +273,21 @@ import UIKit
         capture("21-gespraechsdetails")
         back("Gesprächsdetails")
         app.buttons["speak"].tap()
-        if app.alerts.firstMatch.waitForExistence(timeout: 3) {
-            let allow = app.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Erlauben", "Allow", "OK"])).firstMatch
-            if allow.exists { allow.tap() }
+        let monitor = addUIInterruptionMonitor(withDescription: "Mikrofon und Spracherkennung erlauben") { alert in
+            let allow = alert.buttons.matching(NSPredicate(format: "label IN %@", ["Erlauben", "Allow", "OK"])).firstMatch
+            guard allow.exists else { return false }; allow.tap(); return true
         }
-        // This simulator does not support Apple's on-device SpeechTranscriber.
-        expectation(for: NSPredicate(format: "value == %@", "error"), evaluatedWith: voiceState)
+        // Interruption monitors run when an interaction is blocked, not on queries.
+        voiceState.tap()
+        removeUIInterruptionMonitor(monitor)
+        expectation(for: NSPredicate(format: "value IN %@", ["recording", "error"]), evaluatedWith: voiceState)
         waitForExpectations(timeout: 15)
         capture("22-spracherkennung-nativer-hinweis")
         if app.alerts.buttons["OK"].exists { app.alerts.buttons["OK"].tap() }
+        if voiceState.value as? String == "recording" {
+            Thread.sleep(forTimeInterval: 3)
+            XCTAssertTrue(app.buttons["finish-speaking"].exists)
+        }
         app.buttons["stop-speech"].tap()
         XCTAssertEqual(voiceState.value as? String, "idle")
         XCTAssertTrue(app.buttons["speak"].isEnabled)

@@ -1,145 +1,83 @@
 import SwiftUI
-@preconcurrency import AVFoundation
+import AVFoundation
+import UniformTypeIdentifiers
 
-/// The shutter opens the result immediately. Only the capture delegate supplies
-/// bytes; session teardown waits for that delegate even if the camera is dismissed.
-struct CaptureView: UIViewControllerRepresentable {
+/// Apple's camera includes its own shutter, camera switch, retake and use-photo
+/// controls. An import begins only after the user accepts the photograph.
+struct CaptureView: View {
     let onShutter: @MainActor () -> String
     let onPhoto: @MainActor (Data, String) -> Void
     let onFailure: @MainActor (Error, String) -> Void
     @Environment(\.dismiss) private var dismiss
-    func makeUIViewController(context: Context) -> CaptureController {
-        CaptureController(onShutter: onShutter, onPhoto: onPhoto, onFailure: onFailure, close: { dismiss() })
-    }
-    func updateUIViewController(_ uiViewController: CaptureController, context: Context) {}
-}
-
-final class CaptureController: UIViewController {
-    private let hardware = CaptureHardware()
-    private var preview: AVCaptureVideoPreviewLayer?
-    private let shutter = UIButton(type: .system)
-    private let message = UILabel()
-    private let onShutter: @MainActor () -> String
-    private let onPhoto: @MainActor (Data, String) -> Void
-    private let onFailure: @MainActor (Error, String) -> Void
-    private let close: @MainActor () -> Void
-    init(onShutter: @escaping @MainActor () -> String, onPhoto: @escaping @MainActor (Data, String) -> Void,
-         onFailure: @escaping @MainActor (Error, String) -> Void, close: @escaping @MainActor () -> Void) {
-        self.onShutter = onShutter; self.onPhoto = onPhoto; self.onFailure = onFailure; self.close = close
-        super.init(nibName: nil, bundle: nil)
-    }
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    override func viewDidLoad() {
-        super.viewDidLoad(); view.backgroundColor = .black
-        let preview = AVCaptureVideoPreviewLayer(session: hardware.session)
-        preview.videoGravity = .resizeAspectFill; view.layer.addSublayer(preview); self.preview = preview
-        shutter.configuration = .filled(); shutter.setTitle("Fotografieren", for: .normal)
-        shutter.accessibilityIdentifier = "capture-shutter"; shutter.isEnabled = false
-        shutter.addTarget(self, action: #selector(capture), for: .touchUpInside)
-        let cancel = UIButton(type: .system)
-        cancel.configuration = .filled(); cancel.setTitle("Abbrechen", for: .normal)
-        cancel.addTarget(self, action: #selector(cancelCapture), for: .touchUpInside)
-        message.textColor = .white; message.numberOfLines = 0; message.textAlignment = .center
-        let controls = UIStackView(arrangedSubviews: [message, shutter, cancel]); controls.axis = .vertical; controls.spacing = 16
-        controls.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(controls)
-        NSLayoutConstraint.activate([
-            controls.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
-            controls.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
-            controls.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            shutter.heightAnchor.constraint(greaterThanOrEqualToConstant: 54),
-            cancel.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
-        ])
-        Task {
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            guard granted else { message.text = "Erlaube Laßnitzhöhe den Kamerazugriff in den iPhone-Einstellungen."; return }
-            hardware.start { [weak self] error in
-                Task { @MainActor in
-                    self?.message.text = error
-                    self?.shutter.isEnabled = error == nil
+    @Environment(\.openURL) private var openURL
+    @State private var allowed = false
+    @State private var checked = false
+    var body: some View {
+        Group {
+            if allowed {
+                NativeCamera { result in
+                    let id = onShutter()
+                    switch result {
+                    case .success(let bytes): onPhoto(bytes, id)
+                    case .failure(let error): onFailure(error, id)
+                    }
+                } cancel: { dismiss() }.ignoresSafeArea()
+            } else {
+                NavigationStack {
+                    Group {
+                        if checked {
+                            ContentUnavailableView {
+                                Label("Kamera nicht verfügbar", systemImage: "camera")
+                            } description: {
+                                Text(UIImagePickerController.isSourceTypeAvailable(.camera) ? "Erlaube den Kamerazugriff in den iPhone-Einstellungen." : "Auf diesem Gerät ist keine Kamera verfügbar. Du kannst ein Bild aus Fotos auswählen.")
+                            } actions: {
+                                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                    Button("Einstellungen öffnen") { openURL(URL(string: UIApplication.openSettingsURLString)!) }
+                                }
+                            }
+                        } else { ProgressView("Kamera öffnen …") }
+                    }.toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
                 }
             }
-        }
-    }
-    override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); preview?.frame = view.bounds }
-    override func viewDidDisappear(_ animated: Bool) { super.viewDidDisappear(animated); hardware.stop() }
-    @objc private func cancelCapture() { close() }
-    @objc private func capture() {
-        shutter.isEnabled = false
-        let id = onShutter()
-        let success = onPhoto, failure = onFailure
-        hardware.capture { result in
-            Task { @MainActor in
-                switch result { case .success(let bytes): success(bytes, id); case .failure(let error): failure(error, id) }
-            }
+        }.task {
+            guard UIImagePickerController.isSourceTypeAvailable(.camera) else { checked = true; return }
+            allowed = await AVCaptureDevice.requestAccess(for: .video)
+            checked = true
         }
     }
 }
-
-private final class CaptureHardware: @unchecked Sendable {
-    let session = AVCaptureSession()
-    private let queue = DispatchQueue(label: "at.rehakalender.personal.capture")
-    private let output = AVCapturePhotoOutput()
-    private var delegate: PhotoDelegate?
-    private var stopRequested = false
-    func start(_ completion: @escaping @Sendable (String?) -> Void) {
-        queue.async {
-            do {
-                self.session.beginConfiguration()
-                defer { self.session.commitConfiguration() }
-                self.session.sessionPreset = .photo
-                guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
-                    throw CaptureError.unavailable
-                }
-                let input = try AVCaptureDeviceInput(device: camera)
-                guard self.session.canAddInput(input), self.session.canAddOutput(self.output) else { throw CaptureError.unavailable }
-                self.session.addInput(input); self.session.addOutput(self.output)
-            } catch { completion(error.localizedDescription); return }
-            guard !self.stopRequested else { return }
-            self.session.startRunning(); completion(nil)
-        }
+private struct NativeCamera: UIViewControllerRepresentable {
+    let complete: (Result<Data, Error>) -> Void
+    let cancel: () -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let camera = UIImagePickerController()
+        camera.sourceType = .camera
+        camera.mediaTypes = [UTType.image.identifier]
+        camera.cameraCaptureMode = .photo
+        camera.allowsEditing = false
+        camera.showsCameraControls = true
+        camera.delegate = context.coordinator
+        camera.view.accessibilityIdentifier = "native-camera"
+        return camera
     }
-    func capture(_ completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
-        queue.async {
-            guard self.session.isRunning else { completion(.failure(CaptureError.unavailable)); return }
-            let delegate = PhotoDelegate(completion: completion) { [self] in
-                queue.async { [self] in
-                    self.delegate = nil
-                    if stopRequested { session.stopRunning() }
-                }
-            }
-            self.delegate = delegate
-            let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-            self.output.capturePhoto(with: settings, delegate: delegate)
+    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: NativeCamera
+        private var delivered = false
+        init(parent: NativeCamera) { self.parent = parent }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            guard !delivered else { return }; delivered = true; parent.cancel()
         }
-    }
-    func stop() {
-        queue.async {
-            self.stopRequested = true
-            if self.delegate == nil { self.session.stopRunning() }
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            guard !delivered else { return }; delivered = true
+            if let url = info[.imageURL] as? URL, let data = try? Data(contentsOf: url) { parent.complete(.success(data)) }
+            else if let original = info[.originalImage] as? UIImage, let data = original.jpegData(compressionQuality: 0.98) { parent.complete(.success(data)) }
+            else { parent.complete(.failure(CaptureError.noImage)) }
         }
     }
 }
 private enum CaptureError: LocalizedError {
-    case unavailable, noBytes
-    var errorDescription: String? {
-        switch self { case .unavailable: "Kamera ist nicht verfügbar."; case .noBytes: "Aufnahme konnte nicht gespeichert werden." }
-    }
-}
-private final class PhotoDelegate: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
-    private let completion: @Sendable (Result<Data, Error>) -> Void
-    private let finished: @Sendable () -> Void
-    private var delivered = false
-    init(completion: @escaping @Sendable (Result<Data, Error>) -> Void, finished: @escaping @Sendable () -> Void) {
-        self.completion = completion; self.finished = finished
-    }
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        delivered = true
-        if let error { completion(.failure(error)) }
-        else if let bytes = photo.fileDataRepresentation() { completion(.success(bytes)) }
-        else { completion(.failure(CaptureError.noBytes)) }
-    }
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
-        if !delivered { completion(.failure(error ?? CaptureError.noBytes)) }
-        finished()
-    }
+    case noImage
+    var errorDescription: String? { "Das Foto konnte nicht übernommen werden. Bitte erneut fotografieren." }
 }

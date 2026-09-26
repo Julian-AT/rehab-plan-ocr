@@ -97,6 +97,38 @@ import Foundation
         precondition(AgendaWindow(agenda: springDay, now: springDate, calendar: calendar).minutes == 720)
         precondition(!DayAgenda(events: [past, late], date: now, now: now, calendar: calendar).isComplete)
         precondition(window.scrollMinute >= 0 && window.scrollMinute <= 720)
+        // The requested swipe direction, vertical scroll rejection, week and DST boundaries.
+        let sunday = monday.days[6]
+        precondition(AgendaNavigation.swipedDate(sunday, horizontal: 90, vertical: 4, calendar: calendar) == monday.end)
+        precondition(AgendaNavigation.swipedDate(monday.end, horizontal: -90, vertical: 4, calendar: calendar) == sunday)
+        precondition(AgendaNavigation.swipedDate(now, horizontal: 60, vertical: 100, calendar: calendar) == nil)
+        precondition(AgendaNavigation.swipedDate(now, horizontal: 12, vertical: 0, calendar: calendar) == nil)
+        for date in [springDate, dstNow] {
+            let next = AgendaNavigation.swipedDate(date, horizontal: 100, vertical: 0, calendar: calendar)!
+            precondition(calendar.component(.hour, from: next) == 0)
+            precondition(AgendaNavigation.swipedDate(next, horizontal: -100, vertical: 0, calendar: calendar) == calendar.startOfDay(for: date))
+        }
+        for density in AgendaDensity.allCases {
+            let segments = DayAgenda(events: [short, adjacent, next, overlap, after], date: now, now: now, calendar: calendar).timed
+            let readable = ReadableAgendaLayout(segments, minutes: 1440, pointsPerHour: density.pointsPerHour, heights: ["short": 180])
+            precondition(readable.items.first { $0.id == "short" }!.height >= 180)
+            precondition(readable.items.allSatisfy { $0.height >= 100 })
+            precondition(zip(readable.positions, readable.positions.dropFirst()).allSatisfy { $0 <= $1 })
+            for a in readable.items {
+                for b in readable.items where a.id != b.id && a.placement.column == b.placement.column {
+                    precondition(a.top + a.height <= b.top || b.top + b.height <= a.top)
+                }
+            }
+            precondition(readable.items.first { $0.id == "next" }!.top == readable.items.first { $0.id == "overlap" }!.top)
+        }
+        var withNotes = next
+        let json = try! JSONEncoder().encode(withNotes)
+        var object = try! JSONSerialization.jsonObject(with: json) as! [String: Any]
+        object["metadata"] = ["notes": "Therapeut:in: Anna Beispiel\n  MSc\nKlinik: Laßnitzhöhe\nRaum: Raum 2.14\nHinweise: Nicht als Therapeut verwenden"]
+        withNotes = try! JSONDecoder().decode(CalendarEvent.self, from: JSONSerialization.data(withJSONObject: object))
+        precondition(withNotes.therapist == "Anna Beispiel, MSc")
+        precondition(withNotes.placeDescription == "Raum 2.14 · Laßnitzhöhe")
+        precondition(next.therapist == nil && next.therapistDescription == "Therapeut nicht angegeben")
         print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday 23/25-hour DST days and clipped 06–18 window passed")
     }
 }

@@ -35,6 +35,8 @@ struct SettingsSaveStatus: View {
 }
 
 struct SettingsView: View {
+    @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
+    @SwiftUI.AppStorage("agenda.list") private var listView = false
     enum Page { case appearance, reminders, recognition, storage }
     let core: NativeApplication
     var page: Page = .appearance
@@ -47,6 +49,7 @@ struct SettingsView: View {
     @State private var editingDefault: CompletionDefault?
     @State private var addingDefault = false
     @State private var removingDefault: CompletionDefault?
+    init(core: NativeApplication, page: Page = .appearance) { self.core = core; self.page = page }
     private var title: String {
         switch page { case .appearance: "Darstellung"; case .reminders: "Erinnerungen"; case .recognition: "Erkennung"; case .storage: "Aufbewahrung" }
     }
@@ -60,6 +63,12 @@ struct SettingsView: View {
                             Text("System").tag("system"); Text("Hell").tag("light"); Text("Dunkel").tag("dark")
                         }.accessibilityIdentifier("appearance-picker")
                     } footer: { Text("Schriftgröße und Bedienungshilfen folgen den Einstellungen deines iPhones.") }
+                    Section {
+                        Picker("Kalendergröße", selection: $density) {
+                            ForEach(AgendaDensity.allCases, id: \.rawValue) { Text($0.title).tag($0.rawValue) }
+                        }.accessibilityIdentifier("agenda-density")
+                        Toggle("Tagesliste", isOn: $listView).accessibilityIdentifier("agenda-list-setting")
+                    } header: { Text("Kalender") } footer: { Text("Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach rechts wischen: nächster Tag. Nach links: vorheriger Tag.") }
                 case .reminders:
                     Section {
                         Picker("Kalendererinnerung", selection: store.binding(\.reminder, fallback: nil)) { minuteOptions }

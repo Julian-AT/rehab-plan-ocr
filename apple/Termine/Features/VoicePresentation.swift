@@ -26,26 +26,46 @@ struct VoicePresentation {
     }
 }
 
-/// Only measured input/playback energy changes this orb. Loading has no motion.
+/// Slow organic motion gives the orb a living surface; measured microphone or
+/// playback energy controls the stronger response. Reduce Motion freezes both.
+private struct FluidOrbShape: Shape {
+    let time: Double
+    let energy: Double
+    func path(in rect: CGRect) -> Path {
+        let radius = min(rect.width, rect.height) * 0.43
+        var path = Path()
+        for index in 0...128 {
+            let angle = Double(index) / 128 * .pi * 2
+            let wave = sin(angle * 3 + time * 1.2) * 0.045 + sin(angle * 5 - time * 0.8) * 0.025
+            let r = radius * (1 + wave * (0.5 + energy * 2.5))
+            let point = CGPoint(x: rect.midX + cos(angle) * r, y: rect.midY + sin(angle) * r)
+            if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+        }
+        path.closeSubpath(); return path
+    }
+}
 struct VoiceOrb: View {
     let state: VoicePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var scheme
     var body: some View {
-        let level = reduceMotion ? 0 : min(1, max(0, state.level))
-        ZStack {
-            Circle().fill(.white.opacity(scheme == .dark ? 0.12 : 0.65))
-            Circle().fill(RadialGradient(colors: [.white, Color(red: 0.83, green: 0.91, blue: 0.99), Color(red: 0.20, green: 0.65, blue: 0.95)], center: .topLeading, startRadius: 12, endRadius: 210))
-            Ellipse().fill(.white.opacity(0.72)).frame(width: 124, height: 96)
-                .blur(radius: 20).offset(x: -17 + level * 10, y: -22 + level * 24)
-            Ellipse().fill(Color(red: 0.05, green: 0.48, blue: 0.95).opacity(0.48))
-                .frame(width: 105 + level * 35, height: 85).blur(radius: 21).offset(x: 29, y: 39 - level * 35)
-            Circle().strokeBorder(.white.opacity(0.65), lineWidth: 1)
-        }.frame(width: 180, height: 180).clipShape(.circle)
-            .scaleEffect(1 + level * 0.09)
-            .shadow(color: .black.opacity(0.06), radius: 13, y: 8)
-            .frame(width: 214, height: 214)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { context in
+            let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+            let energy = reduceMotion ? 0 : min(1, pow(max(0, state.level), 0.6))
+            let shape = FluidOrbShape(time: t, energy: energy)
+            ZStack {
+                RadialGradient(colors: [Color(red: 0.8, green: 1, blue: 0.85), AppPalette.tint, Color(red: 0, green: 0.28, blue: 0.13)], center: .topLeading, startRadius: 5, endRadius: 255)
+                Ellipse().fill(.white.opacity(0.7))
+                    .frame(width: 130, height: 100).blur(radius: 24)
+                    .offset(x: -28 + sin(t * 0.7) * 22, y: -40 + cos(t * 0.9) * 18)
+                Ellipse().fill(Color(red: 0.25, green: 0.95, blue: 0.48).opacity(0.85))
+                    .frame(width: 135 + energy * 60, height: 105).blur(radius: 22)
+                    .rotationEffect(.radians(t * 0.35))
+                    .offset(x: 35 * cos(t * 0.6), y: 35 + sin(t * 0.8) * 22)
+            }.clipShape(shape)
+                .overlay { shape.stroke(.white.opacity(0.28), lineWidth: 1) }
+                .scaleEffect(reduceMotion ? 1 : 1 + sin(t * 1.1) * 0.018 + energy * 0.1)
+                .shadow(color: AppPalette.tint.opacity(0.12), radius: 20, y: 8)
+        }.frame(width: 248, height: 248)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(state.title).accessibilityValue(state.phase.rawValue)
             .accessibilityIdentifier("voice-state")
@@ -78,28 +98,29 @@ struct VoiceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
         .safeAreaInset(edge: .bottom) {
-            HStack {
+            VStack(spacing: 12) {
                 Button {
                     Task { if model.recorder.state == .recording { await model.endTurn() } else { await model.beginTurn() } }
                 } label: {
-                    Label(model.recorder.state == .recording ? "Fertig" : "Sprechen", systemImage: model.recorder.state == .recording ? "checkmark" : "mic")
-                        .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                }.buttonStyle(.bordered).buttonBorderShape(.circle)
+                    HStack(spacing: 12) {
+                        Text(model.recorder.state == .recording ? "✓" : "🎙️").font(.largeTitle)
+                        Text(model.recorder.state == .recording ? "Fertig" : "Sprechen").font(.title3.weight(.semibold))
+                    }.frame(minWidth: 190, minHeight: 48)
+                }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.large)
+                    .accessibilityLabel(model.recorder.state == .recording ? "Fertig" : "Sprechen")
                     .accessibilityIdentifier(model.recorder.state == .recording ? "finish-speaking" : "speak")
                     .accessibilityHint(model.recorder.state == .recording ? "Aufnahme beenden und auswerten" : "Aufnahme starten")
-                    .disabled(model.busy || model.edits.busy || (model.recorder.state != .idle && model.recorder.state != .recording) || model.failures >= 2 || model.edits.proposal != nil)
-                Spacer()
-                Button("Gesprächsdetails", systemImage: "ellipsis") { details = true }
-                    .labelStyle(.iconOnly).controlHeight().foregroundStyle(.secondary)
+                    .disabled(model.busy || model.edits.busy || (model.recorder.state != .idle && model.recorder.state != .recording) || model.edits.proposal != nil)
+                Button("Gesprächsdetails", systemImage: "ellipsis.bubble") { details = true }
+                    .font(.subheadline).controlHeight().foregroundStyle(.secondary)
                     .accessibilityIdentifier("voice-details")
-                Spacer()
-                Button { model.cancelSession() } label: {
-                    Label("Abbrechen", systemImage: "xmark").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                }.buttonStyle(.bordered).buttonBorderShape(.circle)
-                    .accessibilityIdentifier("stop-speech")
-            }.padding(.horizontal, 28).padding(.vertical, 16)
+            }.padding(.horizontal).padding(.bottom, 12).padding(.top, 16)
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Abbrechen", systemImage: "xmark") { model.cancelSession() }
+                    .accessibilityIdentifier("stop-speech")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Spracheinstellungen", systemImage: "slider.horizontal.3") { model.cancelSession(); settings = true }
                     .accessibilityIdentifier("voice-settings")
@@ -135,8 +156,17 @@ private struct VoiceDetailsView: View {
     @State private var output = SpeechOutput.shared
     @State private var editor = false
     @State private var editingEvent: CalendarEvent?
+    @State private var message = ""
     var body: some View {
         Form {
+            Section("Nachricht") {
+                TextField("Dein Anliegen", text: $message, axis: .vertical).lineLimit(1...4).accessibilityIdentifier("voice-message")
+                Button("Senden", systemImage: "arrow.up") {
+                    let text = message; message = ""
+                    Task { await model.submitText(text) }
+                }.disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy || model.edits.busy || model.edits.proposal != nil)
+                    .accessibilityIdentifier("voice-send")
+            }
             if !model.recorder.transcript.isEmpty {
                 Section("Deine Worte") { Text(model.recorder.transcript).textSelection(.enabled).accessibilityIdentifier("voice-transcript") }
             }

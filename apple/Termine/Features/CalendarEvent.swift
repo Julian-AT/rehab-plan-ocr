@@ -33,6 +33,34 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
         if case .object(let fields) = metadata, case .bool(let value) = fields["all_day"] { return value }
         return false
     }
+    /// Imported treatment details are preserved in EventKit notes. Read only
+    /// labelled fields; never mistake an arbitrary note or attendee for a therapist.
+    func note(_ labels: [String]) -> String? {
+        guard case .object(let fields) = metadata, case .string(let notes) = fields["notes"] else { return nil }
+        let wanted = labels.map { $0.lowercased() + ":" }.sorted { $0.count > $1.count }
+        var result: [String] = []
+        var collecting = false
+        for line in notes.components(separatedBy: .newlines) {
+            if collecting && line.hasPrefix("  ") { result.append(line.trimmingCharacters(in: .whitespaces)); continue }
+            if collecting { break }
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard let prefix = wanted.first(where: { trimmed.lowercased().hasPrefix($0) }) else { continue }
+            collecting = true
+            result.append(trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces))
+        }
+        let value = result.filter { !$0.isEmpty }.joined(separator: ", ")
+        return value.isEmpty ? nil : value
+    }
+    var therapist: String? { note(["Therapeut", "Therapeutin", "Therapeut:in", "Therapeut/in", "Therapist"]) }
+    var therapistDescription: String { therapist.map { "Therapeut: \($0)" } ?? "Therapeut nicht angegeben" }
+    var placeDescription: String {
+        var parts = [values.location.trimmingCharacters(in: .whitespacesAndNewlines)]
+        for label in ["Raum", "Klinik", "Abteilung"] {
+            if let value = note([label]), !parts.contains(where: { $0.localizedCaseInsensitiveContains(value) }) { parts.append(value) }
+        }
+        let text = parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        return text.isEmpty ? "Ort nicht angegeben" : text
+    }
     var spoken: String {
         let summary: String
         if isAllDay {
@@ -40,7 +68,7 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
             let span = Calendar.current.isDate(values.start, inSameDayAs: last) ? "" : " bis \(eventDay(last))"
             summary = "\(values.title), ganztägig am \(eventDay(values.start))\(span).\(values.location.isEmpty ? "" : " " + values.location + ".")"
         } else { summary = values.spoken }
-        return "\(summary) Kalender \(calendar_title)\(source.isEmpty ? "" : ", " + source)."
+        return "\(summary) \(therapistDescription). Kalender \(calendar_title)\(source.isEmpty ? "" : ", " + source)."
     }
 }
 

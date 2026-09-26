@@ -16,6 +16,8 @@ import RehaCore
             UserDefaults.standard.set(original.calendarId, forKey: "preview.originalCalendar")
             UserDefaults.standard.set(original.displayCalendarIds, forKey: "preview.originalDisplay")
             UserDefaults.standard.set(original.appearance, forKey: "preview.originalAppearance")
+            UserDefaults.standard.set(UserDefaults.standard.string(forKey: "agenda.density") ?? "overview", forKey: "preview.originalDensity")
+            UserDefaults.standard.set(UserDefaults.standard.bool(forKey: "agenda.list"), forKey: "preview.originalList")
         }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
         for id in UserDefaults.standard.stringArray(forKey: "preview.calendar.ids") ?? [] {
@@ -27,9 +29,13 @@ import RehaCore
             preferences.displayCalendarIds = UserDefaults.standard.stringArray(forKey: "preview.originalDisplay") ?? []
             preferences.appearance = UserDefaults.standard.string(forKey: "preview.originalAppearance") ?? "system"
             _ = try await core.savePreferences(value: preferences)
-            for key in ["preview.calendar.ids", "preview.originalCalendar", "preview.originalDisplay", "preview.originalAppearance"] { UserDefaults.standard.removeObject(forKey: key) }
+            UserDefaults.standard.set(UserDefaults.standard.string(forKey: "preview.originalDensity") ?? "overview", forKey: "agenda.density")
+            UserDefaults.standard.set(UserDefaults.standard.bool(forKey: "preview.originalList"), forKey: "agenda.list")
+            for key in ["preview.originalDensity", "preview.originalList", "preview.calendar.ids", "preview.originalCalendar", "preview.originalDisplay", "preview.originalAppearance"] { UserDefaults.standard.removeObject(forKey: key) }
             return
         }
+        UserDefaults.standard.set("overview", forKey: "agenda.density")
+        UserDefaults.standard.set(false, forKey: "agenda.list")
         guard let source = store.sources.first(where: { $0.sourceType == .local }) ?? store.defaultCalendarForNewEvents?.source else { return }
         var calendars: [EKCalendar] = []
         for index in 0..<2 {
@@ -49,8 +55,17 @@ import RehaCore
             let event = EKEvent(eventStore: store)
             event.calendar = calendars[calendar]; event.title = title; event.location = room
             event.startDate = start; event.endDate = end; event.isAllDay = allDay
-            event.notes = "Öffentliche synthetische Simulatorvorschau."
+            event.notes = "Therapeut: Anna Beispiel\nKlinik: Laßnitzhöhe\nAbteilung: Therapiezentrum\nHinweise: Öffentliche synthetische Simulatorvorschau."
             try store.save(event, span: .thisEvent, commit: true)
+        }
+        if mode == "readable" {
+            for offset in 0...8 {
+                let date = Calendar.current.date(byAdding: .day, value: offset, to: day)!
+                try add("Physiotherapie Tag \(offset)", start: date.addingTimeInterval(9 * 3600), end: date.addingTimeInterval(9.5 * 3600))
+                try add("Kontrolle Tag \(offset)", start: date.addingTimeInterval(10 * 3600), end: date.addingTimeInterval(10 * 3600 + 60), room: "Raum 105, Erdgeschoss")
+                try add("Training Tag \(offset)", start: date.addingTimeInterval(11 * 3600), end: date.addingTimeInterval(11.5 * 3600), room: "Turnsaal, 1. Stock")
+                try add("Ergotherapie Tag \(offset)", start: date.addingTimeInterval(11 * 3600), end: date.addingTimeInterval(11.5 * 3600), calendar: 1, room: "Raum 202")
+            }
         }
         if mode == "complete" || mode == "finishing" {
             try add("Erholung nach Physiotherapie", start: now.addingTimeInterval(-3600), end: now.addingTimeInterval(mode == "finishing" ? 5 : -1800))

@@ -40,9 +40,9 @@ import XCTest
     func testCaptureMenuPresentsAllSources() {
         app.buttons["add-plan"].tap()
         app.buttons["plan-menu-camera"].tap()
-        XCTAssertTrue(app.buttons["capture-shutter"].waitForExistence(timeout: 8))
-        capture("Camera presentation and unavailable simulator hardware")
-        app.buttons["Abbrechen"].tap()
+        XCTAssertTrue(app.otherElements["native-camera"].waitForExistence(timeout: 8) || app.staticTexts["Kamera nicht verfügbar"].exists)
+        capture("09-native-apple-kamera")
+        app.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Abbrechen", "Schließen"])).firstMatch.tap()
         XCTAssertTrue(app.buttons["add-plan"].waitForExistence(timeout: 5))
         app.buttons["add-plan"].tap(); app.buttons["plan-menu-photos"].tap()
         XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
@@ -55,8 +55,8 @@ import XCTest
         app.tabBars.buttons["Archiv"].tap()
         app.navigationBars["Archiv"].buttons["Plan hinzufügen"].tap()
         app.buttons["archive-menu-camera"].tap()
-        XCTAssertTrue(app.buttons["capture-shutter"].waitForExistence(timeout: 8))
-        app.buttons["Abbrechen"].tap()
+        XCTAssertTrue(app.otherElements["native-camera"].waitForExistence(timeout: 8) || app.staticTexts["Kamera nicht verfügbar"].exists)
+        app.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Abbrechen", "Schließen"])).firstMatch.tap()
     }
     func testNeuralPlaybackStopAndRepeat() {
         app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-settings"].tap()
