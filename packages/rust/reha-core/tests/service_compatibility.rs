@@ -16,6 +16,94 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, PipelineRun) {
     store.save_run(&run).unwrap();
     (dir, Arc::new(Application::new(store, "models".into())), run)
 }
+
+fn add_page(app: &Application, original: &PipelineRun) -> String {
+    let mut page = original.clone();
+    page.document.id = uuid::Uuid::new_v4().to_string();
+    for appointment in &mut page.appointments {
+        appointment.id = uuid::Uuid::new_v4().to_string();
+    }
+    app.store.lock().unwrap().save_run(&page).unwrap();
+    page.document.id
+}
+
+#[test]
+fn appended_pages_keep_siblings_and_review_values_after_reopen() {
+    let (root, app, original) = fixture();
+    let parent = original.document.id.clone();
+    let first = add_page(&app, &original);
+    let second = add_page(&app, &original);
+    assert_eq!(
+        service::calendar::append_pages(&app, parent.clone(), vec![first.clone(), first.clone()])
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        service::calendar::append_pages(&app, first.clone(), vec![second.clone(), first.clone()])
+            .unwrap(),
+        3
+    );
+    let expected = vec![parent.clone(), first, second.clone()];
+    assert_eq!(
+        service::calendar::page_group(&app, second).unwrap(),
+        expected
+    );
+    drop(app);
+    let reopened = Store::open(root.path()).unwrap();
+    assert_eq!(reopened.page_ids(&parent).unwrap(), expected);
+    assert_eq!(
+        serde_json::to_value(reopened.load_run(&parent).unwrap()).unwrap(),
+        serde_json::to_value(original).unwrap()
+    );
+}
+
+#[test]
+fn rejected_page_appends_are_atomic_during_erasure_and_for_invalid_sources() {
+    let (_root, app, original) = fixture();
+    let parent = original.document.id.clone();
+    let valid = add_page(&app, &original);
+    let deleted = add_page(&app, &original);
+    app.store
+        .lock()
+        .unwrap()
+        .delete_sources(std::slice::from_ref(&deleted))
+        .unwrap();
+    let foreign = add_page(&app, &original);
+    let foreign_second = add_page(&app, &original);
+    let foreign_group = vec![foreign.clone(), foreign_second];
+    app.store
+        .lock()
+        .unwrap()
+        .group_pages(&foreign, &foreign_group)
+        .unwrap();
+    let admission = app.lifecycle_lock.try_lock().unwrap();
+    assert!(service::calendar::append_pages(&app, parent.clone(), vec![valid.clone()]).is_err());
+    drop(admission);
+    let too_many: Vec<_> = (0..12).map(|_| add_page(&app, &original)).collect();
+    for pages in [
+        vec![valid.clone(), uuid::Uuid::new_v4().to_string()],
+        vec![valid.clone(), deleted.clone()],
+        vec![valid.clone(), foreign.clone()],
+        too_many,
+    ] {
+        assert!(service::calendar::append_pages(&app, parent.clone(), pages).is_err());
+        let store = app.store.lock().unwrap();
+        assert_eq!(
+            store.page_ids(&parent).unwrap(),
+            std::slice::from_ref(&parent)
+        );
+        assert_eq!(
+            store.page_ids(&valid).unwrap(),
+            std::slice::from_ref(&valid)
+        );
+        assert_eq!(store.page_ids(&foreign).unwrap(), foreign_group);
+        assert!(store.load_run(&deleted).is_err());
+    }
+    assert_eq!(
+        service::calendar::append_pages(&app, parent, vec![valid]).unwrap(),
+        2
+    );
+}
 #[test]
 fn calendar_warnings_preserve_success_and_legacy_results() {
     let legacy =

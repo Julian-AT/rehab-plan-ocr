@@ -645,6 +645,21 @@ impl NativeApplication {
         })
         .await
     }
+    pub async fn append_pages(&self, id: String, pages: Vec<String>) -> Result<u32> {
+        if id.is_empty() {
+            return Err(AppError::Validation {
+                message: "id fehlt.".into(),
+            });
+        }
+        self.blocking(move |s| {
+            // The shared service retains admission, sibling order, source
+            // lifetime checks and proposal invalidation. Groups are limited to 12.
+            service::calendar::append_pages(&s, id, pages)
+                .map(|count| count as u32)
+                .map_err(failure)
+        })
+        .await
+    }
     pub async fn pdf_pages(&self, id: String, count: u32) -> Result<Vec<String>> {
         self.blocking(move |s| {
             s.store

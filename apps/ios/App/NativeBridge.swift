@@ -91,11 +91,3 @@ func userMessage(_ error: Error) -> String {
   case .Cancelled: return "Erkennung abgebrochen. Ein bereits erstellter Entwurf bleibt erhalten."
   }
 }
-
-extension NativeApplication {
-  func appendPages(id: String, pages: [String]) async throws -> Int {
-    struct Response: Decodable { let count: Int }
-    return try await eventRequest("appendPlanPages", ["id": id, "pages": pages], as: Response.self)
-      .count
-  }
-}

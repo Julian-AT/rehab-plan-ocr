@@ -284,6 +284,29 @@ aufbewahrte Simulatorpaket besteht die Prüfung sämtlicher zwölf Mach-O-Dateie
 Modelle, Notices und Datenschutzmanifeste. Quellen, vollständiges Resultat und
 Produkte bleiben erhalten; der UI-Fall ersetzt keine Bestätigungs-/Geräteabnahme.
 
+## Weitere Seiten eines vorhandenen Plans
+
+Fotoeingang und PDF-Eingang rufen `NativeApplication.appendPages` mit typisierter
+Plan-/Seitenidentität auf. Der aktive Swift-Wrapper mit Stringbefehl und
+JSON-Zähler entfällt. Die neue Methode verwendet denselben Core-Ablauf wie der
+bisherige `appendPlanPages`-Kompatibilitätseingang. Lebenszyklussperre, atomare
+Zuordnung, Seitenreihenfolge, Zwölf-Seiten-Grenze und Verwerfen betroffener
+Vorschläge bleiben dort erhalten; Speicherformate ändern sich nicht.
+
+Neue Regressionen prüfen Anhängen über eine Unterseite, wiederholte Seiten,
+erhaltene Geschwister und unveränderte Prüfdaten nach erneutem Öffnen. Fehlende,
+gelöschte und bereits anders gruppierte Seiten sowie Anhängen während einer
+laufenden Datenlöschung werden ohne Teiländerung zurückgewiesen. 242 Core-/FFI-
+Tests, Workspace-Clippy, offizielle Bindings und der tatsächliche native Rundweg
+bestehen in `typed-plan-pages-20260926-s19-002`. Die Swift-Probe hängt echte lokal
+gespeicherte Eingänge an, vergleicht den Legacy-Zähler und prüft nach erneutem
+Öffnen die Seitenfolge sowie unveränderte Termine und Prüfrevision. Gemeinsamer
+App-/UI-Testbuild, zwei bestehende Simulatorfälle für Mehrseitenansicht und
+Originalzugriff sowie die Paketprüfung über zwölf Mach-O-Dateien, Ressourcen und
+Notices bestehen in `plan-pages-ui-20260926-s19-001`. Die UI-Fälle prüfen die Ansichten;
+das Anhängen selbst ist im echten FFI-Rundweg geprüft. Quellen, vollständiges
+Resultat und ausführbare Produkte bleiben separat erhalten.
+
 ## Ausstehende Mitteilungslinks
 
 Die App liest und quittiert ausstehende Terminidentitäten über

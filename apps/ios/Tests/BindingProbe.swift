@@ -110,6 +110,8 @@ final class TestHost: AppleHost, Sendable {
     let root = CommandLine.arguments[1]
     let draftRoot = root + "-draft"
     try FileManager.default.copyItem(atPath: root, toPath: draftRoot)
+    let pagesRoot = root + "-pages"
+    try FileManager.default.copyItem(atPath: root, toPath: pagesRoot)
     let host = TestHost()
     let core = try await openApplication(root: root, models: "/unavailable-test-model", host: host)
     let nativeFailures: [AppError] = [
@@ -496,6 +498,45 @@ final class TestHost: AppleHost, Sendable {
     for (before, after) in zip(beforeDraft.appointments, afterAccept.appointments) {
       precondition(before.fields == after.fields)
     }
+    let pagesCore = try await openApplication(
+      root: pagesRoot, models: "/unavailable-test-model", host: host)
+    let initialPage = try await pagesCore.loadScan(id: id)
+    let source = try await pagesCore.artifactPath(id: id, artifact: "source.bin")
+    let firstPage = UUID().uuidString
+    let secondPage = UUID().uuidString
+    _ = try await pagesCore.stagePhoto(id: firstPage, path: source)
+    _ = try await pagesCore.stagePhoto(id: secondPage, path: source)
+    let firstCount = try await pagesCore.appendPages(id: id, pages: [firstPage, firstPage])
+    precondition(firstCount == 2)
+    let secondCount = try await pagesCore.appendPages(
+      id: firstPage, pages: [secondPage, firstPage])
+    precondition(secondCount == 3)
+    let expectedPages = [id, firstPage, secondPage]
+    let grouped = try await pagesCore.pageGroup(id: secondPage)
+    precondition(grouped == expectedPages)
+    let legacyCountText = try await pagesCore.calendarRequest(
+      command: "appendPlanPages",
+      arguments: String(
+        data: JSONSerialization.data(withJSONObject: ["id": id, "pages": []]),
+        encoding: .utf8)!)
+    let legacyCount =
+      try JSONSerialization.jsonObject(with: Data(legacyCountText.utf8)) as! [String: Int]
+    precondition(legacyCount["count"] == 3)
+    do {
+      _ = try await pagesCore.appendPages(id: "", pages: [secondPage])
+      preconditionFailure("Missing parent accepted")
+    } catch AppError.Validation {}
+    do {
+      _ = try await pagesCore.appendPages(id: id, pages: [UUID().uuidString])
+      preconditionFailure("Missing source accepted")
+    } catch AppError.Validation {}
+    let pagesReopened = try await openApplication(
+      root: pagesRoot, models: "/unavailable-test-model", host: host)
+    let reopenedPages = try await pagesReopened.pageGroup(id: id)
+    let unchangedPage = try await pagesReopened.loadScan(id: id)
+    precondition(reopenedPages == expectedPages)
+    precondition(unchangedPage.revision == initialPage.revision)
+    precondition(unchangedPage.appointments == initialPage.appointments)
     print(
       "Swift 6 integration passed: typed appointments/geometry, revisions, approvals, stable ICS, uncertain-write recovery, reopen, cancellation and artifact confinement"
     )

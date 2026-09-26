@@ -330,3 +330,12 @@ den bestandenen 68-Test-Lauf qualifiziert.
   bytegleich, beide vorhandenen Modelle lesen denselben vorab festgelegten Text
   korrekt. Gewichtshashes und altes Kandidatenmanifest unverändert. Details und
   private Laufidentitäten: [Buildnachweis](build-reproducibility.md).
+
+- Typisiertes Anhängen weiterer Planseiten: **verifiziert**, 242 Core-/FFI-Tests,
+  Workspace-Clippy, offizielle Bindings und echter FFI-Rundweg bestehen unter
+  `typed-plan-pages-20260926-s19-002`. Seitenfolge und Prüfdaten bleiben nach erneutem
+  Öffnen erhalten; fehlende/gelöschte/fremd gruppierte Seiten, laufende Löschung
+  und Überlänge erzeugen keine Teiländerung. Gemeinsamer App-/UI-Testbuild sowie
+  zwei vorhandene Ansichts-/Originalfälle bestehen ohne Fehler/Skip in
+  `plan-pages-ui-20260926-s19-001`; dessen Paketprüfung ist ebenfalls erfolgreich.
+  Dies ist kein erneuter vollständiger UI-/Geräte-Endlauf.

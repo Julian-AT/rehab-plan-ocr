@@ -686,6 +686,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func answerDraftQuestion(id: String, revision: String, questionId: String, value: FieldValue?, timezone: String) async throws 
     
+    func appendPages(id: String, pages: [String]) async throws  -> UInt32
+    
     /**
      * Owned runtime task continues journal bookkeeping if Swift drops this future.
      */
@@ -952,6 +954,22 @@ open func answerDraftQuestion(id: String, revision: String, questionId: String, 
             completeFunc: ffi_reha_ffi_rust_future_complete_void,
             freeFunc: ffi_reha_ffi_rust_future_free_void,
             liftFunc: { $0 },
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func appendPages(id: String, pages: [String])async throws  -> UInt32  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_append_pages(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id),FfiConverterSequenceString.lower(pages)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_u32,
+            completeFunc: ffi_reha_ffi_rust_future_complete_u32,
+            freeFunc: ffi_reha_ffi_rust_future_free_u32,
+            liftFunc: FfiConverterUInt32.lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -11403,6 +11421,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_answer_draft_question() != 39282) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_append_pages() != 57935) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_approve_calendar() != 12107) {
