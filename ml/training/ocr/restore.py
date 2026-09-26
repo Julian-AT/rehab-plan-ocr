@@ -17,6 +17,27 @@ def valid(path, pin):
         return hashlib.file_digest(stream, "sha256").hexdigest() == pin["checkpoint_sha256"]
 
 
+def download_checkpoint(response, target, pin):
+    """Read at most the pinned size plus one byte, preserving the installed checkpoint."""
+    expected = pin["checkpoint_bytes"]
+    if type(expected) is not int or expected < 1:
+        raise ValueError("Checkpoint restoration requires a positive pinned byte count")
+    temporary = target.with_suffix(target.suffix + ".part")
+    remaining = expected + 1
+    with temporary.open("wb") as output:
+        while remaining:
+            block = response.read(min(1024 * 1024, remaining))
+            if not block:
+                break
+            output.write(block)
+            remaining -= len(block)
+    if not valid(temporary, pin):
+        raise ValueError(
+            "Training checkpoint checksum/size mismatch; existing checkpoint preserved"
+        )
+    temporary.replace(target)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true")
@@ -60,16 +81,8 @@ def main():
         if args.offline:
             raise ValueError("Pinned OCR training checkpoint is missing or corrupt")
         target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_suffix(target.suffix + ".part")
         with urllib.request.urlopen(pin["checkpoint_url"], timeout=120) as response:
-            with temporary.open("wb") as output:
-                while block := response.read(1024 * 1024):
-                    output.write(block)
-        if not valid(temporary, pin):
-            raise ValueError(
-                "Training checkpoint checksum/size mismatch; existing checkpoint preserved"
-            )
-        temporary.replace(target)
+            download_checkpoint(response, target, pin)
     print("Verified pinned PP-OCRv6 Small training source and checkpoint")
 
 
