@@ -193,14 +193,6 @@ struct CalendarStatusView: View {
           .accessibilityValue(
             status.access == "fullAccess"
               ? "Vollzugriff" : status.access == "denied" ? "Verweigert" : "Nicht verfügbar")
-          ForEach(
-            status.calendars.filter {
-              $0.id == status.calendar_id || status.display_calendar_ids?.contains($0.id) == true
-            }
-          ) { calendar in
-            LabeledContent(
-              calendar.title, value: calendar.id == status.calendar_id ? "Zielkalender" : "Anzeige")
-          }
           NavigationLink("Kalenderauswahl bearbeiten") { CalendarPreferencesView(core: core) }
           if status.unavailableCount > 0 {
             LabeledContent(
