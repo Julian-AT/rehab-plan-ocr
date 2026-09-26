@@ -250,13 +250,16 @@ struct TodayView: View {
           Text(
             model.unavailableCalendars.isEmpty
               ? "Für diesen Tag sind keine Termine eingetragen."
-              : "Ein Teil der Kalenderdaten ist nicht verfügbar. Kalenderstatus prüfen.")
+              : "Ein Teil der Kalenderdaten ist nicht verfügbar. Kalenderstatus prüfen."
+          )
+          .foregroundStyle(AppPalette.secondaryText)
         }
       } else if agenda.isComplete && !showPast {
         ContentUnavailableView {
           Label("Zeit zum Erholen", systemImage: "leaf")
         } description: {
-          Text("Für heute stehen keine weiteren Termine an.")
+          Text("Für heute stehen keine weiteren Termine an.").foregroundStyle(
+            AppPalette.secondaryText)
         } actions: {
           Button("Vergangene Termine anzeigen") { showPast = true }.accessibilityIdentifier(
             "past-events")
@@ -356,7 +359,8 @@ struct TodayView: View {
       ContentUnavailableView {
         Label("Kalenderzugriff fehlt", systemImage: "calendar.badge.exclamationmark")
       } description: {
-        Text("Kalenderzugriff erlauben, um Termine anzuzeigen.")
+        Text("Kalenderzugriff erlauben, um Termine anzuzeigen.").foregroundStyle(
+          AppPalette.secondaryText)
       } actions: {
         if EKEventStore.authorizationStatus(for: .event) == .notDetermined {
           Button("Kalenderzugriff erlauben") { setup = true }
@@ -370,7 +374,7 @@ struct TodayView: View {
       ContentUnavailableView {
         Label("Kalender auswählen", systemImage: "calendar")
       } description: {
-        Text("Kalender für die Terminansicht auswählen.")
+        Text("Kalender für die Terminansicht auswählen.").foregroundStyle(AppPalette.secondaryText)
       } actions: {
         Button("Kalender auswählen") { setup = true }
       }
@@ -378,7 +382,7 @@ struct TodayView: View {
       ContentUnavailableView {
         Label("Kalender nicht verfügbar", systemImage: "exclamationmark.circle")
       } description: {
-        Text(model.error ?? "Bitte erneut versuchen.")
+        Text(model.error ?? "Bitte erneut versuchen.").foregroundStyle(AppPalette.secondaryText)
       } actions: {
         Button("Erneut versuchen", action: reload)
         Button("Kalender prüfen") { setup = true }
@@ -398,7 +402,9 @@ private struct WeekSelector: View {
         Button {
           move(-7)
         } label: {
-          Image(systemName: "chevron.left").frame(width: 44, height: 44).contentShape(.rect)
+          Image(systemName: "chevron.left").foregroundStyle(AppPalette.tint).frame(
+            width: 44, height: 44
+          ).contentShape(.rect)
         }
         .accessibilityLabel("Vorherige Woche").accessibilityIdentifier("previous-week")
         Spacer()
@@ -407,7 +413,9 @@ private struct WeekSelector: View {
         Button {
           move(7)
         } label: {
-          Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(.rect)
+          Image(systemName: "chevron.right").foregroundStyle(AppPalette.tint).frame(
+            width: 44, height: 44
+          ).contentShape(.rect)
         }
         .accessibilityLabel("Nächste Woche").accessibilityIdentifier("next-week")
       }
@@ -425,10 +433,10 @@ private struct WeekSelector: View {
               } label: {
                 VStack(spacing: 6) {
                   Text(date.formatted(.dateTime.weekday(.abbreviated))).font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppPalette.secondaryText)
                   Text(date.formatted(.dateTime.day())).font(.body)
                     .frame(width: 40, height: 40)
-                    .foregroundStyle(selected ? .white : .primary)
+                    .foregroundStyle(selected ? AppPalette.onAction : AppPalette.text)
                     .background(selected ? AppPalette.tint : .clear, in: .circle)
                 }.frame(maxWidth: .infinity).padding(.vertical, 4).contentShape(.rect)
               }.buttonStyle(.plain)
@@ -507,7 +515,7 @@ private struct TimelineAppointment: View {
       VStack(alignment: .leading, spacing: 3) {
         Text(event.values.title).font(.subheadline.weight(.semibold))
         Text("\(eventTime(event.values.start))–\(eventTime(event.values.end))")
-          .font(.caption).monospacedDigit().foregroundStyle(.secondary)
+          .font(.caption).monospacedDigit().foregroundStyle(AppPalette.secondaryText)
         Text(event.placeDescription).font(.caption)
         Text(event.therapistDescription).font(.caption)
       }.foregroundStyle(.primary).frame(maxWidth: .infinity, alignment: .leading)
@@ -558,17 +566,20 @@ struct CalendarAgendaRow: View {
         if let marker { Text(marker).font(.subheadline.weight(.semibold)) }
         Text(event.values.title).font(.body.weight(.medium))
         Text(event.placeDescription).font(.subheadline)
-        Text(event.therapistDescription).font(.subheadline).foregroundStyle(.secondary)
+        Text(event.therapistDescription).font(.subheadline).foregroundStyle(
+          AppPalette.secondaryText)
         if !Calendar.current.isDate(
           event.values.start, inSameDayAs: event.values.end.addingTimeInterval(-1))
         {
-          Text(span).font(.subheadline).foregroundStyle(.secondary)
+          Text(span).font(.subheadline).foregroundStyle(AppPalette.secondaryText)
         }
         Text(
           event.source.isEmpty ? event.calendar_title : "\(event.calendar_title) · \(event.source)"
         )
-        .font(.subheadline).foregroundStyle(.secondary)
-        if event.values.end <= now { Text("Vorbei").font(.subheadline).foregroundStyle(.secondary) }
+        .font(.subheadline).foregroundStyle(AppPalette.secondaryText)
+        if event.values.end <= now {
+          Text("Vorbei").font(.subheadline).foregroundStyle(AppPalette.secondaryText)
+        }
       }.frame(maxWidth: .infinity, alignment: .leading)
     }.padding(8).background(
       EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 8)
@@ -592,7 +603,8 @@ struct ProcessingRow: View {
   var body: some View {
     HStack(spacing: AppSpacing.medium) {
       ProgressView().accessibilityHidden(true)
-      Text(text).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+      Text(text).foregroundStyle(AppPalette.secondaryText).fixedSize(
+        horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, AppSpacing.small)
     .accessibilityElement(children: .combine).accessibilityLabel(text)

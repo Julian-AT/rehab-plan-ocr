@@ -36,7 +36,8 @@ struct SettingsSaveStatus: View {
     if let error = store.error {
       Section {
         Text(error).foregroundStyle(AppPalette.destructive)
-        Text("Angezeigt wird der zuletzt gespeicherte Stand.").foregroundStyle(.secondary)
+        Text("Angezeigt wird der zuletzt gespeicherte Stand.").foregroundStyle(
+          AppPalette.secondaryText)
         Button("Erneut versuchen") {
           if store.canRetry { store.retry() } else { Task { await store.load() } }
         }
@@ -90,6 +91,7 @@ struct SettingsView: View {
             }.accessibilityIdentifier("appearance-picker")
           } footer: {
             Text("Schriftgröße und Bedienungshilfen folgen den iPhone-Einstellungen.")
+              .foregroundStyle(AppPalette.secondaryText)
           }
           Section {
             Picker("Kalendergröße", selection: $density) {
@@ -101,7 +103,7 @@ struct SettingsView: View {
           } footer: {
             Text(
               "Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach links wischen: nächster Tag. Nach rechts: vorheriger Tag."
-            )
+            ).foregroundStyle(AppPalette.secondaryText)
           }
           Section("Terminfarben") {
             ForEach(EventCategory.allCases, id: \.rawValue) { category in
@@ -119,6 +121,7 @@ struct SettingsView: View {
             }
           } footer: {
             Text("Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.")
+              .foregroundStyle(AppPalette.secondaryText)
           }
           Section {
             Toggle(
@@ -165,7 +168,9 @@ struct SettingsView: View {
               }
               .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(.rect)
             }.disabled(testingReminder).accessibilityIdentifier("test-reminder")
-            if let testResult { Text(testResult).font(.subheadline).foregroundStyle(.secondary) }
+            if let testResult {
+              Text(testResult).font(.subheadline).foregroundStyle(AppPalette.secondaryText)
+            }
             if let testError {
               Text(testError).font(.subheadline).foregroundStyle(AppPalette.destructive)
             }
@@ -173,7 +178,8 @@ struct SettingsView: View {
             Text(
               reminderStatus.isEmpty
                 ? "Die App erinnert an importierte und innerhalb der App erstellte Termine. Bestätigte Planung und beobachtete Zustellung werden getrennt erfasst."
-                : reminderStatus)
+                : reminderStatus
+            ).foregroundStyle(AppPalette.secondaryText)
           }
         case .recognition:
           Section {
@@ -185,6 +191,7 @@ struct SettingsView: View {
             }
           } footer: {
             Text("Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.")
+              .foregroundStyle(AppPalette.secondaryText)
           }
           Section {
             ForEach(preferences.completionDefaults, id: \.id) { item in
@@ -200,6 +207,7 @@ struct SettingsView: View {
             Text("Ergänzungsvorgaben")
           } footer: {
             Text("Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.")
+              .foregroundStyle(AppPalette.secondaryText)
           }
         case .storage:
           Section {
@@ -210,10 +218,12 @@ struct SettingsView: View {
             }
           } footer: {
             Text("Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
+              .foregroundStyle(AppPalette.secondaryText)
           }
           Section {
-            Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }.disabled(
-              erasing)
+            Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }
+              .foregroundStyle(AppPalette.destructive).disabled(
+                erasing)
           }
         }
       } else if store.error == nil {
@@ -221,6 +231,7 @@ struct SettingsView: View {
       }
       SettingsSaveStatus()
     }
+    .pickerStyle(.navigationLink)
     .pageTitle(title)
     .task {
       await store.load()
@@ -241,7 +252,7 @@ struct SettingsView: View {
           store.change { $0.completionDefaults.removeAll { $0.id == id } }
         }
         removingDefault = nil
-      }
+      }.foregroundStyle(AppPalette.destructive)
     }
     .confirmationDialog(
       "Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen.",
@@ -253,7 +264,7 @@ struct SettingsView: View {
           defer { erasing = false }
           do { try await scanner.eraseLocalData(store) } catch { self.error = userMessage(error) }
         }
-      }
+      }.foregroundStyle(AppPalette.destructive)
     }
     .alert(
       "Einstellungen", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })
@@ -327,6 +338,7 @@ private struct CompletionDefaultForm: View {
           .keyboardType(field == "duration_minutes" ? .numberPad : .default)
       } footer: {
         Text("Alle Angaben sind erforderlich. Eine Dauer muss zwischen 1 und 1440 Minuten liegen.")
+          .foregroundStyle(AppPalette.secondaryText)
       }
     }.pageTitle(original == nil ? "Neue Vorgabe" : "Vorgabe")
       .toolbar {

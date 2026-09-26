@@ -243,7 +243,8 @@ struct RecoveryView: View {
     ) {
       Button("Änderung wurde nicht ausgeführt") { resolve(false) }
       if resolution?.operation.kind == .remove {
-        Button("Löschung wurde ausgeführt", role: .destructive) { resolve(true) }
+        Button("Löschung wurde ausgeführt", role: .destructive) { resolve(true) }.foregroundStyle(
+          AppPalette.destructive)
       }
       Button("Abbrechen", role: .cancel) {}
     }

@@ -489,7 +489,7 @@ struct ReviewView: View {
             dismiss()
           } catch { deletionError = userMessage(error) }
         }
-      }
+      }.foregroundStyle(AppPalette.destructive)
     }
   }
   @ViewBuilder private var saveControls: some View {

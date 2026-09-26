@@ -155,7 +155,7 @@ import XCTest
     XCTAssertTrue(app.tabBars.buttons["Mehr"].waitForExistence(timeout: 15))
     app.tabBars.buttons["Mehr"].tap()
     app.buttons["Darstellung"].tap()
-    XCTAssertTrue(app.buttons["agenda-density"].label.contains("Standard"))
+    XCTAssertEqual(app.buttons["agenda-density"].value as? String, "Standard")
     XCTAssertEqual(app.switches["agenda-list-setting"].value as? String, "1")
     app.tabBars.buttons["Termine"].tap()
     app.swipeLeft()

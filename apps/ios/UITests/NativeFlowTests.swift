@@ -368,9 +368,11 @@ import XCTest
   func testTextSizeAndDarkAppearance() throws {
     app.tabBars.buttons["Mehr"].tap()
     app.buttons["Darstellung"].tap()
-    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Erscheinungsbild,")).firstMatch
-      .tap()
+    app.buttons["appearance-picker"].tap()
     app.buttons["Dunkel"].tap()
+    if app.navigationBars["Erscheinungsbild"].exists {
+      app.navigationBars["Erscheinungsbild"].buttons.firstMatch.tap()
+    }
     app.navigationBars["Darstellung"].buttons.firstMatch.tap()
     app.terminate()
     app.launchArguments += [

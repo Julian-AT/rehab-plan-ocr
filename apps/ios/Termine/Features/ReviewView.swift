@@ -133,7 +133,8 @@ struct AppointmentEditor: View {
       .interactiveDismissDisabled(dirty || review.saving)
       .confirmationDialog("Änderungen verwerfen?", isPresented: $discard, titleVisibility: .visible)
       {
-        Button("Änderungen verwerfen", role: .destructive) { dismiss() }
+        Button("Änderungen verwerfen", role: .destructive) { dismiss() }.foregroundStyle(
+          AppPalette.destructive)
         Button("Weiter bearbeiten") { discard = false }
       }
       .sheet(isPresented: $source) {

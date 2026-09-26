@@ -253,7 +253,7 @@ struct VoiceSettingsView: View {
         VStack(alignment: .leading) {
           LabeledContent(
             "Sprechtempo", value: rate.formatted(.number.precision(.fractionLength(2))) + "×")
-          Slider(value: $rate, in: 0.75...1.25, step: 0.05) { Text("Sprechtempo") }
+          AppSlider(value: $rate, range: 0.75...1.25, step: 0.05, label: "Sprechtempo")
         }
         Button(
           output.speaking ? "Wiedergabe beenden" : "Stimme anhören",
@@ -264,11 +264,13 @@ struct VoiceSettingsView: View {
           } else {
             output.speak("Am 14. September um 9 Uhr 15: Physiotherapie, Raum 2.14 in Laßnitzhöhe.")
           }
-        }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
+        }.labelStyle(AppControlLabelStyle()).controlHeight()
+          .accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
         if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
         if output.phase == .failed { Text(output.status).foregroundStyle(AppPalette.destructive) }
       } footer: {
         Text("Die Stimme ist bereits enthalten und funktioniert auf diesem iPhone ohne Internet.")
+          .foregroundStyle(AppPalette.secondaryText)
       }
       Section {
         LabeledContent(
@@ -278,7 +280,7 @@ struct VoiceSettingsView: View {
       } footer: {
         Text(
           "Gespräch starten und Mikrofon sowie Spracherkennung erlauben. Zusätzliche Sprachdateien sind nicht nötig. Nach etwa 1,2 Sekunden Sprechpause beginnt die Antwort automatisch. Hineinsprechen unterbricht die Wiedergabe; das Gespräch kann jederzeit pausiert werden."
-        )
+        ).foregroundStyle(AppPalette.secondaryText)
       }
 
     }.pageTitle("Sprache")

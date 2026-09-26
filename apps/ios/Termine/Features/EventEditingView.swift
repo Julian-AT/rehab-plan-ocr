@@ -219,7 +219,7 @@ struct ProposalCard: View {
           "Wiederherstellung als neuer Eintrag. Versendete Einladungen oder Benachrichtigungen werden nicht zurückgenommen."
         )
       }
-      Button(action: confirm) {
+      Button(role: proposal.kind == "remove" ? .destructive : nil, action: confirm) {
         Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(
           horizontal: false, vertical: true)
       }.buttonStyle(AppPrimaryButtonStyle()).disabled(busy).accessibilityIdentifier("confirm-event")
@@ -308,7 +308,8 @@ struct EventEditorView: View {
             if original != nil {
               Button("Kalendereintrag löschen", role: .destructive) {
                 Task { await preview(delete: true) }
-              }.controlHeight().disabled(original?.writable == false || model.busy)
+              }.foregroundStyle(AppPalette.destructive).controlHeight().disabled(
+                original?.writable == false || model.busy)
               if original?.recurring == true {
                 Button("Ganze Serie im Systemkalender bearbeiten") {
                   Task {

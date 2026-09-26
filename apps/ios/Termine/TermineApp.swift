@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    AppPalette.configureNavigation()
     NativeServices.shared.start()
     return true
   }
@@ -355,9 +356,10 @@ private struct MoreView: View {
         Text(
           "Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")"
         )
-        .font(.footnote).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .center)
+        .font(.footnote).foregroundStyle(AppPalette.secondaryText).frame(
+          maxWidth: .infinity, alignment: .center)
       }
-    }.pageTitle("Mehr")
+    }.labelStyle(AppControlLabelStyle()).pageTitle("Mehr")
   }
 }
 private struct HelpView: View {

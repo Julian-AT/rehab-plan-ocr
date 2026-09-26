@@ -127,7 +127,9 @@ struct PlanPagesView: View {
             NavigationLink("Original und Details", value: "page:\(page)")
           }
           if index > 0 {
-            Button("Seite aus Plan lösen", role: .destructive) { remove = page }.disabled(
+            Button("Seite aus Plan lösen", role: .destructive) { remove = page }.foregroundStyle(
+              AppPalette.destructive
+            ).disabled(
               scanner.running)
           }
         }

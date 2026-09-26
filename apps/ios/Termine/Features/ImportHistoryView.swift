@@ -41,6 +41,7 @@ struct ImportHistoryView: View {
               Toggle("Entfernen der angezeigten Termine bestätigen", isOn: $approveRemovals)
             }
             Button("Rücknahme ausführen", role: .destructive) { Task { await undo() } }
+              .foregroundStyle(AppPalette.destructive)
               .disabled(
                 busy || proposal.operations.contains(where: \.requiresResolution)
                   || (proposal.operations.contains { $0.kind == .remove } && !approveRemovals))
