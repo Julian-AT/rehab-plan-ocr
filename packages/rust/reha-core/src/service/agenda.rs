@@ -81,21 +81,12 @@ pub async fn sync_warnings(app: &Arc<dyn super::Platform>, state: &AppState) -> 
         Err(error) => vec![error.to_string()],
     }
 }
-pub async fn agenda(app: Arc<dyn super::Platform>, state: &Arc<AppState>) -> Response<Value> {
-    let _guard = state.calendar_lock.lock().await;
-    legacy_sync(&app, state).await
-}
 /// Existing command clients retain the complete historical response. The native
 /// app and internal maintenance use the typed effect above.
 pub async fn legacy_sync(app: &Arc<dyn super::Platform>, state: &AppState) -> Response<Value> {
     let args = serde_json::to_value(sync_request(state)?).map_err(storage)?;
     let app = app.clone();
     tokio::task::spawn_blocking(move || app.call("agenda", args))
-        .await
-        .map_err(failure)?
-}
-pub async fn test_reminder(app: Arc<dyn super::Platform>) -> Response<Value> {
-    tokio::task::spawn_blocking(move || app.call("testReminder", json!({})))
         .await
         .map_err(failure)?
 }

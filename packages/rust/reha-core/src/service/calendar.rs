@@ -3,7 +3,6 @@ use crate::service::Proposal;
 use crate::service::{failure, AppState, Response};
 use reha_core::contracts::*;
 use reha_core::{calendar, store::Store};
-use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -158,16 +157,6 @@ pub fn export_ics(
         store.save_run(&run).map_err(failure)?;
     }
     Ok(text)
-}
-pub async fn calendars(app: Arc<dyn super::Platform>, dedicated: Option<bool>) -> Response<Value> {
-    tokio::task::spawn_blocking(move || {
-        app.call(
-            "calendars",
-            json!({"dedicated": dedicated.unwrap_or(false)}),
-        )
-    })
-    .await
-    .map_err(failure)?
 }
 #[allow(clippy::too_many_arguments)] // Shared preparation inputs for native imports and regression tests.
 pub async fn prepare_calendar(

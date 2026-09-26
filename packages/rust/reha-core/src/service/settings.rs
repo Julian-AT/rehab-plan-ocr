@@ -41,25 +41,6 @@ pub fn maintenance(state: &Arc<AppState>) -> Response<usize> {
         .cleanup(chrono::Utc::now().timestamp())
         .map_err(failure)
 }
-pub async fn settings(
-    app: Arc<dyn super::Platform>,
-    state: &Arc<AppState>,
-    value: Option<Value>,
-) -> Response<Value> {
-    let changed = value.is_some();
-    let result = settings_value(state, value)?;
-    #[cfg(target_os = "ios")]
-    if changed {
-        let _guard = state.calendar_lock.lock().await;
-        let mut response = result;
-        response["maintenance_warnings"] =
-            json!(crate::service::agenda::sync_warnings(&app, state).await);
-        return Ok(response);
-    }
-    #[cfg(not(target_os = "ios"))]
-    let _ = (app, changed);
-    Ok(result)
-}
 pub fn settings_value(state: &AppState, value: Option<Value>) -> Response<Value> {
     let store = state.store.lock().map_err(failure)?;
     if let Some(mut value) = value {

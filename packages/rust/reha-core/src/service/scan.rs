@@ -192,12 +192,6 @@ pub async fn import_image(
     }
     result
 }
-pub fn history(state: &Arc<AppState>) -> Response<Value> {
-    let store = state.store.lock().map_err(failure)?;
-    Ok(
-        json!({"scans":store.list_scans().map_err(failure)?,"plans":store.plans().map_err(failure)?,"intakes":store.intakes().map_err(failure)?,"batches":store.batches().map_err(failure)?,"imports":store.records(None).map_err(failure)?,"pending":store.pending().map_err(failure)?.len(),"pending_details":store.pending().map_err(failure)?,"failures":store.failures().map_err(failure)?}),
-    )
-}
 pub fn load_scan(state: &Arc<AppState>, id: String) -> Response<PipelineRun> {
     let store = state.store.lock().map_err(failure)?;
     let mut run = store.load_run(&id).map_err(failure)?;
@@ -274,14 +268,6 @@ pub fn save_review(
     reha_core::review::suggest(&mut run, &defaults, &store.records(None).map_err(failure)?);
     store.save_run(&run).map_err(failure)?;
     Ok(run)
-}
-pub async fn capture(app: Arc<dyn super::Platform>, source: String) -> Response<Value> {
-    if !["camera", "photos"].contains(&source.as_str()) {
-        return Err("Unbekannte Bildquelle.".into());
-    }
-    tokio::task::spawn_blocking(move || app.call(&source, json!({})))
-        .await
-        .map_err(failure)?
 }
 pub fn delete_scan(state: &Arc<AppState>, id: String) -> Response<()> {
     let _admission = state
