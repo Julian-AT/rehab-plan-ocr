@@ -134,7 +134,7 @@ import XCTest
         app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
         XCTAssertTrue(app.navigationBars["Darstellung"].waitForExistence(timeout: 5))
         app.navigationBars["Darstellung"].buttons.firstMatch.tap()
-        app.buttons["Erkennung"].tap()
+        app.buttons["Erfassung"].tap()
         XCTAssertTrue(app.navigationBars["Erkennung"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Vorgabe hinzufügen"].exists)
         app.navigationBars["Erkennung"].buttons.firstMatch.tap()

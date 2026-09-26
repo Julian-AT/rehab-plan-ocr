@@ -389,7 +389,8 @@ public final class NativeServices: @unchecked Sendable {
     invoke.resolve(["base64": png.base64EncodedString()])
   }
   func recognize(_ invoke: ServiceRequest) throws {
-    let args = try invoke.parseArgs(PhotoArgs.self)
+    struct Args: Decodable { let base64: String; let budget_ms: Double? }
+    let args = try invoke.parseArgs(Args.self)
     guard let data = Data(base64Encoded: args.base64), let image = UIImage(data: data)?.cgImage
     else {
       invoke.reject("Bild für Vision fehlt.")
@@ -401,6 +402,9 @@ public final class NativeServices: @unchecked Sendable {
       request.recognitionLevel = .accurate
       request.recognitionLanguages = ["de-DE", "en-US"]
       request.usesLanguageCorrection = false
+      let timeout = DispatchWorkItem { request.cancel() }
+      DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + min(60, max(0.001, (args.budget_ms ?? 60000) / 1000)), execute: timeout)
+      defer { timeout.cancel() }
       do {
         try VNImageRequestHandler(cgImage: image).perform([request])
         var regions: [[String: Any]] = []

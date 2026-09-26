@@ -19,7 +19,7 @@ final class DedicatedCalendar {
     let saved = defaults.dictionary(forKey: key) as? [String: String]
     if let id = saved?["id"], let calendar = store.calendar(withIdentifier: id) {
       guard calendar.allowsContentModifications else {
-        throw Failure.message("Der gespeicherte Kalender ist schreibgeschützt. Wähle einen beschreibbaren Kalender.")
+        throw Failure.message("Der gespeicherte Kalender ist schreibgeschützt. Bitte einen beschreibbaren Kalender auswählen.")
       }
       try renameOwnedDefault(calendar, saved: saved, in: store)
       remember(calendar)

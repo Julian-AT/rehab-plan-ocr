@@ -196,38 +196,8 @@ pub fn process(
         progress("Ersten Entwurf sichern", Some(&run));
         #[cfg(target_os = "ios")]
         if !cancel.load(std::sync::atomic::Ordering::Relaxed) && started.elapsed().as_secs() < 55 {
-            let refinement = reha_core::refinement::refine_with_reader(
-                &mut run,
-                &directory,
-                &cancel,
-                started + std::time::Duration::from_secs(55),
-                None,
-                &mut |crop, _, flag, _, _| {
-                    if flag.load(std::sync::atomic::Ordering::Relaxed) {
-                        return Err(reha_core::Error::Invalid("Nachprüfung abgebrochen.".into()));
-                    }
-                    let mut png = std::io::Cursor::new(Vec::new());
-                    image::DynamicImage::ImageRgb8(crop.clone())
-                        .write_to(&mut png, image::ImageFormat::Png)?;
-                    let response = app
-                        .call(
-                            "recognize",
-                            json!({"base64":STANDARD.encode(png.into_inner())}),
-                        )
-                        .map_err(reha_core::Error::Invalid)?;
-                    Ok((
-                        serde_json::from_value(response["regions"].clone())?,
-                        serde_json::from_value(response["observations"].clone())?,
-                        vec![Stage {
-                            name: "vision_crop".into(),
-                            status: "complete".into(),
-                            duration_ms: response["duration_ms"].as_u64().unwrap_or(0),
-                            detail: "Gezielte lokale Apple-Vision-Nachprüfung".into(),
-                            artifacts: vec![],
-                        }],
-                    ))
-                },
-            );
+            let refinement = refine_vision(app.as_ref(), &mut run, &directory, &cancel,
+                started + std::time::Duration::from_secs(55));
             if refinement.is_err() {
                 run.stages.push(Stage {
                     name: "vision_refinement".into(),
@@ -309,4 +279,35 @@ pub fn process(
     _: std::time::Instant,
 ) -> Response<Value> {
     Err("This build has no portable inference runtime.".into())
+}
+
+/// Shared bounded Vision pass for initial processing and explicit field retries.
+#[cfg(target_os = "ios")]
+pub(super) fn refine_vision(
+    app: &dyn super::Platform,
+    run: &mut crate::contracts::PipelineRun,
+    directory: &std::path::Path,
+    cancel: &AtomicBool,
+    deadline: std::time::Instant,
+) -> crate::Result<()> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    let first_stage = run.stages.len();
+    let result = crate::refinement::refine_with_reader(run, directory, cancel, deadline, None,
+        &mut |crop, _, flag, _, _| {
+            if flag.load(std::sync::atomic::Ordering::Relaxed) || std::time::Instant::now() >= deadline {
+                return Err(crate::Error::Invalid("Nachprüfung abgebrochen oder Zeitbudget erschöpft.".into()));
+            }
+            let mut png = std::io::Cursor::new(Vec::new());
+            image::DynamicImage::ImageRgb8(crop.clone()).write_to(&mut png, image::ImageFormat::Png)?;
+            let response = app.call("recognize", serde_json::json!({
+                "base64": STANDARD.encode(png.into_inner()),
+                "budget_ms": deadline.saturating_duration_since(std::time::Instant::now()).as_millis() as u64
+            })).map_err(crate::Error::Invalid)?;
+            Ok((serde_json::from_value(response["regions"].clone())?,
+                serde_json::from_value(response["observations"].clone())?, vec![]))
+        });
+    for stage in &mut run.stages[first_stage..] {
+        if stage.name == "selective_reread" { stage.name = "vision_refinement".into(); }
+    }
+    result
 }

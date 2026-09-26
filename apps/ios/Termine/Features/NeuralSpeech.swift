@@ -151,6 +151,13 @@ struct PlaybackWord: Identifiable { let id: Int; let text: String }
         saveAudioEvidence()
         #endif
     }
+    func eraseSession() {
+        stop()
+        words = []; spokenText = ""; lastText = ""; wordIndex = 0
+        status = "Bereit zum Vorlesen"; onFinished = nil; onFailure = nil
+        UserDefaults.standard.removeObject(forKey: "voice.neural.id")
+        UserDefaults.standard.removeObject(forKey: "voice.neural.rate")
+    }
     nonisolated static func phrases(_ text: String) -> [String] { SpeechPhrasing.phrases(text) }
 }
 

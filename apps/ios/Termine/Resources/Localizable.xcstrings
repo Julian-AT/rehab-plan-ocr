@@ -551,12 +551,12 @@
         }
       }
     },
-    "Fotos und Prüfdaten bleiben erhalten, bis du sie löschst. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.": {
+    "Fotos und Prüfdaten bleiben bis zur manuellen Löschung erhalten. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos und Prüfdaten bleiben erhalten, bis du sie löschst. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt."
+            "value": "Fotos und Prüfdaten bleiben bis zur manuellen Löschung erhalten. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt."
           }
         }
       }

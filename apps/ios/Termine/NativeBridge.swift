@@ -28,7 +28,11 @@ final class NativeBridge: AppleHost, @unchecked Sendable {
                     box.set(result); gate.signal()
                 }
             }
-            guard gate.wait(timeout: .now() + 60) == .success, let result = box.get() else { throw AppError.UncertainWrite }
+            let timeout = command == "recognize" ? min(60, max(0.001, (arguments["budget_ms"] as? Double ?? 60000) / 1000)) : 60
+            guard gate.wait(timeout: .now() + timeout) == .success, let result = box.get() else {
+                if command == "recognize" { throw AppError.Validation(message: "Zeitbudget der lokalen Nachprüfung erschöpft.") }
+                throw AppError.UncertainWrite
+            }
             let responseData = try result.get()
             return (try JSONSerialization.jsonObject(with: responseData, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
         } catch let error as AppError { throw error }

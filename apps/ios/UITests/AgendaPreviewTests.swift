@@ -256,7 +256,7 @@ import UIKit
         XCTAssertEqual(sound.value as? String, soundBefore)
         capture("16-erinnerungen-sofort-gespeichert")
         back("Erinnerungen")
-        app.buttons["Erkennung"].tap(); app.buttons["Vorgabe hinzufügen"].tap()
+        app.buttons["Erfassung"].tap(); app.buttons["Vorgabe hinzufügen"].tap()
         XCTAssertFalse(app.buttons["Übernehmen"].isEnabled)
         capture("17-neue-vorgabe-validierung")
         app.buttons["Abbrechen"].tap(); back("Erkennung")

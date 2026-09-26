@@ -94,7 +94,9 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
                 }.padding().background(.regularMaterial, in: .rect(cornerRadius: 16))
             }
         }
-        .onChange(of: scanner.isErasing) { _, erasing in if erasing { voice.cancelSession(reason: "erase") } }
+        .onChange(of: scanner.isErasing) { _, erasing in
+            if erasing { voice.cancelSession(reason: "erase"); SpeechOutput.shared.eraseSession() }
+        }
         .onChange(of: scanner.erasedID) { _, _ in
             todayPath = []; plansPath = []; linkedEvent = nil; openError = nil; refreshID += 1
         }

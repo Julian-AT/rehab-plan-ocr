@@ -267,7 +267,7 @@ impl Platform for HostBridge {
         let run = || -> Result<Value> {
             match command {
                 "calendarStatus" | "eventCalendars" | "queryEvents" | "getEvent"
-                | "mutateEvent" => serde_json::from_str(
+                | "mutateEvent" | "editSystemEvent" | "resolveOwnedEvent" | "recognize" => serde_json::from_str(
                     &self
                         .host
                         .calendar_event_call(command.into(), args.to_string())?,
@@ -1104,4 +1104,32 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
             .chain(assessment.warnings)
             .collect::<Vec<_>>(),
     )
+}
+
+#[cfg(test)]
+mod host_routing_tests {
+    use super::*;
+    struct Host;
+    impl AppleHost for Host {
+        fn calendar_event_call(&self, command: String, arguments: String) -> Result<String> {
+            Ok(json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()}).to_string())
+        }
+        fn snapshot(&self, _: Vec<ImportRecord>) -> Result<LiveCalendar> { unreachable!() }
+        fn apply(&self, _: CalendarOperation, _: bool) -> Result<CalendarResult> { unreachable!() }
+        fn decode_photo(&self, _: Vec<u8>) -> Result<Vec<u8>> { unreachable!() }
+        fn sync_agenda(&self, _: Vec<ImportRecord>, _: Preferences) -> Result<()> { unreachable!() }
+        fn forget_calendar(&self) -> Result<()> { unreachable!() }
+        fn overlaps(&self, _: HashMap<String, EventValues>, _: Vec<String>) -> Result<Vec<CalendarOverlap>> { unreachable!() }
+    }
+    #[test]
+    fn vision_and_current_event_effects_reach_the_native_callback() {
+        let bridge = HostBridge { host: Box::new(Host), progress: Mutex::new(HashMap::new()), cancelled: Mutex::new(HashSet::new()) };
+        for command in ["recognize", "resolveOwnedEvent", "editSystemEvent"] {
+            let args = json!({"base64":"synthetic-crop", "budget_ms":1234});
+            let result = bridge.call(command, args.clone()).unwrap();
+            assert_eq!(result["received_command"], command);
+            assert_eq!(result["arguments"], args);
+        }
+        assert!(bridge.call("unregistered-effect", json!({})).is_err());
+    }
 }

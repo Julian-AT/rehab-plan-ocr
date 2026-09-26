@@ -40,7 +40,7 @@ struct AgendaEmptyView: View {
         .font(.title2).accessibilityHidden(true)
       Text(
         state == "unavailable"
-          ? "App öffnen" : state == "stale" ? "Bitte aktualisieren" : "Zeit für dich"
+          ? "App öffnen" : state == "stale" ? "Bitte aktualisieren" : "Zeit zum Erholen"
       )
       .font(.headline)
       Text(

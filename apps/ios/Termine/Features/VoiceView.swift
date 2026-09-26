@@ -124,7 +124,7 @@ struct VoiceSnapshot {
     }
     private func failed(_ message: String = "Das habe ich noch nicht verstanden.") {
         failures += 1
-        say(failures >= 2 ? "Bitte wähle jetzt auf dem Bildschirm aus." : "\(message) \(response)")
+        say(failures >= 2 ? "Bitte auf dem Bildschirm auswählen." : "\(message) \(response)")
     }
     private func interpret(_ text: String) async {
         guard !text.isEmpty else { failed("Ich habe keine Sprache erkannt."); return }
@@ -251,7 +251,7 @@ struct VoiceSnapshot {
             guard session == current, modelToken == token, !Task.isCancelled else { return }
             responseTask = nil
             SpeechOutput.shared.stop(); rememberSpoken()
-            say("Die Antwort konnte gerade nicht erstellt werden. Bitte versuche es erneut oder wähle in den Gesprächsdetails aus.", question: .action)
+            say("Die Antwort konnte gerade nicht erstellt werden. Bitte erneut versuchen oder in den Gesprächsdetails auswählen.", question: .action)
         }
     }
     func submitAction(_ action: VoiceIntent.Action) async {

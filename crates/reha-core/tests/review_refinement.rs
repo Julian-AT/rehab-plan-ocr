@@ -718,3 +718,37 @@ fn explicitly_confirmed_absent_field_survives_rereading() {
     assert!(r.appointments[0].location.is_empty());
     assert!(review::field_confirmed(&r.appointments[0], "location"));
 }
+
+#[test]
+fn completely_failed_reader_pass_is_not_reported_as_complete() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = run();
+    r.appointments[0].location.clear();
+    let original = image::RgbImage::new(2500, 3500);
+    refinement::refine_with_reader(&mut r, temp.path(), &std::sync::atomic::AtomicBool::new(false),
+        std::time::Instant::now() + std::time::Duration::from_secs(5), Some(&original),
+        &mut |_, _, _, _, _| Err(reha_core::Error::Invalid("Simulated native reader failure".into()))).unwrap();
+    assert!(!r.refinement_attempts.is_empty());
+    assert!(r.refinement_attempts.iter().all(|attempt| attempt.status == "failed"));
+    assert_eq!(r.stages.last().unwrap().status, "failed");
+    assert!(!r.appointments.is_empty());
+}
+
+#[test]
+fn field_confirmation_alone_keeps_a_row_missed_by_a_new_detector() {
+    let mut previous = run();
+    previous.appointments.truncate(1);
+    let row = &mut previous.appointments[0];
+    row.location.clear();
+    row.approval = None; row.origins.clear();
+    let field = row.fields.get_mut("location").unwrap();
+    field.state = PrintedState::NotPrinted;
+    field.confirmed_at = Some(1);
+    field.confirmed_value = Some(serde_json::json!(""));
+    assert!(review::field_confirmed(row, "location"));
+    let mut next = previous.clone(); next.appointments.clear();
+    refinement::preserve_review(&previous, &mut next).unwrap();
+    assert_eq!(next.appointments.len(), 1);
+    assert!(next.appointments[0].location.is_empty());
+    assert!(next.appointments[0].issues.iter().any(|issue| issue.code == "retained_review" && issue.blocking));
+}

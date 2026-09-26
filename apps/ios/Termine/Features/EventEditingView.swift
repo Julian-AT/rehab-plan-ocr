@@ -233,7 +233,7 @@ struct EventHistoryView: View {
                     Text(item.status == "saved" ? "\(item.proposal.kind == "remove" ? "Gelöscht" : "Gespeichert")\(item.undone_by == nil ? "" : " · Rückgängig angefordert")" : item.status == "failed" ? "Nicht ausgeführt" : item.status == "acknowledged" ? "Nach manueller Kalenderprüfung abgeschlossen" : "Nicht sicher gespeichert – bitte abgleichen")
                     if ["pending", "uncertain"].contains(item.status) {
                         DisclosureGroup("Manuell im Kalender prüfen") {
-                            Text("Prüfe den Termin im Systemkalender und bereinige ihn dort bei Bedarf. Hier wird anschließend nur der Verlauf abgeschlossen. Kein erneuter Schreibversuch und kein App-Rückgängig.")
+                            Text("Bitte den Termin im Systemkalender prüfen und dort bei Bedarf bereinigen. Hier wird anschließend nur der Verlauf abgeschlossen. Kein erneuter Schreibversuch und kein App-Rückgängig.")
                             Button("Im Kalender geprüft – Verlauf abschließen") { Task {
                                 do { let _: EventResponse = try await core.eventRequest("resolveEventUncertainty", ["id": item.id, "confirmation": "button"]); await load() }
                                 catch { model.error = userMessage(error) }

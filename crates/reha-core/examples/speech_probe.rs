@@ -14,9 +14,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let latest = AtomicU64::new(1);
     for (name, text, speed) in [
         ("victoria-fruehstueck", "Frühstück I, um 07:00 Uhr im Speisesaal. Frühstück II, um 07:30 Uhr. Danach Behandlung XII, bei Dr. Muster in Raum 2.14.", 0.95),
-        ("victoria-kalender", "Am 14.09.2026 um 09:15 Uhr beginnt deine Physiotherapie in Laßnitzhöhe. Bitte komm in Raum 2.14. Der Termin endet um 09:45 Uhr.", 0.95),
-        ("victoria-langsam", "Am Dienstag, 15. September 2026, hast du um 13:05 Uhr Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.", 0.75),
-        ("victoria-lange-antwort", "Heute stehen mehrere Termine an. Um 08:30 Uhr beginnt die Physiotherapie im Raum 2.14 in Laßnitzhöhe. Sie dauert 30 Min. Um 10:15 Uhr folgt Ergotherapie in Raum 105. Dieser Termin endet um 11:00 Uhr. Am Nachmittag, um 13:05 Uhr, beginnt die Rückengymnastik im Turnsaal. Bitte prüfe die Angaben auf dem Bildschirm. Kalenderänderungen speichere ich erst, wenn du die Bestätigungsschaltfläche antippst.", 1.0),
+        ("victoria-kalender", "Am 14.09.2026 um 09:15 Uhr beginnt die Physiotherapie in Laßnitzhöhe, in Raum 2.14. Der Termin endet um 09:45 Uhr.", 0.95),
+        ("victoria-langsam", "Am Dienstag, 15. September 2026, beginnt um 13:05 Uhr die Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.", 0.75),
+        ("victoria-lange-antwort", "Heute stehen mehrere Termine an. Um 08:30 Uhr beginnt die Physiotherapie im Raum 2.14 in Laßnitzhöhe. Sie dauert 30 Min. Um 10:15 Uhr folgt Ergotherapie in Raum 105. Dieser Termin endet um 11:00 Uhr. Am Nachmittag, um 13:05 Uhr, beginnt die Rückengymnastik im Turnsaal. Bitte die Angaben auf dem Bildschirm prüfen. Kalenderänderungen werden erst nach Bestätigung auf dem Bildschirm gespeichert.", 1.0),
     ] {
         let started = Instant::now();
         let timed = engine.render_timed(text, "victoria", speed, 1, &latest)?;

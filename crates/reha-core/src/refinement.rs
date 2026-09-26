@@ -248,6 +248,7 @@ where
 {
     use std::{sync::atomic::Ordering, time::Instant};
     let started = Instant::now();
+    let initial_attempts = run.refinement_attempts.len();
     let available = || !cancel.load(Ordering::Relaxed) && Instant::now() < deadline;
     let mut targets = vec![];
     for a in &run.appointments {
@@ -577,12 +578,18 @@ where
     let artifact = serde_json::to_vec(&run.refinement_readings.iter().map(|r|serde_json::json!({"appointment_id":r.appointment_id,"field":r.field,"value":r.value,"evidence":r.evidence,"attempt":r.attempt})).collect::<Vec<_>>())?;
     // Detailed readings are retained even without large debug rasters and expire with the scan.
     std::fs::write(dir.join("refinement-readings.json"), artifact)?;
+    let attempts = &run.refinement_attempts[initial_attempts..];
+    let failures = attempts.iter().filter(|attempt| attempt.status == "failed").count();
     run.stages.push(Stage {
         name: "selective_reread".into(),
         status: if cancel.load(Ordering::Relaxed) {
             "cancelled"
         } else if Instant::now() >= deadline {
             "budget_exhausted"
+        } else if !attempts.is_empty() && failures == attempts.len() {
+            "failed"
+        } else if failures > 0 {
+            "partial"
         } else {
             "complete"
         }
@@ -704,7 +711,8 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
             {
                 a.approval = old.approval.clone();
             }
-        } else if old.approval.is_some()
+        } else if old.fields.keys().any(|field| review::field_confirmed(old, field))
+            || old.approval.is_some()
             || old.calendar_event_id.is_some()
             || old.ics_event_id.is_some()
             || old

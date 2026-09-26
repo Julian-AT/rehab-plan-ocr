@@ -431,6 +431,7 @@ pub async fn retry_scan(
                 return Err("Eine Verarbeitung läuft bereits.".into());
             }
             active.insert(id.clone(), cancel.clone());
+            if app.cancelled(&id) { cancel.store(true, Ordering::Relaxed); }
         }
         drop(admission);
         let shared = state.clone();
@@ -474,6 +475,15 @@ pub async fn retry_scan(
                         artifacts: vec![],
                     });
                 }
+                drop(engine);
+                #[cfg(target_os = "ios")]
+                if !cancel.load(Ordering::Relaxed) && started.elapsed().as_secs() < 60 {
+                    if let Err(error) = inference::refine_vision(app.as_ref(), &mut run, &dir, &cancel,
+                        started + std::time::Duration::from_secs(60)) {
+                        run.stages.push(Stage { name: "vision_refinement".into(), status: "failed".into(),
+                            duration_ms: 0, detail: error.to_string(), artifacts: vec![] });
+                    }
+                }
                 let store = shared.store.lock().map_err(failure)?;
                 // Discard no user edits that arrived while the CPU pass was running.
                 let current = store.load_run(&scan_id).map_err(failure)?;
@@ -483,7 +493,7 @@ pub async fn retry_scan(
                 for a in &mut run.appointments {
                     if let Some(latest) = current.appointments.iter().find(|v| v.id == a.id) {
                         for field in reha_core::review::FIELDS {
-                            if latest
+                            if reha_core::review::field_confirmed(latest, field) || latest
                                 .origins
                                 .get(*field)
                                 .is_some_and(|o| ["manual", "suggested"].contains(&o.kind.as_str()))
@@ -494,8 +504,7 @@ pub async fn retry_scan(
                                     reha_core::review::value(latest, field),
                                 )
                                 .map_err(failure)?;
-                                a.origins
-                                    .insert((*field).into(), latest.origins[*field].clone());
+                                if let Some(origin) = latest.origins.get(*field) { a.origins.insert((*field).into(), origin.clone()); }
                             }
                         }
                         a.included = latest.included;
