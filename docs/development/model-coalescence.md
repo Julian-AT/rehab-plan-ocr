@@ -55,3 +55,26 @@ die Integration dieser Einstiege belegt keine Anwendung auf echten Modellen und
 keine Speicherfreigabe. Logische Dateigrößen sind keine APFS-Gewinnzusage. Eine spätere
 Anwendung misst den freien Volumenplatz vorher/nachher, einschließlich anderer
 Systemaktivität. Modellqualität und Appsignaturen werden daraus nicht abgeleitet.
+
+## Tatsächliche Anwendung am 26. September 2026
+
+Beide geprüften Pläne wurden anschließend ausgeführt. Die Smoke-A-Gruppe erhält
+alle drei Zielpfade und die beiden Referenzdateien einschließlich der unveränderten
+Referenz-Inodes; Lauf-, Fehler- und Tokenizerbelege sind erneut geprüft. Der zweite
+Plan umfasst sieben registrierte Baselines, darunter die neuen Development002-
+und Stage1-Exporte. Beide Aktionen erhalten die zugesagten Inhalte und Metadaten;
+Trainingscheckpoints und Optimizer wurden nicht berührt.
+
+| Aktion | Freie Bytes vorher | Freie Bytes nachher | Beobachtete Differenz |
+|---|---:|---:|---:|
+| Drei Smoke-Ziele | 41.998.577.664 | 41.980.096.512 | −18.481.152 |
+| Sieben Baselinepfade | 41.936.330.752 | 41.987.915.776 | +51.585.024 |
+
+Daraus ist kein größerer zurechenbarer Speichergewinn belegt. Geteilte APFS-Extents
+und Systemaktivität verhindern eine Gleichsetzung mit den logischen Dateigrößen.
+Die 44-GiB-Schranke für die geplanten Appversuche war anschließend weiterhin offen.
+
+Die privaten Abschlussbelege sind `.local/maintenance/assistant-smoke-a-objects-20260926-s21-001.receipt.json`
+(SHA256 `de0fc5adb5157882b7b70dddc7cb0dcb285bf787960c454b0fc938de1f064879`) und
+`.local/maintenance/model-objects-20260926-s21-001.receipt.json`
+(SHA256 `eaf310a03a1300e73e0d9f5e27ff8b1655560775624648653366e95ff2ff3482`). Historische Laufberichte bleiben unverändert.
