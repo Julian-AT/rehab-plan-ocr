@@ -5,7 +5,7 @@
   "base_registry": "ocr-base.json",
   "dataset": {
     "kind": "pixel-verified-synthetic-crops",
-    "sha256": "7314061c5104738dea1da2f627fea27fa30612372c4402968bfe700cce073ef6",
+    "sha256": "09b05a647892cee1a285042fd4331976fc32734220bcb21a41171ef897f6be72",
     "partitions": {
       "train": {
         "crops": 512,
@@ -42,7 +42,7 @@
       "stop_reason": "validation-stopped",
       "selected_epoch": 1,
       "checkpoint_sha256": "76acc813ae5ede18a27478396af7d34da83df5a19e1c41322a5ac4de2d926989",
-      "run_identity_sha256": "6c05304f1b684489e099e0b3fde046c1626605c20c948736e111d61992f09116",
+      "run_identity_sha256": "92c2074b6525137d37b3a89fc8f1b2cc28126e0b3b8897602c2ed0efc7e4307c",
       "onnx_sha256": "7418100fef149c47029bf42f7be8b8e2a3c9480b3d33a560a4b8338b7c22a808",
       "baseline_metrics": {
         "overall": {
@@ -119,13 +119,13 @@
         "atol": 1e-05
       },
       "evidence": {
-        "settings.json": "48993875ebed8fa2151f4ca47c44f9feabdefc435486807654951b8e33562578",
-        "identity.json": "6c05304f1b684489e099e0b3fde046c1626605c20c948736e111d61992f09116",
+        "settings.json": "c1fb300be50dd9213590df0b03b4fc4b869b59242aa678948ac5d064a21a3f0d",
+        "identity.json": "92c2074b6525137d37b3a89fc8f1b2cc28126e0b3b8897602c2ed0efc7e4307c",
         "baseline.json": "923726eb6ff6b9f9f50bfc33cdc0318b76bb61833ebdf3425bc4a064eabf9e01",
         "progress.json": "7dd68b1f6927051ddf05484c5671fa2640d0f2a367dbbc68f12d361a4c39bc3f",
-        "selection.json": "d61d7160ab91b3079a3b2223dd7e05761a5d33b11c4bb895a6111c998a4337a8",
-        "checkpoints/epoch-0001/checkpoint.json": "0f29959cc2495e87008698f43512250aab190a883356f86a31124596c19937ea",
-        "deployment/export.json": "acaa01c477cb1f09e339a800ecac5733e12648f862b729c6fe0f2d84a805dfe3",
+        "selection.json": "e221a9c670a97b29f6c94e0e9d9d494ea86228a23d53ae206cba7e7178bee955",
+        "checkpoints/epoch-0001/checkpoint.json": "35d7a63087e0a5bbfe70195762ec02f7494108c92bee606b1359c3db9ea56037",
+        "deployment/export.json": "7919474c552d96a379f8d26a39c772bed030df005a3dab7941d9cd68b1c6ffdd",
         "deployment/parity.json": "679cbc8452a8114026cdb88d377563a2a8899efbc993403885939f61989869e0"
       },
       "qualified": false
@@ -139,7 +139,7 @@
       "stop_reason": "validation-stopped",
       "selected_epoch": 2,
       "checkpoint_sha256": "f2fb5c1fc0b0445414a33a787ebb9b1425c4dc88db9f10213e088a0b4251bb25",
-      "run_identity_sha256": "42ffba379858d9ac093691b781cf6133db4fab4e80262687ec15d2950c1d0c6c",
+      "run_identity_sha256": "1a23cdfa673b3e857a311d396277d65c5501cb7fa7eafc40fa593589103d3ea6",
       "onnx_sha256": "a19917f226331db300e28faf62dc50a1e9650aa4c66ba371ed91f1663cef03a9",
       "baseline_metrics": {
         "overall": {
@@ -216,13 +216,13 @@
         "atol": 1e-05
       },
       "evidence": {
-        "settings.json": "b2aa5c50d5836e45a9f0418714752c2a405933e466fbe2dd4025f03687e7e4ee",
-        "identity.json": "42ffba379858d9ac093691b781cf6133db4fab4e80262687ec15d2950c1d0c6c",
+        "settings.json": "23ffa92798435f1da4f4de64e85f042a13aee73a14fa57ac5023a91ccaf4eb2a",
+        "identity.json": "1a23cdfa673b3e857a311d396277d65c5501cb7fa7eafc40fa593589103d3ea6",
         "baseline.json": "923726eb6ff6b9f9f50bfc33cdc0318b76bb61833ebdf3425bc4a064eabf9e01",
         "progress.json": "da333250253aaaefea0b30ffae87d4f9e8d3e7658778b35d27240f3f6b5dfbf2",
-        "selection.json": "79dd24f2422fb0764cc919bcc45b381f860e6d162df318ec9b66b78620a5d62b",
-        "checkpoints/epoch-0002/checkpoint.json": "8ac40c00a7d191b850c070bbf09aa25dd1b587ae5919d087ab0dee87a78e29c3",
-        "deployment/export.json": "44c48a857c6f504dcf5fc52217dbc821c5279bbbcbbfdf5859b5cf501e89dfa8",
+        "selection.json": "44416608319d7bbc6d0dec1bcadc7048b0e3cdebc08c38807e60c2360fdddb89",
+        "checkpoints/epoch-0002/checkpoint.json": "36a32568a4a3ecf623ec4ed53e9c9a075dde4c91f053fc64c87295334e8f4d07",
+        "deployment/export.json": "950e79517527a06d64076b95f0efa1cb1530e92b4ddde0b3a68d04cbf0de3b74",
         "deployment/parity.json": "5cc3cd232843a9c081288e890670d2a616e8e915b2b52d3434118a71e7259c41"
       },
       "qualified": false

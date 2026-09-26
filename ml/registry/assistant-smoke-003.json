@@ -6,8 +6,8 @@
   "purpose": "Synthetic training/fusion/export compatibility only; not a usable calendar assistant.",
   "base_registry": "ml/registry/assistant-base.json",
   "base_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
-  "run_manifest_sha256": "ee7493d13b62e5ab6550842d8e4a8ba9e8fc1d79dfd68fab3c70a84c9c2aa6dd",
-  "evaluation_sha256": "16f8fbd0519872e9286daec56ddef31c6f0b3884554211de127556d3811b3371",
+  "run_manifest_sha256": "8088710eb9268712f5116badc986c8ccf2521ad2b6ee63d73232c28aa337d77f",
+  "evaluation_sha256": "e53af26a8d0ddfba8756f8963480f1943693a210350d68c7d27ff0ce5a9a7d8c",
   "environment_sha256": "054133cc57b21ddb9e14a42ee6096513dc72806e0cdbfea096b636cf548cf9a8",
   "export_environment_sha256": "99bcbb05e1b42432f43fa5fdc15f2e71e669ab6bba63fa0b3dc00318b890ed67",
   "source_files_sha256": {
@@ -17,7 +17,7 @@
     "ml/registry/assistant-base.json": "e853a9556fef8ac1c1962f23e9b6fb15aaa6c4f29b1424f46b95a933ffb52d60"
   },
   "dataset_sha256": "d725d2776e83c86f6f24c80a8b465cfa6b008c90416cbcf9a8b272999b8305dc",
-  "configuration_sha256": "ef9bab1591e62064745c70c73c3ddaceba71e74d2a6c8ffb649d8c15beb2c1eb",
+  "configuration_sha256": "ecfe6f6ab3cc2b251e8396953e14cee8a9784832aa2318727b3cb489e7a5efbd",
   "converter_revision": "41fc7584f0c1d72d9cc1ac46ccae8defc1587f0f",
   "runtime_sha256": "07285dd33e2ade112ae1ced29183afb5f77dd6b57fa0d935b7b5b9fcd9592c86",
   "adapter_sha256": "e82f3af39e8bb9f35d40742518a5a7cb2c97f4577b044276e9be4cdb7b193eb3",

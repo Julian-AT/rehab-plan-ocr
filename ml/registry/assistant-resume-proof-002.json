@@ -4,7 +4,7 @@
   "qualified": false,
   "status": "experimental-quality-gate-failed",
   "base_registry": "ml/registry/assistant-base.json",
-  "run_identity_sha256": "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
+  "run_identity_sha256": "8f5e8674d51b3c3f26b35b7fae6d5e0b5ac967cb94959a383452e89c7966fe7a",
   "dataset_sha256": "6f5ba239facfd6b8a2b803aec5dab5fb1ea229d06735546e63c792b798610e9d",
   "resume_parity": {
     "schema_version": 1,
@@ -18,11 +18,11 @@
     "epoch": 2,
     "steps": 28,
     "run_identity_sha256": [
-      "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
-      "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25"
+      "8f5e8674d51b3c3f26b35b7fae6d5e0b5ac967cb94959a383452e89c7966fe7a",
+      "8f5e8674d51b3c3f26b35b7fae6d5e0b5ac967cb94959a383452e89c7966fe7a"
     ]
   },
-  "checkpoint_sha256": "d91fae8f1c9b5ec5c26f90911e9875ed10859653096f93d684d240e1d690a1de",
+  "checkpoint_sha256": "71c6e0fe95fb4f22740963efea454afef38b8f6177342f2f0b55e194c90c2c1e",
   "artifact": {
     "format": "GGUF-F16",
     "sha256": "6d09bb0381036089808061128ad6675fdae9874696c5a60f3b097b83c7b09ffd",
@@ -32,7 +32,7 @@
   "deployment_complete_answer_parity": {
     "cases": 10,
     "all_equal": true,
-    "report_sha256": "939d47e867993c1a26ab1c76290de2be23e9983b93ec6c1a72df80525067ad9e"
+    "report_sha256": "80dee1f85959710d2db0de52fda325478cb88ad704d18e8a85409d40b47e0251"
   },
   "validation": {
     "cases": 10,
@@ -74,14 +74,14 @@
     "qualified": false,
     "source": ".local/runs/assistant-resume-proof-002",
     "continuous": ".local/runs/assistant-continuous-proof-002",
-    "source_checkpoint_sha256": "eddaf24980e49b9c8256778cbb4622ad9320b5d88e657ba23ab468a2a86e911e",
+    "source_checkpoint_sha256": "bbdb284509c8079a6abfb2b788b9c2a6689a347e766ddb995d31314397949cbe",
     "runner_sha256": "0ed4d0198ecc8f8030a874990cf72b5d3afe111ee2c808f7b2914bff98f87b21",
     "signal": "SIGTERM",
     "trigger_step": 16,
     "status": "interruption-resume-parity-passed",
     "interrupted": true,
     "returncode": -15,
-    "parity_sha256": "fb9eebc4b1b9eb554ab39356db0baf37ccd9e6277e8a92bf7fe9e855681d2299",
+    "parity_sha256": "e4f7ceee9bba8ac6e59b6461f57d83f6aedc54e6c15eae984860a4bc1d8d796f",
     "parity": {
       "schema_version": 1,
       "kind": "complete-epoch-resume-parity",
@@ -94,8 +94,8 @@
       "epoch": 2,
       "steps": 28,
       "run_identity_sha256": [
-        "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
-        "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25"
+        "8f5e8674d51b3c3f26b35b7fae6d5e0b5ac967cb94959a383452e89c7966fe7a",
+        "8f5e8674d51b3c3f26b35b7fae6d5e0b5ac967cb94959a383452e89c7966fe7a"
       ]
     }
   }

@@ -6,7 +6,7 @@
   "status": "experimental-export-parity-passed-quality-open",
   "base_registry": "ml/registry/assistant-base.json",
   "protocol": "ml/experiments/2026-09-26-s21-assistant-development-v2.md",
-  "run_identity_sha256": "1868fa0cb9d998ef383b45e669b41dd5e930c3ac711434cc460675a28e18c5df",
+  "run_identity_sha256": "675586a8aa7198ca179dd048d4ae21ef2f2d59714b34b8a99f812bfbab895578",
   "dataset_sha256": "a86258061e01115e8990f43eb1efa171d775bd2e10a6720509f5b9bbe6d8b3e3",
   "settings": {
     "seed": 20260917,
@@ -37,7 +37,7 @@
     ],
     "stopped": true
   },
-  "selected_checkpoint_sha256": "9c3723310af4547a1c3d7e6dd653d0f7236933ed48b5dee13d1923ad44854c04",
+  "selected_checkpoint_sha256": "36cd5b430b9c6b9ab67b7b855a57154cf3f5946068bac867874a328895051ec8",
   "artifact": {
     "format": "GGUF-F16",
     "sha256": "0dfee2695c0c1bf44bbb1aa2bd9d59ce17c723fdf8b76f9a0ad2ad96da0f44a2",
@@ -49,7 +49,7 @@
     "fusion_equal": 40,
     "runtime_equal": 40,
     "all_equal": true,
-    "report_sha256": "6fb288545ebcadcf4c844b677464e0c75e49847fad76eafd3477c631fa9f95b0"
+    "report_sha256": "9344189f1defc691e3fa7eea865b3e43377132f890414edf98527eff3bd0a485"
   },
   "validation": {
     "cases": 40,
@@ -169,8 +169,8 @@
     ".local/runs/assistant-development-002-evidence/training-completion.json": "6f8be021d858c2c1041df4ee96bc146dbf56da61456fb8847f1a7c5298b69d95",
     ".local/runs/assistant-development-002-evidence/export-execution.json": "f1c2f546891f67861952e7d5156b752956e887628568e4010f6beac454f9ee83",
     ".local/runs/assistant-development-002/baseline.json": "13b27d201acf1aa237b1b6d71f944fdd4f59d4d9dc5c5e126b9456adf646652d",
-    ".local/runs/assistant-development-002/result.json": "5807d161507c6921b45fb3d5fdaab449a05aa1a972bfbd07677485175569082f",
-    ".local/runs/assistant-development-002/deployment/export.json": "a3930dc6d86927023829710bb20d2de6ac03738972ff6bd0fe162eb8261fbc69",
+    ".local/runs/assistant-development-002/result.json": "591b417ed9faa15f74e45e37568da7d325f332771672c021ae0f7888a1fef14b",
+    ".local/runs/assistant-development-002/deployment/export.json": "26a485708fe9b81dece612ddebcb49b4398cbb13f50fb704cc31b518f9d5e2c1",
     ".local/runs/assistant-v2-router-replay-20260926-s21-001/summary.json": "a92b36b8c4bc587d97f867573073d2f50d47ac22c301d1c38052528dbc41e911",
     ".local/runs/assistant-v2-router-replay-20260926-s21-002/summary.json": "eabe9bae714c0a9603826b40d8e30f53799c446e8e6abbbc5cfdf643a479f5e6",
     ".local/runs/assistant-v2-router-replay-20260926-s21-002/execution.json": "56f8ca0c41b910377d02610ccaeddb7638d8bb407a57dfdfc72e373da6e34c7b",

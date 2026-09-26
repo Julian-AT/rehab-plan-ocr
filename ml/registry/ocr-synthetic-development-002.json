@@ -5,7 +5,7 @@
   "base_registry": "ocr-base.json",
   "dataset": {
     "kind": "pixel-verified-synthetic-crops",
-    "sha256": "463743f227578148be5f517dd15410dc2eea08374bfc67582fbc4c7db87234dd",
+    "sha256": "a866bf8fc8ffd3b74dc4dcb1857b27558733aea5f1cb80ea9c7b6353a40487ef",
     "partitions": {
       "train": {
         "crops": 512,
@@ -45,7 +45,7 @@
       "stop_reason": "validation-stopped",
       "selected_epoch": 2,
       "checkpoint_sha256": "10b063f9cbb93729418b64eda84dda61c852745e89979235ea65b150e54ebd12",
-      "run_identity_sha256": "daa5c2c9e2cfd75e975545cdd5df73de5531898cb6cb461532577b75fd2af7df",
+      "run_identity_sha256": "815cbc71682e4cf20f366a37103fc60cfeda74854a7b757fa172a3839029f120",
       "onnx_sha256": "59fff6d16f0b06812b381e78ea6a0493f882e98fc06a45be16a907952978090c",
       "baseline_metrics": {
         "overall": {
@@ -122,21 +122,21 @@
         "atol": 1e-05
       },
       "evidence": {
-        "settings.json": "b4d091caa71e4aa5ecc36a4502593ce438088826c1e4b27535c926b89703c5e6",
-        "identity.json": "daa5c2c9e2cfd75e975545cdd5df73de5531898cb6cb461532577b75fd2af7df",
+        "settings.json": "47edf66ce34469ae626c7e42781b2d15512304a81a583c2e42ac24be3b733af8",
+        "identity.json": "815cbc71682e4cf20f366a37103fc60cfeda74854a7b757fa172a3839029f120",
         "baseline.json": "5ceea719c0b25a8d4b2d113a71334ec154301fb7fc10271bd8345f72f30fd1f2",
         "progress.json": "baabce16a72535c0b96164a0ace41eaf9464363b8f5794418a04540cb7825720",
-        "selection.json": "c682c157533c7b8cf44f1dff8527c44c1b96dbcdad63fb0b371b0740f3f72ce6",
-        "checkpoints/epoch-0002/checkpoint.json": "a46bcac8cf3832e92c616c7c50ee5f0a166d623be86377a19e19334ec24abdf3",
-        "deployment/export.json": "24ec8103a148bc32c4d1ee08549f6fa1933cd6ff642ba4545e23b261f9ec797f",
-        "deployment/parity.json": "20da98691664878ff56bea9cf8f80cadfddbbe6269aab63a6d355ec140fb2d73"
+        "selection.json": "7e8be4af6f34adfb8529c7275c7bd4f3caf60e042107d03b9cb67d40fba27903",
+        "checkpoints/epoch-0002/checkpoint.json": "c808777a50952e4896ee6a9cf46b3cea52027b992c9fbb904b6b0a11f96287ca",
+        "deployment/export.json": "622f8d55b5f9ff5752a60d0fcbef4beebe53bb80e9a7b4acde789390e5fd4d99",
+        "deployment/parity.json": "5412e121e1c43e827bc7ecc7c002a3d1fe1072c838c05712fa31d7554408e1b3"
       },
       "qualified": false,
       "identity_verification": {
         "schema_version": 1,
         "mode": "current",
-        "run_identity_sha256": "daa5c2c9e2cfd75e975545cdd5df73de5531898cb6cb461532577b75fd2af7df",
-        "dataset_sha256": "463743f227578148be5f517dd15410dc2eea08374bfc67582fbc4c7db87234dd",
+        "run_identity_sha256": "815cbc71682e4cf20f366a37103fc60cfeda74854a7b757fa172a3839029f120",
+        "dataset_sha256": "a866bf8fc8ffd3b74dc4dcb1857b27558733aea5f1cb80ea9c7b6353a40487ef",
         "archived_training_sources": null,
         "current_validation_sources": {
           "ml/training/ocr/run_identity.py": "d05d355b84ee7b7268a69d91d4a85ed458fc81ff654c1164a13fc34303171a72",
@@ -158,7 +158,7 @@
       "stop_reason": "validation-stopped",
       "selected_epoch": 2,
       "checkpoint_sha256": "153801e3c3e874b89944fd0e623f5dac79e21f9d36fc3bcdfd9926073d80a46b",
-      "run_identity_sha256": "8ebc6565139d7df9bcc925813eea175b4e4cecf1f9efba7d16caa2379ffdeb7e",
+      "run_identity_sha256": "b9ff0b55cfee3325e3c968ca7f39c32a22585592a47dfadd958bdfb82c3b5fc7",
       "onnx_sha256": "9d570289bcdf6f8ca2756a351ed65433c3d1c6d983ab60b7cd95ffc29410c7d4",
       "baseline_metrics": {
         "overall": {
@@ -235,21 +235,21 @@
         "atol": 1e-05
       },
       "evidence": {
-        "settings.json": "4bc7ac30ee53cd90d5b01445eaf51ea365ec2802897c9366142a0cdeb96daa5f",
-        "identity.json": "8ebc6565139d7df9bcc925813eea175b4e4cecf1f9efba7d16caa2379ffdeb7e",
+        "settings.json": "025325c0f0505a2c3e00f105bf46b39924d766a5a7228f60a1e808ebe6bf154e",
+        "identity.json": "b9ff0b55cfee3325e3c968ca7f39c32a22585592a47dfadd958bdfb82c3b5fc7",
         "baseline.json": "5ceea719c0b25a8d4b2d113a71334ec154301fb7fc10271bd8345f72f30fd1f2",
         "progress.json": "20a0b34331e9d3870c3f87d5035b157d5c03b761f89cdc6bf68f516f5126a9c5",
-        "selection.json": "293460e91b4ba191b0aaffa8c4edcd0fbc9017a01f5e8a533bf3381494b6adfb",
-        "checkpoints/epoch-0002/checkpoint.json": "25958ddfd9224ade4b338e004c3004e3b656ea9d996caa64f42c3ca22a28c6a2",
-        "deployment/export.json": "0e3cb981d73228e993f87b5ec84c598ee93d7af496edd870c6d61a11e8b9b241",
-        "deployment/parity.json": "7938767170878a2f9b2ae2c066b83fc87ef56600c7a5de8c439e914fafe44ac4"
+        "selection.json": "55bf065b01454be6e5d7e4202ab97b9625c84fd9a51344752a866e75b65da6c7",
+        "checkpoints/epoch-0002/checkpoint.json": "d80d71634d60d1fb593cc6919d97693d418a3897577c1aa6b5851516d7ee8e9a",
+        "deployment/export.json": "9eb1b3491eb4b2150415191e831647d2ab31e4b162594c0d76bb2a8e92b9fb2a",
+        "deployment/parity.json": "1685718207d91ef6c2e32994d64b2d64b0edce4fd69fe3cb52fc4809923c501f"
       },
       "qualified": false,
       "identity_verification": {
         "schema_version": 1,
         "mode": "current",
-        "run_identity_sha256": "8ebc6565139d7df9bcc925813eea175b4e4cecf1f9efba7d16caa2379ffdeb7e",
-        "dataset_sha256": "463743f227578148be5f517dd15410dc2eea08374bfc67582fbc4c7db87234dd",
+        "run_identity_sha256": "b9ff0b55cfee3325e3c968ca7f39c32a22585592a47dfadd958bdfb82c3b5fc7",
+        "dataset_sha256": "a866bf8fc8ffd3b74dc4dcb1857b27558733aea5f1cb80ea9c7b6353a40487ef",
         "archived_training_sources": null,
         "current_validation_sources": {
           "ml/training/ocr/run_identity.py": "d05d355b84ee7b7268a69d91d4a85ed458fc81ff654c1164a13fc34303171a72",

@@ -4,7 +4,7 @@
   "qualified": false,
   "status": "experimental-quality-and-deployment-parity-failed",
   "base_registry": "ml/registry/assistant-base.json",
-  "run_identity_sha256": "f60f76431622ad81eb4bb5d343b60cb6cd13128055ddd328b77c1faf83c35ca5",
+  "run_identity_sha256": "96ae3b8ceb0d840c013cf94911f1d928a2a78e1c81f0ad119c5e7749735997b2",
   "dataset_sha256": "676f0667dbf058b930520bfaa72ae5336cfe4fd8a386fdec95773672493ba89c",
   "selection": {
     "epoch": 7,
@@ -19,7 +19,7 @@
     ],
     "stopped": true
   },
-  "checkpoint_sha256": "48d37f19ad21a1c14de53c51f4b7f5605bb15936f7f85e33c331a777c9d22256",
+  "checkpoint_sha256": "4401da72177c975682ef3b9adb05db7a6f906ab3f225aa588f30ef85905e5939",
   "artifact": {
     "format": "GGUF-F16",
     "sha256": "c522352314c4291de620ec947653c272ab7622eb477edca8cac422d157f2651d",
@@ -31,7 +31,7 @@
     "fusion_equal": 40,
     "runtime_equal": 34,
     "all_equal": false,
-    "report_sha256": "e66f23c95f46d357996714ce88358bd8fbb1c3d121ecba14da05c76b9212a7ed"
+    "report_sha256": "122f56dc0c11ab96b019beff8fb88c9f70fba9093b72f7140e943bc7811ddcdf"
   },
   "validation": {
     "cases": 40,

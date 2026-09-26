@@ -4,7 +4,7 @@
   "qualified": false,
   "status": "experimental-untuned-comparator",
   "base_registry": "ml/registry/assistant-base.json",
-  "run_identity_sha256": "f60f76431622ad81eb4bb5d343b60cb6cd13128055ddd328b77c1faf83c35ca5",
+  "run_identity_sha256": "96ae3b8ceb0d840c013cf94911f1d928a2a78e1c81f0ad119c5e7749735997b2",
   "converter_revision": "41fc7584f0c1d72d9cc1ac46ccae8defc1587f0f",
   "artifact": {
     "format": "GGUF-F16",
@@ -14,7 +14,7 @@
   },
   "export_record": {
     "path": ".local/runs/assistant-development-001/deployment/export.json",
-    "sha256": "f1d2e7cd19fea286774429e5811428fb74ecf4b1e232d7b4f7bd3df26b3b44d1",
+    "sha256": "6f09f4164523a5a40c9d4be5c8878defe42812a9afc7a83ea9dc81b904070454",
     "baseline_export_stage": "passed",
     "overall_status": "interrupted-or-failed"
   },
@@ -23,7 +23,7 @@
     "exact_match": 4,
     "schema_valid": 18,
     "unsafe_mutation": 7,
-    "report_sha256": "e66f23c95f46d357996714ce88358bd8fbb1c3d121ecba14da05c76b9212a7ed",
+    "report_sha256": "122f56dc0c11ab96b019beff8fb88c9f70fba9093b72f7140e943bc7811ddcdf",
     "human_review": "pending",
     "independent_real_dialogues": 0
   },
