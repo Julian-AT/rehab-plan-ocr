@@ -77,6 +77,10 @@ Both custom models must be trained and evaluated before the project is complete.
 ## External prerequisites
 
 Human approval of transcription/crops cannot be manufactured by training tools.
+The [German collection guide](product/research/collection-guide.md) and a consent
+draft are prepared. Responsible-party details and the actual consent process still
+require completion before collection. New local intake verifies consent scope,
+receipt hashes, retention and original copies without granting annotation approval.
 Unseen schedules, consented speech, patient comprehension/listening tests and
 physical devices are required for the corresponding acceptance gates. The intended
 Git remote is not configured. Do not activate hosted CI against an invented remote.

@@ -91,3 +91,8 @@ inventory-private:
 
 migrate-private:
 	python3 tooling/dev/migrate-private.py apply --manifest "$(MIGRATION)"
+
+.PHONY: intake
+intake:
+	@test -n "$(REQUEST)" -a -n "$(BATCH)" || { echo 'Set REQUEST and a new BATCH below .local/datasets/incoming'; exit 2; }
+	uv run --locked python ml/data/annotation/intake.py "$(REQUEST)" "$(BATCH)"

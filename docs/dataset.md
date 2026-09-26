@@ -9,6 +9,11 @@ no qualified clinical model or independent final test exists. Both model pipelin
 have produced synthetic smoke artifacts; see the [current status](status.md).
 Personal data and every content-bearing artifact remain in ignored private storage.
 
+New collections follow the [German collection guide](product/research/collection-guide.md)
+and its consent draft. `make intake` copies a checked incoming batch without
+changing existing originals, references or group assignments. Intake never grants
+annotation approval, train/validation assignment or privacy-mask approval.
+
 ## Review and approval
 
 Use the [local reference CLI](reference-cli.md). The former desktop lab is removed.

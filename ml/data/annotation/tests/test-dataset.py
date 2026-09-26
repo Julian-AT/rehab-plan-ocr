@@ -14,6 +14,19 @@ spec.loader.exec_module(dataset)
 
 
 class DatasetTests(unittest.TestCase):
+    def test_new_inventory_cannot_replace_existing_reference_relationships(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "one.png").write_bytes(b"invented original")
+            dataset.PRIVATE = root / "private"
+            dataset.inventory(source)
+            before = (dataset.PRIVATE / "inventory.json").read_bytes()
+            with self.assertRaisesRegex(ValueError, "Existing inventory preserved"):
+                dataset.inventory(source)
+            self.assertEqual((dataset.PRIVATE / "inventory.json").read_bytes(), before)
+
     def test_relocation_preserves_names_bytes_and_unrelated_files(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

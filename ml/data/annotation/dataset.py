@@ -31,6 +31,8 @@ def write(path, value):
 
 
 def inventory(source):
+    if (PRIVATE / "inventory.json").exists():
+        raise ValueError("Existing inventory preserved. Use intake.py for a new collection batch.")
     source = Path(source).resolve(strict=True)
     if not source.is_dir():
         raise ValueError("Dataset source must be a directory.")
