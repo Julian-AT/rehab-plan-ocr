@@ -1,6 +1,58 @@
 > Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
 
-# Native Grenzen und noch offene Umstellungen
+# Native Grenzen und erhaltene Serialisierung
+
+## Gemeinsamer Core-/FFI-Stand vom 26. September 2026
+
+Der native Import, Kalenderaufrufe, lokales Vergessen, Erkennungsfortschritt und
+die Rückgabe von Entwürfen, Dokumenten, Terminen und Verlauf verwenden nun
+typisierte interne Werte. Die folgenden älteren Abschnittsnachweise gelten
+weiterhin für ihre benannten Quellen; sie sind keine Abnahme des neuen Appstands.
+
+`application_projections` und `review_projections` bilden die vorhandenen
+Domainwerte direkt auf UniFFI ab. Der allgemeine `convert<T, U>`-Umweg über
+JSON ist entfernt. Fehlende und explizit leere Feldwerte, Ganzzahlgrenzen,
+Dezimalwerte, Herkunft, Überschneidungen, Operationen, Schreibstatus und separate
+Wartungswarnungen behalten ihre bisherigen Verträge. Nicht endliche
+Geometriekoordinaten bleiben Fehler. Die nativen öffentlichen Signaturen und
+generierten Bindings ändern sich nicht.
+
+`ProgressUpdate` trägt Stufe, Zeitbudget, Laufzeit und Entwurfsverfügbarkeit.
+Fortschritt und Abschluss gehören zur konkreten Erkennungsinstanz: Die bereits
+vorhandene gemeinsame Abbruchreferenz und der laufende Zustand müssen unter
+derselben Sperre passen. Eine alte Arbeit kann damit weder einen abgeschlossenen
+Auftrag wieder öffnen noch einen neuen Versuch mit derselben Scan-ID überschreiben.
+Der Legacy-JSON-Fortschritt ohne Versuchidentität aktualisiert den nativen Zustand
+nicht. Zwei Gegenproben reproduzieren diese Fehler im vorherigen Code.
+
+Die Geometrie der Tabellenkoordinaten ist aus dem Parser in das private Modul
+`parser::alignment` ausgelagert. Rechenreihenfolge, Schwellenwerte, Parser-API
+und Extraktionsversion 11 sind unverändert.
+
+Die aufeinanderfolgenden gezielten Prüfungen bestehen zuletzt mit **307
+Workspace-Rusttests**, Clippy für alle Ziele, iOS-26-ONNX-Kompilierung und
+unveränderten offiziellen Bindings. Die anschließende rein mechanische
+Parser-Aufteilung besteht zusätzlich alle 27 Parsertests, die Cache-/Refresh-
+Regression und Clippy. Belege unter `.local/maintenance`:
+`application-projections-20260926-s21-001`, `review-projections-20260926-s21-001`,
+`typed-progress-red-20260926-s21-001.log` und
+`parser-alignment-extraction-20260926-s21-001`; der binäre Import ist separat in
+`.local/runs/typed-scan-import-20260926-s21-001` belegt. Ein neuer gemeinsamer
+Appbuild und die Simulator-/Geräteabnahme bleiben erforderlich.
+
+Serialisierung bleibt ausdrücklich an diesen Grenzen:
+
+- Gespeicherte Einstellungen mit älteren Vorgaben und unbekannten Schlüsseln;
+  `decode_stored_preferences` dekodiert diese Speicherwerte. Beim Speichern
+  werden bekannte Felder in den vorhandenen Datensatz gemischt.
+- Persistierte Dokumente, Ereigniswerte, Journale, Diagnosen, Exporte und
+  Widgetdateien mit ihren bestehenden Versionen und Wiederherstellungsverträgen.
+- Die benannten älteren JSON-/CLI-Eingänge und Standardadapter des `Platform`-
+  Traits. Der native Host überschreibt die aktiven Effekte typisiert; seine
+  verbleibenden Stringadapter `agenda`, `editSystemEvent` und `decodePhoto`
+  erhalten ausdrücklich ältere Aufrufer.
+- Strukturierte Modell- und Gesprächsdaten mit nachfolgender Validierung;
+  sie verleihen weder Schreibrechte noch ersetzen sie die sichtbare Bestätigung.
 
 ## Bereits typisierte aktive Grenzen
 

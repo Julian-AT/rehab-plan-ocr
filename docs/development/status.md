@@ -29,11 +29,13 @@ Use the maintained technical records for implementation and scoped evidence:
 - [Data provenance and review](dataset.md),
   [assistant safety](assistant-safety.md), [local system speech](system-speech.md).
 
-The latest read-only physical inventory found build 2026092624 on iPhone 17/iOS
-26.6 with schema 8, 15 tables and 29 scans. This is neither a complete fresh backup
-nor evidence of the new candidate's behavior. No physical device was updated in
-this continuation. Current preview/listening approval, a fresh full backup,
-in-place installation and persistent-data comparison remain required.
+The earlier read-only physical inventory found build 2026092624 on iPhone 17/iOS
+26.6 with schema 8, 15 tables and 29 scans. On September 26, 2026, the paired-device
+listing reports its tunnel unavailable; cached OS/connection metadata does not
+verify the current device. Neither observation is a fresh backup or evidence of
+the new candidate's behavior. No physical device was updated in this continuation.
+Current preview/listening approval, a fresh full backup, in-place installation
+and persistent-data comparison remain required.
 
 The previously signed package's earliest profile expired on September 26, 2026 at
 11:56:33 UTC. Its [historical package record](../releases/history/2026-09-26-s18-signed-package.md)
