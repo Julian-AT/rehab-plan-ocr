@@ -58,9 +58,9 @@ ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
-Auf dem iPhone ist nach dem freigegebenen [Hotspot-Update](docs/soft-audio-device-update.md) Build 2026092623 installiert; App-Start und Datenerhalt sind geprüft.
-Für Build 2026092624 ist die ausgewählte [Palette „Zitrus & Olive“ samt grüner Schrift für „Vergangene Termine anzeigen“](docs/preview/2026-09-26-s14-zitrus-olive/README.md) umgesetzt. Das Geräteupdate dieses Stands steht noch aus.
-Die [Vorschau mit transparenten Grünflächen, Orb-Schatten und Audio-Wiederherstellung](docs/preview/2026-09-26-s14-soft-greens-audio/README.md) dokumentiert den installierten Stand. Simulator- und Audio-Regressionsprüfungen bestehen; die Prüfung mit echter Sprache steht aus.
+Auf dem iPhone ist nach dem freigegebenen [Hotspot-Update](docs/zitrus-device-update.md) Build 2026092624 installiert; erster App-Start und Datenerhalt vor und nach diesem Start sind geprüft.
+Die ausgewählte [Palette „Zitrus & Olive“ samt grüner Schrift für „Vergangene Termine anzeigen“](docs/preview/2026-09-26-s14-zitrus-olive/README.md) dokumentiert die installierte Darstellung.
+Die vorherige [Vorschau mit transparenten Grünflächen, Orb-Schatten und Audio-Wiederherstellung](docs/preview/2026-09-26-s14-soft-greens-audio/README.md) dokumentiert die unverändert übernommene Audioverarbeitung. Simulator- und Audio-Regressionsprüfungen bestehen; die Prüfung mit echter Sprache steht aus.
 Die [Kalenderpalette Greens-7](docs/preview/2026-09-26-s14-greens/README.md) ist mit Simulatoraufnahmen dokumentiert. [Du/Sie und die überarbeitete Mikrofonaufnahme](docs/preview/2026-09-26-s14-calm-voice/README.md) sind mit Victoria-Hörproben und Prüfprotokoll dokumentiert. Die Prüfung mit echter Sprache steht noch aus.
 
 Die vorherige gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mitblättern](docs/preview/2026-09-26-s13-page-axis/README.md).

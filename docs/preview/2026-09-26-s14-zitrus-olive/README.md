@@ -2,7 +2,7 @@
 
 # Zitrus & Olive
 
-Native Umsetzung der gewählten **Palette 07** aus der [HTML-Auswahl](../termin-farbpaletten.html), vorgesehen für **Build 2026092624**.
+Native Umsetzung der gewählten **Palette 07** aus der [HTML-Auswahl](../termin-farbpaletten.html) in **Build 2026092624**.
 
 Die Auswahl stand auf 32 % Farbstärke. Kalenderkarten und Tagesliste übernehmen entsprechend **32 % Deckkraft in Hell** und **36 % in Dunkel**. Die dunklen Akzente entsprechen exakt der HTML-Vorschau. Titel und Zusatztexte bleiben neutral, Kalendergrößen und Kartenaufteilung unverändert.
 
@@ -42,4 +42,4 @@ Die zusätzlichen `large-…-0` bis `-4`-Aufnahmen zeigen die einzelnen Kategori
 - Insgesamt **3 UI-Tests, 0 Fehler**, dokumentiert in `/tmp/reha-zitrus-preview.xcresult` und `/tmp/reha-zitrus-ui.log`.
 - Der grüne Link wurde zusätzlich im dunklen Simulator geöffnet und visuell kontrolliert; Kalenderkarten und Linkschrift sind in beiden Erscheinungsbildern geprüft.
 
-Auf dem iPhone bleibt vorerst der zuvor installierte Build 2026092623. Diese Vorschau dokumentiert die neue Darstellung; ein weiteres Geräteupdate wurde noch nicht durchgeführt.
+Build **2026092624** wurde am 26. September 2026 nach ausdrücklicher Freigabe und frischer Sicherung ohne Deinstallation auf dem iPhone installiert. Erster App-Start und Datenerhalt vor und nach diesem Start sind geprüft; der [Gerätebericht](../../zitrus-device-update.md) dokumentiert die Nachweise.
