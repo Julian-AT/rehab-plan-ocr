@@ -128,6 +128,40 @@
           "recorded_responses_admitted": 16
         }
       }
+    },
+    "router_replay_with_explicit_rename_rule": {
+      "rules_identity": "calendar-4",
+      "cases": 40,
+      "independent_dependency_groups": 1,
+      "fresh_inference": false,
+      "full_voice_workflow": false,
+      "qualified": false,
+      "report": ".local/runs/assistant-v2-router-replay-20260926-s21-002/summary.json",
+      "report_sha256": "eabe9bae714c0a9603826b40d8e30f53799c446e8e6abbbc5cfdf643a479f5e6",
+      "variants": {
+        "baseline-002-native": {
+          "exact_matches": 28,
+          "schema_valid": 30,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 12
+        },
+        "trained-001-corrected-native": {
+          "exact_matches": 37,
+          "schema_valid": 40,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 12
+        },
+        "trained-002-native": {
+          "exact_matches": 40,
+          "schema_valid": 40,
+          "unsafe_proposed_mutations": 0,
+          "recorded_responses_admitted": 12
+        }
+      },
+      "rule_improvements_per_variant": 4,
+      "model_improvements_against_previous_under_same_rules": 3,
+      "new_incorrect_cases_against_previous": 0,
+      "new_unsafe_proposals_against_previous": 0
     }
   },
   "evidence": {
@@ -137,7 +171,10 @@
     ".local/runs/assistant-development-002/baseline.json": "13b27d201acf1aa237b1b6d71f944fdd4f59d4d9dc5c5e126b9456adf646652d",
     ".local/runs/assistant-development-002/result.json": "5807d161507c6921b45fb3d5fdaab449a05aa1a972bfbd07677485175569082f",
     ".local/runs/assistant-development-002/deployment/export.json": "a3930dc6d86927023829710bb20d2de6ac03738972ff6bd0fe162eb8261fbc69",
-    ".local/runs/assistant-v2-router-replay-20260926-s21-001/summary.json": "a92b36b8c4bc587d97f867573073d2f50d47ac22c301d1c38052528dbc41e911"
+    ".local/runs/assistant-v2-router-replay-20260926-s21-001/summary.json": "a92b36b8c4bc587d97f867573073d2f50d47ac22c301d1c38052528dbc41e911",
+    ".local/runs/assistant-v2-router-replay-20260926-s21-002/summary.json": "eabe9bae714c0a9603826b40d8e30f53799c446e8e6abbbc5cfdf643a479f5e6",
+    ".local/runs/assistant-v2-router-replay-20260926-s21-002/execution.json": "56f8ca0c41b910377d02610ccaeddb7638d8bb407a57dfdfc72e373da6e34c7b",
+    ".local/runs/assistant-validator-contract-delta-20260926-s21-001/report.json": "5c9b804a8fbf6f202c548f7c0e990ffb8622cd2776c70fd3450f7532a2d92b81"
   },
   "limits": [
     "Known synthetic development controls influenced training expansion; not an unseen holdout or independent participants.",

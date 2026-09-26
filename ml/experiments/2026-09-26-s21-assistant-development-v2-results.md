@@ -54,6 +54,24 @@ new relative to the untuned control. All results remain one known development
 group. The immutable private evidence is
 `.local/runs/assistant-v2-router-replay-20260926-s21-001`.
 
+After the separately tested, narrow explicit-rename rule (`calendar-4`), a second
+actual host replay scores **28/40, 37/40 and 40/40** for those same three variants.
+All have zero unsafe post-router proposals. The recording inputs are byte-identical
+to the first replay. Each variant now uses 28 complete rule answers and 12 provider
+answers: the four additional rename successes belong to the rule, while the new
+model's three-case advantage over the previous candidate remains unchanged under
+the same current rules. No new incorrect or unsafe post-router case appears.
+The rule resolves one previously discussed live reference, proposes only the
+explicit title, and still requires the visible confirmation button before writing.
+Focused conversation tests cover stale/ambiguous targets, extra model fields,+cancellation and pending field collection; these are developer regressions.
+
+The second replay's 115 pinned source inputs remained unchanged. Evidence is at
+`.local/runs/assistant-v2-router-replay-20260926-s21-002`; neither replay is a complete
+voice workflow or independent generalization test. The separately corrected
+Python ASCII-time validator leaves all 200 retained raw strings' assessments
+unchanged (`assistant-validator-contract-delta-20260926-s21-001`). Frozen training,
+export and first-replay evidence retain their original validator identities.
+
 Private evidence:
 
 - `.local/runs/assistant-development-002`: baseline, all checkpoint states,
