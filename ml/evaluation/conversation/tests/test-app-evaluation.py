@@ -137,9 +137,18 @@ class AppEvaluationTests(unittest.TestCase):
         changed = copy.deepcopy(self.result)
         changed["cases"][0].update(provider="complete-rules", model_identity=identity)
         self.audit(changed)
-        changed["cases"][0]["model_identity"] = "calendar-3"
-        with self.assertRaises(ValueError):
-            self.audit(changed)
+        for stale in ["calendar-3", "calendar-4"]:
+            changed["cases"][0]["model_identity"] = stale
+            with self.subTest(scope="mixed provider observation", identity=stale):
+                with self.assertRaises(ValueError):
+                    self.audit(changed)
+            rules_fixture = dict(self.fixture, mode="rules")
+            rules_result = dict(
+                self.result, mode="rules", provider="complete-rules", model_identity=stale
+            )
+            with self.subTest(scope="rules-only envelope", identity=stale):
+                with self.assertRaises(ValueError):
+                    evaluate(rules_result, rules_fixture, self.rows, "pinned")
 
     def test_nonfinite_negative_boolean_durations_and_wrong_status_fail(self):
         for seconds in [float("nan"), float("inf"), -1, True, "0.5"]:

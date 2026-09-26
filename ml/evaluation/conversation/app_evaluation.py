@@ -6,7 +6,7 @@ from ml.evaluation.conversation.intent import InvalidIntent, validate
 from ml.evaluation.conversation.paired import clusters
 from ml.training.assistant.contract import validate_dataset
 
-RULES_MODEL_IDENTITY = "calendar-4"
+RULES_MODEL_IDENTITY = "calendar-5"
 
 
 def prepare(path, run_id, mode):
