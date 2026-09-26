@@ -104,3 +104,10 @@ The new proof matches 171 tensors after resume and 10/10 complete answers throug
 fusion/GGUF. Its 4/10 correct development operations and one unsafe proposal still
 fail acceptance; it is not integrated as the app's provider. The expanded invented
 corpus still awaits human review and is not an independent real dialogue set.
+
+Speech-output PCM decoding is now bounded, format-validated, cancelable and off the
+main actor. Its native probe, simulator build and two output/confirmation UI tests
+pass. Their launch helpers wait for the existing recovery gate to enable tabs.
+The previous CoreAudio RPC abort did not recur in the minimal audio probe or latest
+UI reruns, but remains an unexplained intermittent issue. Earlier failure records
+are retained; there is still no complete audio or physical-device qualification.

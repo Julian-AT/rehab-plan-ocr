@@ -269,3 +269,18 @@ answers against uninterrupted training. Ten complete answers match across adapte
 fusion and desktop GGUF. The tuned model still has only 4/10 exact development
 operations and one unsafe proposed mutation, so it remains unqualified. See the
 [resumption experiment](../ml/experiments/2026-09-26-s17-assistant-resumption.md).
+
+Speech-output PCM validation/conversion now runs off the main actor. The decoder
+checks the entire canonical PCM16/24 kHz/mono WAV header, declared lengths, alignment
+and a five-minute per-phrase allocation bound before conversion. Cancellation is
+checked during conversion; a superseded playback generation cannot start late.
+Exact-sample, malformed-header, truncation, size-limit and cancellation probes pass.
+The simulator build and both real-output/voice-confirmation UI regressions pass.
+The UI launch helpers now wait for enabled tabs: the persistent-data recovery gate
+already displayed disabled tabs, and the initial test tapped before that gate opened.
+
+Before the PCM change, an independent minimal AVAudioEngine app and the two original
+output UI cases also passed without changing the production audio setup. The earlier
+CoreAudio RPC abort is therefore intermittent and remains unexplained; neither the
+successful reruns nor off-main PCM decoding establish its resolution. No device,
+latency, energy or pause-handling qualification follows from these simulator runs.

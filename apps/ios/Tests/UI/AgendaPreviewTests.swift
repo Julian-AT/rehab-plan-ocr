@@ -10,6 +10,12 @@ import XCTest
       ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", mode] + extra
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 20))
+    // The shell is visible while its persistent-data recovery gate still
+    // disables navigation. A visible tab is not yet an actionable tab.
+    expectation(
+      for: NSPredicate(format: "enabled == true"),
+      evaluatedWith: app.tabBars.buttons["Termine"])
+    waitForExpectations(timeout: 20)
   }
   override func tearDown() async throws {
     guard let app else { return }

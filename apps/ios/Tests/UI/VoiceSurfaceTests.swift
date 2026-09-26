@@ -23,6 +23,10 @@ import XCTest
       + (silent ? ["--preview-microphone-silent"] : [])
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Sprechen"].waitForExistence(timeout: 25))
+    expectation(
+      for: NSPredicate(format: "enabled == true"),
+      evaluatedWith: app.tabBars.buttons["Sprechen"])
+    waitForExpectations(timeout: 20)
     app.tabBars.buttons["Sprechen"].tap()
   }
   override func tearDown() async throws {

@@ -135,6 +135,17 @@ import Foundation
   }
   func play(wav: Data) async throws -> Bool {
     stopPlayback()
+    let id = playbackID
+    // Immutable PCM crosses the actor boundary; AVAudioEngine and its buffers
+    // remain owned here. Cancellation must not start a late spoken response.
+    let decoding = Task.detached(priority: .userInitiated) { try SpeechPCM.decode(wav) }
+    let decoded = try await withTaskCancellationHandler {
+      try await decoding.value
+    } onCancel: {
+      decoding.cancel()
+    }
+    try Task.checkCancellation()
+    guard playbackID == id else { return false }
     if engine == nil {
       let audio = AVAudioSession.sharedInstance()
       try audio.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
@@ -149,26 +160,19 @@ import Foundation
       throw LocalSpeechError.message(
         "Die Audioausgabe wurde unterbrochen. Bitte das Gespräch erneut starten.")
     }
-    // The internal renderer always emits a canonical 44-byte PCM16 WAV.
-    guard wav.count > 44, wav.prefix(4) == Data("RIFF".utf8), let player,
+    guard let player,
       let buffer = AVAudioPCMBuffer(
         pcmFormat: AVAudioFormat(standardFormatWithSampleRate: 24_000, channels: 1)!,
-        frameCapacity: AVAudioFrameCount((wav.count - 44) / 2))
+        frameCapacity: AVAudioFrameCount(decoded.samples.count))
     else {
       throw LocalSpeechError.message("Die Sprachdatei ist ungültig.")
     }
     buffer.frameLength = buffer.frameCapacity
-    wav.withUnsafeBytes { raw in
-      for i in 0..<Int(buffer.frameLength) {
-        buffer.floatChannelData![0][i] =
-          Float(Int16(littleEndian: raw.loadUnaligned(fromByteOffset: 44 + i * 2, as: Int16.self)))
-          / 32768
-      }
+    decoded.samples.withUnsafeBufferPointer { samples in
+      buffer.floatChannelData![0].update(from: samples.baseAddress!, count: samples.count)
     }
     pcm = buffer
     playbackDuration = Double(buffer.frameLength) / 24_000
-    let id = UUID()
-    playbackID = id
     return await withCheckedContinuation { continuation in
       completion = continuation
       player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) {
