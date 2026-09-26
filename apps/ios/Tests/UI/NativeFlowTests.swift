@@ -76,17 +76,23 @@ import XCTest
     let preview = app.buttons["preview-voice"]
     XCTAssertTrue(preview.waitForExistence(timeout: 8))
     preview.tap()
-    expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: preview)
-    waitForExpectations(timeout: 45)
+    // Resolve the phase in the current hierarchy. A retained element can still
+    // expose the preparation snapshot after playback starts.
+    let playing = app.buttons.matching(
+      NSPredicate(format: "identifier == %@ AND value == %@", "preview-voice", "playing")
+    ).firstMatch
+    let idle = app.buttons.matching(
+      NSPredicate(format: "identifier == %@ AND value == %@", "preview-voice", "idle")
+    ).firstMatch
+    XCTAssertTrue(playing.waitForExistence(timeout: 45))
     capture("Victoria playing")
     preview.tap()
-    XCTAssertEqual(preview.value as? String, "idle")
+    XCTAssertTrue(idle.waitForExistence(timeout: 5))
     preview.tap()
-    expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: preview)
-    waitForExpectations(timeout: 30)
+    XCTAssertTrue(playing.waitForExistence(timeout: 30))
     XCUIDevice.shared.press(.home)
     app.activate()
-    XCTAssertEqual(preview.value as? String, "idle")
+    XCTAssertTrue(idle.waitForExistence(timeout: 5))
   }
   func testSystemControlsAndMoreAppearance() {
     app.tabBars.buttons["Sprechen"].tap()

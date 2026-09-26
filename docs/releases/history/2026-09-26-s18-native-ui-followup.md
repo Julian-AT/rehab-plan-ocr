@@ -58,3 +58,21 @@ its overall failure remains recorded. A subsequent image-overflow workaround
 failed and was removed. Neither attempt is counted as a passing test. The owned
 simulator's original store was preserved and hash-verified before seeding the
 complete public UI fixtures. Physical data and the visual baseline were unchanged.
+
+## Voice-query candidates
+
+The address test brings its response row back into view before checking the
+addressed question. Playback tests now match the expected phase in a current
+accessibility query, instead of polling the value on the retained button. The
+playing deadlines remain 45/30 seconds. Stop/background checks wait for the
+updated idle query; these UI synchronization checks do not measure the separate
+250 ms interruption target.
+
+All three changed test sources compile in an actual simulator test build, with
+source hashes and the successful build log retained in
+`.local/runs/ui-query-readiness-20260926-s18-001/verification.json`.
+Their behavioral qualification remains pending the hosted suite. Local address
+reproduction is blocked before the changed assertion by the independently
+reproduced CoreAudio RPC abort; it is not recorded as a pass. Production audio
+code, pause thresholds, visuals and test assertions about user behavior remain
+unchanged.

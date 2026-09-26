@@ -127,6 +127,9 @@ import XCTest
     field.typeText("Testtermin")
     app.buttons["Bezeichnung übernehmen"].tap()
     let answer = app.staticTexts["voice-response-details"]
+    // Submitting the lower form keeps its scroll position. The response row is
+    // virtualized above the viewport until it is brought back into view.
+    for _ in 0..<8 where !answer.isHittable { app.swipeDown() }
     expectation(for: NSPredicate(format: "label CONTAINS %@", "haben Sie"), evaluatedWith: answer)
     waitForExpectations(timeout: 8)
     app.tabBars.buttons["Mehr"].tap()

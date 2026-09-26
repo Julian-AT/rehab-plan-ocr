@@ -64,10 +64,15 @@ import XCTest
       capture("polish-voice-settings-\(mode)")
       // Hit the empty trailing part of the label, not its text.
       edgeTap(preview)
-      expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: preview)
-      waitForExpectations(timeout: 45)
+      let playing = app.buttons.matching(
+        NSPredicate(format: "identifier == %@ AND value == %@", "preview-voice", "playing")
+      ).firstMatch
+      XCTAssertTrue(playing.waitForExistence(timeout: 45))
       edgeTap(preview)
-      XCTAssertEqual(preview.value as? String, "idle")
+      let idle = app.buttons.matching(
+        NSPredicate(format: "identifier == %@ AND value == %@", "preview-voice", "idle")
+      ).firstMatch
+      XCTAssertTrue(idle.waitForExistence(timeout: 5))
       app.tabBars.buttons["Mehr"].tap()
       app.buttons["Kalender"].tap()
       // Native Toggle exposes both its full row and the smaller visual switch.
