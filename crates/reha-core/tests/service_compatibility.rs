@@ -54,7 +54,11 @@ fn revision_check_is_atomic_and_stale_approval_cannot_return() {
 fn reopen_preserves_canonical_hash_schema_and_unknown_preferences() {
     let (dir, app, run) = fixture();
     let settings = serde_json::json!({"timezone":"Europe/Vienna","reminder":10,"future_preference":{"keep":true}});
-    service::settings::settings_value(&app, Some(settings.clone())).unwrap();
+    let saved = service::settings::settings_value(&app, Some(settings.clone())).unwrap();
+    for (key, value) in settings.as_object().unwrap() {
+        assert_eq!(&saved[key], value);
+    }
+    assert_eq!(saved["display_selection_revision"], 0);
     let expected = service::scan::revision(&run);
     drop(app);
     let store = Store::open(dir.path()).unwrap();
@@ -72,7 +76,7 @@ fn reopen_preserves_canonical_hash_schema_and_unknown_preferences() {
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(&store.setting("preferences").unwrap().unwrap())
             .unwrap(),
-        settings
+        saved
     );
 }
 #[test]

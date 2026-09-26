@@ -14,6 +14,11 @@ license = "MIT"
 [profile.dev.package.reha-core]
 opt-level = 3
 
+# Logic regressions do not benchmark inference. Avoid optimizing the complete
+# test harness on every edit; application and benchmark builds stay optimized.
+[profile.test.package.reha-core]
+opt-level = 1
+
 [profile.dev.package.image]
 opt-level = 3
 

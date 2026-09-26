@@ -767,7 +767,9 @@ fn completely_failed_reader_pass_is_not_reported_as_complete() {
         &mut r,
         temp.path(),
         &std::sync::atomic::AtomicBool::new(false),
-        std::time::Instant::now() + std::time::Duration::from_secs(5),
+        // This asserts failure reporting, not image-processing throughput. Leave
+        // enough time for instrumented/debug builds and contended CI machines.
+        std::time::Instant::now() + std::time::Duration::from_secs(60),
         Some(&original),
         &mut |_, _, _, _, _| {
             Err(reha_core::Error::Invalid(
