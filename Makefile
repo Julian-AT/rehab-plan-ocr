@@ -226,11 +226,15 @@ register-ocr:
 	@test -n "$(RUN)" -a -n "$(MODEL_CARD)" || { echo 'Set RUN and a new ml/registry MODEL_CARD path'; exit 2; }
 	.local/envs/ocr/bin/python ml/training/ocr/model_card.py --run "$(RUN)" $(if $(COMPARE_RUN),--run "$(COMPARE_RUN)") --output "$(MODEL_CARD)"
 
-.PHONY: diagnose-ocr-parity
+.PHONY: diagnose-ocr-parity diagnose-ocr-baseline-parity
 PARITY_OPTIMIZATION ?= disabled
 diagnose-ocr-parity:
 	@test -n "$(RUN)" -a -n "$(PARITY_REPORT)" || { echo 'Set RUN and a new private PARITY_REPORT path'; exit 2; }
 	OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 .local/envs/ocr/bin/python ml/evaluation/recognition/export_parity.py --run "$(RUN)" --onnx "$(RUN)/deployment/recognizer.onnx" --failures-from "$(RUN)/deployment/parity.json" --graph-optimization "$(PARITY_OPTIMIZATION)" --report "$(PARITY_REPORT)"
+
+diagnose-ocr-baseline-parity:
+	@test -n "$(RUN)" -a -n "$(PARITY_REPORT)" || { echo 'Set RUN and a new private PARITY_REPORT path'; exit 2; }
+	OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 .local/envs/ocr/bin/python ml/evaluation/recognition/export_parity.py --run "$(RUN)" --baseline --report "$(PARITY_REPORT)"
 
 ASSISTANT_PER_FAMILY ?= 16
 ASSISTANT_EPOCHS ?= 20

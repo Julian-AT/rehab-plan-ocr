@@ -37,8 +37,20 @@ the ONNX artifact SHA-256 is
 Complete evidence is in `.local/runs/ocr-synthetic-frozen-001` and the separate
 `ocr-frozen-parity-diagnostic-20260926-s18-001` diagnostic directory.
 
-The matching full-adaptation run remains active under the same dataset, seed,
-width, batch and validation policy, at learning rate 1e-5 rather than 1e-4.
+An independent diagnostic compares the original trainable pretrained checkpoint
+with the pinned shipping ONNX recognizer on these same 1,206 inputs. It also fails
+numeric parity: 1,187/1,206 pass, with 1,206/1,206 identical argmax sequences and
+maximum absolute difference 0.0011280477046966553. This establishes that numerical
+disagreement already exists in the baseline comparison; it does not establish its
+cause or qualify either adapted model. Tolerances stay unchanged. The retained
+report `.local/runs/ocr-pretrained-parity-20260926-s18-001/parity.json` has SHA-256
+`e85a2a68662ade93457980c949267450cadef5b350f6dca5da376d41208929f2`.
+
+The matching full-adaptation run completes five epochs (1,280 optimizer steps)
+under the same dataset, seed, width, batch and validation policy, at learning rate
+1e-5 rather than 1e-4. It selects epoch two with 91/91 exact validation crops and no
+new critical errors. The final epoch declines to 70/91; the selected checkpoint
+remains epoch two. Its export qualification is pending.
 Training and file-ASR diagnosis overlap on the host, so no runtime-latency,
 energy or thermal comparison is inferred. No human reference/crop approval,
 final holdout, physical-device update or production model change occurs.

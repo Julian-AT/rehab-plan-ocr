@@ -148,6 +148,12 @@ and app loading reject those reports as deployment parity. Numeric tolerances an
 token comparison remain unchanged. The runtime option is documented in the
 [official ONNX Runtime API](https://onnxruntime.ai/docs/api/python/api_summary.html#onnxruntime.SessionOptions).
 
+`make diagnose-ocr-baseline-parity RUN=<prepared-run> PARITY_REPORT=<new-private-json>`
+compares the pinned pretrained checkpoint with the shipping small recognizer on
+the same prepared crops and widths. Checkpoint, runtime and dictionary pins must
+match. Its report is always diagnostic and cannot qualify an adapted checkpoint.
+The new path preserves previous evidence, including failed comparisons.
+
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.
