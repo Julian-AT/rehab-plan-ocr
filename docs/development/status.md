@@ -137,6 +137,14 @@ answers equal to MLX. Both quality and parity gates fail. See the
 [development experiment](../../ml/experiments/2026-09-26-s17-assistant-development.md).
 No calendar operation was executed by these evaluations and no provider was promoted.
 
+The paired recorded-answer audit now verifies lineage and every decoded outcome.
+It identifies seven newly unsafe proposal cases despite a net increase of four,
+and retains all 17 case-level regression flags. The ten development families share
+one declared speaker group; the audit therefore reports one connected component
+and no confidence interval. Two audits are byte-identical; ten focused regressions,
+all 153 tool tests and lint pass. This adds evaluation discipline, not new model
+quality or independent real-dialogue evidence.
+
 The [listening preparation](../../ml/evaluation/speech/README.md) now produces 100
 host previews: ten invented texts through Victoria and nine available German
 system voices. Its anonymous browser form and audio-integrity checks pass. No

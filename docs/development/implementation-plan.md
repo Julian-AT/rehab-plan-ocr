@@ -108,6 +108,30 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Paired assistant errors and dependency-aware uncertainty — 2026-09-26
+
+`make audit-assistant-pairs` verifies the existing model-card/run/dataset/decoder
+identities and redecodes every recorded answer. Complete validation coverage,
+boolean outcomes, aggregate counts and full-answer parity are rechecked. Paired
+resampling retains connected family/scenario/paraphrase/speaker groups; it refuses
+an interval when fewer than two components exist. Case-level regressions cannot
+be hidden by an improved aggregate. No inference or calendar operation is run.
+
+The actual development record still has 4/40 versus 17/40 exact operations and
+7/40 versus 11/40 unsafe proposals. Seven cases have newly unsafe proposals while
+three previous cases improve. There are 17 cases requiring regression review,
+including 16 changed incorrect operations and one new schema rejection; categories
+overlap. Ten families share one declared speaker group, so only one dependency
+component exists and no confidence interval is justified by this audit. The six
+GGUF parity failures remain. No candidate is promoted.
+
+Ten isolated regressions, all 153 tool tests and repository lint pass. Two complete
+audits produce byte-identical reports. The final report is retained at
+`.local/runs/assistant-paired-20260926-s18-002/report.json`, SHA-256
+`7a23eb72a78b318e5577902d8b36ee5e88720b8d9da4a3eff868dc40a8658a45`.
+The [evaluation guide](../../ml/evaluation/conversation/README.md) records the
+method, estimand and limits; this remains selected, invented development evidence.
+
 ### Hosted CI access and exact-revision monitoring — 2026-09-26
 
 The configured GitHub repository is reachable. The latest existing run,

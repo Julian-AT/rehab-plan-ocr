@@ -138,6 +138,11 @@ evaluate-assistant:
 	@test -n "$(RUN)" || { echo 'Set RUN to the completed smoke directory'; exit 2; }
 	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/evaluation/conversation/compare.py --run "$(RUN)" --output "$(RUN)/evaluation"
 
+.PHONY: audit-assistant-pairs
+audit-assistant-pairs:
+	@test -n "$(RUN)" -a -n "$(MODEL_CARD)" -a -n "$(OUTPUT)" || { echo 'Set RUN, MODEL_CARD and a new OUTPUT below .local/runs'; exit 2; }
+	/usr/bin/env uv run --locked python ml/evaluation/conversation/paired.py --run "$(RUN)" --model-card "$(MODEL_CARD)" --output "$(OUTPUT)"
+
 MIGRATION ?= .local/migrations/private-storage.json
 .PHONY: inventory-private migrate-private
 inventory-private:
