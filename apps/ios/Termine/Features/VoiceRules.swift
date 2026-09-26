@@ -1,5 +1,26 @@
 import Foundation
 
+/// Patterns are shared across voice turns. The lock protects only the bounded
+/// cache; matching happens outside it on immutable regular expressions.
+private final class VoiceRegexCache: @unchecked Sendable {
+  private let lock = NSLock()
+  private var expressions: [String: NSRegularExpression] = [:]
+
+  func expression(_ pattern: String) -> NSRegularExpression? {
+    lock.lock()
+    let cached = expressions[pattern]
+    lock.unlock()
+    if let cached { return cached }
+    guard let compiled = try? NSRegularExpression(pattern: pattern) else { return nil }
+    lock.lock()
+    defer { lock.unlock() }
+    if let cached = expressions[pattern] { return cached }
+    // Retain the frequent rules without unbounded growth from future callers.
+    if expressions.count < 128 { expressions[pattern] = compiled }
+    return compiled
+  }
+}
+
 /// Only the current turn is held in memory. Reference time and requested new time
 /// are deliberately separate; a model suggestion never becomes a calendar ID.
 struct VoiceIntent: Equatable {
@@ -19,14 +40,55 @@ struct VoiceIntent: Equatable {
   var corrected = false
 }
 enum VoiceRules {
+  private static let expressions = VoiceRegexCache()
+  private static let timeWords = [
+    "ein": 1, "eins": 1, "eine": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, "sechs": 6,
+    "sieben": 7, "acht": 8, "neun": 9, "zehn": 10, "elf": 11, "zwölf": 12, "dreizehn": 13,
+    "vierzehn": 14, "fünfzehn": 15, "sechzehn": 16, "siebzehn": 17, "achtzehn": 18,
+    "neunzehn": 19, "zwanzig": 20, "einundzwanzig": 21, "zweiundzwanzig": 22,
+    "dreiundzwanzig": 23, "dreissig": 30, "vierzig": 40, "fünfundvierzig": 45, "fünfzig": 50,
+  ]
+  private static let durationWords = [
+    "fünf": 5, "zehn": 10, "fünfzehn": 15, "zwanzig": 20, "dreissig": 30, "fünfundvierzig": 45,
+    "sechzig": 60, "neunzig": 90,
+  ]
+  private static let timePattern = "\\b(?:\(timeWords.keys.sorted().joined(separator: "|")))\\b"
+  private static let durationPattern =
+    "\\b(?:\(durationWords.keys.sorted().joined(separator: "|")))\\b"
+
+  private static func replacing(_ pattern: String, in text: String, with template: String)
+    -> String
+  {
+    guard let regex = expressions.expression(pattern) else { return text }
+    return regex.stringByReplacingMatches(
+      in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
+  }
+
+  private static func replacingNumbers(_ text: String, words: [String: Int], pattern: String)
+    -> String
+  {
+    guard let regex = expressions.expression(pattern) else { return text }
+    let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+    guard !matches.isEmpty else { return text }
+    let original = text as NSString
+    let result = NSMutableString(string: text)
+    // Original UTF-16 ranges stay valid when replacements proceed from the end.
+    for match in matches.reversed() {
+      if let value = words[original.substring(with: match.range)] {
+        result.replaceCharacters(in: match.range, with: String(value))
+      }
+    }
+    return result as String
+  }
+
   static func normalized(_ text: String) -> String {
-    text.lowercased().replacingOccurrences(of: "ß", with: "ss")
-      .replacingOccurrences(of: "[,!?]", with: " ", options: .regularExpression)
-      .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression).trimmingCharacters(
-        in: .whitespacesAndNewlines)
+    let lower = text.lowercased().replacingOccurrences(of: "ß", with: "ss")
+    let punctuation = replacing("[,!?]", in: lower, with: " ")
+    return replacing("\\s+", in: punctuation, with: " ").trimmingCharacters(
+      in: .whitespacesAndNewlines)
   }
   static func matches(_ pattern: String, _ text: String) -> [[String]] {
-    guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+    guard let regex = expressions.expression(pattern) else { return [] }
     let ns = text as NSString
     return regex.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { match in
       (0..<match.numberOfRanges).map {
@@ -69,17 +131,7 @@ enum VoiceRules {
     if let correction = text.range(of: " nein ", options: .backwards) {
       text = String(text[correction.upperBound...])
     }
-    let numbers = [
-      "ein": 1, "eins": 1, "eine": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, "sechs": 6,
-      "sieben": 7, "acht": 8, "neun": 9, "zehn": 10, "elf": 11, "zwölf": 12, "dreizehn": 13,
-      "vierzehn": 14, "fünfzehn": 15, "sechzehn": 16, "siebzehn": 17, "achtzehn": 18,
-      "neunzehn": 19, "zwanzig": 20, "einundzwanzig": 21, "zweiundzwanzig": 22,
-      "dreiundzwanzig": 23, "dreissig": 30, "vierzig": 40, "fünfundvierzig": 45, "fünfzig": 50,
-    ]
-    for (word, number) in numbers {
-      text = text.replacingOccurrences(
-        of: "\\b\(word)\\b", with: String(number), options: .regularExpression)
-    }
+    text = replacingNumbers(text, words: timeWords, pattern: timePattern)
     var minutes: Int?
     if let m = matches("\\b(dreiviertel|halb|viertel) (\\d{1,2})\\b", text).last,
       let hour = Int(m[2]), (1...24).contains(hour)
@@ -101,14 +153,7 @@ enum VoiceRules {
     return minutes
   }
   static func duration(_ text: String) -> Int? {
-    var input = normalized(text)
-    for (word, value) in [
-      "fünf": 5, "zehn": 10, "fünfzehn": 15, "zwanzig": 20, "dreissig": 30, "fünfundvierzig": 45,
-      "sechzig": 60, "neunzig": 90,
-    ] {
-      input = input.replacingOccurrences(
-        of: "\\b\(word)\\b", with: String(value), options: .regularExpression)
-    }
+    let input = replacingNumbers(normalized(text), words: durationWords, pattern: durationPattern)
     if let match = matches("\\b(\\d{1,3}) minuten\\b", input).last, let value = Int(match[1]),
       value > 0
     {
@@ -117,9 +162,9 @@ enum VoiceRules {
     return nil
   }
   static func referenceWords(_ input: String) -> [String] {
-    let clean = normalized(input).replacingOccurrences(
-      of: "(?:im|in|aus|vom) kalender .+?(?= am | um | heute| morgen|$)", with: "",
-      options: .regularExpression)
+    let clean = replacing(
+      "(?:im|in|aus|vom) kalender .+?(?= am | um | heute| morgen|$)", in: normalized(input),
+      with: "")
     let ignored = Set(
       "verschiebe verschieben ändere ändern lösche löschen entferne entfernen den der die das dem meinen mein meine meiner mir bitte termin termine behandlung um am auf von nach vor bis uhr heute morgen übermorgen nächste nächsten nächster ist wann zeige finde habe ich mich dienstag montag mittwoch donnerstag freitag samstag sonntag halb viertel dreiviertel nein keine keinen kein nicht neun zehn eins ein zwei drei vier fünf sechs sieben acht elf zwölf"
         .split(separator: " ").map(String.init))

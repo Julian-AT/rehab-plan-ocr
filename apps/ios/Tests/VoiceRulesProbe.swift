@@ -39,6 +39,22 @@ import Foundation
     precondition(parse("Habe ich keine Termine?").action == .list)
     precondition(parse("Nicht am Dienstag, am Mittwoch").action != .cancel)
     precondition(parse("Gespräch beenden").action == .cancel)
+    precondition(VoiceRules.normalized("  Größe,\tÜBUNG!\n🗓️?  ") == "grösse übung 🗓️")
+    precondition(VoiceRules.time("🗓️ um fünf Uhr fünfundvierzig") == 345)
+    precondition(VoiceRules.time("um einundzwanzig Uhr zwei") == 1262)
+    precondition(VoiceRules.time("um eine Uhr") == 60)
+    precondition(VoiceRules.time("um eins Uhr") == 60)
+    precondition(VoiceRules.time("um einen Uhr") == nil)
+    precondition(VoiceRules.duration("🗓️ neunzig Minuten") == 90)
+    precondition(VoiceRules.duration("neunzigminuten") == nil)
+    precondition(VoiceRules.matches("[", "ungültig").isEmpty)
+    DispatchQueue.concurrentPerform(iterations: 256) { index in
+      // Distinct patterns exercise cache saturation while common rules are in use.
+      precondition(VoiceRules.matches("^probe\(index)$", "probe\(index)") == [["probe\(index)"]])
+      precondition(VoiceRules.time("halb zehn") == 570)
+      precondition(VoiceRules.duration("dreißig Minuten") == 30)
+      precondition(VoiceRules.normalized("  Nächster Termin!?  ") == "nächster termin")
+    }
     print("Voice rules: dates, times, corrections, negations and explicit cancellation passed")
   }
 }
