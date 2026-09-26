@@ -1,10 +1,17 @@
 {
   "class-variance-authority-license.txt": "0ccbf956cffc8dcf515809433cb5242ee67c94513d46e48c261d68d0880de406",
   "cn-license.txt": "00ff8408e93e2ecc4d90c0edeabdf434100c3aff50acc5d330e17eccd4a3faa5",
+  "espeak-ng-gpl-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+  "kokoro-apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "kokoro-onnx-mit.txt": "f61fdd0217de9ece8fa699912848d91187d84879fc2e689f0906d0c1299e955e",
+  "kokoro-source.txt": "4a9116b1c8533ce1f110bf9acff5901e548e435b03039af28063ee7fc98e051b",
+  "libfvad-AUTHORS": "cd9bea3aacbdb2a25763835e029f0ea34198dfc35687616a6ce29e7db1b6114a",
+  "libfvad-LICENSE": "78b16d4e803975e0c5d826339c607d0676192a40e2c510c10b2cb4ab4cde416a",
+  "libfvad-PATENTS": "01462e2068d1a04c2274f3389773014c14ed9bc3446b28303543bd3e3c064145",
   "lucide-react-license": "668dcc52803480e0a026b31140a4cae668772663cd764e5991d252eef03f98db",
   "next-license.txt": "ee765244e2d59f5234d474f62e0766fa0c8b99af967fdd4c0cb8dcb0c76ea224",
   "onnx-runtime-license": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
-  "onnx-runtime-third-party-notices.txt": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc",
+  "onnx-runtime-third-party-notices.txt": "a59131044500f454151c25b7b75da37a10aa9a678bf330e437e942e6be3215c7",
   "ort-license-mit": "b880185add684cd1c6d24394a2e30fe08b75ba4586619b0890ce764bc4cd43a0",
   "paddle-ocr-license": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
   "radix-ui-license.txt": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138",
@@ -16,12 +23,8 @@
   "tailwindcss-license.txt": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
   "tauri-license-mit": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d",
   "tw-animate-css-license.txt": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109",
-  "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
+  "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a",
   "uniffi-mpl-2.0.txt": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
   "uniffi-source.txt": "adb66737a1dcc220969b25f438c4cc03108d8d2291dd6998a35a5683baabcfea",
-  "kokoro-source.txt": "a58472014834928595c9fdf289fed0a851a32b07b4e9cd31a56e5c2fed781cbf",
-  "kokoro-apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-  "kokoro-onnx-mit.txt": "f61fdd0217de9ece8fa699912848d91187d84879fc2e689f0906d0c1299e955e",
-  "espeak-ng-gpl-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
-  "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a"
+  "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
 }
