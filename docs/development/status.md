@@ -73,6 +73,10 @@ prove the behavior on physical hardware.
 The common interpretation contract now validates capabilities, availability,
 bounded requests/output, cancellation and deadlines. Rules and Apple Intelligence
 share the contract; custom GGUF execution is not yet registered in the app.
+The separate `LocalAssistant` package now executes the custom GGUF on macOS and
+the iOS simulator, with native cancellation/limits and isolation checks passing.
+Two complete answers match the desktop; both remain wrong and one is an unsafe
+mutation proposal. This verifies runtime compatibility without qualifying the model.
 All four privacy manifests pass built-bundle verification. Privacy/support drafts
 are prepared; publisher/contact information and public distribution review remain open.
 

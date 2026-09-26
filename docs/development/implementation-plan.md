@@ -95,6 +95,19 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Runtime dependency inventory — 2026-09-26
 
+### Experimental native assistant execution
+
+`LocalAssistant` builds a verified pinned llama.cpp CPU boundary for host, simulator
+and device architectures, with no training-code app dependency. Actual host and
+simulator inference, cancellation, deadlines, context/output limits and state
+isolation pass; two complete outputs match the previous desktop GGUF. Neither
+matches the expected operation and one proposes an unwanted mutation. No operation
+is executed and the candidate remains unqualified/unregistered in the app.
+The [native experiment](../../ml/experiments/2026-09-26-s17-assistant-native.md) records
+identities, the fixed sub-millisecond timeout defect and remaining integration gates.
+
+### Bundled runtime dependencies
+
 The selected iOS normal/build closure now has a reproducible inventory: 136 Rust
 packages, with 109 normal target dependencies and 27 build-only packages. Two are
 workspace packages; 134 external packages have pinned source checksums and retained
@@ -118,7 +131,7 @@ Git's automatic CRLF normalization was detected during the first inventory commi
 Bundled notices now use `-text`, and that attribute file is a verified input. A
 fresh export of the staged Git tree, with no registry/model assets, passes the
 read-only inventory check. Its corrected inventory identity is
-`063a8894149ba57acbbe64ed041b1b2e511f84ea11caf1ba9b820ea1876cecda`.
+`6e2c395af8baff1c06fa202bf42481c3a5821bb3ed03807561cb8fb7a6a8d6c3`.
 
 ## Verified implementation slices — 2026-09-26
 

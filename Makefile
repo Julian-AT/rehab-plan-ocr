@@ -12,6 +12,7 @@ help:
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
+	@echo 'Native assistant trial: make build-assistant-native; make test-assistant-native TEST_ARGS="--run .local/runs/<new-run> [--simulator <disposable-id>]"'
 
 bootstrap doctor format lint test:
 	python3 tooling/dev/quality.py $@
@@ -103,6 +104,11 @@ restore-assistant-assets: restore-assistant-training restore-assistant-export
 
 build-assistant-runtime:
 	python3 ml/training/assistant/runtime.py build
+
+ASSISTANT_NATIVE_TARGETS ?= host simulator
+.PHONY: build-assistant-native
+build-assistant-native:
+	python3 tooling/build/build-assistant-native.py $(ASSISTANT_NATIVE_TARGETS)
 
 assistant-smoke:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }
