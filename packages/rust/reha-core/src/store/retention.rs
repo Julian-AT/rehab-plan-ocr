@@ -107,6 +107,36 @@ impl Store {
                 eligible.insert(source);
             }
         }
+        // Exact duplicate captures have their own durable original but reuse a
+        // prior scan instead of creating another run. Connect every matching
+        // scan, including legacy duplicates, to its plan/PDF aggregate. A fresh
+        // capture or unfinished related page therefore protects the whole group.
+        let duplicates = self.connection.prepare(
+            "SELECT i.id,s.id,
+                i.imported_at<=?1
+                AND NOT EXISTS(SELECT 1 FROM failures WHERE id=i.id)
+                AND NOT EXISTS(SELECT 1 FROM processing_attempts WHERE scan_id=i.id AND status='processing'),
+                s.run IS NULL
+                AND NOT EXISTS(SELECT 1 FROM intakes WHERE id=s.id AND status!='deleted')
+                AND NOT EXISTS(SELECT 1 FROM failures WHERE id=s.id)
+                AND NOT EXISTS(SELECT 1 FROM processing_attempts WHERE scan_id=s.id AND status='processing')
+             FROM intakes i JOIN scans s ON s.source_hash=i.source_hash AND s.id!=i.id
+             WHERE i.status='duplicate'",
+        )?.query_map([cutoff], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, bool>(2)?, r.get::<_, bool>(3)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        let mut live_duplicates = BTreeSet::new();
+        for (duplicate, source, expired, source_deleted) in duplicates {
+            groups.push(BTreeSet::from([duplicate.clone(), source.clone()]));
+            if expired {
+                eligible.insert(duplicate.clone());
+                live_duplicates.insert(duplicate);
+            }
+            // A legacy scan may have been explicitly removed before intakes
+            // existed. Its tombstone must not retain a duplicate forever.
+            if source_deleted {
+                eligible.insert(source);
+            }
+        }
         // Include old scans that predate archive indexing, then merge transitive
         // plan/PDF relationships before considering any source for deletion.
         groups.extend(pages.iter().map(|id| BTreeSet::from([id.clone()])));
@@ -126,7 +156,10 @@ impl Store {
         let mut count = 0;
         for group in merged {
             let live_count = group.intersection(&pages).count();
-            if (live_count > 0 || !group.is_disjoint(&live_documents)) && group.is_subset(&eligible)
+            if (live_count > 0
+                || !group.is_disjoint(&live_documents)
+                || !group.is_disjoint(&live_duplicates))
+                && group.is_subset(&eligible)
             {
                 self.delete_sources(&group.into_iter().collect::<Vec<_>>())?;
                 count += live_count;

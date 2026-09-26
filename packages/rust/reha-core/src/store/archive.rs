@@ -41,7 +41,9 @@ const VISIBLE_PLANS: &str = "SELECT p.id,p.imported_at FROM plans p
     AND (
         EXISTS(SELECT 1 FROM plan_pages pp JOIN scans s ON s.id=pp.scan_id
                WHERE pp.plan_id=p.id AND s.run IS NOT NULL)
-        OR EXISTS(SELECT 1 FROM intakes i WHERE i.status!='deleted' AND
+        OR EXISTS(SELECT 1 FROM intakes i WHERE i.status!='deleted'
+            AND (i.status!='duplicate' OR NOT EXISTS(
+                SELECT 1 FROM scans original WHERE original.source_hash=i.source_hash AND original.run IS NOT NULL)) AND
             (i.id=p.id OR i.id IN(SELECT scan_id FROM plan_pages WHERE plan_id=p.id)))
         OR EXISTS(SELECT 1 FROM plan_pages pp JOIN batch_documents d ON d.document_id=pp.scan_id
                   WHERE pp.plan_id=p.id)
