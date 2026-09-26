@@ -1,6 +1,6 @@
 use crate as reha_core;
 use crate::service::inference::{self, ImportRequest};
-use crate::service::{failure, AppState, Response};
+use crate::service::{domain_failure, failure, AppState, DomainFailure, Response};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::contracts::*;
 use serde_json::{json, Value};
@@ -81,7 +81,8 @@ pub async fn import_image(
     {
         let mut active = state.cancel.lock().map_err(failure)?;
         if !active.is_empty() {
-            return Err("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen.".into());
+            return Err(DomainFailure::Busy
+                .with_message("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen."));
         }
         active.insert(request.id.clone(), cancel.clone());
         if app.cancelled(&request.id) {
@@ -194,7 +195,7 @@ pub async fn import_image(
 }
 pub fn load_scan(state: &Arc<AppState>, id: String) -> Response<PipelineRun> {
     let store = state.store.lock().map_err(failure)?;
-    let mut run = store.load_run(&id).map_err(failure)?;
+    let mut run = store.load_run(&id).map_err(domain_failure)?;
     if reha_core::refinement::refresh_cached_mapping(&mut run).map_err(failure)? {
         store.save_run(&run).map_err(failure)?;
     }
@@ -214,14 +215,15 @@ pub fn save_review(
     }
     let store = state.store.lock().map_err(failure)?;
     if !store.pending().map_err(failure)?.is_empty() {
-        return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
+        return Err(DomainFailure::UncertainWrite
+            .with_message("Unklare Schreibvorgänge zuerst abgleichen."));
     }
-    let mut run = store.load_run(&id).map_err(failure)?;
+    let mut run = store.load_run(&id).map_err(domain_failure)?;
     if expected_revision
         .as_ref()
         .is_some_and(|expected| expected != &revision(&run))
     {
-        return Err("stale_revision".into());
+        return Err(DomainFailure::StaleRevision.with_message("stale_revision"));
     }
     if state.cancel.lock().map_err(failure)?.contains_key(&id) {
         return Err("Eine Erkennung bearbeitet diesen Scan. Bitte warten oder abbrechen.".into());
@@ -273,7 +275,7 @@ pub fn delete_scan(state: &Arc<AppState>, id: String) -> Response<()> {
     let _admission = state
         .lifecycle_lock
         .try_lock()
-        .map_err(|_| "Eine Datenänderung läuft bereits.")?;
+        .map_err(|_| DomainFailure::Busy.with_message("Eine Datenänderung läuft bereits."))?;
     let pages = state
         .store
         .lock()
@@ -299,7 +301,8 @@ pub fn delete_scan(state: &Arc<AppState>, id: String) -> Response<()> {
         .keys()
         .any(|id| removed.contains(id))
     {
-        return Err("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen.".into());
+        return Err(DomainFailure::Busy
+            .with_message("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen."));
     }
     let store = state.store.lock().map_err(failure)?;
     store.delete_sources(&removed).map_err(failure)
@@ -309,7 +312,7 @@ pub fn delete_scan(state: &Arc<AppState>, id: String) -> Response<()> {
 /// separate review and confirmation, and never delete missing rows.
 pub fn associate_recheck(state: &Arc<AppState>, id: String, previous: String) -> Response<()> {
     let store = state.store.lock().map_err(failure)?;
-    store.load_run(&id).map_err(failure)?;
+    store.load_run(&id).map_err(domain_failure)?;
     let scans = store.list_scans().map_err(failure)?;
     let schedule = scans
         .iter()
@@ -351,7 +354,9 @@ pub async fn retry_scan(
                 .intake(&id)
                 .map_err(failure)?
                 .filter(|v| v.status != "deleted")
-                .ok_or("Aufnahme wurde gelöscht oder fehlt.")?;
+                .ok_or(
+                    DomainFailure::ExpiredScan.with_message("Aufnahme wurde gelöscht oder fehlt."),
+                )?;
             Some((
                 intake,
                 crate::photo_source::read(store.source_path(&id).map_err(failure)?)
@@ -389,7 +394,7 @@ pub async fn retry_scan(
         {
             let mut active = state.cancel.lock().map_err(failure)?;
             if !active.is_empty() {
-                return Err("Eine Verarbeitung läuft bereits.".into());
+                return Err(DomainFailure::Busy.with_message("Eine Verarbeitung läuft bereits."));
             }
             active.insert(id.clone(), cancel.clone());
             if app.cancelled(&id) {
@@ -409,7 +414,7 @@ pub async fn retry_scan(
                 let (mut run, dir) = {
                     let store = shared.store.lock().map_err(failure)?;
                     (
-                        store.load_run(&scan_id).map_err(failure)?,
+                        store.load_run(&scan_id).map_err(domain_failure)?,
                         store.scan_dir(&scan_id).map_err(failure)?,
                     )
                 };
@@ -459,7 +464,7 @@ pub async fn retry_scan(
                 }
                 let store = shared.store.lock().map_err(failure)?;
                 // Discard no user edits that arrived while the CPU pass was running.
-                let current = store.load_run(&scan_id).map_err(failure)?;
+                let current = store.load_run(&scan_id).map_err(domain_failure)?;
                 if cancel.load(Ordering::Relaxed) {
                     return Ok(current);
                 }
@@ -530,7 +535,7 @@ pub async fn retry_scan(
                         let status = if cancel.load(Ordering::Relaxed) { "cancelled" } else { "budget_exhausted" };
                         cancel.store(true, Ordering::Relaxed);
                         let store = state.store.lock().map_err(failure)?;
-                        let mut run = store.load_run(&id).map_err(failure)?;
+                        let mut run = store.load_run(&id).map_err(domain_failure)?;
                         run.stages.push(Stage { name:"automatic_review".into(), status:status.into(), duration_ms:started.elapsed().as_millis() as u64, detail:"Letzter brauchbarer Entwurf bleibt erhalten.".into(), artifacts:vec![] });
                         store.save_run(&run).map_err(failure)?;
                         return Ok(run);

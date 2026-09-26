@@ -25,7 +25,7 @@ pub fn process(
     cancel: Arc<AtomicBool>,
     started: std::time::Instant,
 ) -> Response<Value> {
-    use crate::service::failure;
+    use crate::service::{domain_failure, failure};
     use reha_core::{
         contracts::*,
         pipeline::{self, RecognitionOutput, ScanInput},
@@ -207,7 +207,7 @@ pub fn process(
                 .lock()
                 .map_err(failure)?
                 .load_run(&request.id)
-                .map_err(failure)?;
+                .map_err(domain_failure)?;
             return Ok(json!({"run":saved,"duplicate":false}));
         }
         if !directly_decodable {
@@ -252,7 +252,7 @@ pub fn process(
         let store = state.store.lock().map_err(failure)?;
         if cancel.load(std::sync::atomic::Ordering::Relaxed) {
             return Ok(
-                json!({"run":store.load_run(&request.id).map_err(failure)?,"duplicate":false}),
+                json!({"run":store.load_run(&request.id).map_err(domain_failure)?,"duplicate":false}),
             );
         }
         store.save_run(&run).map_err(failure)?;

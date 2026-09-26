@@ -19,6 +19,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("{0}")]
     Invalid(String),
+    #[error("Scan wurde gelöscht oder ist noch nicht erkannt.")]
+    MissingRun,
+    #[error("{0}")]
+    UnresolvedCalendarWrites(String),
     #[error("Local storage operation failed: {0}")]
     Io(#[from] std::io::Error),
     #[error("Invalid local record: {0}")]

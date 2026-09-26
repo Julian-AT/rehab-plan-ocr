@@ -1,5 +1,5 @@
 //! Typed editing contracts. Serde is retained for existing journals and legacy adapters.
-use super::{calendar_reads::Event, Response, ServiceError};
+use super::{calendar_reads::Event, DomainFailure, Response, ServiceError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -300,7 +300,7 @@ pub struct Destination {
     pub color_components: Option<Vec<f64>>,
 }
 
-use super::{failure, AppState, Platform};
+use super::{domain_failure, failure, AppState, Platform};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -525,7 +525,7 @@ pub async fn confirm(
         .lock()
         .map_err(failure)?
         .remove(&request.token)
-        .ok_or("Vorschau abgelaufen. Erneut prüfen.")?;
+        .ok_or(DomainFailure::StaleProposal.with_message("Vorschau abgelaufen. Erneut prüfen."))?;
     if request.confirmation != Confirmation::Button
         || request.session != proposal.session
         || request.revision != proposal.revision
@@ -566,9 +566,12 @@ pub async fn confirm(
                 ["pending", "uncertain"].contains(&h["status"].as_str().unwrap_or_default())
             })
         {
-            return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
+            return Err(DomainFailure::UncertainWrite
+                .with_message("Unklare Schreibvorgänge zuerst abgleichen."));
         }
-        store.begin_event_mutation(&proposal).map_err(failure)?;
+        store
+            .begin_event_mutation(&proposal)
+            .map_err(domain_failure)?;
     }
     let mut result = mutate(
         platform.clone(),

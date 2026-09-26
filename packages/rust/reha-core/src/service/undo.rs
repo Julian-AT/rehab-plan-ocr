@@ -1,4 +1,4 @@
-use super::{failure, AppState, Platform, Proposal, Response};
+use super::{domain_failure, failure, AppState, DomainFailure, Platform, Proposal, Response};
 use crate::{contracts::*, store::ImportBatch};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -8,7 +8,8 @@ fn evidence(
 ) -> Response<(ImportBatch, Vec<ImportRecord>, String, Option<ImportBatch>)> {
     let store = state.store.lock().map_err(failure)?;
     if store.has_unresolved_calendar_writes().map_err(failure)? {
-        return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
+        return Err(DomainFailure::UncertainWrite
+            .with_message("Unklare Schreibvorgänge zuerst abgleichen."));
     }
     let batch = store
         .batches()
@@ -163,7 +164,8 @@ pub(super) async fn approve_locked(
         return Err("Löschungen separat bestätigen.".into());
     }
     if evidence(state, undo_of)?.2 != proposal.run_hash {
-        return Err("Prüfdaten wurden geändert. Kalender-Vorschau neu erstellen.".into());
+        return Err(DomainFailure::StaleProposal
+            .with_message("Prüfdaten wurden geändert. Kalender-Vorschau neu erstellen."));
     }
     // Re-run comparison before storing intent; even resolved 'keep' choices must
     // not conceal newly changed events among the operations being reversed.
@@ -175,7 +177,7 @@ pub(super) async fn approve_locked(
         .remove(&fresh.token);
     for op in proposal.operations.iter().filter(|o| o.kind != "keep") {
         let Some(now) = fresh.operations.iter().find(|o| o.id == op.id) else {
-            return Err("Vorschau abgelaufen.".into());
+            return Err(DomainFailure::StaleProposal.with_message("Vorschau abgelaufen."));
         };
         if now.requires_resolution
             || serde_json::to_value(now).map_err(failure)?
@@ -191,7 +193,7 @@ pub(super) async fn approve_locked(
         if let Some(resume) = &proposal.resume_batch {
             store
                 .retry_failed_batch(resume, &proposal.operations)
-                .map_err(failure)?
+                .map_err(domain_failure)?
         } else {
             store
                 .begin_batch(
@@ -200,7 +202,7 @@ pub(super) async fn approve_locked(
                     &proposal.operations,
                     Some(undo_of),
                 )
-                .map_err(failure)?
+                .map_err(domain_failure)?
         }
     };
     let mut results = vec![];

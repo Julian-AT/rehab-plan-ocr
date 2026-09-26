@@ -1,5 +1,5 @@
 use crate as reha_core;
-use crate::service::{failure, AppState, Response};
+use crate::service::{failure, AppState, DomainFailure, Response};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -30,9 +30,10 @@ pub fn maintenance(state: &Arc<AppState>) -> Response<usize> {
     let _admission = state
         .lifecycle_lock
         .try_lock()
-        .map_err(|_| "Eine Datenänderung läuft bereits.")?;
+        .map_err(|_| DomainFailure::Busy.with_message("Eine Datenänderung läuft bereits."))?;
     if !state.cancel.lock().map_err(failure)?.is_empty() {
-        return Err("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen.".into());
+        return Err(DomainFailure::Busy
+            .with_message("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen."));
     }
     state
         .store

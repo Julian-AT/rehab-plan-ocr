@@ -82,9 +82,7 @@ impl Store {
             .query_row("SELECT run FROM scans WHERE id=?1", [id], |r| r.get(0))
             .optional()?
             .flatten();
-        let mut run: PipelineRun = serde_json::from_str(&json.ok_or_else(|| {
-            Error::Invalid("Scan wurde gelöscht oder ist noch nicht erkannt.".into())
-        })?)?;
+        let mut run: PipelineRun = serde_json::from_str(&json.ok_or(Error::MissingRun)?)?;
         crate::review::migrate(&mut run)?;
         Ok(run)
     }

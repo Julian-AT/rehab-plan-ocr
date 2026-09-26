@@ -1,10 +1,16 @@
 /// Native failure identity survives service dispatch without parsing display text.
-/// Legacy preserves the existing domain-validation adapter until those callers
-/// have explicit error variants; it must never wrap a native callback failure.
+/// Legacy preserves ordinary validation diagnostics; it never determines a
+/// failure's identity and must never wrap a native callback failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ServiceError {
     #[error("{0}")]
     Legacy(String),
+    /// Core guards keep their historical journal text separately from identity.
+    #[error("{message}")]
+    Domain {
+        kind: DomainFailure,
+        message: String,
+    },
     #[error("{0}")]
     Validation(String),
     #[error("{0}")]
@@ -25,6 +31,24 @@ pub enum ServiceError {
     Busy,
     #[error("Abgebrochen; vorhandener Entwurf bleibt erhalten.")]
     Cancelled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DomainFailure {
+    ExpiredScan,
+    StaleRevision,
+    StaleProposal,
+    Busy,
+    UncertainWrite,
+}
+
+impl DomainFailure {
+    pub fn with_message(self, message: impl Into<String>) -> ServiceError {
+        ServiceError::Domain {
+            kind: self,
+            message: message.into(),
+        }
+    }
 }
 
 impl From<String> for ServiceError {

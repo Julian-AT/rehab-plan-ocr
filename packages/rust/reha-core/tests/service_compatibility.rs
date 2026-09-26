@@ -143,7 +143,12 @@ fn revision_check_is_atomic_and_stale_approval_cannot_return() {
         None,
         Some(revision),
     );
-    assert_eq!(stale.unwrap_err(), "stale_revision".into());
+    let stale = stale.unwrap_err();
+    assert_eq!(
+        stale,
+        service::DomainFailure::StaleRevision.with_message("stale_revision")
+    );
+    assert_eq!(serde_json::to_value(stale).unwrap(), "stale_revision");
     let saved = app
         .store
         .lock()

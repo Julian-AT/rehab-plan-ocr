@@ -53,7 +53,7 @@ impl Store {
             ));
         }
         if self.has_unresolved_calendar_writes()? {
-            return Err(Error::Invalid(
+            return Err(Error::UnresolvedCalendarWrites(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));
         }

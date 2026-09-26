@@ -59,7 +59,7 @@ impl Store {
         )>,
     ) -> Result<ImportBatch> {
         if self.has_unresolved_calendar_writes()? {
-            return Err(Error::Invalid(
+            return Err(Error::UnresolvedCalendarWrites(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));
         }
@@ -196,7 +196,7 @@ impl Store {
         operations: &[CalendarOperation],
     ) -> Result<ImportBatch> {
         if self.has_unresolved_calendar_writes()? {
-            return Err(Error::Invalid(
+            return Err(Error::UnresolvedCalendarWrites(
                 "Unklare Schreibvorgänge zuerst abgleichen.".into(),
             ));
         }

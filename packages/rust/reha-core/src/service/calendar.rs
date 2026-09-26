@@ -1,6 +1,6 @@
 use crate as reha_core;
 use crate::service::Proposal;
-use crate::service::{failure, AppState, Response};
+use crate::service::{domain_failure, failure, AppState, DomainFailure, Response};
 use reha_core::contracts::*;
 use reha_core::{calendar, store::Store};
 use std::collections::BTreeMap;
@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub(super) fn schedule_runs(store: &Store, id: &str) -> Response<Vec<PipelineRun>> {
     let ids = store.page_ids(id).map_err(failure)?;
     ids.iter()
-        .map(|id| store.load_run(id).map_err(failure))
+        .map(|id| store.load_run(id).map_err(domain_failure))
         .collect()
 }
 fn schedule_events(
@@ -31,7 +31,7 @@ pub fn set_page_group(state: &Arc<AppState>, id: String, page_ids: Vec<String>) 
     let _admission = state
         .lifecycle_lock
         .try_lock()
-        .map_err(|_| "Eine Datenänderung läuft bereits.")?;
+        .map_err(|_| DomainFailure::Busy.with_message("Eine Datenänderung läuft bereits."))?;
     let mut store = state.store.lock().map_err(failure)?;
     let id = store
         .plans()
@@ -69,7 +69,7 @@ pub fn append_pages(state: &AppState, id: String, pages: Vec<String>) -> Respons
     let _admission = state
         .lifecycle_lock
         .try_lock()
-        .map_err(|_| "Eine Datenänderung läuft bereits.")?;
+        .map_err(|_| DomainFailure::Busy.with_message("Eine Datenänderung läuft bereits."))?;
     let mut store = state.store.lock().map_err(failure)?;
     let parent = store
         .plans()
@@ -206,7 +206,7 @@ pub(super) async fn prepare_impl(
                 .iter()
                 .any(|h| matches!(h["status"].as_str(), Some("pending" | "uncertain")))
         {
-            return Err("Unklare Schreibvorgänge zuerst im Verlauf abgleichen. Keine neue Erstellung bis zur Auflösung.".into());
+            return Err(DomainFailure::UncertainWrite.with_message("Unklare Schreibvorgänge zuerst im Verlauf abgleichen. Keine neue Erstellung bis zur Auflösung."));
         }
         let runs = if draft {
             super::draft::available_runs(&store, &id)?.0
@@ -331,7 +331,9 @@ pub fn resolve_proposal(
     choice: String,
 ) -> Response<Proposal> {
     let mut proposals = state.proposals.lock().map_err(failure)?;
-    let proposal = proposals.get_mut(&token).ok_or("Vorschau abgelaufen.")?;
+    let proposal = proposals
+        .get_mut(&token)
+        .ok_or(DomainFailure::StaleProposal.with_message("Vorschau abgelaufen."))?;
     if proposal.undo_of.is_some() && choice != "keep" {
         return Err("Extern geänderte Termine bleiben beim Rückgängigmachen erhalten.".into());
     }
@@ -420,7 +422,7 @@ pub async fn approve_calendar(
         .map_err(failure)?
         .get(&token)
         .cloned()
-        .ok_or("Vorschau abgelaufen.")?;
+        .ok_or(DomainFailure::StaleProposal.with_message("Vorschau abgelaufen."))?;
     if proposal.draft.is_some() {
         return Err("Plan mit accept_and_save annehmen.".into());
     }
@@ -479,7 +481,8 @@ pub async fn approve_calendar(
         let mut store = state.store.lock().map_err(failure)?;
         let runs = schedule_runs(&store, &proposal.document_id)?;
         if reha_core::hash(&serde_json::to_vec(&runs).map_err(failure)?) != proposal.run_hash {
-            return Err("Prüfdaten wurden geändert. Kalender-Vorschau neu erstellen.".into());
+            return Err(DomainFailure::StaleProposal
+                .with_message("Prüfdaten wurden geändert. Kalender-Vorschau neu erstellen."));
         }
         for mut run in runs {
             for a in &mut run.appointments {
@@ -501,7 +504,7 @@ pub async fn approve_calendar(
                 &proposal.operations,
                 None,
             )
-            .map_err(failure)?
+            .map_err(domain_failure)?
     };
     execute_batch(app, state, proposal, batch).await
 }

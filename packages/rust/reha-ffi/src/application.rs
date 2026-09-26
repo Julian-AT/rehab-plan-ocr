@@ -39,36 +39,25 @@ pub(crate) fn storage(e: impl std::fmt::Display) -> AppError {
     }
 }
 pub(crate) fn failure(error: service::ServiceError) -> AppError {
-    use service::ServiceError as E;
-    let message = match error {
-        E::Validation(message) => return AppError::Validation { message },
-        E::Storage(message) => return AppError::Storage { message },
-        E::PermissionDenied => return AppError::PermissionDenied,
-        E::Timeout(operation) => return AppError::Timeout { operation },
-        E::UncertainWrite => return AppError::UncertainWrite,
-        E::ExpiredScan => return AppError::ExpiredScan,
-        E::StaleRevision => return AppError::StaleRevision,
-        E::StaleProposal => return AppError::StaleProposal,
-        E::Busy => return AppError::Busy,
-        E::Cancelled => return AppError::Cancelled,
-        E::Legacy(message) => message,
-    };
-    if message == "Kalenderzugriff fehlt." {
-        AppError::PermissionDenied
-    } else if message == "stale_revision" {
-        AppError::StaleRevision
-    } else if message.contains("Vorschau abgelaufen")
-        || message.contains("Prüfdaten wurden geändert")
-    {
-        AppError::StaleProposal
-    } else if message.contains("gelöscht oder") {
-        AppError::ExpiredScan
-    } else if message.contains("läuft bereits") {
-        AppError::Busy
-    } else if message.contains("Unklare Schreibvorgänge") {
-        AppError::UncertainWrite
-    } else {
-        AppError::Validation { message }
+    use service::{DomainFailure as D, ServiceError as E};
+    match error {
+        E::Legacy(message) | E::Validation(message) => AppError::Validation { message },
+        E::Storage(message) => AppError::Storage { message },
+        E::Domain { kind, .. } => match kind {
+            D::ExpiredScan => AppError::ExpiredScan,
+            D::StaleRevision => AppError::StaleRevision,
+            D::StaleProposal => AppError::StaleProposal,
+            D::Busy => AppError::Busy,
+            D::UncertainWrite => AppError::UncertainWrite,
+        },
+        E::PermissionDenied => AppError::PermissionDenied,
+        E::Timeout(operation) => AppError::Timeout { operation },
+        E::UncertainWrite => AppError::UncertainWrite,
+        E::ExpiredScan => AppError::ExpiredScan,
+        E::StaleRevision => AppError::StaleRevision,
+        E::StaleProposal => AppError::StaleProposal,
+        E::Busy => AppError::Busy,
+        E::Cancelled => AppError::Cancelled,
     }
 }
 fn platform_failure(error: AppError) -> service::ServiceError {
@@ -1937,6 +1926,62 @@ mod host_routing_tests {
             assert!(bridge.call(command, json!({})).is_err());
         }
     }
+    #[test]
+    fn domain_failure_identity_is_independent_of_its_preserved_diagnostic() {
+        use service::{DomainFailure as D, ServiceError as E};
+        for (kind, expected) in [
+            (D::ExpiredScan, E::ExpiredScan),
+            (D::StaleRevision, E::StaleRevision),
+            (D::StaleProposal, E::StaleProposal),
+            (D::Busy, E::Busy),
+            (D::UncertainWrite, E::UncertainWrite),
+        ] {
+            for message in ["Unveränderter Journaltext", "Kalenderzugriff fehlt."] {
+                let error = kind.with_message(message);
+                assert_eq!(serde_json::to_value(&error).unwrap(), json!(message));
+                assert_eq!(error.to_string(), message);
+                // The unchanged AppError variant preserves the app's localized
+                // presentation; original domain text stays in its journal projection.
+                assert_eq!(platform_failure(failure(error)), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn misleading_diagnostics_never_change_validation_or_storage_identity() {
+        use service::ServiceError as E;
+        for message in [
+            "Kalenderzugriff fehlt.",
+            "stale_revision",
+            "Vorschau abgelaufen.",
+            "Prüfdaten wurden geändert.",
+            "Scan wurde gelöscht oder ist noch nicht erkannt.",
+            "Eine Verarbeitung läuft bereits.",
+            "Unklare Schreibvorgänge zuerst abgleichen.",
+        ] {
+            for error in [E::Legacy(message.into()), E::Validation(message.into())] {
+                assert_eq!(
+                    platform_failure(failure(error)),
+                    E::Validation(message.into())
+                );
+            }
+            assert_eq!(
+                platform_failure(failure(E::Storage(message.into()))),
+                E::Storage(message.into())
+            );
+        }
+        // Deliberately storage-mapped APIs retain their existing boundary policy.
+        assert!(matches!(
+            storage(reha_core::Error::MissingRun),
+            AppError::Storage { message }
+                if message == "Scan wurde gelöscht oder ist noch nicht erkannt."
+        ));
+        assert!(matches!(
+            storage(reha_core::Error::UnresolvedCalendarWrites("Originaltext".into())),
+            AppError::Storage { message } if message == "Originaltext"
+        ));
+    }
+
     #[test]
     fn every_native_failure_preserves_identity_through_service_dispatch() {
         use service::ServiceError as E;

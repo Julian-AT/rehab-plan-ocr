@@ -22,7 +22,7 @@ impl Store {
     }
     pub fn begin_event_mutation(&self, proposal: &EventProposal) -> Result<()> {
         if self.has_unresolved_calendar_writes()? {
-            return Err(crate::Error::Invalid(
+            return Err(crate::Error::UnresolvedCalendarWrites(
                 "Unklare Schreibvorgänge zuerst prüfen.".into(),
             ));
         }

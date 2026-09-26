@@ -1,5 +1,7 @@
 //! Read-only preparation followed by one durable plan acceptance.
-use super::{calendar, failure, AppState, Platform, Proposal, Response};
+use super::{
+    calendar, domain_failure, failure, AppState, DomainFailure, Platform, Proposal, Response,
+};
 use crate::{
     contracts::*,
     readiness::{self, DraftAssessment, PlanAcceptance, Readiness},
@@ -45,7 +47,7 @@ pub(super) fn available_runs(store: &Store, id: &str) -> Response<(Vec<PipelineR
             .map_err(failure)?
             .flatten();
         if retained.is_some() {
-            runs.push(store.load_run(&page).map_err(failure)?);
+            runs.push(store.load_run(&page).map_err(domain_failure)?);
         } else {
             missing.push(page);
         }
@@ -112,7 +114,8 @@ pub async fn preview(
         )
         .await?;
         if proposal.run_hash != assessment.revision {
-            return Err("Prüfdaten wurden geändert. Erneut laden.".into());
+            return Err(DomainFailure::StaleProposal
+                .with_message("Prüfdaten wurden geändert. Erneut laden."));
         }
         Some(proposal)
     };
@@ -134,7 +137,8 @@ pub fn answer(
     let mut store = state.store.lock().map_err(failure)?;
     let (mut runs, _) = available_runs(&store, &id)?;
     if !store.pending().map_err(failure)?.is_empty() {
-        return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
+        return Err(DomainFailure::UncertainWrite
+            .with_message("Unklare Schreibvorgänge zuerst abgleichen."));
     }
     if state
         .cancel
@@ -147,7 +151,7 @@ pub fn answer(
     }
     let assessment = readiness::assess(&runs, &timezone);
     if assessment.revision != revision {
-        return Err("stale_revision".into());
+        return Err(DomainFailure::StaleRevision.with_message("stale_revision"));
     }
     let q = assessment
         .questions
@@ -235,7 +239,7 @@ pub async fn accept_and_save(
         .map_err(failure)?
         .get(&token)
         .cloned()
-        .ok_or("Vorschau abgelaufen.")?;
+        .ok_or(DomainFailure::StaleProposal.with_message("Vorschau abgelaufen."))?;
     let intent = proposal.draft.clone().ok_or("Keine Planvorschau.")?;
     if intent.policy_version != readiness::POLICY_VERSION {
         return Err("Prüfregeln geändert. Vorschau erneuern.".into());
@@ -307,12 +311,14 @@ pub async fn accept_and_save(
             .iter()
             .any(|h| matches!(h["status"].as_str(), Some("pending" | "uncertain")))
         {
-            return Err("Unklare Schreibvorgänge zuerst abgleichen.".into());
+            return Err(DomainFailure::UncertainWrite
+                .with_message("Unklare Schreibvorgänge zuerst abgleichen."));
         }
         let (runs, missing) = available_runs(&store, &proposal.document_id)?;
         let assessment = readiness::assess(&runs, &intent.timezone);
         if assessment.revision != proposal.run_hash {
-            return Err("Prüfdaten wurden geändert. Vergleich erneut laden.".into());
+            return Err(DomainFailure::StaleProposal
+                .with_message("Prüfdaten wurden geändert. Vergleich erneut laden."));
         }
         if !missing.is_empty() && proposal.operations.iter().any(|op| op.kind == "remove") {
             return Err("Unvollständiger Plan darf keine Termine ersetzen.".into());
@@ -353,7 +359,7 @@ pub async fn accept_and_save(
         (
             store
                 .begin_accepted_batch(&proposal, &runs, &accepted)
-                .map_err(failure)?,
+                .map_err(domain_failure)?,
             remaining,
         )
     };
@@ -434,7 +440,7 @@ pub fn export_ics(
     let mut store = state.store.lock().map_err(failure)?;
     let (mut runs, _) = available_runs(&store, &id)?;
     if readiness::assess(&runs, &timezone).revision != revision {
-        return Err("stale_revision".into());
+        return Err(DomainFailure::StaleRevision.with_message("stale_revision"));
     }
     if state
         .cancel

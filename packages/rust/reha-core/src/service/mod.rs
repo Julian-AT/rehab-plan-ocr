@@ -7,12 +7,25 @@ use std::{
 };
 
 mod error;
-pub use error::ServiceError;
+pub use error::{DomainFailure, ServiceError};
 mod event_sessions;
 pub use event_sessions::EventSessions;
 pub type Response<T> = std::result::Result<T, ServiceError>;
 pub fn failure(e: impl std::fmt::Display) -> ServiceError {
     ServiceError::Legacy(e.to_string())
+}
+/// Preserve only explicit store-domain identities at their service boundaries.
+/// Other domain/storage diagnostics retain their existing presentation policy.
+pub fn domain_failure(error: crate::Error) -> ServiceError {
+    match error {
+        error @ crate::Error::MissingRun => {
+            DomainFailure::ExpiredScan.with_message(error.to_string())
+        }
+        crate::Error::UnresolvedCalendarWrites(message) => {
+            DomainFailure::UncertainWrite.with_message(message)
+        }
+        other => failure(other),
+    }
 }
 pub struct Application {
     pub store: Mutex<Store>,
