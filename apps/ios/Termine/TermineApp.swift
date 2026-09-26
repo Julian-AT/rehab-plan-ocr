@@ -69,6 +69,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   @State private var tab: AppTab = .appointments
   @State private var plansPath: [String] = []
   @State private var todayPath: [String] = []
+  @State private var todayRequestID = 0
   @State private var preferences: PreferencesStore
   @State private var refreshID = 0
   @State private var scanner: ScanModel
@@ -237,7 +238,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   }
   private var todayTab: some View {
     NavigationStack(path: $todayPath) {
-      TodayView(core: core, scanner: scanner, refreshID: refreshID)
+      TodayView(core: core, scanner: scanner, refreshID: refreshID, todayRequestID: todayRequestID)
         .navigationDestination(for: String.self) { id in
           PlanDestination(core: core, scanner: scanner, id: id, changed: refresh)
         }
@@ -264,6 +265,9 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   private func openEvent(_ url: URL) async {
     guard let link = AgendaLink(url) else { return }
     if link == .today {
+      todayPath = []
+      linkedEvent = nil
+      todayRequestID += 1
       tab = .appointments
       return
     }

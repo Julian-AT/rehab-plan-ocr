@@ -40,6 +40,23 @@ import XCTest
   }
   private func back(_ title: String) { app.navigationBars[title].buttons.firstMatch.tap() }
 
+  func testTodayDeepLinkReturnsFromAnotherDayAndTab() throws {
+    launch("readable")
+    let selection = NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")
+    let today = app.buttons.matching(selection).firstMatch.label
+    app.swipeLeft()
+    XCTAssertTrue(row("Physiotherapie Tag 1").waitForExistence(timeout: 8))
+    XCTAssertNotEqual(app.buttons.matching(selection).firstMatch.label, today)
+    app.tabBars.buttons["Mehr"].tap()
+    app.open(try XCTUnwrap(URL(string: "reha-calendar://today")))
+    XCTAssertTrue(app.buttons["agenda-today"].waitForExistence(timeout: 8))
+    expectation(
+      for: NSPredicate(format: "label == %@", today),
+      evaluatedWith: app.buttons.matching(selection).firstMatch)
+    waitForExpectations(timeout: 8)
+    capture("today-deep-link")
+  }
+
   func testSwipingAndCompleteAppointmentLabels() {
     launch("readable")
     // Left advances, including on the resting/empty state; no arrow needed.

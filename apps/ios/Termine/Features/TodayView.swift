@@ -95,6 +95,7 @@ struct TodayView: View {
   let core: NativeApplication
   let scanner: ScanModel
   let refreshID: Int
+  let todayRequestID: Int
   @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   @State private var model = TodayModel(describe: userMessage)
@@ -113,10 +114,11 @@ struct TodayView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.openURL) private var openURL
   @Environment(\.dynamicTypeSize) private var typeSize
-  init(core: NativeApplication, scanner: ScanModel, refreshID: Int) {
+  init(core: NativeApplication, scanner: ScanModel, refreshID: Int, todayRequestID: Int = 0) {
     self.core = core
     self.scanner = scanner
     self.refreshID = refreshID
+    self.todayRequestID = todayRequestID
   }
   private var week: AgendaWeek { AgendaWeek(containing: selectedDate) }
   private var requestID: String {
@@ -161,20 +163,13 @@ struct TodayView: View {
     .pageTitle("Termine")
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
-        Button("Heute") {
-          selectedDate = Calendar.current.startOfDay(for: .now)
-          visibleWeek = week.start
-          showPast = false
-          scrollMinute = nil
-          scrollReset += 1
-          reload()
-        }
-        .accessibilityIdentifier("agenda-today")
-        #if DEBUG && targetEnvironment(simulator)
-          .accessibilityValue(
-            ProcessInfo.processInfo.arguments.contains("--preview-agenda-delay")
-              ? (model.isRefreshing ? "refreshing" : "settled") : "")
-        #endif
+        Button("Heute", action: openToday)
+          .accessibilityIdentifier("agenda-today")
+          #if DEBUG && targetEnvironment(simulator)
+            .accessibilityValue(
+              ProcessInfo.processInfo.arguments.contains("--preview-agenda-delay")
+                ? (model.isRefreshing ? "refreshing" : "settled") : "")
+          #endif
       }
       ToolbarItem(placement: .topBarTrailing) {
         Menu {
@@ -189,6 +184,7 @@ struct TodayView: View {
     }
     .refreshable { reload() }
     .task(id: requestID) { await load() }
+    .onChange(of: todayRequestID) { openToday() }
     .onChange(of: preferences.value.map { Set($0.displayCalendarIds) }) { _, _ in
       model.invalidate()
       reload()
@@ -228,6 +224,18 @@ struct TodayView: View {
       EventEditorView(core: core, original: event, changed: reload)
     }
     .sheet(isPresented: $create, onDismiss: reload) { EventEditorView(core: core, changed: reload) }
+  }
+  private func openToday() {
+    selectedDate = Calendar.current.startOfDay(for: .now)
+    visibleWeek = week.start
+    showPast = false
+    scrollMinute = nil
+    scrollReset += 1
+    setup = false
+    calendarStatus = false
+    editor = nil
+    create = false
+    reload()
   }
   private func usesList(_ agenda: DayAgenda, layout: AgendaTimelineLayout) -> Bool {
     let crowded = layout.requiresList
