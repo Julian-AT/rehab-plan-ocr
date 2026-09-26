@@ -211,6 +211,7 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "packages/apple/VoiceActivity/README.md",
         "packages/rust/reha-core/build.rs",
         "tooling/build/build-native.sh",
+        "tooling/build/product_generation.py",
         "tooling/build/assemble-native.py",
         "tooling/build/verify-native-assets.py",
         "tooling/release/runtime_inventory.py",

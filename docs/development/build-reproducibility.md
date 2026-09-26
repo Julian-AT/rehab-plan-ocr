@@ -147,3 +147,52 @@ Profile ab. Eine aktuelle signierte Gerätepaketabnahme ersetzt das nicht.
 Der UUID-Helfer wurde zusätzlich lesend gegen alle vier arm64-Binärdateien und
 dSYMs des aufbewahrten Altarchivs geprüft. Dessen unbekannter Quellcommit wird
 beim erneuten Paketieren nicht aus dem heutigen Checkout erfunden.
+
+
+## Product generations after resource changes
+
+`make build` and the UI build entry use one product-generation lease around
+Xcode. The contract hashes the project specification, model/runtime pins, notices,
+runtime inventory, build scripts, exclusion policy and pinned toolchain settings.
+An unchanged contract reuses `.local/builds/ios/DerivedData`. Normal rebuilds do
+not create generations or duplicate caches. `--built` UI checks reject an unknown,
+stale or interrupted generation before consuming an old app.
+
+When that contract changes, `product_generation.py` first checks other compiler
+processes, open files and nested worktrees. It inventories owned regular files,
+modes, file identities and raw symlink targets without traversing external links.
+It then atomically renames the entire previous DerivedData into
+`.local/builds/ios/generations/<id>/DerivedData`, verifies the preserved inventory,
+and creates an empty current DerivedData with the new contract marker. The next
+Xcode invocation uses that same stable current path. This prevents removed folder
+resources, including the former Kokoro/eSpeak resources, from surviving an
+incremental copy. Exclusion checks stay strict; no forbidden resources are removed
+from an old evidence bundle merely to make that bundle pass.
+
+Each transition retains a private plan and completion receipt. A pending pointer
+supports restart after either rename or creation of the new empty directory.
+Changed source contracts, altered preserved bytes or unexpected new files stop
+recovery without overwriting either generation. Restore the recorded source
+contract before resuming an interrupted transition. Absolute symlinks retain
+their original targets; a historical cache that uses absolute paths may require
+restoring its recorded original location before use. Historical reports remain
+unchanged; the receipt records where their earlier product was retained.
+
+Generations are created only for changed contracts. Their app products, symbols,
+failure evidence and transition receipts need a retention decision; compiler
+intermediates, module caches and indices are reproducible working data, not
+permanent release evidence. The initial transition preserves them together to
+avoid destroying an unresolved failure. Later cleanup must select those exact
+retired-generation cache paths from its inventory, add their reviewed consumers
+and rebuild procedure to the versioned retention policy, verify no active
+references, and retain a separate removal receipt. The initial protection entry
+must then be narrowed to retained products/evidence rather than silently bypassed. Whole generations are not automatically declared necessary forever or
+recursively deleted. The normal 20 GiB reserve plus build peak check remains in
+force before starting the build. No external simulator or release archive is
+part of this transition.
+
+`make test-product-generation` uses synthetic directories to verify preservation,
+contract changes, ordinary cache reuse, active consumers, exclusive build leases,
+interrupted rename/marker publication and recovery refusal after corruption. A
+successful helper test is not a final app/bundle acceptance; the resulting actual
+product still needs the usual build, resource and release checks.

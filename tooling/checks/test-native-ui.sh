@@ -5,12 +5,17 @@ cd "$(dirname "$0")/../.."
 eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 runtime=$(python3 tooling/checks/native-simulator.py --profile "${REHA_SIMULATOR_PROFILE:-local}" --simulator "${REHA_TEST_SIMULATOR:-}")
-if [ "${1:-}" = --built ]; then shift; else sh tooling/build/build-native.sh simulator; fi
+if [ "${1:-}" = --built ]; then
+  shift
+  python3 tooling/build/product_generation.py check
+else
+  sh tooling/build/build-native.sh simulator
+fi
 # Build tests before signing the simulator copy. A subsequent `test` build would
 # reinstall the unsigned product and lose its App Group entitlements.
-xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
+python3 tooling/build/product_generation.py build -- xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing
+  ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing
 if [ -n "${REHA_TEST_SIMULATOR:-}" ]; then
   simulator=$REHA_TEST_SIMULATOR
 else

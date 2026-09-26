@@ -12,7 +12,8 @@
     "docs/product/visual-baseline",
     ".local/builds/ios/Laßnitzhöhe.xcarchive",
     "external originals and simulators",
-    ".local/objects"
+    ".local/objects",
+    ".local/builds/ios/generations"
   ],
   "rebuildable": [
     {

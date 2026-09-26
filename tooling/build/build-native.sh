@@ -65,14 +65,14 @@ case "$mode" in
     framework
     xcodegen generate --spec apps/ios/project.yml --project apps/ios
     case "$mode" in
-      simulator) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
-      device) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
+      simulator) python3 tooling/build/product_generation.py build -- xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
+      device) python3 tooling/build/product_generation.py build -- xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
       archive)
-        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath "$archive_path" ARCHS=arm64 -allowProvisioningUpdates archive
+        python3 tooling/build/product_generation.py build -- xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath "$archive_path" ARCHS=arm64 -allowProvisioningUpdates archive
         python3 tooling/release/package-native.py --run "$RELEASE_RUN"
         ;;
       test)
-        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+        python3 tooling/build/product_generation.py build -- xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
         sh tooling/checks/test-native-ui.sh --built
         ;;
     esac

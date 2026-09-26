@@ -163,6 +163,10 @@ test-ci-monitor:
 test-ios:
 	python3 tooling/dev/quality.py test-ios
 
+.PHONY: test-product-generation
+test-product-generation:
+	python3 tooling/build/tests/test-product-generation.py
+
 build:
 	python3 tooling/dev/quality.py build $(TARGET)
 
