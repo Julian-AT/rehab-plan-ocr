@@ -3,72 +3,6 @@ import EventKit
 import RehaCore
 import SwiftUI
 
-/// Cache keys are civil Mondays. A new refresh epoch rejects all older loads.
-@MainActor @Observable final class TodayModel {
-  enum Availability { case loading, ready, noAccess, noSelection, failed }
-  private var cache: [Date: [CalendarEvent]] = [:]
-  var availability: Availability = .loading
-  var error: String?
-  var unavailableCalendars = Set<String>()
-  private var epoch = UUID()
-  private var refreshKey = ""
-  func events(on date: Date) -> [CalendarEvent]? { cache[AgendaWeek(containing: date).start] }
-  func refresh(_ core: NativeApplication, week: AgendaWeek, visibleWeek: Date, key: String) async {
-    if key != refreshKey {
-      refreshKey = key
-      epoch = UUID()
-      cache = [:]
-      unavailableCalendars = []
-    }
-    let request = epoch
-    let weeks = [week.start, visibleWeek].flatMap { center in
-      [-7, 0, 7].map {
-        AgendaWeek(containing: Calendar.current.date(byAdding: .day, value: $0, to: center)!)
-      }
-    }
-    let keep = Set(weeks.map(\.start))
-    cache = cache.filter { keep.contains($0.key) }
-    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-      cache = [:]
-      availability = .noAccess
-      return
-    }
-    do {
-      struct Ownership: Decodable {
-        struct Record: Decodable { let id: String }
-        let records: [Record]
-      }
-      let owned = try await core.eventRequest("ownedEventRecords", [:], as: Ownership.self)
-      let preferences = try await core.preferences()
-      guard request == epoch, !Task.isCancelled else { return }
-      guard !preferences.displayCalendarIds.isEmpty || !owned.records.isEmpty else {
-        cache = [:]
-        availability = .noSelection
-        return
-      }
-      _ = try await core.calendarRequest(command: "refreshAgenda", arguments: "{}")
-      let iso = ISO8601DateFormatter()
-      // Selected week first; a cancelled prefetch never publishes stale data.
-      for item in [week] + weeks where cache[item.start] == nil {
-        try Task.checkCancellation()
-        let result = try await core.eventRequest(
-          "queryCalendarEvents",
-          ["start_utc": iso.string(from: item.start), "end_utc": iso.string(from: item.end)],
-          as: CalendarQueryResponse.self)
-        guard request == epoch, !Task.isCancelled else { return }
-        cache[item.start] = result.events
-        unavailableCalendars.formUnion(result.unavailableCalendarIDs ?? [])
-        availability = .ready
-        error = nil
-      }
-    } catch {
-      guard request == epoch, !Task.isCancelled else { return }
-      self.error = userMessage(error)
-      availability = .failed
-    }
-  }
-}
-
 /// Native paging tracks the finger, exposes neighbours and cancels naturally.
 /// Dates retain identity when the bounded window is extended at rest.
 private struct CalendarPager<Content: View>: View {
@@ -123,7 +57,7 @@ struct TodayView: View {
   let refreshID: Int
   @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
-  @State private var model = TodayModel()
+  @State private var model = TodayModel(describe: userMessage)
   @State private var visibleWeek = AgendaWeek(containing: .now).start
   @State private var scrollMinute: Double?
   @State private var scrollReset = 0
@@ -135,6 +69,7 @@ struct TodayView: View {
   @State private var create = false
   @State private var showPast = false
   @State private var reloadID = 0
+  @Environment(PreferencesStore.self) private var preferences
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.openURL) private var openURL
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -144,7 +79,9 @@ struct TodayView: View {
     self.refreshID = refreshID
   }
   private var week: AgendaWeek { AgendaWeek(containing: selectedDate) }
-  private var requestID: String { "\(week.start)-\(visibleWeek)-\(refreshID)-\(reloadID)" }
+  private var requestID: String {
+    "\(week.start)-\(visibleWeek)-\(refreshID)-\(reloadID)-\(scanner.isReady)"
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -160,6 +97,15 @@ struct TodayView: View {
             Text("Status prüfen").controlHeight()
           }
         }.padding(.horizontal).foregroundStyle(AppPalette.text)
+      }
+      if model.error != nil && model.events(on: selectedDate) != nil {
+        HStack {
+          Text("Aktualisierung fehlgeschlagen").font(.footnote)
+          Spacer()
+          Button(action: reload) {
+            Image(systemName: "arrow.clockwise").controlHeight()
+          }.accessibilityLabel("Kalender erneut aktualisieren")
+        }.padding(.horizontal).foregroundStyle(AppPalette.secondaryText)
       }
       TimelineView(.periodic(from: .now, by: 15)) { context in
         sharedTimeline(now: AgendaPreviewClock.now(context.date))
@@ -188,6 +134,11 @@ struct TodayView: View {
           reload()
         }
         .accessibilityIdentifier("agenda-today")
+        #if DEBUG && targetEnvironment(simulator)
+          .accessibilityValue(
+            ProcessInfo.processInfo.arguments.contains("--preview-agenda-delay")
+              ? (model.isRefreshing ? "refreshing" : "settled") : "")
+        #endif
       }
       ToolbarItem(placement: .topBarTrailing) {
         Menu {
@@ -202,6 +153,17 @@ struct TodayView: View {
     }
     .refreshable { reload() }
     .task(id: requestID) { await load() }
+    .onChange(of: preferences.value.map { Set($0.displayCalendarIds) }) { _, _ in
+      model.invalidate()
+      reload()
+    }
+    .onChange(of: scanner.isErasing) { _, erasing in
+      if erasing { model.invalidate() }
+    }
+    .onChange(of: scanner.erasedID) { _, _ in
+      model.invalidate()
+      reload()
+    }
     .onChange(of: selectedDate) {
       showPast = false
       visibleWeek = week.start
@@ -239,7 +201,7 @@ struct TodayView: View {
   @ViewBuilder private func day(_ agenda: DayAgenda, now: Date) -> some View {
     Group {
       if model.events(on: agenda.date) == nil {
-        if model.availability == .ready { ProgressView("Kalender laden …") } else { unavailable }
+        if model.availability == .ready { loading } else { unavailable }
       } else if agenda.events.isEmpty {
         ContentUnavailableView {
           Label(
@@ -345,8 +307,11 @@ struct TodayView: View {
     }
   }
   private func load() async {
+    guard scanner.isReady else { return }
+    _ = await preferences.flush()
+    guard scanner.isReady, !Task.isCancelled else { return }
     await model.refresh(
-      core, week: week, visibleWeek: visibleWeek,
+      using: NativeAgendaSource(core: core), week: week, visibleWeek: visibleWeek,
       key: "\(refreshID)-\(reloadID)-\(Calendar.current.timeZone.identifier)")
   }
   private func reload() { reloadID += 1 }
@@ -354,9 +319,14 @@ struct TodayView: View {
     if selectedDate == observedToday { selectedDate = today }
     observedToday = today
   }
+  private var loading: some View {
+    ProgressView("Kalender laden …")
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .accessibilityIdentifier("agenda-loading")
+  }
   @ViewBuilder private var unavailable: some View {
     switch model.availability {
-    case .loading: ProgressView("Kalender laden …").frame(maxWidth: .infinity, maxHeight: .infinity)
+    case .loading: loading
     case .noAccess:
       ContentUnavailableView {
         Label("Kalenderzugriff fehlt", systemImage: "calendar.badge.exclamationmark")
