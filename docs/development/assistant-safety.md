@@ -170,3 +170,21 @@ make test-custom-assistant-provider \
   TEST_ARGS='.local/runs/<neu>/input.json .local/runs/<neu>/recorded.json .local/runs/<neu>/router.json'
 make assess-assistant-router-replay RUN=.local/runs/<neu>
 ```
+
+## Erneute Laufzeitprüfung am 26. September 2026
+
+Die Herkunftsprüfung verwirft den alten nativen Cache nach Änderungen an Builder
+und Assembly-Helfer. `make build-assistant-native` erstellt deshalb alle drei
+bisher vorhandenen Ziele (Mac, Simulator, Gerät) mit den aktuellen Werkzeugen neu.
+Alte Produkte und der Ablehnungsbeleg bleiben erhalten; keine Cacheprüfung wurde
+umgangen. Der Swift-6-Hostlauf mit echter C-Grenze besteht Eingabe-/Assetprüfungen,
+Abbruch, Deadline, Kontext-/Ausgabelimit, Isolation nach Abbruch und Wiederladen.
+
+Zwei tatsächlich erneut erzeugte Entwicklungsantworten sind identisch zum
+früheren Desktop-Ergebnis, aber **0/2 fachlich exakt**. Eine enthält den bereits
+bekannten falschen Änderungsvorschlag bei einer Raum-Rückfrage. Diese Rohinferenz
+enthält weder vorgeschaltete Regeln noch Router, Bestätigung oder Kalenderzugriff;
+sie führt keine Änderung aus und ersetzt den getrennten Routerreplay nicht.
+Modellparität und fachliche Qualifizierung bleiben offen beziehungsweise
+fehlgeschlagen. Belege: `.local/runs/native-package-content-20260926-s20-001` und
+`native-assistant-refresh-20260926-s20-001`; keine physische Installation.

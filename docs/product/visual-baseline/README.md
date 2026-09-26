@@ -48,16 +48,17 @@ Build **2026092624** wurde am 26. September 2026 nach ausdrücklicher Freigabe u
 
 Die [visuelle Prüfanleitung](../../../apps/ios/Tests/Visual/README.md) erfasst alle
 22 Ansichten mit festem Referenzdatum. Die Originalbilder und ihre Prüfsummen
-bleiben unverändert. Zwei aktuelle Läufe bestehen jeweils die drei UI-Tests,
-erreichen aber nur 15/22 beziehungsweise 13/22 exakte Bildtreffer. Unterschiede bei
-großer Schrift hängen von der Scrollposition ab; dunkle Systemflächen zeigen kleine
-Rasterunterschiede. Die vollständige visuelle Freigabe bleibt offen. Der
-[Prüfbericht](../../../ml/experiments/2026-09-26-s18-visual-baseline.md) trennt diese
-Aufnahmeschwankungen von den bereits pixelgleichen Ansichten.
+bleiben unverändert. Der jüngste vollständige Lauf `ui-complete-20260926-s20-004`
+an `01fbafe` besteht alle 70 UI-Tests einschließlich der drei Aufnahmetests.
+Der strenge Vergleich `visual-baseline-20260926-s20-004` erreicht **17/22** exakte
+Bildtreffer. Vier Unterschiede liegen ausschließlich in der nativen
+Scrollindikatorspur; der dunkle Tagesabschluss hat weiterhin eine kleine
+Rasterabweichung. Die vollständige visuelle Freigabe bleibt offen. Frühere
+[Prüfberichte](../../../ml/experiments/2026-09-26-s18-visual-baseline.md) bleiben erhalten.
 
 Der [Aufnahmevertrag](capture-contract.md) dokumentiert die einzelnen neun
-historischen Abweichungen und legt überprüfbare Scrollpositionen für den nächsten
-Kandidatenlauf fest. Die Originalbilder und Vergleichsschwellen bleiben erhalten.
+historischen Abweichungen und die inzwischen reproduzierten Scrollpositionen.
+Die Originalbilder und Vergleichsschwellen bleiben erhalten.
 
 Die Ergebnisauswertung prüft ab 26. September 2026 zusätzlich die Identitäten der drei
 Aufnahmetests im vollständigen XCTest-Baum. Jeder muss im richtigen Testbundle

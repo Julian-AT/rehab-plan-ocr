@@ -46,13 +46,39 @@ Alle geprüften Dateien blieben während `make lint` und `make test` an `4ea7fd2
 unverändert; beide Befehle bestanden. Die Gesamtinhaltsprüfung bleibt offen.
 
 Der jüngste Bestandsbeleg
-`.local/maintenance/repository-inventory-20260926-s20-004.json` erfasst 862 Dateien in
+`.local/maintenance/repository-inventory-20260926-s20-005.json` erfasst 864 Dateien in
 17 Gruppen. Der gemeinsame Leser `photo_source.rs` wird von Import, Vormerken,
 Wiederaufnahme und Referenzanzeige sowie den Größenprüfungen der Speicherung und
 Bildvorbereitung verwendet. Seine Inhalts- und Grenzprüfungen stehen unter
 `.local/runs/bounded-photo-input-20260926-s20-001`. Die beiden neuen nativen
 Erkennungsdateien sind nun auch ausdrücklich im separaten EventKit-Testziel
 registriert; dessen tatsächlicher Build und 21 erfolgreiche Fälle sind belegt.
+
+Neun Implementierungsdateien unter `tooling/release` wurden auf Verbraucher,
+Schreibgrenzen, Herkunft, Profile, Symbole, Datenschutz und Sicherungsvergleich
+geprüft. Dabei wurde die fehlende Zuordnung des tatsächlichen Signaturzertifikats
+zum Geräteprofil ergänzt. Die gesamte Werkzeugprüfung besteht mit 461 Fällen
+aus 78 Gruppen und 21 ausdrücklichen Umgebungs-Skips. Belege:
+`release-content-review-20260926-s20-001.json` und
+`release-content-verification-20260926-s20-001.json` unter `.local/maintenance`.
+
+Alle acht Dateien des experimentellen `LocalAssistant`-Pakets haben geprüfte
+Verbraucher und Zuständigkeiten. Die überholte Integrationsbeschreibung wurde
+korrigiert. Der zunächst verworfene alte Buildcache bleibt nachweisbar; alle drei
+Zielbibliotheken wurden kanonisch neu gebaut und die echten Host-Grenz-/Lebensdauer-
+proben bestanden. Die zwei erneut erzeugten Rohantworten sind weiterhin falsch;
+das Paket bleibt außerhalb der öffentlichen App-Auswahl. Belege:
+`assistant-package-content-review-20260926-s20-001.json` und zugehöriger
+`assistant-package-content-verification-20260926-s20-001.json`.
+
+Das vollständige VAD-Paket umfasst 28 Dateien. Alle 26 übernommenen Quellen,
+Header, Buildmetadaten und Rechtstexte stimmen bytegenau mit dem bereits gepinnten
+Upstream-Archiv überein. Eigener SwiftPM-Einstieg und README stimmen mit dem
+tatsächlichen Audioadapter überein; die C-Probe besteht. Ausgeschlossene originale
+Buildmetadaten bleiben als Teil des unveränderten Herkunftsbestands erhalten.
+Beleg: `vad-content-review-20260926-s20-001.json` und
+`.local/audits/fvad-provenance-20260926-s20-001`. Eine vollständige Prüfung aller
+fremden Algorithmen oder realer Sprechenden wird damit nicht behauptet.
 
 ## Geprüfte Kandidaten ab 8d81c4c
 

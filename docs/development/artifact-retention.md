@@ -303,3 +303,13 @@ Branches bleiben erhalten. Die separaten Belege liegen unter
 unverändert. Wegen paralleler Builds und APFS-Teilung wird aus den protokollierten
 freien Bytes kein zurechenbarer Speichergewinn abgeleitet. Originale, Checkpoints,
 Gerätesicherungen und fremde Simulatoren waren nicht im Umfang.
+
+Der abgeschlossene Arbeitsbaum `package-signing-certificate` wurde ebenso nach
+Integration entfernt. Alle 864 geprüften Quellen ließen sich zuvor aus Quellarchiv
+und Patch vollständig wiederherstellen; Branch und Nachweise bleiben erhalten.
+103 unreferenzierte Python-/Ruff-Cachedateien mit zusammen 1.394.175 logischen Bytes
+wurden entfernt. Die Prüfung fand keine offenen Dateien. Plan und Abschluss liegen
+unter `.local/maintenance/package-signer-worktree-retirement-20260926-s20-001.json`
+und `package-signer-worktree-retirement-result-20260926-s20-001.json`; der Plan enthält
+auch den konkreten Wiederherstellungsbefehl. Wegen gleichzeitigem isoliertem Build
+und APFS-Teilung wird kein zurechenbarer physischer Speichergewinn behauptet.

@@ -27,6 +27,13 @@ image are errors. This reference must not be automatically replaced by a failing
 candidate. Other views, Dynamic Type and dark appearance need their own fixed
 fixtures; this one passing view does not establish whole-app visual equivalence.
 
+The same fixture was rerun on 2026-09-26 at `d670608` after integrating the current
+calendar/import changes and packaging provenance. The UI method and bundle checks
+passed; the screenshot has zero differing pixels below the same 160-pixel status
+region. Original reference bytes are unchanged. Source archive, exact test products,
+result bundle and `comparison.json` are retained at
+`.local/runs/archive-visual-20260926-s20-001`.
+
 ## Retained calendar appearance
 
 The 22 [Zitrus & Olive references](../../../../docs/product/visual-baseline/README.md)

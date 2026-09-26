@@ -4,6 +4,29 @@
 
 ## Aktueller frischer Appnachweis vom 26. September 2026
 
+`.local/runs/fresh-offline-app-20260926-s20-001` prüft den separaten Checkout
+`8f49deb` einschließlich begrenzter Originaldateileser, lokalem EventKit-Zugriff
+und aktualisiertem Paket-/Signaturinventar. Seine Produktquellen stimmen mit dem
+integrierten `d670608` überein; nur die Assistenten-README unterscheidet sich.
+Alle **16 Schritte** bestehen ohne Wiederanlauf. Der Checkout bleibt unverändert.
+
+Die Einrichtung übernimmt erneut ausschließlich geprüfte Werkzeug-/Pythondateien,
+gesperrte Downloads und Registrymetadaten, keine Rust-/Xcode-Buildprodukte oder
+entpackten Cargo-Quellen. Die äußere Netzsperre und ihre Kindprozess-Gegenprobe
+sowie die unten beschriebene lokale Xcode-Kompatibilität gelten für alle Schritte.
+Erstbuild und Wiederholung liefern identische **106.043.159 Bytes in 52 Einträgen**,
+einschließlich Dateimodi und Symlinks. Beide Pakete bestehen Inhalts-, Datenschutz-
+und Laufzeitprüfung; Bindings und Release-Symbole bestehen ebenfalls.
+
+Die kleinste beobachtete freie Kapazität beträgt **47,36 GiB** bei 20 GiB Reserve
+und zwölf GiB geplantem Spitzenbedarf. Quellarchiv, genaue Eingangsdateien,
+ausführbare Orchestrierung, Logs und beide Apps bleiben im privaten Lauf erhalten.
+`verification.json` und `main-integration.json` trennen den tatsächlich gebauten
+Commit von seiner Integration. Kein Geräteupdate oder signiertes Release wird
+daraus abgeleitet.
+
+## Vorheriger frischer Appnachweis vom 26. September 2026
+
 Der vollständig separate Checkout in
 `.local/runs/fresh-offline-app-20260926-s19-002/checkout` prüft `ebdf4b8`, einschließlich
 der korrigierten Mitteilungslebensdauer. Alle **16 Einrichtung-, Build- und

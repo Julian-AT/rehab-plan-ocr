@@ -115,3 +115,15 @@ audit directory. Report SHA-256 is
 the verified inventory SHA-256 is
 `db182b42cbc5767cd519387a36277f8774b4a231afec0932ec6b1ff6bc26458e`.
 All 14 synthetic audit tests, four documentation checks and Ruff checks passed.
+
+On 2026-09-26 a fresh explicit retrieval produced RustSec commit
+[`d5c17953a895cf19e8d3ce66eaa42b6fcfe1fb16`](https://github.com/RustSec/advisory-db/tree/d5c17953a895cf19e8d3ce66eaa42b6fcfe1fb16).
+The subsequent offline Make audit again reports no matching vulnerabilities
+across 231 lockfile dependencies and 1,251 advisories. The two maintenance
+warnings remain: `paste 1.0.15` is in the build dependency closure and
+`ttf-parser 0.25.1` in the target dependency closure. No dependency was changed.
+Native components and registry yanks were not freshly audited by this run.
+The immutable database, raw report and receipt are retained at
+`.local/audits/advisories-20260926-s20-001` and `review-20260926-s20-001`; the separate
+`.local/maintenance/dependency-review-summary-20260926-s20-001.json` records scope and
+unchanged lockfile identity after integration. Earlier reports remain unchanged.

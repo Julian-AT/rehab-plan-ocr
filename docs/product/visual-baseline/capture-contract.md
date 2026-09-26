@@ -279,3 +279,26 @@ Eine abschließende Absicherung liest den Rahmen einer noch nicht vorhandenen
 Lazy-Listzeile erst nach ihrer Existenzprüfung. Der Großschriftablauf besteht
 auch mit dieser endgültigen Testhilfe erneut in `ui-visible-targets-20260926-s20-002`;
 Quellen, Produkte und Paketprüfung sind jeweils getrennt erhalten.
+
+## Vollständig bestandener gemeinsamer Lauf 004
+
+`ui-complete-20260926-s20-004` an `01fbafe` besteht alle 70 Methoden ohne Fehler oder
+Skip, einschließlich der drei Aufnahmetests. Seine 391 Produktquellen bleiben
+während des Laufs unverändert. `visual-baseline-20260926-s20-004` bleibt streng
+**fehlgeschlagen: 17/22**. Beide großen Index-4-Bilder sind diesmal exakt.
+
+Die vier verbleibenden Scrollbilder unterscheiden sich ausschließlich in der
+neun Pixel breiten nativen Indikatorspur: beide großen Index-2-Bilder um je
+3.745 Pixel, beide unteren Normallisten um je 7.268 Pixel. Ihr übriger Inhalt ist
+exakt. Der dunkle Tagesabschluss behält 1.559 abweichende Pixel und maximale
+Kanaldifferenz vier. Alle fünf abweichenden Kandidaten stimmen unterhalb der
+Statusleiste bytegenau mit Lauf `visual-baseline-20260926-s20-003` überein. Der neue
+`triage.json` belegt diesen Vergleich ausdrücklich auf dem zugeschnittenen Inhalt.
+Das ist eine Ursacheneingrenzung; weder Originale noch Regeln wurden verändert.
+
+Die getrennte feste Archivreferenz wurde anschließend an `d670608` mit ihrem
+ursprünglichen Seed-Zeitpunkt `2026-09-16T12:00:00Z` aufgenommen. Der vollständige
+zugehörige UI-Ablauf und alle zwölf Paketkomponenten bestehen; unterhalb der
+gleichen 160 Systempixel unterscheiden sich **null Pixel** vom Archivoriginal.
+Beleg: `.local/runs/archive-visual-20260926-s20-001`. Damit sind weder zusätzliche
+Kalenderreferenzen freigegeben noch neue Referenzbilder ersetzt worden.
