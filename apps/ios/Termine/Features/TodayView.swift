@@ -225,8 +225,9 @@ struct TodayView: View {
           Text("Für heute stehen keine weiteren Termine an.").foregroundStyle(
             AppPalette.secondaryText)
         } actions: {
-          Button("Vergangene Termine anzeigen") { showPast = true }.accessibilityIdentifier(
-            "past-events")
+          Button("Vergangene Termine anzeigen") { showPast = true }
+            .foregroundStyle(AppPalette.tint)
+            .accessibilityIdentifier("past-events")
         }
       } else {
         List {
@@ -506,7 +507,7 @@ private struct TimelineAppointment: View {
       .clipped()
       .background(category.surface(in: colorScheme), in: .rect(cornerRadius: 10))
       .overlay(alignment: .leading) {
-        RoundedRectangle(cornerRadius: 2).fill(category.color)
+        RoundedRectangle(cornerRadius: 2).fill(category.color(in: colorScheme))
           .frame(width: 3).padding(.vertical, 8)
       }
       .contentShape(.rect)
@@ -586,7 +587,7 @@ struct CalendarAgendaRow: View {
       category.surface(in: colorScheme), in: .rect(cornerRadius: 8)
     )
     .overlay(alignment: .leading) {
-      Capsule().fill(category.color).frame(width: 3).padding(
+      Capsule().fill(category.color(in: colorScheme)).frame(width: 3).padding(
         .vertical, 6)
     }
     .fixedSize(horizontal: false, vertical: true).foregroundStyle(.primary).contentShape(.rect)

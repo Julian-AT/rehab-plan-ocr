@@ -55,6 +55,7 @@ struct SettingsView: View {
   var page: Page = .appearance
   @Environment(PreferencesStore.self) private var store
   @Environment(ScanModel.self) private var scanner
+  @Environment(\.colorScheme) private var colorScheme
   @State private var reminderStatus = ""
   @State private var testingReminder = false
   @State private var testResult: String?
@@ -107,7 +108,7 @@ struct SettingsView: View {
               Label {
                 Text(category.title)
               } icon: {
-                Circle().fill(category.color).frame(width: 12, height: 12)
+                Circle().fill(category.color(in: colorScheme)).frame(width: 12, height: 12)
               }
             }
           }

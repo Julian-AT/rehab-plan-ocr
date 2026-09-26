@@ -1,0 +1,233 @@
+{
+  "matches_selected_html_palette": true,
+  "minimum_text_contrast": 4.969,
+  "checks": [
+    {
+      "category": "therapy",
+      "theme": "light",
+      "accent": "#85A832",
+      "background": "#FFFFFF",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 8.354
+    },
+    {
+      "category": "therapy",
+      "theme": "light",
+      "accent": "#85A832",
+      "background": "#F2F2F7",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 7.687
+    },
+    {
+      "category": "therapy",
+      "theme": "dark",
+      "accent": "#99B653",
+      "background": "#000000",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 9.118
+    },
+    {
+      "category": "therapy",
+      "theme": "dark",
+      "accent": "#99B653",
+      "background": "#1C1C1E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 6.894
+    },
+    {
+      "category": "therapy",
+      "theme": "dark",
+      "accent": "#99B653",
+      "background": "#2C2C2E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 5.879
+    },
+    {
+      "category": "medical",
+      "theme": "light",
+      "accent": "#41A58B",
+      "background": "#FFFFFF",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 8.114
+    },
+    {
+      "category": "medical",
+      "theme": "light",
+      "accent": "#41A58B",
+      "background": "#F2F2F7",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 7.462
+    },
+    {
+      "category": "medical",
+      "theme": "dark",
+      "accent": "#5FB39E",
+      "background": "#000000",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 9.501
+    },
+    {
+      "category": "medical",
+      "theme": "dark",
+      "accent": "#5FB39E",
+      "background": "#1C1C1E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 7.2
+    },
+    {
+      "category": "medical",
+      "theme": "dark",
+      "accent": "#5FB39E",
+      "background": "#2C2C2E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 6.142
+    },
+    {
+      "category": "meal",
+      "theme": "light",
+      "accent": "#EABC21",
+      "background": "#FFFFFF",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 9.288
+    },
+    {
+      "category": "meal",
+      "theme": "light",
+      "accent": "#EABC21",
+      "background": "#F2F2F7",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 8.573
+    },
+    {
+      "category": "meal",
+      "theme": "dark",
+      "accent": "#EDC745",
+      "background": "#000000",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 7.659
+    },
+    {
+      "category": "meal",
+      "theme": "dark",
+      "accent": "#EDC745",
+      "background": "#1C1C1E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 5.802
+    },
+    {
+      "category": "meal",
+      "theme": "dark",
+      "accent": "#EDC745",
+      "background": "#2C2C2E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 4.969
+    },
+    {
+      "category": "organization",
+      "theme": "light",
+      "accent": "#E8883F",
+      "background": "#FFFFFF",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 8.359
+    },
+    {
+      "category": "organization",
+      "theme": "light",
+      "accent": "#E8883F",
+      "background": "#F2F2F7",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 7.692
+    },
+    {
+      "category": "organization",
+      "theme": "dark",
+      "accent": "#EC9B5E",
+      "background": "#000000",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 9.021
+    },
+    {
+      "category": "organization",
+      "theme": "dark",
+      "accent": "#EC9B5E",
+      "background": "#1C1C1E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 6.84
+    },
+    {
+      "category": "organization",
+      "theme": "dark",
+      "accent": "#EC9B5E",
+      "background": "#2C2C2E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 5.842
+    },
+    {
+      "category": "other",
+      "theme": "light",
+      "accent": "#C97086",
+      "background": "#FFFFFF",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 7.875
+    },
+    {
+      "category": "other",
+      "theme": "light",
+      "accent": "#C97086",
+      "background": "#F2F2F7",
+      "opacity": 0.32,
+      "text": "#3B3B3B",
+      "contrast": 7.236
+    },
+    {
+      "category": "other",
+      "theme": "dark",
+      "accent": "#D28799",
+      "background": "#000000",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 9.92
+    },
+    {
+      "category": "other",
+      "theme": "dark",
+      "accent": "#D28799",
+      "background": "#1C1C1E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 7.526
+    },
+    {
+      "category": "other",
+      "theme": "dark",
+      "accent": "#D28799",
+      "background": "#2C2C2E",
+      "opacity": 0.36,
+      "text": "#ECECEC",
+      "contrast": 6.417
+    }
+  ],
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

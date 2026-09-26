@@ -2,16 +2,25 @@ import Foundation
 
 enum EventCategory: String, CaseIterable {
   case therapy, medical, meal, organization, other
-  // Original Greens-7 swatches remain visible in the narrow accents and legend.
-  // Card fills use transparency so the native background stays visible.
-  static let surfaceOpacity = (light: 0.18, dark: 0.22)
+  // Zitrus & Olive, selected from docs/preview/termin-farbpaletten.html at 32%.
+  // Dark accents match the preview's 16% white mix; fills remain transparent.
+  static let surfaceOpacity = (light: 0.32, dark: 0.36)
   var rgb: UInt32 {
     switch self {
-    case .therapy: 0xA1D99B
-    case .medical: 0x74C476
-    case .meal: 0x41AB5D
-    case .organization: 0x238B45
-    case .other: 0x005A32
+    case .therapy: 0x85A832
+    case .medical: 0x41A58B
+    case .meal: 0xEABC21
+    case .organization: 0xE8883F
+    case .other: 0xC97086
+    }
+  }
+  var darkRGB: UInt32 {
+    switch self {
+    case .therapy: 0x99B653
+    case .medical: 0x5FB39E
+    case .meal: 0xEDC745
+    case .organization: 0xEC9B5E
+    case .other: 0xD28799
     }
   }
   var title: String {
@@ -55,13 +64,16 @@ enum EventCategory: String, CaseIterable {
         green: Double((rgb >> 8) & 255) / 255,
         blue: Double(rgb & 255) / 255, opacity: 1)
     }
-    var color: Color { color(rgb) }
+    func color(in scheme: ColorScheme) -> Color {
+      color(scheme == .dark ? darkRGB : rgb)
+    }
     func surface(in scheme: ColorScheme) -> Color {
-      color.opacity(scheme == .dark ? Self.surfaceOpacity.dark : Self.surfaceOpacity.light)
+      color(in: scheme).opacity(
+        scheme == .dark ? Self.surfaceOpacity.dark : Self.surfaceOpacity.light)
     }
     func secondaryText(in scheme: ColorScheme) -> Color {
       // Includes elevated grouped backgrounds used by sheets and the day list.
-      Color(.sRGB, white: scheme == .dark ? 0.78 : 0.30, opacity: 1)
+      color(scheme == .dark ? 0xECECEC : 0x3B3B3B)
     }
   }
 #endif
