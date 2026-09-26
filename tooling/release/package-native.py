@@ -12,6 +12,7 @@ import tempfile
 
 import release_artifacts
 from bundle import require, verify
+from signing import verify_signer
 
 BUNDLE = "at.rehakalender.personal"
 TEAM = "ZP2PFF43D2"
@@ -107,7 +108,11 @@ def package(run_value, existing_archive=None):
                 "Provisioning profile has expired",
             )
             profiles.append(
-                {"bundle": identifier, "expires_utc": profile["ExpirationDate"].isoformat()}
+                {
+                    "bundle": identifier,
+                    "expires_utc": profile["ExpirationDate"].isoformat(),
+                    "signer": verify_signer(component, profile, run),
+                }
             )
         require(len(profiles) == 4, "Missing signed app or extension")
         require(common_devices, "App and extensions must authorize at least one common device")
