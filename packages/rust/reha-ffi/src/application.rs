@@ -1,8 +1,8 @@
 use crate::{
-    recognition_jobs::RecognitionJobs, records::*, runtime, AgendaSyncRequest, AgendaSyncResult,
-    AppError, CalendarPlatformStatus, CalendarReadEvent, CalendarReadQuery, CalendarReadReference,
-    CalendarReadResult, EventCalendarDestination, EventMutationRequest, EventMutationResult,
-    RecognitionJob,
+    recognition_jobs::RecognitionJobs, records::*, runtime, AgendaOwnedRecord, AgendaSyncRequest,
+    AgendaSyncResult, AppError, CalendarLinkInspection, CalendarPlatformStatus, CalendarReadEvent,
+    CalendarReadQuery, CalendarReadReference, CalendarReadResult, EventCalendarDestination,
+    EventMutationRequest, EventMutationResult, RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -313,6 +313,10 @@ pub trait AppleHost: Send + Sync {
     fn apply(&self, operation: CalendarOperation, recovery_only: bool) -> Result<CalendarResult>;
     fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>>;
     fn sync_agenda(&self, request: AgendaSyncRequest) -> Result<AgendaSyncResult>;
+    fn inspect_calendar_links(
+        &self,
+        records: Vec<AgendaOwnedRecord>,
+    ) -> Result<CalendarLinkInspection>;
     fn forget_calendar(&self) -> Result<()>;
     fn overlaps(
         &self,
@@ -326,6 +330,15 @@ pub(crate) struct HostBridge {
     jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
+    fn inspect_calendar_links(
+        &self,
+        records: Vec<reha_core::store::OwnedEventRecord>,
+    ) -> service::Response<service::calendar_links::Inspection> {
+        self.host
+            .inspect_calendar_links(records.into_iter().map(Into::into).collect())
+            .map(Into::into)
+            .map_err(platform_failure)
+    }
     fn import_snapshot(
         &self,
         records: Vec<domain::ImportRecord>,
@@ -429,14 +442,12 @@ impl Platform for HostBridge {
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
             match command {
-                "editSystemEvent" | "resolveOwnedEvent" | "inspectCalendarLinks" | "recognize" => {
-                    serde_json::from_str(
-                        &self
-                            .host
-                            .calendar_event_call(command.into(), args.to_string())?,
-                    )
-                    .map_err(storage)
-                }
+                "editSystemEvent" | "resolveOwnedEvent" | "recognize" => serde_json::from_str(
+                    &self
+                        .host
+                        .calendar_event_call(command.into(), args.to_string())?,
+                )
+                .map_err(storage),
                 "decodePhoto" => {
                     let bytes = STANDARD
                         .decode(args["base64"].as_str().unwrap_or(""))
@@ -1406,6 +1417,7 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
 #[cfg(test)]
 mod host_routing_tests {
     use super::*;
+    use crate::{CalendarLinkResult, CalendarLinkState};
     type HostCalls = Arc<Mutex<Vec<(String, Value)>>>;
     #[derive(Default)]
     pub(super) struct Host {
@@ -1468,6 +1480,30 @@ mod host_routing_tests {
                 return Err(failure(error.clone()));
             }
             Ok(self.response.clone().unwrap_or_else(|| json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()})).to_string())
+        }
+        fn inspect_calendar_links(
+            &self,
+            records: Vec<AgendaOwnedRecord>,
+        ) -> Result<CalendarLinkInspection> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push(("typedCalendarLinks".into(), json!(records)));
+            }
+            Ok(CalendarLinkInspection {
+                calendar_ids: vec!["visible".into()],
+                results: records
+                    .into_iter()
+                    .map(|r| CalendarLinkResult {
+                        id: r.id,
+                        state: CalendarLinkState::Unavailable { reason: None },
+                    })
+                    .collect(),
+            })
         }
         fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar> {
             if let Some(error) = &self.failure {

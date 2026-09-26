@@ -3258,6 +3258,114 @@ public func FfiConverterTypeCalendarBookkeepingResult_lower(_ value: CalendarBoo
 }
 
 
+public struct CalendarLinkInspection: Equatable, Hashable {
+    public var calendarIds: [String]
+    public var results: [CalendarLinkResult]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(calendarIds: [String], results: [CalendarLinkResult]) {
+        self.calendarIds = calendarIds
+        self.results = results
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarLinkInspection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarLinkInspection: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarLinkInspection {
+        return
+            try CalendarLinkInspection(
+                calendarIds: FfiConverterSequenceString.read(from: &buf), 
+                results: FfiConverterSequenceTypeCalendarLinkResult.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarLinkInspection, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.calendarIds, into: &buf)
+        FfiConverterSequenceTypeCalendarLinkResult.write(value.results, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkInspection_lift(_ buf: RustBuffer) throws -> CalendarLinkInspection {
+    return try FfiConverterTypeCalendarLinkInspection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkInspection_lower(_ value: CalendarLinkInspection) -> RustBuffer {
+    return FfiConverterTypeCalendarLinkInspection.lower(value)
+}
+
+
+public struct CalendarLinkResult: Equatable, Hashable {
+    public var id: String
+    public var state: CalendarLinkState
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, state: CalendarLinkState) {
+        self.id = id
+        self.state = state
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CalendarLinkResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarLinkResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarLinkResult {
+        return
+            try CalendarLinkResult(
+                id: FfiConverterString.read(from: &buf), 
+                state: FfiConverterTypeCalendarLinkState.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CalendarLinkResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterTypeCalendarLinkState.write(value.state, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkResult_lift(_ buf: RustBuffer) throws -> CalendarLinkResult {
+    return try FfiConverterTypeCalendarLinkResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkResult_lower(_ value: CalendarLinkResult) -> RustBuffer {
+    return FfiConverterTypeCalendarLinkResult.lower(value)
+}
+
+
 public struct CalendarOperation: Equatable, Hashable {
     public var kind: OperationKind
     public var id: String
@@ -7982,6 +8090,90 @@ public func FfiConverterTypeCalendarAccessStatus_lower(_ value: CalendarAccessSt
 
 
 
+public enum CalendarLinkState: Equatable, Hashable {
+    
+    case found(calendarId: String, externalId: String, ownershipUrl: String?
+    )
+    case deleted(reason: String?
+    )
+    case unavailable(reason: String?
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CalendarLinkState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCalendarLinkState: FfiConverterRustBuffer {
+    typealias SwiftType = CalendarLinkState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CalendarLinkState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .found(calendarId: try FfiConverterString.read(from: &buf), externalId: try FfiConverterString.read(from: &buf), ownershipUrl: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 2: return .deleted(reason: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 3: return .unavailable(reason: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CalendarLinkState, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .found(calendarId,externalId,ownershipUrl):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(calendarId, into: &buf)
+            FfiConverterString.write(externalId, into: &buf)
+            FfiConverterOptionString.write(ownershipUrl, into: &buf)
+            
+        
+        case let .deleted(reason):
+            writeInt(&buf, Int32(2))
+            FfiConverterOptionString.write(reason, into: &buf)
+            
+        
+        case let .unavailable(reason):
+            writeInt(&buf, Int32(3))
+            FfiConverterOptionString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkState_lift(_ buf: RustBuffer) throws -> CalendarLinkState {
+    return try FfiConverterTypeCalendarLinkState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCalendarLinkState_lower(_ value: CalendarLinkState) -> RustBuffer {
+    return FfiConverterTypeCalendarLinkState.lower(value)
+}
+
+
+
+
 public enum EventConfirmation: Equatable, Hashable {
     
     case button
@@ -9010,6 +9202,8 @@ public protocol AppleHost: AnyObject, Sendable {
     
     func syncAgenda(request: AgendaSyncRequest) throws  -> AgendaSyncResult
     
+    func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws  -> CalendarLinkInspection
+    
     func forgetCalendar() throws 
     
     func overlaps(events: [String: EventValues], exclude: [String]) throws  -> [CalendarOverlap]
@@ -9282,6 +9476,31 @@ fileprivate struct UniffiCallbackInterfaceAppleHost {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeAgendaSyncResult_lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeAppError_lower
+            )
+        },
+        inspectCalendarLinks: { (
+            uniffiHandle: UInt64,
+            records: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> CalendarLinkInspection in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceAppleHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.inspectCalendarLinks(
+                     records: try FfiConverterSequenceTypeAgendaOwnedRecord.lift(records)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeCalendarLinkInspection_lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -9995,6 +10214,31 @@ fileprivate struct FfiConverterSequenceTypeBatchOperation: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeBatchOperation.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCalendarLinkResult: FfiConverterRustBuffer {
+    typealias SwiftType = [CalendarLinkResult]
+
+    public static func write(_ value: [CalendarLinkResult], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCalendarLinkResult.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CalendarLinkResult] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CalendarLinkResult]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCalendarLinkResult.read(from: &buf))
         }
         return seq
     }
@@ -11083,10 +11327,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 28434) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 22829) {
+    if (uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links() != 41104) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 32097) {
+    if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 56600) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_applehost_overlaps() != 9555) {
         return InitializationResult.apiChecksumMismatch
     }
 

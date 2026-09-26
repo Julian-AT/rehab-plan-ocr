@@ -330,6 +330,16 @@ public final class NativeServices: @unchecked Sendable {
       completion($0)
     }
   }
+  public func inspectCalendarLinks(
+    _ records: [NativeCalendarRecord],
+    completion: @escaping @Sendable (Result<NativeCalendarLinkInspection, Error>) -> Void
+  ) {
+    measured(.calendarRead) { done in
+      calendarReads.inspectCalendarLinks(records, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
   public func importOverlaps(
     events: [String: NativeImportValues], exclude: [String],
     completion: @escaping @Sendable (Result<[NativeImportOverlap], Error>) -> Void

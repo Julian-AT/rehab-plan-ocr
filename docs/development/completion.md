@@ -295,3 +295,11 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Quellidentität. Der exakte Bildvergleich bleibt **fehlgeschlagen**, jetzt 15/22;
   fünf native Indikatorzustände und zwei kleine Tagesabschluss-Rasterabweichungen.
   Dies wiederholt weder die vollständigen 68 UI-Tests noch eine Geräteabnahme.
+- Typisierte Besitzmarkerprüfung: **verifiziert** für den Plattformeffekt,
+  239 Core-/FFI-Tests, Workspace-Clippy, offizielle Bindings, echter nativer
+  Rundweg und strenge Swift-6-Typprüfung erfolgreich. EventKit besteht mit
+  20 Erfolgen, einem erwarteten Dateischutz-Skip und null Fehlern unter
+  `typed-calendar-links-20260926-s19-002`. Gemeinsamer App-/UI-Testbuild und der
+  Reparaturdialog für nicht erreichbare Kalender bestehen unter
+  `calendar-links-ui-20260926-s19-001`. Der Anzeige-/Bestätigungsauftrag des
+  Reparaturberichts bleibt als nächste typisierte Grenze offen.

@@ -40,6 +40,9 @@
       throw denied()
     }
     func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult { throw denied() }
+    func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
+      throw denied()
+    }
     func forgetCalendar() throws { throw denied() }
     func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {
       throw denied()

@@ -80,6 +80,15 @@ pub trait Platform: Send + Sync {
         serde_json::from_value(self.call("calendarStatus", serde_json::json!({}))?)
             .map_err(calendar_administration::storage)
     }
+    fn inspect_calendar_links(
+        &self,
+        records: Vec<crate::store::OwnedEventRecord>,
+    ) -> Response<calendar_links::Inspection> {
+        calendar_links::Inspection::from_legacy(self.call(
+            "inspectCalendarLinks",
+            serde_json::json!({"records": records}),
+        )?)
+    }
     /// Compatibility defaults serve older JSON hosts. Native adapters override
     /// both methods and never serialize a whole read payload across the FFI.
     fn query_calendar(
@@ -176,6 +185,7 @@ pub mod agenda_queries;
 pub mod calendar;
 pub mod calendar_administration;
 pub mod calendar_imports;
+pub mod calendar_links;
 pub mod calendar_mutations;
 pub mod calendar_reads;
 mod calendar_repair;

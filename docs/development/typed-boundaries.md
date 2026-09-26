@@ -225,6 +225,47 @@ Paketprüfung über zwölf Mach-O-Dateien bestehen in
 `visual-capture-control-20260926-s19-004`; dessen drei Aufnahmetests bestehen ebenfalls.
 Der vollständige Endlauf und das reale Bedienen des Systemeditors bleiben separat.
 
+## Prüfung lokaler Kalenderzuordnungen
+
+`Platform.inspect_calendar_links` überträgt bestätigte Datensätze über den
+typisierten `AppleHost`-Callback an `NativeServices.inspectCalendarLinks`.
+Die Antwort enthält lesbare Kalenderkennungen und getrennte Fälle für gefunden,
+gelöscht und nicht erreichbar. Bei einem Treffer werden nur Kalenderkennung,
+externe Kennung und der exakte Besitzmarker übertragen. Weder ein vollständiger
+Terminsnapshot noch Metadaten-JSON ist für diesen aktiven Effekt nötig.
+
+Der EventKit-Besitzer führt die bisherige Suche auf seiner seriellen Queue aus;
+EventKit-Objekte verlassen diese Queue nicht. Typisierter und älterer Eingang
+verwenden dieselbe Suche. Der ältere `inspectCalendarLinks`-Eingang behält seinen
+vollständigen Snapshot samt Kalenderprojektion. Der Core prüft weiterhin jede
+angeforderte Identität, Vollständigkeit, Duplikate, lesbaren Zielkalender und
+Besitzmarker. Ein passender Titel oder Zeitpunkt berechtigt nicht zur Übernahme.
+Bestätigte Werte, Herkunft, Importhistorie, lokale Fingerprints, ausdrückliche
+Auswahl und atomare Bereinigung bleiben erhalten. Nachgelagerte Wartungswarnungen
+werden weiterhin getrennt vom bereits dauerhaften Abschluss gemeldet.
+
+Die neun Reparaturregressionen verwenden einen Host, der jeden Stringeffekt
+zurückweist. Zusammen mit allen anderen Core-/FFI-Fällen bestehen 239 Rusttests,
+Workspace-Clippy ohne Warnungen, offizielle Bindings samt Konsistenzprüfung und
+der echte Swift–Rust–Swift-Rundweg. Dieser prüft vollständige bestätigte Datensätze
+und alle zehn Fehleridentitäten auch für die neue Prüfung. Strenge Swift-6-
+Typprüfung einschließlich nativer Integration und Erweiterungen besteht ebenfalls.
+Beleg: `typed-calendar-links-20260926-s19-001`, Prüfserie `checks2`. Die tatsächliche
+EventKit-Ausführung `typed-calendar-links-20260926-s19-002` besteht mit 20 Erfolgen,
+einem erwarteten Dateischutz-Skip und null Fehlern. Sie vergleicht beide Eingänge
+für eindeutige Marker, fehlende Kalender und mehrdeutige Treffer; Notizen, Alarme
+und fremde Termine bleiben erhalten. Gemeinsamer App-/UI-Testbuild und der echte
+Reparaturdialog bestehen in `calendar-links-ui-20260926-s19-001` mit einem Erfolg ohne
+Skip. Der Dialogfall prüft den Hinweis auf nicht erreichbare Kalender; er ersetzt
+keine vollständige Bestätigungs-/Geräteabnahme. Quellen, Resultate und ausführbare
+Produkte sind separat erhalten. Der erste
+Simulatorstart wurde vor Kompilierung beendet, um den fehlenden expliziten
+Dateieintrag im Integrationstestprojekt zu ergänzen; er ist kein bestandener Test.
+
+Der App-Auftrag zur Anzeige/Bestätigung des Reparaturberichts bleibt vorerst
+der dokumentierte Legacy-Eingang. Dieser Schritt typisiert den Plattformeffekt,
+nicht bereits sämtliche verbleibenden Produktgrenzen.
+
 ## Ausstehende Mitteilungslinks
 
 Die App liest und quittiert ausstehende Terminidentitäten über
@@ -324,10 +365,11 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
 `Platform.call`, `AppleHost.calendar_event_call`,
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
 transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
-gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
+gehören der Anzeige-/Bestätigungsauftrag der Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
 Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
-Weitere Plattformeffekte bleiben offen; der Systemeditor verwendet die unten beschriebene typisierte Grenze.
+Weitere Plattformeffekte bleiben offen; Systemeditor und Besitzmarkerprüfung
+verwenden die oben beschriebenen typisierten Grenzen.
 Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
 `Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
 Core-Agenda-Abgleich verwendet ebenfalls typisierte Aufträge und Ergebnisse;

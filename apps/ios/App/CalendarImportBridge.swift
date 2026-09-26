@@ -87,6 +87,30 @@ extension NativeBridge {
         maintenanceWarnings: result.reminders.error.flatMap { $0.isEmpty ? nil : [$0] } ?? [])
     } catch { throw Self.appError(error) }
   }
+  func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
+    do {
+      let result = try NativeServiceCall.waitValue(for: .inspectCalendarLinks) { completion in
+        NativeServices.shared.inspectCalendarLinks(
+          records.map {
+            Self.nativeRecord(
+              id: $0.id, calendarID: $0.calendarId, externalID: $0.externalId,
+              status: $0.status, values: $0.approved)
+          }, completion: completion)
+      }
+      return CalendarLinkInspection(
+        calendarIds: result.calendarIDs,
+        results: result.results.map {
+          let state: CalendarLinkState
+          switch $0.state {
+          case .found(let calendarID, let externalID, let ownershipURL):
+            state = .found(
+              calendarId: calendarID, externalId: externalID, ownershipUrl: ownershipURL)
+          case .unavailable(let reason): state = .unavailable(reason: reason)
+          }
+          return CalendarLinkResult(id: $0.id, state: state)
+        })
+    } catch { throw Self.appError(error) }
+  }
   func forgetCalendar() throws {
     do {
       try NativeServiceCall.waitValue(for: .forgetCalendar) { completion in

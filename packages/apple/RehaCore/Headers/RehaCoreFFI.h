@@ -315,14 +315,21 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD10
-typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod10)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD11
-typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod11)(uint64_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD12
+typedef void (*UniffiCallbackInterfaceAppleHostMethod12)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -342,8 +349,9 @@ typedef struct UniffiVTableCallbackInterfaceAppleHost {
     UniffiCallbackInterfaceAppleHostMethod7 _Nonnull apply;
     UniffiCallbackInterfaceAppleHostMethod8 _Nonnull decodePhoto;
     UniffiCallbackInterfaceAppleHostMethod9 _Nonnull syncAgenda;
-    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull forgetCalendar;
-    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull overlaps;
+    UniffiCallbackInterfaceAppleHostMethod10 _Nonnull inspectCalendarLinks;
+    UniffiCallbackInterfaceAppleHostMethod11 _Nonnull forgetCalendar;
+    UniffiCallbackInterfaceAppleHostMethod12 _Nonnull overlaps;
 } UniffiVTableCallbackInterfaceAppleHost;
 
 #endif
@@ -1491,6 +1499,12 @@ uint16_t uniffi_reha_ffi_checksum_method_applehost_decode_photo(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_SYNC_AGENDA
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_SYNC_AGENDA
 uint16_t uniffi_reha_ffi_checksum_method_applehost_sync_agenda(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_INSPECT_CALENDAR_LINKS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_APPLEHOST_INSPECT_CALENDAR_LINKS
+uint16_t uniffi_reha_ffi_checksum_method_applehost_inspect_calendar_links(void
     
 );
 #endif

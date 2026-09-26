@@ -13,10 +13,14 @@ struct Host {
 impl Platform for Host {
     fn progress(&self, _: Value) {}
     fn call(&self, command: &str, _: Value) -> service::Response<Value> {
-        match command {
-            "inspectCalendarLinks" => Ok(self.response.lock().unwrap().clone()),
-            _ => panic!("Calendar cleanup must not invoke {command}"),
-        }
+        panic!("Calendar cleanup must not invoke string effect {command}")
+    }
+    fn inspect_calendar_links(
+        &self,
+        records: Vec<reha_core::store::OwnedEventRecord>,
+    ) -> service::Response<service::calendar_links::Inspection> {
+        assert!(!records.is_empty());
+        service::calendar_links::Inspection::from_legacy(self.response.lock().unwrap().clone())
     }
     fn synchronize_agenda(
         &self,

@@ -1,4 +1,5 @@
 //! Explicit local-link cleanup. This service never sends an EventKit mutation.
+use super::calendar_links::LinkState;
 use super::{failure, AppState, Platform, Response};
 use crate::store::OwnedEventRecord;
 use serde::{Deserialize, Serialize};
@@ -9,23 +10,6 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Deserialize)]
-struct Inspection {
-    access: String,
-    calendars: Vec<Calendar>,
-    results: Vec<LinkResult>,
-}
-#[derive(Deserialize)]
-struct Calendar {
-    id: String,
-}
-#[derive(Deserialize)]
-struct LinkResult {
-    id: String,
-    status: String,
-    reason: Option<String>,
-    event: Option<Value>,
-}
 #[derive(Deserialize)]
 struct Selection {
     id: String,
@@ -103,15 +87,11 @@ pub async fn run(
         }
     }
     let host = platform.clone();
-    let request = json!({"records": records});
-    let raw = tokio::task::spawn_blocking(move || host.call("inspectCalendarLinks", request))
+    let request = records.clone();
+    let inspection = tokio::task::spawn_blocking(move || host.inspect_calendar_links(request))
         .await
         .map_err(failure)??;
-    let inspection: Inspection = serde_json::from_value(raw).map_err(failure)?;
-    if inspection.access != "fullAccess" {
-        return Err("Zuerst Kalender-Vollzugriff erlauben.".into());
-    }
-    let calendars: BTreeSet<_> = inspection.calendars.iter().map(|c| c.id.as_str()).collect();
+    let calendars: BTreeSet<_> = inspection.calendar_ids.iter().map(String::as_str).collect();
     let results: BTreeMap<_, _> = inspection
         .results
         .iter()
@@ -129,18 +109,21 @@ pub async fn run(
     let mut removed = 0;
     for record in records {
         let result = results[record.id.as_str()];
-        match result.status.as_str() {
-            "found" => {
-                let event = result.event.as_ref().ok_or("Gefundener Termin fehlt.")?;
-                let calendar = event["calendar_id"]
-                    .as_str()
-                    .filter(|s| calendars.contains(s))
-                    .ok_or("Gefundener Kalender ist nicht lesbar.")?;
-                let external = event["external_id"]
-                    .as_str()
-                    .filter(|s| !s.is_empty())
-                    .ok_or("Gefundene Terminkennung fehlt.")?;
-                if event["metadata"]["url"].as_str()
+        match &result.state {
+            LinkState::Found {
+                calendar_id,
+                external_id,
+                ownership_url,
+            } => {
+                let calendar = calendar_id.as_str();
+                let external = external_id.as_str();
+                if !calendars.contains(calendar) {
+                    return Err("Gefundener Kalender ist nicht lesbar.".into());
+                }
+                if external.is_empty() {
+                    return Err("Gefundene Terminkennung fehlt.".into());
+                }
+                if ownership_url.as_deref()
                     != Some(format!("reha-calendar://event/{}", record.id).as_str())
                 {
                     return Err("Terminzuordnung nicht eindeutig bestätigt.".into());
@@ -156,7 +139,7 @@ pub async fn run(
                     relinked += 1;
                 }
             }
-            "deleted" | "unavailable" => {
+            LinkState::Deleted { reason } | LinkState::Unavailable { reason } => {
                 if selection.contains_key(record.id.as_str()) {
                     let mut retired = record.clone();
                     retired.status = "detached".into();
@@ -171,14 +154,13 @@ pub async fn run(
                         start_utc: record.approved.start_utc,
                         end_utc: record.approved.end_utc,
                         timezone: record.approved.timezone,
-                        reason: result
-                            .reason
-                            .clone()
-                            .unwrap_or_else(|| result.status.clone()),
+                        reason: reason.clone().unwrap_or_else(|| match result.state {
+                            LinkState::Deleted { .. } => "deleted".into(),
+                            _ => "unavailable".into(),
+                        }),
                     });
                 }
             }
-            _ => return Err("Unbekanntes Prüfergebnis. Es wurde nichts bereinigt.".into()),
         }
     }
     if !changes.is_empty() {

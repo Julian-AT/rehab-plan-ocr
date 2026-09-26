@@ -53,7 +53,22 @@ final class EventEditingService: @unchecked Sendable {
         let args =
           try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
         switch command {
-        case "inspectCalendarLinks": request.resolve(try self.inspectLinks(args))
+        case "inspectCalendarLinks":
+          let records = try JSONDecoder().decode(
+            [OwnedRecord].self,
+            from: JSONSerialization.data(withJSONObject: args["records"] ?? []))
+          let inspection = try self.inspectLinks(records.map(NativeCalendarRecord.init))
+          let results: [[String: Any]] = inspection.results.map { id, state in
+            switch state {
+            case .found(let event):
+              return ["id": id, "status": "found", "event": self.snapshot(event)]
+            case .unavailable(let reason):
+              return ["id": id, "status": "unavailable", "reason": reason]
+            }
+          }
+          request.resolve([
+            "access": "fullAccess", "calendars": self.calendars(), "results": results,
+          ])
         case "eventCalendars": request.resolve(["calendars": self.calendars()])
         case "queryEvents":
           request.resolve(try self.query(NativeCalendarQuery(legacy: args)).legacyValue)
@@ -103,14 +118,21 @@ final class EventEditingService: @unchecked Sendable {
   }
   /// Explicit repair searches committed events by the app's exact ownership
   /// marker. A matching title or time is never sufficient to adopt an event.
-  private func inspectLinks(_ args: [String: Any]) throws -> [String: Any] {
+  private enum LinkLookup {
+    case found(EKEvent)
+    case unavailable(String)
+  }
+  // EKEvent values returned here are projected on this same serial queue before
+  // delivery. The typed caller needs only identity and the exact ownership URL.
+  private func inspectLinks(_ records: [NativeCalendarRecord]) throws
+    -> (calendarIDs: [String], results: [(String, LinkLookup)])
+  {
+    try requireReadAccess()
     store.refreshSourcesIfNecessary()
-    let records = try JSONDecoder().decode(
-      [OwnedRecord].self,
-      from: JSONSerialization.data(withJSONObject: args["records"] ?? []))
     let readable = store.calendars(for: .event)
-    var results: [[String: Any]] = []
-    for record in records {
+    var results: [(String, LinkLookup)] = []
+    for native in records {
+      let record = native.ownedRecord
       let marker = "reha-calendar://event/\(record.id)"
       var candidate: EKEvent?
       if case .found(let event) = agenda.lookup(record) { candidate = event }
@@ -125,17 +147,43 @@ final class EventEditingService: @unchecked Sendable {
         ambiguous = matches.count > 1
       }
       if let candidate {
-        results.append(["id": record.id, "status": "found", "event": snapshot(candidate)])
+        results.append((record.id, .found(candidate)))
       } else {
         let missing = !readable.contains { $0.calendarIdentifier == record.calendar_id }
         let reason = ambiguous ? "ambiguous" : missing ? "calendar_missing" : "event_missing"
-        results.append(["id": record.id, "status": "unavailable", "reason": reason])
+        results.append((record.id, .unavailable(reason)))
       }
     }
-    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-      throw NativeServiceError.permissionDenied
+    try requireReadAccess()
+    return (readable.map(\.calendarIdentifier), results)
+  }
+
+  func inspectCalendarLinks(
+    _ records: [NativeCalendarRecord],
+    completion: @escaping @Sendable (Result<NativeCalendarLinkInspection, Error>) -> Void
+  ) {
+    queue.async {
+      do {
+        let inspection = try self.inspectLinks(records)
+        let results = inspection.results.map { id, state in
+          let value: NativeCalendarLinkState
+          switch state {
+          case .found(let event):
+            value = .found(
+              calendarID: event.calendar.calendarIdentifier,
+              externalID: event.eventIdentifier ?? event.calendarItemIdentifier,
+              ownershipURL: event.url?.absoluteString)
+          case .unavailable(let reason): value = .unavailable(reason: reason)
+          }
+          return NativeCalendarLinkResult(id: id, state: value)
+        }
+        try self.requireReadAccess()
+        completion(
+          .success(
+            NativeCalendarLinkInspection(
+              calendarIDs: inspection.calendarIDs, results: results)))
+      } catch { completion(.failure(error)) }
     }
-    return ["access": "fullAccess", "calendars": calendars(), "results": results]
   }
 
   func readDestinations(

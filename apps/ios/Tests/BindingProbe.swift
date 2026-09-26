@@ -8,6 +8,7 @@ final class TestHost: AppleHost, Sendable {
   let queries = OSAllocatedUnfairLock<[CalendarReadQuery]>(initialState: [])
   let agendaRequests = OSAllocatedUnfairLock<[AgendaSyncRequest]>(initialState: [])
   let agendaWarnings = OSAllocatedUnfairLock<[String]>(initialState: [])
+  let linkRecords = OSAllocatedUnfairLock<[[AgendaOwnedRecord]]>(initialState: [])
   func calendarStatus() throws -> CalendarPlatformStatus {
     precondition(!Thread.isMainThread)
     if let error = failure.withLock({ $0 }) { throw error }
@@ -60,9 +61,12 @@ final class TestHost: AppleHost, Sendable {
   }
   func calendarEventCall(command: String, arguments: String) throws -> String {
     precondition(
-      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus", "agenda"]
-        .contains(
-          command),
+      ![
+        "queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus", "agenda",
+        "inspectCalendarLinks",
+      ]
+      .contains(
+        command),
       "Typed effect used JSON callback")
     if let error = failure.withLock({ $0 }) { throw error }
     return "{}"
@@ -80,6 +84,16 @@ final class TestHost: AppleHost, Sendable {
       maintenanceWarnings: recoveryOnly ? ["Erfundener Wartungshinweis"] : [])
   }
   func decodePhoto(bytes: Data) throws -> Data { bytes }
+  func inspectCalendarLinks(records: [AgendaOwnedRecord]) throws -> CalendarLinkInspection {
+    precondition(!Thread.isMainThread)
+    linkRecords.withLock { $0.append(records) }
+    if let error = failure.withLock({ $0 }) { throw error }
+    return CalendarLinkInspection(
+      calendarIds: ["selected"],
+      results: records.map {
+        CalendarLinkResult(id: $0.id, state: .unavailable(reason: "calendar_missing"))
+      })
+  }
   func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult {
     precondition(!Thread.isMainThread)
     agendaRequests.withLock { $0.append(request) }
@@ -119,6 +133,10 @@ final class TestHost: AppleHost, Sendable {
       do {
         _ = try await core.refreshAgenda()
         preconditionFailure("Typed agenda failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
+      do {
+        _ = try await core.calendarRequest(command: "inspectCalendarRepair", arguments: "{}")
+        preconditionFailure("Typed ownership inspection failure disappeared")
       } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }
@@ -375,6 +393,17 @@ final class TestHost: AppleHost, Sendable {
     precondition(transferred?.approved == imported.approved)
     precondition(transferred?.origin == "import" && transferred?.importId == imported.id)
     precondition(transferred?.operationId == imported.operationId)
+    let linkReport = try await reopened.calendarRequest(
+      command: "inspectCalendarRepair", arguments: "{}")
+    let inspectedRecords = host.linkRecords.withLock { $0.last! }
+    precondition(inspectedRecords.first { $0.id == imported.id } == transferred)
+    let linkResponse =
+      try JSONSerialization.jsonObject(with: Data(linkReport.utf8)) as! [String: Any]
+    let linkIssues = linkResponse["issues"] as! [[String: Any]]
+    let linkIssue = linkIssues.first { $0["id"] as? String == imported.id }!
+    precondition(linkIssue["reason"] as? String == "calendar_missing")
+    precondition(linkIssue["title"] as? String == imported.approved.title)
+    precondition(linkResponse["removed_count"] as? Int == 0)
     let jobID = UUID().uuidString
     let job = try core.registerJob(id: jobID)
     try core.cancelJob(id: job.attemptId())

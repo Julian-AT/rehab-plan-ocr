@@ -403,6 +403,22 @@ final class EventEditingTests: XCTestCase {
         results[1]["status"] as? String, "unavailable",
         "Same title and time must not adopt unrelated events")
       XCTAssertEqual(results[2]["reason"] as? String, "ambiguous")
+      let typedRecords = try JSONDecoder().decode(
+        [OwnedRecord].self, from: JSONSerialization.data(withJSONObject: records)
+      ).map(NativeCalendarRecord.init)
+      let typed: NativeCalendarLinkInspection = try await withCheckedThrowingContinuation { c in
+        NativeServices.shared.inspectCalendarLinks(typedRecords) { c.resume(with: $0) }
+      }
+      XCTAssertTrue(typed.calendarIDs.contains(calendar.calendarIdentifier))
+      XCTAssertEqual(typed.results.map(\.id), [id, missingID, ambiguousID])
+      XCTAssertEqual(
+        typed.results[0].state,
+        .found(
+          calendarID: calendar.calendarIdentifier,
+          externalID: event.eventIdentifier ?? event.calendarItemIdentifier,
+          ownershipURL: "reha-calendar://event/\(id)"))
+      XCTAssertEqual(typed.results[1].state, .unavailable(reason: "calendar_missing"))
+      XCTAssertEqual(typed.results[2].state, .unavailable(reason: "ambiguous"))
       let refreshed = try XCTUnwrap(store.event(withIdentifier: event.eventIdentifier))
       XCTAssertEqual(refreshed.notes, "Original bleibt erhalten")
       XCTAssertEqual(refreshed.alarms?.first?.relativeOffset, -600)
