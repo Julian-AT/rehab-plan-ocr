@@ -1,0 +1,117 @@
+> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
+
+# Reproducible dependency security review
+
+The optional audit entry uses cargo-audit **0.22.2** from the hash-pinned Homebrew
+`arm64_tahoe` bottle. It supports ARM64 macOS 26 or newer and runs from
+`.local/tools/bin/cargo-audit`; Homebrew is not required. Other host platforms need
+a separately reviewed tool pin. The normal Rustup/Xcode setup remains unchanged.
+Python, Git and curl use the documented development host environment.
+
+The [tool policy](../../config/toolchains/cargo-audit.json) records the executable,
+bottle, upstream source and formula identities retrieved on 2026-09-26 from
+[Homebrew's public formula](https://formulae.brew.sh/api/formula/cargo-audit.json).
+The verified executable links only to macOS system libraries. This is a development
+tool; it is not bundled with the app. No dependency update or compiler is invoked
+by any command below.
+
+## Download and setup
+
+After the normal workspace setup, download the 5.95 MB bottle explicitly, then
+install it offline:
+
+```sh
+make download-dependency-audit
+make setup-dependency-audit
+```
+
+Download writes `.local/downloads/cargo-audit-0.22.2-arm64_tahoe.tar.gz`. A valid
+cached archive is reused. The anonymous GHCR header follows
+[Homebrew's public download convention](https://github.com/Homebrew/brew/blob/master/Library/Homebrew/brew.sh);
+no user token is read. Both archive and executable checksums must match. Setup
+extracts only the exact regular executable member, never the full archive tree.
+It reuses an identical installed executable and refuses to replace changed bytes.
+
+An existing verified archive can be supplied without any network request:
+
+```sh
+make setup-dependency-audit AUDIT_ARCHIVE=/absolute/path/to/the/pinned-bottle.tar.gz
+```
+
+The workspace must already use canonical `.local` tool storage. For a legacy
+checkout, use the separately documented
+[verified workspace migration](build-reproducibility.md) first. The audit wrapper
+does not move existing tools or fall back to a binary discovered on `PATH`.
+
+## Explicit advisory update
+
+Use a new directory for every refresh. The command fetches the current default
+branch of the official [RustSec advisory database](https://github.com/RustSec/advisory-db),
+then prints its exact commit and writes a sibling `.identity.json` receipt with
+retrieval time, origin and SHA-256 of every tracked file. Existing snapshots and
+their receipts are never overwritten.
+
+```sh
+make update-dependency-advisories AUDIT_DB=.local/audits/advisories-YYYYMMDD
+```
+
+Replace `YYYYMMDD` with a new snapshot identifier. Save the printed 40-character
+commit for the next step. Refresh is separate from audit so a later run can use
+the same evidence without fetching newer advisories.
+
+## Offline audit
+
+Pass the exact database commit and a new result directory:
+
+```sh
+make audit-dependencies \
+  AUDIT_DB=.local/audits/advisories-YYYYMMDD \
+  AUDIT_COMMIT=COMMIT_PRINTED_BY_THE_UPDATE \
+  AUDIT_RUN=.local/audits/review-YYYYMMDD-01
+```
+
+This invokes `cargo-audit audit --no-fetch --no-yanked` using only the specified
+snapshot. It reads the complete `Cargo.lock`, including build/development entries,
+and verifies the current release runtime inventory separately. Target/build
+relevance still requires review against that inventory. Offline mode deliberately
+does not query crates.io for yanked versions; it does not claim that check passed.
+
+The wrapper rejects a stale inventory, changed database files (including changes
+hidden with Git's `assume-unchanged` flag), a different commit/origin, altered
+executable, filtered audit settings or inputs changed during the run. It keeps
+raw JSON and stderr. A completed `receipt.json` binds the report to the tool,
+wrapper, policy, lockfile, inventory and all database file hashes. A failed tool
+invocation keeps diagnostics but receives no completion receipt. A valid review
+with vulnerabilities retains its receipt and returns exit code 1; findings are
+never ignored automatically. Every result directory is immutable to this command.
+
+No RustSec result supplies public release approval. Native libraries, Apple
+frameworks, models, training environments, licensing and actual release binaries
+need their own checks. The
+[dated security review](../releases/dependency-security-2026-09-26-s18.md) records those
+scope decisions and remaining work; historical reports remain unchanged.
+
+## Verification
+
+```sh
+make test-dependency-audit
+```
+
+The synthetic tests cover archive/member checks, repeatable setup, cache integrity,
+explicit refresh, database identity, hidden modifications, filtered results,
+input races, retained vulnerability evidence and prevention of output overwrite.
+They invoke neither the network nor a compiler and do not read private data.
+
+On 2026-09-26 the existing verified bottle was installed under `.local/tools`
+without Homebrew execution. A fresh explicit database retrieval produced commit
+`2b34578f89884736e0fcbd42f7ba8d6b10b4a0ce`; its receipt is retained locally at
+`.local/audits/dependencies-2026-09-26-s18/repro-rustsec.identity.json`.
+Two offline reviews, including the Make entry, bound the same inputs and produced
+byte-identical reports: 231 lockfile dependencies, 1,251 advisories, no reported
+vulnerabilities and two unmaintained warnings (`paste` and `ttf-parser`). The
+reports and receipts remain in `repro-offline-01` and `repro-offline-02` below that
+audit directory. Report SHA-256 is
+`3c65f9e81f53dd88e6c5fb37a91272a80b5072c471f77c7a46bedb963dc98f3b`;
+the verified inventory SHA-256 is
+`db182b42cbc5767cd519387a36277f8774b4a231afec0932ec6b1ff6bc26458e`.
+All 14 synthetic audit tests, four documentation checks and Ruff checks passed.

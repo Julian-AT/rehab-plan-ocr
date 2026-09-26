@@ -20,6 +20,9 @@ The [2026-09-26 security review](../releases/dependency-security-2026-09-26-s18.
 records the RustSec snapshot, native-library findings, SQLite update and remaining
 maintenance/ONNX qualification work. Its result is bound to the recorded inputs;
 it is not an evergreen security clearance.
+The [reproducible audit entry](../development/dependency-audit.md) separates pinned
+local tool setup, explicit advisory refresh and an offline repeat with recorded
+database identity.
 
 `make inventory-runtime` explicitly regenerates the inventory offline using the
 restored Cargo registry. `make check-runtime-inventory` recomputes it and rejects

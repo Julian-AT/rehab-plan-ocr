@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "version": "0.22.2",
+  "platform": "darwin-arm64",
+  "minimum_macos": 26,
+  "binary_sha256": "51821c337d0e7801ffee30234942276ddaa7c5fb66ad74b5765cc69a19597add",
+  "binary_bytes": 12614432,
+  "provenance": {
+    "retrieved_on": "2026-09-26",
+    "formula_url": "https://formulae.brew.sh/api/formula/cargo-audit.json",
+    "formula_ruby_sha256": "672686c9e89da478dae5398865af505945fdb6e1fab5f9951d2638627c0eeec6",
+    "upstream_source_url": "https://github.com/rustsec/rustsec/archive/refs/tags/cargo-audit/v0.22.2.tar.gz",
+    "upstream_source_sha256": "85c368a4d166b2cc4972108d50abc5fad605013b65098929a06122439488beb5"
+  },
+  "archive": {
+    "url": "https://ghcr.io/v2/homebrew/core/cargo-audit/blobs/sha256:6d9e5dd5e65645fb52c168c0336328dbad40abc2fc170a5baa4307bf8c1c28c9",
+    "sha256": "6d9e5dd5e65645fb52c168c0336328dbad40abc2fc170a5baa4307bf8c1c28c9",
+    "bytes": 5952790,
+    "binary_member": "cargo-audit/0.22.2/bin/cargo-audit",
+    "source": "Homebrew core arm64_tahoe bottle; no runtime dependencies beyond macOS system libraries"
+  },
+  "database_url": "https://github.com/RustSec/advisory-db.git"
+}
