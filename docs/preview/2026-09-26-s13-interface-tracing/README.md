@@ -50,7 +50,7 @@ sh scripts/test-native-ui.sh --built \
 
 Die lokalen XCTest-Nachweise liegen in `/tmp/reha-interface-tracing-final.xcresult` (Inline-Senden/Abbruch), `/tmp/reha-interface-tracing-verified.xcresult` (Hell/Dunkel, vollständiges Tracing, Terminvorlage) und `/tmp/reha-interface-large-help-verified.xcresult` (abschließend korrigierte große Infobox).
 
-Die neue Version wurde noch nicht auf das physische iPhone übertragen.
+Die Änderungen sind inzwischen mit Build 2026092620 [auf dem iPhone installiert](../../calendar-cache-device-update.md).
 
 ## Vorschau
 

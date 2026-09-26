@@ -4,6 +4,8 @@
 
 Simulatorvorschau für Version 0.3.0, Build **2026092620**.
 
+Nach Nutzerfreigabe [über WLAN auf dem iPhone installiert](../../calendar-cache-device-update.md); Sicherung und Datenvergleich bestehen.
+
 Bereits geladene Kalendertage bleiben beim Tabwechsel und Aktualisieren sichtbar. Neue Daten ersetzen die bisherige Woche im Hintergrund; auch leere Wochen zählen als geladen. Die ausgewählte Uhrzeit und Scrollposition bleiben erhalten.
 
 Der Kalender behält bis zu zwölf zuletzt verwendete Wochen im Arbeitsspeicher und lädt benachbarte Wochen vor. Beim Blättern werden bereits aktuelle Wochen wiederverwendet. Beim Aktualisieren werden vorhandene Termine erneut abgefragt, sodass Änderungen und Löschungen ankommen. Nach einem vollständigen App-Neustart wird der Cache neu aufgebaut.
