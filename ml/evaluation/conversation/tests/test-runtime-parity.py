@@ -18,7 +18,9 @@ class RuntimeParityTests(unittest.TestCase):
             def value(flag):
                 return args[args.index(flag) + 1]
 
-            self.assertEqual(value("-f"), "prompt")
+            self.assertEqual(value("--binary-file"), "prompt")
+            self.assertIn("--no-escape", args)
+            self.assertNotIn("-f", args)
             self.assertEqual(value("--temp"), "0")
             self.assertEqual(value("-n"), "192")
             self.assertEqual(value("-c"), "2048")

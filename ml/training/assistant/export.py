@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from ml.evaluation.conversation.intent import InvalidIntent, parse  # noqa: E402
+from ml.evaluation.conversation.runtime_prompt import arguments as prompt_arguments  # noqa: E402
 from ml.training.assistant.contract import messages, references, sha, write  # noqa: E402
 from ml.training.assistant.train import BASE, current_identity, latest_checkpoint  # noqa: E402
 
@@ -106,8 +107,7 @@ def parity(run, destination):
                 str(RUNTIME),
                 "-m",
                 str(destination / f"{name}.gguf"),
-                "-f",
-                str(prompt),
+                *prompt_arguments(prompt),
                 "-no-cnv",
                 "--no-display-prompt",
                 "--simple-io",

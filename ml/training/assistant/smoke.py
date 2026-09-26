@@ -18,6 +18,7 @@ from restore import ROOT, sha, verify
 
 sys.path.insert(0, str(ROOT))
 from ml.data.synthesis.assistant_smoke import examples, messages  # noqa: E402
+from ml.evaluation.conversation.runtime_prompt import arguments as prompt_arguments  # noqa: E402
 
 BASE = ROOT / ".local/models/assistant/qwen3-0.6b"
 CONVERTER = ROOT / ".local/upstream/llama.cpp"
@@ -252,8 +253,7 @@ def main():
             str(RUNTIME),
             "-m",
             str(output / f"{name}.gguf"),
-            "-f",
-            str(output / "runtime-prompt.txt"),
+            *prompt_arguments(output / "runtime-prompt.txt"),
             "-no-cnv",
             "--no-display-prompt",
             "--simple-io",

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from ml.data.synthesis.assistant_smoke import messages  # noqa: E402
 from ml.evaluation.conversation.intent import InvalidIntent, parse, validate  # noqa: E402
+from ml.evaluation.conversation.runtime_prompt import arguments as prompt_arguments  # noqa: E402
 from ml.training.assistant.restore import verify  # noqa: E402
 
 
@@ -79,8 +80,7 @@ def compare(run, destination, runtime, base):
                 str(runtime),
                 "-m",
                 str(run / f"{model}.gguf"),
-                "-f",
-                str(prompt),
+                *prompt_arguments(prompt),
                 "-no-cnv",
                 "--no-display-prompt",
                 "--simple-io",
