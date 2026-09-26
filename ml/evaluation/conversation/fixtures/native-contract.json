@@ -168,6 +168,30 @@
     "valid": false
   },
   {
+    "id": "unicode-hour-digit",
+    "references": ["r1"],
+    "json": "{\"action\":\"create\",\"change\":{\"title\":\"Bewegung\",\"date\":\"2031-05-17\",\"time\":\"0٨:00\"}}",
+    "valid": false
+  },
+  {
+    "id": "unicode-minute-digit",
+    "references": ["r1"],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"time\":\"08:0١\"}}",
+    "valid": false
+  },
+  {
+    "id": "unicode-query-after",
+    "references": ["r1"],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-05-17\",\"after\":\"0８:00\"}}",
+    "valid": false
+  },
+  {
+    "id": "unicode-query-before",
+    "references": ["r1"],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-05-17\",\"before\":\"08:0१\"}}",
+    "valid": false
+  },
+  {
     "id": "partial-create",
     "references": [
       "r1"

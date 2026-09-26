@@ -47,7 +47,8 @@ def canonical_date(value):
 
 def canonical_time(value):
     require(
-        type(value) is str and re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value), "Invalid time"
+        type(value) is str and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value),
+        "Invalid time",
     )
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from ml.data.synthesis.assistant_smoke import examples
-from ml.evaluation.conversation.intent import InvalidIntent, parse, validate
+from ml.evaluation.conversation.intent import InvalidIntent, canonical_time, parse, validate
 
 
 class IntentTests(unittest.TestCase):
@@ -79,6 +79,11 @@ class IntentTests(unittest.TestCase):
         ]:
             with self.subTest(query=query), self.assertRaises(InvalidIntent):
                 validate({"action": "calendar", "query": query})
+
+    def test_every_canonical_minute_is_accepted(self):
+        for hour in range(24):
+            for minute in range(60):
+                canonical_time(f"{hour:02}:{minute:02}")
 
     def test_ambiguous_or_non_json_outputs_are_rejected(self):
         for text in [
