@@ -4,7 +4,8 @@ public enum DiagnosticStep: String, Codable, Sendable {
   case intake, preparation, ocr, mapping, interpretation, refinement, confirmation
   case calendarRead, calendarWrite, reminderSettings, reminderSelection, reminderPlan,
     reminderConfirmed
-  case microphonePermission, speechPermission, inputRoute, audioEngine, audioBuffer,
+  case microphonePermission, speechPermission, inputRoute, audioEngine, audioConfiguration,
+    audioBuffer,
     audioSampleRate, audioChannels, audioLevel, audioConversion, audioRestart
   case speechSession, speechRecognition, tools, synthesis, playback, interruption
 }

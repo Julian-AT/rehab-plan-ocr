@@ -93,7 +93,7 @@ private final class SpeechInput: @unchecked Sendable {
   private var watchdogTask: Task<Void, Never>?
   private var receivedBuffer = false
   private var lastLevelLog = 0.0
-  private var configurationRetryUsed = false
+  private var configurationRecovery = AudioConfigurationRecovery()
   #if DEBUG && targetEnvironment(simulator)
     private var previewInputTask: Task<Void, Never>?
   #endif
@@ -154,7 +154,7 @@ private final class SpeechInput: @unchecked Sendable {
       startedAt = ProcessInfo.processInfo.systemUptime
       if input == nil {
         watchdog = InputBufferWatchdog()
-        configurationRetryUsed = false
+        configurationRecovery.start()
         try prepareMicrophone()
       } else {
         state = receivedBuffer ? .recording : .preparing
@@ -165,7 +165,7 @@ private final class SpeechInput: @unchecked Sendable {
       throw error
     }
   }
-  private func prepareMicrophone() throws {
+  private func prepareMicrophone(recovering: Bool = false) throws {
     microphoneID = UUID()
     let id = microphoneID
     let current = generation
@@ -193,7 +193,7 @@ private final class SpeechInput: @unchecked Sendable {
           guard let self, self.generation == current, self.microphoneID == id else { return }
           LocalDiagnostics.shared.record(.audioConversion, .failed, correlation: current.uuidString)
           if error == .invalidFormat {
-            self.configurationChanged()
+            self.configurationChanged(needsNewInput: true)
           } else {
             self.failInput(
               "Die Mikrofondaten konnten nicht verarbeitet werden. Bitte das Gespräch erneut starten."
@@ -204,7 +204,13 @@ private final class SpeechInput: @unchecked Sendable {
     self.input = input
     // The recognition task and receiver exist before any microphone audio flows.
     startSegment()
-    try ConversationAudio.shared.startMicrophone { @Sendable buffer in input.append(buffer) }
+    if recovering {
+      try ConversationAudio.shared.restartMicrophone { @Sendable buffer in input.append(buffer) }
+    } else {
+      try ConversationAudio.shared.startMicrophone(correlation: current.uuidString) {
+        @Sendable buffer in input.append(buffer)
+      }
+    }
     ConversationAudio.shared.onConfigurationChange = { [weak self] in self?.configurationChanged() }
     watchdog.start(at: ProcessInfo.processInfo.systemUptime)
     watchdogTask?.cancel()
@@ -212,7 +218,27 @@ private final class SpeechInput: @unchecked Sendable {
       while !Task.isCancelled {
         do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
         guard let self, self.generation == current, self.microphoneID == id else { return }
-        switch self.watchdog.check(at: ProcessInfo.processInfo.systemUptime) {
+        let now = ProcessInfo.processInfo.systemUptime
+        if self.configurationRecovery.isPending {
+          let configuration = ConversationAudio.shared.microphoneConfiguration
+          switch self.configurationRecovery.check(
+            at: now, running: configuration.running, matchingFormats: configuration.matchingFormats)
+          {
+          case .wait: continue
+          case .none:
+            LocalDiagnostics.shared.record(
+              .audioConfiguration, .completed, correlation: current.uuidString)
+          case .restart:
+            LocalDiagnostics.shared.record(.audioRestart, .started, correlation: current.uuidString)
+            self.restartMicrophone()
+            return
+          case .fail:
+            self.failInput(
+              "Die Audioverbindung bleibt instabil. Bitte das Gespräch erneut starten.")
+            return
+          }
+        }
+        switch self.watchdog.check(at: now) {
         case .wait: continue
         case .restart:
           LocalDiagnostics.shared.record(.audioRestart, .started, correlation: current.uuidString)
@@ -230,6 +256,7 @@ private final class SpeechInput: @unchecked Sendable {
   private func receiveBuffer(level: Double, rate: Double, channels: Int) {
     let now = ProcessInfo.processInfo.systemUptime
     watchdog.received(at: now)
+    configurationRecovery.received(at: now)
     self.level += (level - self.level) * 0.4
     if !receivedBuffer {
       receivedBuffer = true
@@ -246,15 +273,15 @@ private final class SpeechInput: @unchecked Sendable {
         .audioLevel, .completed, correlation: generation.uuidString, count: Int(level * 1000))
     }
   }
-  private func configurationChanged() {
+  private func configurationChanged(needsNewInput: Bool = false) {
     guard input != nil else { return }
-    guard !configurationRetryUsed, !monitor, state == .recording || state == .preparing else {
-      failInput("Die Audioverbindung wurde geändert. Bitte das Gespräch erneut starten.")
-      return
-    }
-    configurationRetryUsed = true
-    LocalDiagnostics.shared.record(.audioRestart, .started, correlation: generation.uuidString)
-    restartMicrophone()
+    let configuration = ConversationAudio.shared.microphoneConfiguration
+    LocalDiagnostics.shared.record(
+      .audioConfiguration, .started, correlation: generation.uuidString,
+      count: (configuration.running ? 1 : 0) + (configuration.matchingFormats ? 2 : 0)
+        + (needsNewInput ? 4 : 0))
+    configurationRecovery.changed(
+      at: ProcessInfo.processInfo.systemUptime, needsNewInput: needsNewInput)
   }
   private func restartMicrophone() {
     guard input != nil, !monitor, state == .recording || state == .preparing else {
@@ -266,7 +293,7 @@ private final class SpeechInput: @unchecked Sendable {
     endpoint = SpeechEndpoint()
     endpointSent = false
     startedAt = ProcessInfo.processInfo.systemUptime
-    do { try prepareMicrophone() } catch {
+    do { try prepareMicrophone(recovering: true) } catch {
       failInput("Das Mikrofon konnte nicht neu gestartet werden. Bitte erneut versuchen.")
     }
   }
@@ -379,6 +406,7 @@ private final class SpeechInput: @unchecked Sendable {
     generation = UUID()
     microphoneID = UUID()
     watchdog.cancel()
+    configurationRecovery.cancel()
     watchdogTask?.cancel()
     watchdogTask = nil
     receivedBuffer = false

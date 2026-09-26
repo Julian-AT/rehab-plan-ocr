@@ -64,6 +64,7 @@ extension DiagnosticStep {
     case .speechPermission: "Spracherkennungsfreigabe"
     case .inputRoute: "Audioeingang"
     case .audioEngine: "Audioengine"
+    case .audioConfiguration: "Audiokonfiguration"
     case .audioBuffer: "Mikrofonpuffer"
     case .audioSampleRate: "Abtastrate"
     case .audioChannels: "Audiokanäle"

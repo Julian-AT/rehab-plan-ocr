@@ -78,8 +78,43 @@ import Foundation
     precondition(watch.check(at: 12) == .restart)
     watch.cancel()  // Stopp / background / interruption invalidates pending retry.
     precondition(watch.check(at: 100) == .wait)
+    configurationRecovery()
     print(
       "PCM: 16/44.1/48 kHz mono/stereo, interleaving, silence, empty and corrupt buffers, format change, one retry and cancellation passed"
+    )
+  }
+  private static func configurationRecovery() {
+    var recovery = AudioConfigurationRecovery()
+    recovery.start()
+    // iPhone trace: first notification ~150 ms after engine start, no buffers.
+    recovery.changed(at: 0.15)
+    recovery.changed(at: 0.20)  // Duplicate must not postpone recovery indefinitely.
+    precondition(recovery.check(at: 0.29, running: false, matchingFormats: true) == .wait)
+    precondition(recovery.check(at: 0.31, running: false, matchingFormats: true) == .restart)
+    // A late notification after restarting the same healthy graph is harmless.
+    recovery.changed(at: 0.4)
+    precondition(recovery.check(at: 0.6, running: true, matchingFormats: true) == .none)
+    recovery.changed(at: 0.7)
+    precondition(recovery.check(at: 0.9, running: false, matchingFormats: true) == .fail)
+
+    recovery.start()
+    recovery.changed(at: 0, needsNewInput: true)
+    precondition(recovery.check(at: 0.2, running: true, matchingFormats: true) == .restart)
+    recovery.received(at: 0.3)
+    recovery.received(at: 2)  // Isolated buffers do not reset the retry budget.
+    recovery.changed(at: 2)
+    precondition(recovery.check(at: 2.2, running: true, matchingFormats: false) == .fail)
+    for time in stride(from: 2.3, through: 3.5, by: 0.1) { recovery.received(at: time) }
+    recovery.changed(at: 3.6)
+    precondition(recovery.check(at: 3.8, running: true, matchingFormats: false) == .restart)
+
+    recovery.changed(at: 4)
+    recovery.cancel()  // Stopp, background and interruptions invalidate deferred work.
+    recovery.changed(at: 4.1)
+    precondition(!recovery.isPending)
+    precondition(recovery.check(at: 100, running: false, matchingFormats: false) == .none)
+    print(
+      "Audio configuration: startup trace, coalescing, healthy graph, format changes, stable buffers and cancellation passed"
     )
   }
 }

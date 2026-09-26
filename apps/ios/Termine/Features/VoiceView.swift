@@ -193,7 +193,8 @@ struct VoiceSnapshot {
     defer { if session == current { busy = false } }
     do {
       let text = try await recorder.endTurn()
-      LocalDiagnostics.shared.record(.speechRecognition, .completed, correlation: current)
+      LocalDiagnostics.shared.record(
+        .speechRecognition, .completed, correlation: current, count: text.count)
       guard session == current, !Task.isCancelled else { return }
       guard !text.isEmpty else {
         busy = false
