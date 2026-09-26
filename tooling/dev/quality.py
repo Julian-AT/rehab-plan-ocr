@@ -220,6 +220,7 @@ def tests(portable):
             "calendar-answers",
             "input-audio",
             "output-audio",
+            "capture-preparation",
             "speech-input",
             "ordered-settings",
             "diagnostics",

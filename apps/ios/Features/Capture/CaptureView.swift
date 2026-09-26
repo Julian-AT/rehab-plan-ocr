@@ -80,30 +80,44 @@ private struct NativeCamera: UIViewControllerRepresentable {
     return camera
   }
   func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+  static func dismantleUIViewController(
+    _ controller: UIImagePickerController, coordinator: Coordinator
+  ) {
+    coordinator.cancelPreparation()
+    controller.delegate = nil
+  }
   final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate
   {
     let parent: NativeCamera
-    private var delivered = false
+    private var accepted = false
+    private let preparation = CapturePreparation()
     init(parent: NativeCamera) { self.parent = parent }
+    func cancelPreparation() {
+      accepted = true
+      preparation.cancel()
+    }
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-      guard !delivered else { return }
-      delivered = true
+      cancelPreparation()
       parent.cancel()
     }
     func imagePickerController(
       _ picker: UIImagePickerController,
       didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
-      guard !delivered else { return }
-      delivered = true
-      if let url = info[.imageURL] as? URL, let data = try? Data(contentsOf: url) {
-        parent.complete(.success(data))
-      } else if let original = info[.originalImage] as? UIImage,
-        let data = original.jpegData(compressionQuality: 0.98)
-      {
-        parent.complete(.success(data))
-      } else {
-        parent.complete(.failure(CaptureError.noImage))
+      guard !accepted else { return }
+      accepted = true
+      let url = info[.imageURL] as? URL
+      let original = info[.originalImage] as? UIImage
+      preparation.start {
+        try autoreleasepool {
+          if let url, let data = try? Data(contentsOf: url) { return data }
+          guard let data = original?.jpegData(compressionQuality: 0.98) else {
+            throw CaptureError.noImage
+          }
+          return data
+        }
+      } complete: { [weak self] result in
+        self?.parent.complete(result)
       }
     }
   }

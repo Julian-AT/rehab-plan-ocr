@@ -295,3 +295,17 @@ native conversation probe and simulator build pass, and both typed-calendar UI
 regressions pass (127.642 seconds). The added cross-day reference regressions pass
 in the final native probe. These checks do not qualify model interpretation or
 physical speech latency.
+
+Camera file reading and JPEG conversion now run on a detached worker. A single
+accepted result is delivered on the main actor; dismissal cancels the worker and
+rejects late success or failure. Duplicate delegate completion cannot import
+another image. The synthetic concurrency probe verifies that the UI actor remains
+responsive during blocked conversion, plus failure/cancellation/one-delivery
+behavior. The Swift 6 simulator build and camera/Photos/Files entry-point UI test
+pass (28.613 seconds). Actual camera capture still requires physical-device checks.
+
+The expanded assistant training stopped after seven epochs and selected epoch four.
+Its 40 validation cases represent ten invented families. Tuned GGUF achieves
+17/40 exact operations, but produces 11 unsafe proposals versus 7 for the baseline.
+Fusion agrees on 40/40 complete answers; GGUF agrees on only 34/40. Both gates fail;
+the model remains experimental. See the [full development result](../ml/experiments/2026-09-26-s17-assistant-development.md).
