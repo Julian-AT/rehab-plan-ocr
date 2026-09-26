@@ -402,6 +402,10 @@ impl Platform for HostBridge {
             .map_err(platform_failure)
     }
 
+    fn forget_calendar(&self) -> service::Response<()> {
+        self.host.forget_calendar().map_err(platform_failure)
+    }
+
     fn query_calendar(
         &self,
         request: service::calendar_reads::Query,
@@ -485,10 +489,6 @@ impl Platform for HostBridge {
                         .calendar_event_call("agenda".into(), args.to_string())?,
                 )
                 .map_err(storage),
-                "forgetCalendar" => {
-                    self.host.forget_calendar()?;
-                    Ok(Value::Null)
-                }
                 _ => Err(AppError::Validation {
                     message: format!("Unsupported native effect: {command}"),
                 }),
@@ -1623,7 +1623,16 @@ mod host_routing_tests {
             })
         }
         fn forget_calendar(&self) -> Result<()> {
-            unreachable!()
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push(("typedForgetCalendar".into(), Value::Null));
+            }
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(())
         }
         fn overlaps(
             &self,
@@ -1641,6 +1650,27 @@ mod host_routing_tests {
             }
             Ok(self.overlap_response.clone())
         }
+    }
+    #[test]
+    fn typed_forget_calendar_bypasses_and_rejects_the_string_effect() {
+        let calls = Arc::new(Mutex::new(vec![]));
+        let bridge = HostBridge {
+            host: Box::new(Host {
+                calls: Some(calls.clone()),
+                ..Host::default()
+            }),
+            progress: Mutex::new(HashMap::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
+        };
+        bridge.forget_calendar().unwrap();
+        assert!(matches!(
+            bridge.call("forgetCalendar", json!({})),
+            Err(service::ServiceError::Validation(_))
+        ));
+        assert_eq!(
+            *calls.lock().unwrap(),
+            [("typedForgetCalendar".into(), Value::Null)]
+        );
     }
     #[test]
     fn typed_overlap_effect_preserves_values_exclusions_and_response_order() {
@@ -2029,6 +2059,7 @@ mod host_routing_tests {
             );
             assert_eq!(bridge.event_calendars().unwrap_err(), expected);
             assert_eq!(bridge.calendar_status().unwrap_err(), expected);
+            assert_eq!(bridge.forget_calendar().unwrap_err(), expected);
             assert_eq!(
                 bridge.overlaps(Default::default(), vec![]).unwrap_err(),
                 expected

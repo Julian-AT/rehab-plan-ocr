@@ -13,7 +13,7 @@ pub async fn erase_all(app: Arc<dyn super::Platform>, state: &Arc<AppState>) -> 
     state.event_proposals.lock().map_err(failure)?.clear();
     state.event_sessions.lock().map_err(failure)?.revoke_all();
     #[cfg(target_os = "ios")]
-    tokio::task::spawn_blocking(move || app.call("forgetCalendar", json!({})))
+    tokio::task::spawn_blocking(move || app.forget_calendar())
         .await
         .map_err(failure)??;
     state
@@ -26,6 +26,7 @@ pub async fn erase_all(app: Arc<dyn super::Platform>, state: &Arc<AppState>) -> 
     let _ = app;
     Ok(())
 }
+
 pub fn maintenance(state: &Arc<AppState>) -> Response<usize> {
     let _admission = state
         .lifecycle_lock
@@ -119,4 +120,34 @@ pub fn settings_value(state: &AppState, value: Option<Value>) -> Response<Value>
         .map_err(failure)?
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or(json!({"timezone":"Europe/Vienna","reminder":10,"detailed_debug":false})))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::{Platform, ServiceError};
+
+    struct LegacyHost(Response<Value>);
+    impl Platform for LegacyHost {
+        fn call(&self, command: &str, arguments: Value) -> Response<Value> {
+            assert_eq!(command, "forgetCalendar");
+            assert_eq!(arguments, json!({}));
+            self.0.clone()
+        }
+        fn progress(&self, _: Value) {}
+    }
+
+    #[test]
+    fn legacy_forget_calendar_keeps_command_and_failure_contract() {
+        LegacyHost(Ok(json!({"legacy_acknowledgement": true})))
+            .forget_calendar()
+            .unwrap();
+        let error = ServiceError::Storage("Aufräumen fehlgeschlagen.".into());
+        assert_eq!(
+            LegacyHost(Err(error.clone()))
+                .forget_calendar()
+                .unwrap_err(),
+            error
+        );
+    }
 }

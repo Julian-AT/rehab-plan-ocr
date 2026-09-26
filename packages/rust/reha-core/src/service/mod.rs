@@ -100,6 +100,11 @@ pub trait Platform: Send + Sync {
         serde_json::from_value(self.call("calendarStatus", serde_json::json!({}))?)
             .map_err(calendar_administration::storage)
     }
+    /// Native adapters override this effect; older hosts keep their command contract.
+    fn forget_calendar(&self) -> Response<()> {
+        self.call("forgetCalendar", serde_json::json!({}))?;
+        Ok(())
+    }
     fn inspect_calendar_links(
         &self,
         records: Vec<crate::store::OwnedEventRecord>,
