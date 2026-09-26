@@ -166,11 +166,3 @@ func fieldDescription(_ value: FieldValue) -> String {
   case .boolean(let value): value ? "Ja" : "Nein"
   }
 }
-
-private func appointmentStatus(_ appointment: Appointment) -> String {
-  guard appointment.included else { return "Ausgeschlossen" }
-  guard let approval = appointment.approval else { return "Ungeprüfter Entwurf" }
-  if appointment.calendarSavedHash == approval.valuesHash { return "Im Kalender gespeichert" }
-  if appointment.icsExportedHash == approval.valuesHash { return "Als Kalenderdatei exportiert" }
-  return "Bestätigt · noch nicht gespeichert"
-}
