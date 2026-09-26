@@ -13,6 +13,27 @@ make audit-assistant-pairs \
   OUTPUT=.local/runs/assistant-paired-<new>
 ```
 
+To isolate backend and batch settings on previously failed export cases:
+
+```sh
+make diagnose-assistant-parity \
+  RUN=.local/runs/assistant-development-001 \
+  DIAGNOSTIC_RUN=.local/runs/assistant-backend-parity-<new>
+```
+
+This offline diagnostic verifies the selected checkpoint, retained prompts, GGUF,
+export receipt and pinned llama.cpp executable before repeating inference. It
+compares automatic backend selection with explicit CPU execution, then changes
+the CPU batch/microbatch sizes to the native adapter's 512/128. Environment
+overrides for llama.cpp are excluded. Case order rotates the three variants;
+raw outputs, errors, arguments and hashes stay in a new private directory.
+Original parity evidence is never replaced. A successful diagnostic command means
+the comparison completed, not that answers agree or a model qualifies. It uses
+only earlier failures, adds no independent examples and cannot establish full
+parity, iOS execution or physical latency. The current
+[six-case result](../../experiments/2026-09-26-s18-assistant-backend-parity.md) reproduces
+all six failures with each configuration.
+
 The audit checks model-card/run/settings/dataset hashes, verifies the original
 decoder/contract, covers every validation case exactly once and redecodes every
 recorded answer. It recomputes counts and complete-text parity. Outputs are new,

@@ -241,6 +241,11 @@ diagnose-ocr-stage-parity:
 	OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 .local/envs/ocr/bin/python ml/evaluation/recognition/stage_parity.py --run "$(RUN)" --report "$(PARITY_REPORT)"
 
 ASSISTANT_PER_FAMILY ?= 16
+.PHONY: diagnose-assistant-parity
+diagnose-assistant-parity:
+	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" || { echo 'Set RUN and a new private DIAGNOSTIC_RUN directory'; exit 2; }
+	.local/envs/assistant/bin/python ml/evaluation/conversation/runtime_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)"
+
 ASSISTANT_EPOCHS ?= 20
 ASSISTANT_PATIENCE ?= 3
 ASSISTANT_LAYERS ?= 8

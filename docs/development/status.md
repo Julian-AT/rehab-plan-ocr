@@ -97,6 +97,10 @@ answer four cases; the simulator's Apple model route fails at a missing system
 component. No evaluation executes a calendar operation or promotes a provider.
 The [comparison](../../ml/experiments/2026-09-26-s18-app-provider-comparison.md) excludes
 speech and earlier VoiceModel rules; complete shipping-workflow evaluation remains open.
+An [explicit backend/batch diagnostic](../../ml/experiments/2026-09-26-s18-assistant-backend-parity.md)
+reproduces all six prior export divergences with automatic backend selection and
+both CPU batch configurations. Changing these settings supplies no parity or
+quality fix; all original model gates remain open.
 
 Ten local voices have 100 anonymous host listening previews and zero human scores.
 A separate host SpeechTranscriber setup and [100-file ASR experiment](../../ml/experiments/2026-09-26-s18-file-speech-recognition.md)
