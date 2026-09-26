@@ -138,3 +138,73 @@ are under `.local/audits/advisories-20260926-s21-001` and
 time of that run; subsequent inventory or package changes require their own
 verification. Native libraries, Python environments and registry yanks are outside
 this RustSec result.
+
+## Python tooling and training locks
+
+`tooling/release/audit_python.py` audits all registry packages in these five locks:
+the root `uv.lock`, the assistant training, assistant export and OCR training
+`uv.lock` files, and `tooling/build/export-victoria.py.lock`. This covers Python
+development, training and conversion dependencies; it does not claim that Python
+is shipped in the iOS app or replace the Rust/native review.
+
+Retrieval is an explicit online operation. Use a new private directory:
+
+```sh
+.local/envs/tools/bin/python tooling/release/audit_python.py download \
+  --output .local/audits/python-osv-YYYYMMDD-01
+```
+
+Only normalized public PyPI package names and locked versions, returned page
+tokens and public advisory IDs are sent to `api.osv.dev`. No lockfile, source,
+local path, environment credential or virtual-project record is uploaded.
+Exactly `https://pypi.org/simple` registry sources are accepted; unknown registries,
+Git/editable dependencies and unsupported sources stop the audit. Local virtual
+projects are explicitly recorded as excluded. Names/versions are deduplicated
+across locks; every occurrence and its lock/marker context remain in the snapshot.
+Markers are retained rather than used to silently omit inactive platform entries.
+
+The [OSV batch API](https://github.com/google/osv.dev/blob/master/docs/api/post-v1-querybatch.md)
+returns results in request order. The tool records that order, requires one result
+per query, follows every per-result page token and retrieves each full advisory
+through `/v1/vulns/{id}`. Repeated/excessive pages, unexpected result fields,
+changed advisory timestamps and mismatched package identities fail closed.
+Raw requests/responses, full advisory records, all five locks and the audit source
+are saved with hashes. The printed `snapshot_sha256` identifies `receipt.json`;
+retain that value for the offline command.
+
+```sh
+.local/envs/tools/bin/python tooling/release/audit_python.py offline \
+  --snapshot .local/audits/python-osv-YYYYMMDD-01 \
+  --snapshot-sha256 SHA256_PRINTED_BY_DOWNLOAD \
+  --output .local/audits/python-review-YYYYMMDD-01
+```
+
+Offline replay performs no network requests. It verifies the explicit receipt
+hash, exact file closure, source, current and archived locks, inventory and the
+complete ordered request/response sequence before producing a report. Inputs are
+checked again on exit. Different current locks or audit code require a new query;
+historical replay requires the recorded source and matching locks in an isolated
+checkout (`--root` can select it), without rewriting original receipts.
+
+The report preserves full advisories and withdrawal status. Connected advisory
+IDs/aliases count as one vulnerability group; affected package/version pairs and
+raw advisory records have separate counts. A withdrawn-only group remains visible
+and does not count as an active finding. OSV's version-query verdict is replayed;
+the tool does not independently reimplement each ecosystem's affected-range rules.
+
+The declared limits are 30 seconds per network request, 8 MiB per response,
+128 MiB total responses, 100 queries per batch, 20 pages per query, 2,000 unique
+package/version pairs and 2,048 advisory records. Failed or incomplete retrievals
+retain their received bytes and an incomplete receipt. Each request runs in an
+owned HTTP-only child; the wall-clock deadline includes system DNS resolution,
+with a further two seconds allowed for termination and reaping. Completed offline
+evaluation
+returns exit 0 for no active findings or exit 1 for active findings; an unavailable,
+corrupt or incomplete audit returns exit 2 and cannot produce a passing report.
+Existing output directories, destinations inside previous audit snapshots/reports
+and symlinked paths are refused.
+
+No command upgrades packages, updates environments/locks, grants an exception or
+approves release. Findings require review of the relevant tooling/training usage
+and separately validated remediation. Run the network-free synthetic regressions
+with `.local/envs/tools/bin/python tooling/release/tests/test-audit-python.py`.
