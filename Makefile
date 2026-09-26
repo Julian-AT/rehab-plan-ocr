@@ -466,6 +466,11 @@ prepare-assistant-data:
 	@test -n "$(DATASET)" || { echo 'Set DATASET to a new directory below .local'; exit 2; }
 	python3 ml/training/assistant/prepare.py --output "$(DATASET)" --per-family "$(ASSISTANT_PER_FAMILY)"
 
+.PHONY: prepare-assistant-development-data
+prepare-assistant-development-data:
+	@test -n "$(DATASET)" -a -n "$(SOURCE_DATASET)" || { echo 'Set DATASET (new) and SOURCE_DATASET (existing dataset.json)'; exit 2; }
+	python3 ml/training/assistant/development_data.py --source "$(SOURCE_DATASET)" --output "$(DATASET)"
+
 train-assistant:
 	@test -n "$(RUN)" -a -n "$(DATASET)" || { echo 'Set RUN and DATASET'; exit 2; }
 	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/train.py start --run "$(RUN)" --dataset "$(DATASET)/dataset.json" --max-epochs "$(ASSISTANT_EPOCHS)" --patience "$(ASSISTANT_PATIENCE)" --num-layers "$(ASSISTANT_LAYERS)"
