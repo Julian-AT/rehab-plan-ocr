@@ -8,9 +8,14 @@ import UniformTypeIdentifiers
     view.backgroundColor = .systemBackground
     message.numberOfLines = 0
     message.textAlignment = .center
+    message.font = .preferredFont(forTextStyle: .body)
+    message.adjustsFontForContentSizeCategory = true
     message.text = "Dateien werden gesichert …"
     let done = UIButton(type: .system)
     done.configuration = .filled()
+    done.configuration?.buttonSize = .large
+    done.configuration?.baseForegroundColor = .label
+    done.configuration?.baseBackgroundColor = .secondarySystemFill
     done.setTitle("Fertig", for: .normal)
     done.addTarget(self, action: #selector(finish), for: .touchUpInside)
     let stack = UIStackView(arrangedSubviews: [message, done])
@@ -23,6 +28,7 @@ import UniformTypeIdentifiers
       stack.trailingAnchor.constraint(
         equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
       stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+      done.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
     ])
     done.isEnabled = false
     Task {
@@ -55,7 +61,7 @@ import UniformTypeIdentifiers
           count += 1
         }
         message.text =
-          "\(count) Dateien gesichert. Die Erkennung kann in Laßnitzhöhe gestartet werden."
+          "\(count) \(count == 1 ? "Datei" : "Dateien") gesichert. Die Erkennung kann in Laßnitzhöhe gestartet werden."
       } catch {
         message.text =
           "\(error.localizedDescription) Bereits gesicherte Dateien bleiben für Laßnitzhöhe verfügbar."

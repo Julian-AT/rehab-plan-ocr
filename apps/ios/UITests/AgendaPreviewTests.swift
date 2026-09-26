@@ -459,6 +459,39 @@ import XCTest
     app.buttons["voice-settings"].tap()
     capture("23-spracheinstellungen")
   }
+
+  func testReminderIsConfirmedPendingBySystem() {
+    launch("one")
+    app.tabBars.buttons["Mehr"].tap()
+    app.buttons["Erinnerungen"].tap()
+    let enabled = app.switches["app-reminders"]
+    XCTAssertTrue(enabled.waitForExistence(timeout: 5))
+    let wasEnabled = enabled.value as? String == "1"
+    if !wasEnabled {
+      toggle(enabled)
+      let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+      let allow = springboard.buttons.matching(
+        NSPredicate(format: "label IN %@", ["Allow", "Erlauben"])
+      ).firstMatch
+      if allow.waitForExistence(timeout: 5) { allow.tap() }
+      expectation(for: NSPredicate(format: "value == %@", "1"), evaluatedWith: enabled)
+      waitForExpectations(timeout: 10)
+    }
+    let test = app.buttons["test-reminder"]
+    for _ in 0..<5 where !test.isHittable { app.swipeUp() }
+    test.tap()
+    let accepted = app.staticTexts.matching(
+      NSPredicate(
+        format: "label BEGINSWITH %@", "Testauftrag angenommen und vom System vorgemerkt.")
+    ).firstMatch
+    XCTAssertTrue(accepted.waitForExistence(timeout: 25))
+    XCTAssertTrue(test.isEnabled)
+    capture("quality-11-system-bestaetigt-testerinnerung")
+    if !wasEnabled {
+      for _ in 0..<5 where !enabled.isHittable { app.swipeDown() }
+      toggle(enabled)
+    }
+  }
   func testVoiceCreationRequiresExplicitConfirmation() {
     launch("one")
     app.tabBars.buttons["Sprechen"].tap()

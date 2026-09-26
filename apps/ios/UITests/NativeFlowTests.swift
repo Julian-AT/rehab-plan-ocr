@@ -417,4 +417,65 @@ import XCTest
       "The entire calendar destination must fit on screen: \(destination.frame)")
     capture("Public plan imported through Files")
   }
+
+  func testZZZShareExtensionAcceptsPublicPlan() {
+    let files = XCUIApplication(bundleIdentifier: "com.apple.DocumentsApp")
+    files.launch()
+    var host = files
+    func button(_ labels: [String]) -> XCUIElement {
+      host.buttons.matching(NSPredicate(format: "label IN %@", labels)).firstMatch
+    }
+    let browse = button(["Browse", "Durchsuchen"])
+    if browse.waitForExistence(timeout: 5) { browse.tap() }
+    let local = files.staticTexts.matching(
+      NSPredicate(format: "label IN %@", ["On My iPhone", "Auf meinem iPhone"])
+    ).firstMatch
+    if local.waitForExistence(timeout: 3) { local.tap() }
+    let file = files.cells.matching(NSPredicate(format: "identifier BEGINSWITH %@", "Testplan,"))
+      .firstMatch
+    XCTAssertTrue(file.waitForExistence(timeout: 8))
+    // Open the preview; the Files context menu can keep XCTest waiting for
+    // an animation completion indefinitely with Reduce Motion enabled.
+    file.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+    let preview = XCUIApplication(bundleIdentifier: "com.apple.Preview")
+    if preview.wait(for: .runningForeground, timeout: 5) { host = preview }
+    let share = button(["Share", "Teilen"])
+    XCTAssertTrue(share.waitForExistence(timeout: 5))
+    share.tap()
+    let activity = host.descendants(matching: .any).matching(
+      NSPredicate(format: "label == %@", "Laßnitzhöhe")
+    ).firstMatch
+    if !activity.waitForExistence(timeout: 3) {
+      let more = button(["More", "Mehr"])
+      XCTAssertTrue(more.waitForExistence(timeout: 5))
+      more.tap()
+    }
+    XCTAssertTrue(activity.waitForExistence(timeout: 8))
+    activity.tap()
+    let accepted = host.staticTexts.matching(
+      NSPredicate(format: "label BEGINSWITH %@", "1 Datei gesichert.")
+    ).firstMatch
+    XCTAssertTrue(accepted.waitForExistence(timeout: 15))
+    let done = host.buttons["Fertig"]
+    XCTAssertTrue(done.isEnabled)
+    XCTAssertGreaterThanOrEqual(done.frame.height, 44)
+    let shot = XCTAttachment(screenshot: host.screenshot())
+    shot.name = "quality-09-teilen-erweiterung"
+    shot.lifetime = .keepAlways
+    add(shot)
+    done.tap()
+    app.activate()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+    // Activation can finish before the host share-sheet transition. Confirm
+    // the selected destination instead of assuming the first tap was delivered.
+    for _ in 0..<3 {
+      app.tabBars.buttons["Archiv"].tap()
+      if app.navigationBars["Archiv"].waitForExistence(timeout: 3) { break }
+    }
+    XCTAssertTrue(app.navigationBars["Archiv"].waitForExistence(timeout: 10))
+    let retainedPlan = app.buttons[clearID]
+    for _ in 0..<8 where !retainedPlan.isHittable { app.swipeUp() }
+    XCTAssertTrue(retainedPlan.waitForExistence(timeout: 20))
+    capture("quality-10-nach-geteiltem-plan")
+  }
 }
