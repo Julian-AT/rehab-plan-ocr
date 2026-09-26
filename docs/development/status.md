@@ -151,6 +151,13 @@ and an actual interruption proof matching 902 model/optimizer tensors. Frozen
 export passes 24/24 desktop parity cases; full adaptation passes 22/24 and is
 rejected. Both retain 4/4 correctness on tiny synthetic validation already achieved
 by the baseline. See the [OCR experiment](../../ml/experiments/2026-09-26-s17-ocr-resumption.md).
+The corrected baseline and frozen export now also complete the actual simulator
+app import, native rereading and persistence route. Each variant performs two
+forced imports of one synthetic source, with eight appointments each, twelve native
+rereads and zero calendar calls. Warm sessions are verified independently of result
+caching. Nine new regressions, all 188 tool tests, lint, the simulator build and
+bundle verification pass. This [app compatibility evidence](../../ml/experiments/2026-09-26-s18-ocr-app-provider.md)
+does not establish real-photo quality, paired speed or physical acceptance.
 
 Qwen3-0.6B has a resumable LoRA trainer, validation-based selection, fusion and
 complete-answer GGUF export checks. The two-process proof matches 171 tensors and

@@ -9,7 +9,6 @@ import json
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -18,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from ml.evaluation.conversation.app_evaluation import evaluate, prepare  # noqa: E402
 from ml.evaluation.conversation.native import run, sha, write  # noqa: E402
+from ml.evaluation.device.simulator import disposable, install  # noqa: E402
 
 BUNDLE = "at.rehakalender.personal"
 CASES = ["correct-date-0000", "room-follow-up-0000"]
@@ -74,12 +74,7 @@ def main():
     destination = args.run.resolve()
     if not destination.is_relative_to(ROOT / ".local/runs"):
         raise ValueError("Use a new directory below .local/runs")
-    devices = json.loads(run(["xcrun", "simctl", "list", "devices", "booted", "--json"]))
-    selected = [
-        d for group in devices["devices"].values() for d in group if d["udid"] == args.simulator
-    ]
-    if len(selected) != 1 or not selected[0]["name"].startswith("Termine-Native-Test-"):
-        raise ValueError("Use a booted disposable Termine-Native-Test simulator; run serially")
+    selected = disposable(args.simulator, run)
     receipt_path = ROOT / ".local/builds/assistant-app-trial/verification.json"
     receipt = json.loads(receipt_path.read_text())
     app = ROOT / receipt["app"]
@@ -110,7 +105,7 @@ def main():
         "build_receipt_sha256": sha(receipt_path),
         "app_binary_sha256": receipt["app_binary_sha256"],
         "evaluator_sha256": sha(Path(__file__)),
-        "simulator": selected[0],
+        "simulator": selected,
     }
     shutil.copyfile(receipt_path, destination / "build-receipt.json")
     if fixture:
@@ -131,40 +126,14 @@ def main():
                     "ml/evaluation/conversation/app_evaluation.py",
                     "ml/evaluation/conversation/intent.py",
                     "ml/evaluation/conversation/paired.py",
+                    "ml/evaluation/device/simulator.py",
                     "ml/training/assistant/contract.py",
                 ]
             },
         )
     write(destination / "report.json", report)
     try:
-        with tempfile.TemporaryDirectory(prefix="reha-assistant-trial-") as temporary:
-            staged = Path(temporary) / app.name
-            run(["cp", "-cRp", str(app), str(staged)])
-            run(["xattr", "-cr", str(staged)])
-            for product, entitlements in [
-                ("PlugIns/RehaWidgets.appex", "Extensions/Widgets/Widgets.entitlements"),
-                (
-                    "PlugIns/RehaNotificationContent.appex",
-                    "Extensions/NotificationContent/Notification.entitlements",
-                ),
-                ("PlugIns/RehaShare.appex", "Extensions/Share/Share.entitlements"),
-                ("", "App/Termine.entitlements"),
-            ]:
-                run(
-                    [
-                        "codesign",
-                        "--force",
-                        "--sign",
-                        "-",
-                        "--entitlements",
-                        str(ROOT / "apps/ios" / entitlements),
-                        str(staged / product),
-                    ]
-                )
-            run(["xcrun", "simctl", "install", args.simulator, str(staged)], timeout=120)
-        container = Path(
-            run(["xcrun", "simctl", "get_app_container", args.simulator, BUNDLE, "data"])
-        )
+        container = install(app, args.simulator, run)
         output = container / "Documents/assistant-provider-result.json"
         if fixture:
             write(container / "Documents/assistant-evaluation-input.json", fixture)

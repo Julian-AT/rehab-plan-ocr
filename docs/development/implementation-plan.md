@@ -62,6 +62,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Frozen-backbone versus full fine-tuning, resumable lineage and validation stop.
 - [x] ONNX parity comparison before quantization (frozen passes; full adaptation rejected).
 - [x] Experimental custom OCR checkpoint, deployment artifact and model card.
+- [x] Baseline/custom simulator app import, native rereading, warm sessions and persistence compatibility.
 - [ ] Grouped real-photo critical-field/correction evaluation and shipping iOS route.
 - [ ] Qualified OCR improvement against the corrected pretrained baseline.
 
@@ -107,6 +108,24 @@ entries must distinguish portable/native tests, simulator builds, physical evide
 and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
+
+### Custom OCR in the actual app import pipeline — 2026-09-26
+
+The normal Debug simulator app now has an isolated recognition probe that forbids
+calendar access and exercises ordinary import, native rereading and stored-review
+APIs. Baseline and parity-passing frozen weights each complete two forced imports
+of one public synthetic source, yielding eight appointments each and twelve native
+rereading calls per variant. Warm model sessions are reused without reusing image
+results. Exact source/model/dictionary/manifest/binary/runtime identities survive
+in the retained report. Full adaptation remains excluded after failed export parity.
+
+Nine new isolated regressions, all 188 tool tests, lint, the simulator build and
+bundle verification pass. Final evidence is `.local/runs/ocr-app-provider-20260926-s18-004`,
+report SHA-256 `c1f29eefb48e636b8a58c05916c5d5532d3fd829c7f09e968599109e1dfb3f4f`.
+The [experiment record](../../ml/experiments/2026-09-26-s18-ocr-app-provider.md) documents
+earlier failed validation and simulator storage retirement. No physical update,
+real-photo quality result, paired speed claim or model promotion follows from this
+single-source compatibility check. Those acceptance gates remain open.
 
 ### Untuned and tuned models in the same app binary — 2026-09-26
 

@@ -36,6 +36,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
       }
       .modifier(AppAppearance())
       .task {
+        #if DEBUG && targetEnvironment(simulator)
+          if await RecognitionProviderScenario.runIfRequested() { return }
+        #endif
         #if DEBUG && REHA_CUSTOM_ASSISTANT_TRIAL && targetEnvironment(simulator)
           if await AssistantProviderScenario.runIfRequested() { return }
         #endif
