@@ -175,14 +175,9 @@ struct CalendarView: View {
           selection: [])
         guard replacement.accepts(request, inputs: replacementInputs) else { return }
       }
-      let preferences = try await core.preferences()
-      guard replacement.accepts(request, inputs: replacementInputs) else { return }
-      guard !preferences.calendarId.isEmpty else {
-        throw AppError.Validation(message: "Kalender zuerst beim Plan einrichten.")
-      }
-      let preview = try await core.previewReplacement(
-        id: original.document.id, calendarId: preferences.calendarId, timezone: original.timezone,
-        reminder: preferences.reminder)
+      let preview = try await core.previewPlanReplacement(
+        id: original.document.id, timezone: original.timezone,
+        isCurrent: { replacement.accepts(request, inputs: replacementInputs) })
       guard replacement.finish(request, inputs: replacementInputs, value: preview.proposal) else {
         return
       }
