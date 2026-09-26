@@ -97,7 +97,7 @@ enthalten auch die bisherigen Modelle auf demselben Validierungsbestand.
 Der danach getrennt ausgeführte feste Conv.3-Tile16-Versuch besteht zehn
 isolierte Bytevergleiche und zehn Wiederladevergleiche, einschließlich aller
 92.160 gespeicherten Paddle-Ausgabewerte. Der Original-Conv-Kontrollpfad und alle
-Quell-/Laufzeitbindungen bestehen. Das ist ein Fortschritt der Exportdiagnose;
+Quell-/Laufzeitbindungen bestehen. Das ist ein Fortschritt der Exportdiagnose.
 Die anschließende [kumulative Gesamtgraphprüfung](../../ml/experiments/2026-09-26-s21-ocr-cumulative-export-results.md)
 bleibt negativ: 17/24 numerische Erfolge, 33/36 erhaltene frühere BN-Erfolgszellen.
 Der vollständige Korpus ist dafür noch nicht freigegeben. Eine separate statische
@@ -105,10 +105,23 @@ Prüfung findet vollständig lesbare synthetische Notizen, aber stark gestauchte
 Trainings-/Validierungseingaben und unterschiedliche Längenverteilungen. Die
 Messung mit der tatsächlichen proportionalen App-Vorverarbeitung steht noch aus.
 
-Der neue reproduzierbare Python-Abhängigkeitsaudit ist vollständig ausgeführt,
-bleibt aber mit **sieben betroffenen Paketversionen / 24 Advisorygruppen** negativ.
-Die verbleibenden Migrationsschritte werden getrennt gegen ihre erhaltenen
-Konvertierungen geprüft; [Befunde und Offline-Nachweis](dependency-audit.md).
+Der reproduzierbare Python-Abhängigkeitsaudit ist auf seinem gebundenen Stand
+vollständig ausgeführt, mit **sieben betroffenen Paketversionen / 24 Advisorygruppen**
+negativ. Danach wurden Torch 2.13.0 mit Setuptools 83.0.0 sowie Protobuf 6.33.5
+für den Assistentenexport einzeln geprüft und in den Exportlock übernommen.
+Beide vollständigen GGUF-Dateien bleiben in beiden Stufen bytegleich. Das ist
+Exportkompatibilität; weder neue Inferenzqualität noch die Synchronisierung der
+bisherigen kanonischen Exportumgebung ist damit belegt. Eine frische gemeinsame
+Advisoryauswertung nach den verbleibenden Migrationen steht aus;
+[Befunde und Offline-Nachweis](dependency-audit.md).
+
+Der getrennte [ONNX-Runtime-Vergleich](../../ml/experiments/2026-09-26-s21-onnxruntime-upgrade-comparison.md)
+hat alle 3.618 Fälle und technischen Kontrollen abgeschlossen. Version 1.30
+führt gegenüber 1.22 elf zuvor bestandene numerische Fälle in Fehler über und
+repariert zehn frühere Fehler. Alle Tokenfolgen bleiben gleich. Die numerische
+Schranke bleibt unverändert und negativ; weder Python- noch native Laufzeit wurde
+übernommen. Der frühere Lauf mit fehlerhafter dynamischer Paketinventur bleibt
+als eigener fehlgeschlagener Nachweis erhalten.
 
 Am 26. September 2026 meldet die rein lesende Geräteauflistung den Tunnel des iPhone 17
 als nicht verfügbar. Die gespeicherten Angaben zu iOS 26.6 und einer Verbindung

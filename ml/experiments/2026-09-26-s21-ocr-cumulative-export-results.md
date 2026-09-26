@@ -63,7 +63,7 @@ blanks. This is a plausible source of errors, not yet a causal measurement.
 
 All 73 training notes have 18–29 characters; all 18 validation notes have 32–38.
 Held-out wording and length are therefore confounded. The validation notes cover
-six strings, 15 distinct PNGs and 14 synthetic groups. Existing parity reports
+six strings, 15 distinct PNGs and 15 synthetic groups. Existing parity reports
 retain no 640-pixel decoded text or token IDs: `same_tokens` only compares Paddle
 against ONNX within one width. No accuracy improvement at 640 follows from it.
 
