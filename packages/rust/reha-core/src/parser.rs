@@ -33,11 +33,13 @@ fn table_transform(observations: &[Observation], regions: &[Region]) -> [f64; 9]
                 ["uhrzeit", "therapie", "raum", "therapeut"]
                     .contains(&o.text.trim().to_lowercase().as_str())
             })
+            // Resolve each observation once, retaining the existing treatment of
+            // missing, repeated and multiple region references. Looking it up
+            // again for every pair makes a dense page cubic in its region count.
+            .map(|o| observation_bounds(o, regions))
             .collect();
-        for (i, a) in headers.iter().enumerate() {
-            let (ax, ay, _, ab) = observation_bounds(a, regions);
-            for b in headers.iter().skip(i + 1) {
-                let (bx, by, _, bb) = observation_bounds(b, regions);
+        for (i, &(ax, ay, _, ab)) in headers.iter().enumerate() {
+            for &(bx, by, _, bb) in headers.iter().skip(i + 1) {
                 let dx = bx - ax;
                 let dy = (by + bb - ay - ab) / 2.;
                 if dx.abs() > 100. && dy.abs() / dx.abs() < 0.2 {
@@ -1613,6 +1615,97 @@ pub fn validate(a: &Appointment) -> Vec<Issue> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn header_fixture(count: usize, slope: f64) -> (Vec<Observation>, Vec<Region>) {
+        let regions = (0..count)
+            .map(|i| {
+                let x = (i % 4) as f64 * 180.;
+                Region {
+                    id: format!("r{i}"),
+                    polygon: crate::geometry::rect(x, (i / 4) as f64 * 20. + slope * x, 100., 15.),
+                    frame: "page".into(),
+                    kind: "text".into(),
+                    parent: None,
+                    children: vec![],
+                }
+            })
+            .collect();
+        let observations = (0..count)
+            .map(|i| Observation {
+                id: format!("o{i}"),
+                text: ["Uhrzeit", "Therapie", "Raum", "Therapeut"][i % 4].into(),
+                region_ids: vec![format!("r{i}")],
+                engine: "synthetic".into(),
+                score: None,
+                alternatives: vec![],
+            })
+            .collect();
+        (observations, regions)
+    }
+
+    #[test]
+    fn cached_header_bounds_preserve_legacy_pairwise_transform() {
+        // The pre-optimization fallback is retained here as a numerical oracle.
+        // In particular, missing references and multiple boxes must not acquire
+        // different coordinates through a new lookup/deduplication policy.
+        fn previous_transform(observations: &[Observation], regions: &[Region]) -> [f64; 9] {
+            let headers: Vec<_> = observations
+                .iter()
+                .filter(|o| {
+                    ["uhrzeit", "therapie", "raum", "therapeut"]
+                        .contains(&o.text.trim().to_lowercase().as_str())
+                })
+                .collect();
+            let mut slopes = vec![];
+            for (i, a) in headers.iter().enumerate() {
+                let (ax, ay, _, ab) = observation_bounds(a, regions);
+                for b in headers.iter().skip(i + 1) {
+                    let (bx, by, _, bb) = observation_bounds(b, regions);
+                    let dx = bx - ax;
+                    let dy = (by + bb - ay - ab) / 2.;
+                    if dx.abs() > 100. && dy.abs() / dx.abs() < 0.2 {
+                        slopes.push(dy / dx);
+                    }
+                }
+            }
+            slopes.sort_by(f64::total_cmp);
+            let slope = slopes.get(slopes.len() / 2).copied().unwrap_or(0.);
+            [1., 0., 0., -slope, 1., 0., 0., 0., 1.]
+        }
+
+        for count in [0, 1, 4, 64] {
+            for slope in [-0.14, 0., 0.07] {
+                let (mut observations, mut regions) = header_fixture(count, slope);
+                for variant in 0..3 {
+                    if variant == 1 && count >= 4 {
+                        observations[0].region_ids.push("r1".into());
+                        observations[1].region_ids = vec!["missing".into()];
+                        observations[2].region_ids.push("r2".into());
+                        observations[3].text = "Raum 107".into();
+                        regions.push(regions[0].clone());
+                    } else if variant == 2 {
+                        observations.reverse();
+                        regions.reverse();
+                    }
+                    assert_eq!(
+                        table_transform(&observations, &regions).map(f64::to_bits),
+                        previous_transform(&observations, &regions).map(f64::to_bits),
+                        "count={count}, slope={slope}, variant={variant}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dense_header_only_page_does_not_invent_a_schedule() {
+        let (observations, regions) = header_fixture(1500, 0.);
+        assert!(sections(&observations, &regions).is_empty());
+        let (appointments, _, unassigned) = extract("dense-headers", &observations, &regions);
+        assert!(appointments.is_empty());
+        assert_eq!(unassigned.len(), observations.len());
+    }
+
     #[test]
     fn shared_headers_never_duplicate_preamble_times_or_copy_an_unreadable_days_date() {
         let cells = [

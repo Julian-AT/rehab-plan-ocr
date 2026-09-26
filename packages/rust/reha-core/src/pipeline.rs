@@ -237,8 +237,16 @@ pub struct RecognitionOutput {
 pub fn assemble(
     prepared: &Prepared,
     output: RecognitionOutput,
-    _cancel: &AtomicBool,
+    cancel: &AtomicBool,
 ) -> Result<PipelineRun> {
+    let check_cancel = || {
+        if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+            Err(Error::Invalid("Verarbeitung abgebrochen.".into()))
+        } else {
+            Ok(())
+        }
+    };
+    check_cancel()?;
     let RecognitionOutput {
         engine,
         manifest,
@@ -251,6 +259,7 @@ pub fn assemble(
     let start = Instant::now();
     let (mut appointments, mut issues, unassigned) =
         crate::parser::extract(&prepared.document.id, &observations, &regions);
+    check_cancel()?;
     let text_heights: Vec<_> = regions
         .iter()
         .filter(|r| r.kind == "text")
@@ -270,6 +279,7 @@ pub fn assemble(
         ));
     }
     for a in &mut appointments {
+        check_cancel()?;
         for (field, f) in &mut a.fields {
             let ids = a.provenance.get(field).cloned().unwrap_or_default();
             let clipped = observations
@@ -295,12 +305,14 @@ pub fn assemble(
     if appointments.is_empty() {
         issues.push(Issue::new("orientation_review", "Keine sichere Tabellenorientierung: Drehung, Spiegelung und Ausschnitt am Foto prüfen.", None, false));
     }
+    check_cancel()?;
     crate::parser::add_layout(
         &observations,
         &mut regions,
         prepared.page.width(),
         prepared.page.height(),
     );
+    check_cancel()?;
     issues.extend(prepared.issues.clone());
     if observations
         .iter()
@@ -329,9 +341,11 @@ pub fn assemble(
         artifacts: vec![],
     });
     let total_ms = all_stages.iter().map(|s| s.duration_ms).sum();
+    let sections = crate::parser::sections(&observations, &regions);
+    check_cancel()?;
     Ok(PipelineRun {
         schema_version: SCHEMA_VERSION,
-        sections: crate::parser::sections(&observations, &regions),
+        sections,
         refinement_attempts: vec![],
         refinement_readings: vec![],
         extraction_version: crate::parser::EXTRACTION_VERSION,
@@ -447,6 +461,45 @@ pub fn run_with_progress(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn cancelled_assembly_cannot_return_a_completed_run() {
+        let prepared = Prepared {
+            config: PipelineConfig::default(),
+            document: Document {
+                schema_version: SCHEMA_VERSION,
+                id: "synthetic-cancellation".into(),
+                source_hash: "synthetic".into(),
+                filename: "synthetic.png".into(),
+                width: 32,
+                height: 32,
+                orientation: 1,
+                imported_at: 0,
+                source: "test".into(),
+            },
+            page: RgbImage::new(32, 32),
+            original_to_page: geometry::IDENTITY,
+            stages: vec![],
+            issues: vec![],
+        };
+        let output = || RecognitionOutput {
+            engine: "synthetic".into(),
+            manifest: serde_json::json!({}),
+            regions: vec![],
+            observations: vec![],
+            stages: vec![],
+            cache_used: false,
+        };
+        let active = assemble(&prepared, output(), &AtomicBool::new(false)).unwrap();
+        assert!(active
+            .stages
+            .iter()
+            .any(|s| s.name == "layout_and_fields" && s.status == "complete"));
+        let cancelled = assemble(&prepared, output(), &AtomicBool::new(true));
+        assert!(
+            matches!(cancelled, Err(Error::Invalid(message)) if message == "Verarbeitung abgebrochen.")
+        );
+    }
 
     #[cfg(target_os = "macos")]
     #[test]
