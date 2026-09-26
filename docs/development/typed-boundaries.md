@@ -220,7 +220,10 @@ sowie die Kalenderlesevertragsprobe bestehen. Die tatsächliche EventKit-Ausfüh
 `system-editor-20260926-s19-001` besteht mit 20 Erfolgen, einem erwarteten
 Simulator-Dateischutz-Skip und null Fehlern. Der neue Serienvorkommens-Test
 ist darin enthalten; vollständiges Resultat, Quellpatch und ausführbare Produkte
-bleiben privat erhalten. Der gemeinsame Appbuild folgt separat.
+bleiben privat erhalten. Der anschließende gemeinsame App-/UI-Testbuild und die
+Paketprüfung über zwölf Mach-O-Dateien bestehen in
+`visual-capture-control-20260926-s19-004`; dessen drei Aufnahmetests bestehen ebenfalls.
+Der vollständige Endlauf und das reale Bedienen des Systemeditors bleiben separat.
 
 ## Ausstehende Mitteilungslinks
 

@@ -136,6 +136,34 @@ Nachbildungen ins Bild eingesetzt. Beide Tagesabschlussbilder behalten exakt
 ihre bisherigen 1559/87 Pixelabweichungen mit maximaler Kanalabweichung 4/1.
 Originale, historische Berichte und Vergleichsschwellen bleiben unverändert.
 
+Vor Lauf 004 wird deshalb ausschließlich die Rahmenabtastung innerhalb von
+`position` beschleunigt: dieselbe Bedingung mit drei aufeinanderfolgenden gleichen,
+gültigen Rahmen wird nach jeweils höchstens 50 Millisekunden Runloop-Wartezeit
+erneut geprüft, statt vom langsamen Standardintervall der XCTest-Predicate-Prüfung
+abhängig zu sein. Die maximale Laufzeit bleibt zehn Sekunden und verwendet eine
+monotone Uhr. Ein fehlender oder ungültiger Rahmen setzt die Folge zurück.
+Erfolg richtet sich weiter nach dem beobachteten Zustand, nicht nach einer festen
+Verzögerung. Die anschließende Aufnahme prüft unverändert Position und Rahmen vor
+und nach dem Screenshot. Reguläre Aufnahmen behalten die bisherige Abtastung;
+nur die sechs bereits festgelegten Scrollbilder verzichten auf deren zusätzliche
+Wartezeit. Weder Zielkoordinaten, Anzahl gleicher Messungen noch Pixelvergleich
+ändern sich. Ob dies den ursprünglichen nativen Indikator tatsächlich erhält,
+muss der neue Lauf zeigen.
+
+Lauf `visual-baseline-20260926-s19-004` besteht alle drei Aufnahmetests bei
+unveränderten Produkt-/Testquellen. Die große Ansicht benötigt 196,320 Sekunden;
+dies ist eine einzelne Testlaufzeit, kein Produkt-Leistungsnachweis. Der strenge
+Vergleich bleibt **fehlgeschlagen: 15/22**. `large-light-4` ist jetzt vollständig
+exakt. In den fünf übrigen Scrollbildern liegen sämtliche Abweichungen weiterhin
+nur zwischen x = 1188 und 1197: 3745 Pixel bei beiden großen Index-2-Bildern,
+1157 bei `large-dark-4` und je 7268 bei den unteren Normallisten. Auch schnelleres
+Abtasten reproduziert den flüchtigen nativen Indikator also nicht zuverlässig;
+teilweise ist er sichtbar, jedoch anders positioniert. Alle übrigen Pixel dieser
+Bilder sind exakt. Die Tagesabschlussbilder unterscheiden sich um 1570/87 Pixel.
+Kein Bild wurde ersetzt und keine Prüfgrenze erweitert. Vollständige Bilder,
+Quellarchiv/Patch und ausführbare Produkte bleiben unter dem Vergleichslauf und
+`visual-capture-control-20260926-s19-004` erhalten.
+
 ## Diagnose der neun historischen Abweichungen
 
 Quelle ist unverändert `.local/runs/visual-baseline-20260926-s18-002`: drei bestandene

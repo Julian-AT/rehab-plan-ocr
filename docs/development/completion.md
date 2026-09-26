@@ -288,3 +288,10 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Einzelbefehle, vollständige Logs und Abschlussbeleg bleiben unter
   `.local/runs/combined-verification-20260926-s19-001/` erhalten. Die später angepasste
   visuelle Rahmenabtastung benötigt weiterhin ihren eigenen Simulatornachweis.
+- Gemeinsamer App-/UI-Testbuild einschließlich `8b188d2` und `083f82d`:
+  **verifiziert**, drei Aufnahmetests ohne Fehler, tatsächliche Paketprüfung über
+  zwölf Mach-O-Dateien, Ressourcen und Notices erfolgreich. Lauf
+  `visual-capture-control-20260926-s19-004` erhält die ausführbaren Produkte und die
+  Quellidentität. Der exakte Bildvergleich bleibt **fehlgeschlagen**, jetzt 15/22;
+  fünf native Indikatorzustände und zwei kleine Tagesabschluss-Rasterabweichungen.
+  Dies wiederholt weder die vollständigen 68 UI-Tests noch eine Geräteabnahme.

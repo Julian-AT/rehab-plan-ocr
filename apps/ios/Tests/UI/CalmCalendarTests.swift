@@ -26,19 +26,40 @@ import XCTest
         format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", title)
     ).firstMatch
   }
-  private func settledFrame(_ element: XCUIElement) -> CGRect {
+  private func settledFrame(_ element: XCUIElement, promptly: Bool = false) -> CGRect {
     var previous: CGRect?
     var repeated = 0
-    expectation(
-      for: NSPredicate { object, _ in
-        guard let element = object as? XCUIElement, element.exists else { return false }
-        let current = element.frame
-        guard !current.isEmpty, !current.isInfinite, !current.isNull else { return false }
-        repeated = current == previous ? repeated + 1 : 0
-        previous = current
-        return repeated >= 2
-      }, evaluatedWith: element)
-    waitForExpectations(timeout: 10)
+    let stable = NSPredicate { object, _ in
+      guard let element = object as? XCUIElement, element.exists else {
+        previous = nil
+        repeated = 0
+        return false
+      }
+      let current = element.frame
+      guard !current.isEmpty, !current.isInfinite, !current.isNull else {
+        previous = nil
+        repeated = 0
+        return false
+      }
+      repeated = current == previous ? repeated + 1 : 0
+      previous = current
+      return repeated >= 2
+    }
+    if promptly {
+      // XCTest's default predicate polling outlasts the native scroll indicator.
+      // Keep the same three consecutive observations and deadline, but sample
+      // geometry while the original transient system state is still visible.
+      let clock = ContinuousClock()
+      let deadline = clock.now.advanced(by: .seconds(10))
+      while clock.now < deadline {
+        if stable.evaluate(with: element) { return element.frame }
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
+      }
+      XCTFail("Element did not reach three consecutive equal frames within 10 seconds")
+    } else {
+      expectation(for: stable, evaluatedWith: element)
+      waitForExpectations(timeout: 10)
+    }
     return element.frame
   }
   @discardableResult private func dragList(by points: CGFloat) -> CGFloat {
@@ -63,7 +84,7 @@ import XCTest
     let target = CGFloat(topPixel) / 3 - 15
     for _ in 0..<16 where !row.exists { dragList(by: -200) }
     XCTAssertTrue(row.exists)
-    var top = settledFrame(row).minY
+    var top = settledFrame(row, promptly: true).minY
     var lostUpwardTravel: CGFloat = 16
     var lostDownwardTravel: CGFloat = 16
     for _ in 0..<16 {
@@ -80,7 +101,7 @@ import XCTest
       // Very short drags can become taps. Deliberately pass the target with a
       // recognized gesture, then approach from the other direction next time.
       let requested = dragList(by: abs(correction) < 32 ? (down ? 64 : -64) : correction)
-      let next = settledFrame(row).minY
+      let next = settledFrame(row, promptly: true).minY
       let actual = next - top
       let measuredLoss =
         actual * requested > 0 ? abs(requested) - abs(actual) : loss + 8
@@ -91,7 +112,7 @@ import XCTest
       }
       top = next
     }
-    XCTAssertEqual(settledFrame(row).minY, target, accuracy: 1.0 / 6)
+    XCTAssertEqual(settledFrame(row, promptly: true).minY, target, accuracy: 1.0 / 6)
   }
   private func capture(
     _ name: String, anchor: XCUIElement? = nil, topPixel: Int? = nil, settle: Bool = true

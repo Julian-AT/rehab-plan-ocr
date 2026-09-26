@@ -114,11 +114,18 @@ agenda synchronization and pending-notification link paths. The earlier run
 interrupted by host sleep remains preserved; its day-navigation case passes
 in 27.013 seconds in the successful run. No physical device was updated.
 
-The separate strict image comparison is still **failed at 14/22**. All six
-remaining scrolled-list differences are confined to the missing system scroll
-indicator; the normal and large content positions now match exactly. The two
-finished-day views retain 1,559/87 differing pixels with maximum channel deltas
-4/1. The dark legend now matches. References and tolerances are unchanged.
+The subsequent strict image comparison is still **failed at 15/22** in
+`visual-baseline-20260926-s19-004`. Its three capture tests pass. All five remaining
+scrolled-list differences are confined to the transient system scroll indicator;
+all other pixels in these views match exactly. The two finished-day views differ
+by 1,570/87 pixels. References and tolerances are unchanged. Faster state polling
+does not reliably reproduce the original indicator presence/position.
+
+This run also builds the common app and UI test bundle after `8b188d2` and
+`083f82d`. The preserved signed simulator staging passes the actual bundle check
+across all twelve Mach-O files, runtime assets and notices. This is neither a
+device-signing check nor a repeat of the full 68-test suite. Source archive/patch,
+products and logs remain in `.local/runs/visual-capture-control-20260926-s19-004/`.
 Complete evidence is in `.local/runs/visual-baseline-20260926-s19-003/`.
 
 Later changes remain separately scoped: `083f82d` preserves all post-commit
