@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import random
 import sys
 import tempfile
 import unittest
@@ -15,6 +16,65 @@ spec = importlib.util.spec_from_file_location(
 )
 artifacts = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(artifacts)
+
+
+class ReferenceFilterTests(unittest.TestCase):
+    def test_lexical_boundaries_match_pathlib_without_resolving(self):
+        cases = [
+            ("a/b", "a", True),
+            ("a", "a", True),
+            ("ab/c", "a", False),
+            ("a/b", "a/bc", False),
+            ("a/../b", "a", True),
+            ("a/../b", "b", False),
+            ("../a", "..", True),
+            ("a", ".", True),
+            ("", ".", True),
+            ("/a", ".", False),
+            ("/a", "/", True),
+            ("//a", "/", False),
+            ("//a", "//", True),
+            ("///a", "/", True),
+            ("a//./b/", "a/b", True),
+            ("A/b", "a", False),
+            ("a\\b", "a", False),
+            ("é/b", "é", False),
+        ]
+        for name, reference, expected in cases:
+            with self.subTest(name=name, reference=reference):
+                self.assertEqual(Path(name).is_relative_to(reference), expected)
+                self.assertEqual(artifacts.is_referenced(name, {Path(reference)}), expected)
+        self.assertFalse(artifacts.is_referenced("anything", set()))
+
+    def test_seeded_reference_pools_match_both_original_filters(self):
+        randomizer = random.Random(20260921)
+        components = ["a", "A", "b", "..", ".", "file.o", "file.o2", "sp ace", "é", "é", "a\\b"]
+        pool = ["", ".", "/", "//"] + [
+            randomizer.choice(["", "/", "//", "///"])
+            + randomizer.choice(["/", "//"]).join(
+                randomizer.choices(components, k=randomizer.randrange(1, 8))
+            )
+            for _ in range(384)
+        ]
+        files = {name: {"fixture": i} for i, name in enumerate(pool)}
+        for count in (0, 1, 7, 31, 127):
+            for _ in range(4):
+                references = randomizer.choices(pool, k=count)
+                expected = {
+                    name: value
+                    for name, value in files.items()
+                    if not any(Path(name).is_relative_to(Path(ref)) for ref in references)
+                }
+                with patch.object(artifacts, "inventory", return_value=files):
+                    self.assertEqual(
+                        artifacts.eligible(Path("/unused"), [], {"references": references}),
+                        expected,
+                    )
+                reference_set = {Path(ref) for ref in references}
+                self.assertEqual(
+                    any(artifacts.is_referenced(name, reference_set) for name in files),
+                    any(Path(name).is_relative_to(ref) for name in files for ref in references),
+                )
 
 
 class CleanupTests(unittest.TestCase):
@@ -114,6 +174,17 @@ class CleanupTests(unittest.TestCase):
         self.manifest.write_text(json.dumps(value))
         with self.assertRaises(ValueError):
             artifacts.apply(self.root, self.manifest)
+
+    def test_tampered_plan_selecting_retained_ancestor_refuses_before_unlink(self):
+        with patch.object(artifacts, "binary_consumers", return_value={"references": [self.name]}):
+            value = self.plan()
+            item = self.cache / "object"
+            self.assertNotIn(str(item.relative_to(self.root)), value["files"])
+            value["files"][str(item.relative_to(self.root))] = artifacts.fingerprint(item)
+            self.manifest.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "retained runtime/debug-map inputs"):
+                artifacts.apply(self.root, self.manifest)
+            self.assertEqual(item.read_bytes(), b"rebuildable")
 
     def test_interrupt_after_unlink_is_resumable(self):
         self.plan()

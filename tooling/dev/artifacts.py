@@ -458,12 +458,18 @@ def binary_consumers(root):
     }
 
 
+def is_referenced(name, references):
+    """Match a path or lexical ancestor; keep pathlib's dot/anchor semantics."""
+    path = Path(name)
+    return path in references or any(parent in references for parent in path.parents)
+
+
 def eligible(root, names, consumers):
-    references = [Path(name) for name in consumers["references"]]
+    references = {Path(name) for name in consumers["references"]}
     return {
         name: value
         for name, value in inventory(root, names).items()
-        if not any(Path(name).is_relative_to(reference) for reference in references)
+        if not is_referenced(name, references)
     }
 
 
@@ -606,11 +612,8 @@ def apply(root, source):
         raise ValueError("Retained binary consumers changed after the preview")
     if retained_empty_objects(root, policy) != value.get("retained_empty_objects", {}):
         raise ValueError("Retained empty object placeholders changed after the preview")
-    if any(
-        Path(name).is_relative_to(reference)
-        for name in value["files"]
-        for reference in consumers["references"]
-    ):
+    references = {Path(name) for name in consumers["references"]}
+    if any(is_referenced(name, references) for name in value["files"]):
         raise ValueError("Plan selects retained runtime/debug-map inputs")
     if protected_inventory(root, policy, value["files"]) != value["protected_inventory"]:
         raise ValueError("Protected files changed after the preview")

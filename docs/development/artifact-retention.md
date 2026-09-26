@@ -478,6 +478,19 @@ bleiben ein neuer vollständiger Projektplan im Schreibruhefenster, dessen Revie
 die tatsächliche Entfernung und die Offline-Wiederanlaufprüfung erforderlich.
 Der kleine Kontrolllauf und frühere Werkzeugtests ersetzen diese Schritte nicht.
 
+Die nachfolgende Projektplanung wurde vor Fertigstellung kontrolliert abgebrochen.
+Der Traceback in `.local/maintenance/artifact-cleanup-project-20260926-s21-002-execution.log`
+zeigt die verschachtelte Pfad-/Referenzsuche in `eligible`; diese Vorschau ist
+unvollständig und keine Freigabe zur Entfernung. Beide Referenzfilter prüfen nun
+denselben lexikalischen Pfadvertrag über ein einmal aufgebautes Referenzset und
+den Kandidaten samt Elternpfaden. Es findet keine zusätzliche Pfadauflösung statt.
+167 Fixturetests einschließlich Grenzfällen, Zufallspools mit festem Seed und
+Ablehnung eines manipulierten Löschplans bestehen. Ein begrenzter synthetischer
+Vergleich belegt die geringeren Filterkosten bei vielen erfolglosen Vergleichen;
+frühe Treffer können durch den Setaufbau langsamer sein. Der vollständige Beleg
+liegt unter `.local/maintenance/cleanup-reference-filter-optimization-20260926-s21-001`.
+Ein erfolgreicher neuer Projektplan oder eine Gesamtlaufzeit ist damit nicht belegt.
+
 ### Vier abgeschlossene eigene Simulatoren
 
 Vier ausschließlich projektverwaltete, erfolgreiche Testsimulatoren wurden am
