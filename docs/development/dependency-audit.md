@@ -139,6 +139,23 @@ time of that run; subsequent inventory or package changes require their own
 verification. Native libraries, Python environments and registry yanks are outside
 this RustSec result.
 
+## Native ONNX Runtime follow-up
+
+On 2026-09-26, an isolated Python-runtime comparison of ONNX Runtime 1.22.0 and
+1.30.0 completed all **3,618 historical cases** with unchanged inputs and passing
+environment controls, but failed the existing numerical gate. There were
+**11 old-pass/new-fail cells and 10 old-fail/new-pass cells**; all token comparisons
+passed. The [complete result](../../ml/experiments/2026-09-26-s21-onnxruntime-upgrade-comparison.md)
+records the model totals, fixed thresholds and bound private evidence.
+
+The predecessor 001 remains failed: its dynamic package-discovery check changed
+after Setuptools exposed bundled metadata. The separately frozen 002 inventory
+corrects that bookkeeping and reproduces every measured numerical metric and
+tensor hash from 001. It does not change the numerical verdict. **ORT 1.30.0 is
+not promoted**; no active pin/environment was changed and no native/iOS build was
+performed. The Python comparison and separately acquired native archive do not
+qualify native security remediation, model quality, performance or deployment.
+
 ## Python tooling and training locks
 
 `tooling/release/audit_python.py` audits all registry packages in these five locks:
