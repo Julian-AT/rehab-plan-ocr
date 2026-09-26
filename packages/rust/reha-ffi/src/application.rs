@@ -1,7 +1,8 @@
 use crate::{
-    recognition_jobs::RecognitionJobs, records::*, runtime, AppError, CalendarPlatformStatus,
-    CalendarReadEvent, CalendarReadQuery, CalendarReadReference, CalendarReadResult,
-    EventCalendarDestination, EventMutationRequest, EventMutationResult, RecognitionJob,
+    recognition_jobs::RecognitionJobs, records::*, runtime, AgendaSyncRequest, AgendaSyncResult,
+    AppError, CalendarPlatformStatus, CalendarReadEvent, CalendarReadQuery, CalendarReadReference,
+    CalendarReadResult, EventCalendarDestination, EventMutationRequest, EventMutationResult,
+    RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -311,7 +312,7 @@ pub trait AppleHost: Send + Sync {
     fn snapshot(&self, records: Vec<ImportRecord>) -> Result<LiveCalendar>;
     fn apply(&self, operation: CalendarOperation, recovery_only: bool) -> Result<CalendarResult>;
     fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>>;
-    fn sync_agenda(&self, records: Vec<ImportRecord>, preferences: Preferences) -> Result<()>;
+    fn sync_agenda(&self, request: AgendaSyncRequest) -> Result<AgendaSyncResult>;
     fn forget_calendar(&self) -> Result<()>;
     fn overlaps(
         &self,
@@ -349,6 +350,15 @@ impl Platform for HostBridge {
         let operation = request.operation.try_into().map_err(platform_failure)?;
         self.host
             .apply(operation, request.recovery_only)
+            .map(Into::into)
+            .map_err(platform_failure)
+    }
+    fn synchronize_agenda(
+        &self,
+        request: service::agenda::SyncRequest,
+    ) -> service::Response<service::agenda::SyncResult> {
+        self.host
+            .sync_agenda(request.into())
             .map(Into::into)
             .map_err(platform_failure)
     }
@@ -847,10 +857,10 @@ impl NativeApplication {
             let preferences = convert(persisted)?;
             // Preferences are durable. Neither cache preparation nor an OS
             // reminder/widget failure may report the user's save as rejected.
-            let maintenance =
-                service::agenda::sync_request(&s).and_then(|args| bridge.call("agenda", args));
+            let maintenance = service::agenda::sync_request(&s)
+                .and_then(|request| bridge.synchronize_agenda(request));
             let maintenance_warnings = match maintenance {
-                Ok(response) => service::agenda::maintenance_warnings(&response),
+                Ok(response) => response.maintenance_warnings,
                 Err(error) => vec![error.to_string()],
             };
             Ok(PreferencesSaveResult {
@@ -1503,8 +1513,21 @@ mod host_routing_tests {
         fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>> {
             Ok(bytes.into_iter().rev().collect())
         }
-        fn sync_agenda(&self, _: Vec<ImportRecord>, _: Preferences) -> Result<()> {
-            unreachable!()
+        fn sync_agenda(&self, request: AgendaSyncRequest) -> Result<AgendaSyncResult> {
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push(("typedAgenda".into(), json!(request)));
+            }
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(AgendaSyncResult {
+                maintenance_warnings: service::agenda::maintenance_warnings(
+                    self.response.as_ref().unwrap_or(&Value::Null),
+                ),
+            })
         }
         fn forget_calendar(&self) -> Result<()> {
             unreachable!()
@@ -1748,7 +1771,7 @@ mod host_routing_tests {
                     serde_json::to_value(preferences).unwrap()
                 );
                 let call = calls.lock().unwrap().last().unwrap().clone();
-                assert_eq!(call.0, "agenda");
+                assert_eq!(call.0, "typedAgenda");
                 assert_eq!(call.1["display_calendar_ids"], json!(selected));
             }
             assert_eq!(

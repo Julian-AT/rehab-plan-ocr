@@ -118,7 +118,7 @@ pub async fn dispatch(
         .map_err(failure),
         "refreshAgenda" => {
             let _guard = state.calendar_lock.lock().await;
-            super::agenda::sync(&platform, state).await
+            super::agenda::legacy_sync(&platform, state).await
         }
         "appendPlanPages" => {
             let pages: Vec<String> =

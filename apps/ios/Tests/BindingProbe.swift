@@ -6,6 +6,8 @@ final class TestHost: AppleHost, Sendable {
   let mutationOutcome = OSAllocatedUnfairLock<EventMutationStatus>(initialState: .failed)
   let mutationCalls = OSAllocatedUnfairLock<Int>(initialState: 0)
   let queries = OSAllocatedUnfairLock<[CalendarReadQuery]>(initialState: [])
+  let agendaRequests = OSAllocatedUnfairLock<[AgendaSyncRequest]>(initialState: [])
+  let agendaWarnings = OSAllocatedUnfairLock<[String]>(initialState: [])
   func calendarStatus() throws -> CalendarPlatformStatus {
     precondition(!Thread.isMainThread)
     if let error = failure.withLock({ $0 }) { throw error }
@@ -58,8 +60,9 @@ final class TestHost: AppleHost, Sendable {
   }
   func calendarEventCall(command: String, arguments: String) throws -> String {
     precondition(
-      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus"].contains(
-        command),
+      !["queryEvents", "getEvent", "eventCalendars", "mutateEvent", "calendarStatus", "agenda"]
+        .contains(
+          command),
       "Typed effect used JSON callback")
     if let error = failure.withLock({ $0 }) { throw error }
     return "{}"
@@ -77,8 +80,11 @@ final class TestHost: AppleHost, Sendable {
       maintenanceWarnings: recoveryOnly ? ["Erfundener Wartungshinweis"] : [])
   }
   func decodePhoto(bytes: Data) throws -> Data { bytes }
-  func syncAgenda(records: [ImportRecord], preferences: Preferences) throws {
+  func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult {
     precondition(!Thread.isMainThread)
+    agendaRequests.withLock { $0.append(request) }
+    if let error = failure.withLock({ $0 }) { throw error }
+    return AgendaSyncResult(maintenanceWarnings: agendaWarnings.withLock { $0 })
   }
   func forgetCalendar() throws {}
 }
@@ -110,6 +116,10 @@ final class TestHost: AppleHost, Sendable {
         _ = try await core.calendarStatus()
         preconditionFailure("Typed status failure disappeared")
       } catch { precondition(error as? AppError == expected) }
+      do {
+        _ = try await core.refreshAgenda()
+        preconditionFailure("Typed agenda failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }
     var preferences = try await core.preferences()
@@ -128,6 +138,16 @@ final class TestHost: AppleHost, Sendable {
       root: root, models: "/unavailable-test-model", host: host)
     let restoredPreferences = try await preferencesReopened.preferences()
     precondition(restoredPreferences == preferences)
+    host.agendaWarnings.withLock { $0 = ["Alarmjournal ausstehend", "Widget ausstehend"] }
+    let refreshed = try await core.refreshAgenda()
+    precondition(refreshed.maintenanceWarnings == ["Alarmjournal ausstehend", "Widget ausstehend"])
+    let agendaRequest = host.agendaRequests.withLock { $0.last! }
+    precondition(agendaRequest.displayCalendarIds == preferences.displayCalendarIds)
+    precondition(agendaRequest.preferences.enabled == preferences.appRemindersEnabled)
+    precondition(agendaRequest.preferences.minutes == preferences.appReminderMinutes)
+    precondition(agendaRequest.preferences.sound == preferences.reminderSound)
+    precondition(agendaRequest.preferences.preview == preferences.reminderPreview)
+    host.agendaWarnings.withLock { $0 = [] }
     let queryArguments = #"{"start_utc":"2026-09-18T00:00:00Z","end_utc":"2026-09-19T00:00:00Z"}"#
     let query = try await core.calendarRequest(
       command: "queryCalendarEvents", arguments: queryArguments)
@@ -182,6 +202,7 @@ final class TestHost: AppleHost, Sendable {
     var emptyPreferences = preferences
     emptyPreferences.displayCalendarIds = []
     _ = try await core.savePreferencesDetailed(value: emptyPreferences)
+    precondition(host.agendaRequests.withLock { $0.last!.displayCalendarIds.isEmpty })
     let emptyQuery = try await core.queryCalendarEvents(
       request: AgendaQueryRequest(
         startUtc: typedRequest.startUtc, endUtc: typedRequest.endUtc, expectedScope: nil))
@@ -342,6 +363,18 @@ final class TestHost: AppleHost, Sendable {
     let retained = try await reopened.history()
     precondition(
       retained.pending.isEmpty && retained.imports.first?.externalId == "synthetic-external")
+    let imported = retained.imports.first!
+    let transferred = host.agendaRequests.withLock { requests in
+      requests.flatMap(\.records).last {
+        $0.id == imported.id && $0.externalId == imported.externalId
+      }
+    }
+    precondition(
+      transferred != nil, "Confirmed hidden import did not reach typed agenda maintenance")
+    precondition(transferred?.calendarId == imported.calendarId)
+    precondition(transferred?.approved == imported.approved)
+    precondition(transferred?.origin == "import" && transferred?.importId == imported.id)
+    precondition(transferred?.operationId == imported.operationId)
     let jobID = UUID().uuidString
     let job = try core.registerJob(id: jobID)
     try core.cancelJob(id: job.attemptId())

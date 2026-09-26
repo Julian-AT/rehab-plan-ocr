@@ -39,7 +39,7 @@
     func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
       throw denied()
     }
-    func syncAgenda(records: [ImportRecord], preferences: Preferences) throws { throw denied() }
+    func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult { throw denied() }
     func forgetCalendar() throws { throw denied() }
     func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {
       throw denied()

@@ -196,7 +196,7 @@ private final class RecognitionTraceHost: AppleHost, Sendable {
   func apply(operation: CalendarOperation, recoveryOnly: Bool) throws -> CalendarResult {
     throw forbidden
   }
-  func syncAgenda(records: [ImportRecord], preferences: Preferences) throws { throw forbidden }
+  func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult { throw forbidden }
   func forgetCalendar() throws { throw forbidden }
   func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {
     throw forbidden

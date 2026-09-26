@@ -308,7 +308,7 @@ typedef void (*UniffiCallbackInterfaceAppleHostMethod8)(uint64_t, RustBuffer, Ru
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_APPLE_HOST_METHOD9
-typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceAppleHostMethod9)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -365,6 +365,11 @@ uint64_t uniffi_reha_ffi_fn_method_nativeapplication_agenda_selection(uint64_t p
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_QUERY_CALENDAR_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_QUERY_CALENDAR_EVENTS
 uint64_t uniffi_reha_ffi_fn_method_nativeapplication_query_calendar_events(uint64_t ptr, RustBuffer request
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_REFRESH_AGENDA
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_REFRESH_AGENDA
+uint64_t uniffi_reha_ffi_fn_method_nativeapplication_refresh_agenda(uint64_t ptr
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVEAPPLICATION_ACCEPT_AND_SAVE
@@ -1048,6 +1053,12 @@ uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_agenda_selection(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_QUERY_CALENDAR_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_QUERY_CALENDAR_EVENTS
 uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_query_calendar_events(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_REFRESH_AGENDA
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVEAPPLICATION_REFRESH_AGENDA
+uint16_t uniffi_reha_ffi_checksum_method_nativeapplication_refresh_agenda(void
     
 );
 #endif

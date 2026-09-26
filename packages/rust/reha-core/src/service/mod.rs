@@ -68,6 +68,14 @@ pub trait Platform: Send + Sync {
         serde_json::from_value(self.call("apply", arguments)?)
             .map_err(calendar_imports::invalid_response)
     }
+    fn synchronize_agenda(&self, request: agenda::SyncRequest) -> Response<agenda::SyncResult> {
+        let arguments =
+            serde_json::to_value(request).map_err(calendar_imports::invalid_response)?;
+        let response = self.call("agenda", arguments)?;
+        Ok(agenda::SyncResult {
+            maintenance_warnings: agenda::maintenance_warnings(&response),
+        })
+    }
     fn calendar_status(&self) -> Response<calendar_administration::PlatformStatus> {
         serde_json::from_value(self.call("calendarStatus", serde_json::json!({}))?)
             .map_err(calendar_administration::storage)

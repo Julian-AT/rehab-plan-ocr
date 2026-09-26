@@ -677,6 +677,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func queryCalendarEvents(request: AgendaQueryRequest) async throws  -> AgendaQueryResult
     
+    func refreshAgenda() async throws  -> AgendaSyncResult
+    
     /**
      * Acceptance and write intent survive a dropped Swift future.
      */
@@ -895,6 +897,22 @@ open func queryCalendarEvents(request: AgendaQueryRequest)async throws  -> Agend
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeAgendaQueryResult_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func refreshAgenda()async throws  -> AgendaSyncResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_refresh_agenda(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeAgendaSyncResult_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -2126,6 +2144,84 @@ public func FfiConverterTypeRecognitionJob_lower(_ value: RecognitionJob) -> UIn
 
 
 
+public struct AgendaOwnedRecord: Equatable, Hashable {
+    public var id: String
+    public var calendarId: String
+    public var externalId: String?
+    public var approved: EventValues
+    public var status: String
+    public var origin: String
+    public var importId: String?
+    public var operationId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, calendarId: String, externalId: String?, approved: EventValues, status: String, origin: String, importId: String?, operationId: String) {
+        self.id = id
+        self.calendarId = calendarId
+        self.externalId = externalId
+        self.approved = approved
+        self.status = status
+        self.origin = origin
+        self.importId = importId
+        self.operationId = operationId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaOwnedRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaOwnedRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaOwnedRecord {
+        return
+            try AgendaOwnedRecord(
+                id: FfiConverterString.read(from: &buf), 
+                calendarId: FfiConverterString.read(from: &buf), 
+                externalId: FfiConverterOptionString.read(from: &buf), 
+                approved: FfiConverterTypeEventValues.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                origin: FfiConverterString.read(from: &buf), 
+                importId: FfiConverterOptionString.read(from: &buf), 
+                operationId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaOwnedRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.calendarId, into: &buf)
+        FfiConverterOptionString.write(value.externalId, into: &buf)
+        FfiConverterTypeEventValues.write(value.approved, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterString.write(value.origin, into: &buf)
+        FfiConverterOptionString.write(value.importId, into: &buf)
+        FfiConverterString.write(value.operationId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaOwnedRecord_lift(_ buf: RustBuffer) throws -> AgendaOwnedRecord {
+    return try FfiConverterTypeAgendaOwnedRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaOwnedRecord_lower(_ value: AgendaOwnedRecord) -> RustBuffer {
+    return FfiConverterTypeAgendaOwnedRecord.lower(value)
+}
+
+
 public struct AgendaQueryRequest: Equatable, Hashable {
     public var startUtc: String
     public var endUtc: String
@@ -2309,6 +2405,176 @@ public func FfiConverterTypeAgendaQueryScope_lift(_ buf: RustBuffer) throws -> A
 #endif
 public func FfiConverterTypeAgendaQueryScope_lower(_ value: AgendaQueryScope) -> RustBuffer {
     return FfiConverterTypeAgendaQueryScope.lower(value)
+}
+
+
+public struct AgendaReminderPreferences: Equatable, Hashable {
+    public var enabled: Bool
+    public var minutes: UInt32?
+    public var sound: Bool
+    public var preview: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(enabled: Bool, minutes: UInt32?, sound: Bool, preview: Bool) {
+        self.enabled = enabled
+        self.minutes = minutes
+        self.sound = sound
+        self.preview = preview
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaReminderPreferences: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaReminderPreferences: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaReminderPreferences {
+        return
+            try AgendaReminderPreferences(
+                enabled: FfiConverterBool.read(from: &buf), 
+                minutes: FfiConverterOptionUInt32.read(from: &buf), 
+                sound: FfiConverterBool.read(from: &buf), 
+                preview: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaReminderPreferences, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.enabled, into: &buf)
+        FfiConverterOptionUInt32.write(value.minutes, into: &buf)
+        FfiConverterBool.write(value.sound, into: &buf)
+        FfiConverterBool.write(value.preview, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaReminderPreferences_lift(_ buf: RustBuffer) throws -> AgendaReminderPreferences {
+    return try FfiConverterTypeAgendaReminderPreferences.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaReminderPreferences_lower(_ value: AgendaReminderPreferences) -> RustBuffer {
+    return FfiConverterTypeAgendaReminderPreferences.lower(value)
+}
+
+
+public struct AgendaSyncRequest: Equatable, Hashable {
+    public var records: [AgendaOwnedRecord]
+    public var preferences: AgendaReminderPreferences
+    public var displayCalendarIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(records: [AgendaOwnedRecord], preferences: AgendaReminderPreferences, displayCalendarIds: [String]) {
+        self.records = records
+        self.preferences = preferences
+        self.displayCalendarIds = displayCalendarIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaSyncRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaSyncRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaSyncRequest {
+        return
+            try AgendaSyncRequest(
+                records: FfiConverterSequenceTypeAgendaOwnedRecord.read(from: &buf), 
+                preferences: FfiConverterTypeAgendaReminderPreferences.read(from: &buf), 
+                displayCalendarIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaSyncRequest, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeAgendaOwnedRecord.write(value.records, into: &buf)
+        FfiConverterTypeAgendaReminderPreferences.write(value.preferences, into: &buf)
+        FfiConverterSequenceString.write(value.displayCalendarIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaSyncRequest_lift(_ buf: RustBuffer) throws -> AgendaSyncRequest {
+    return try FfiConverterTypeAgendaSyncRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaSyncRequest_lower(_ value: AgendaSyncRequest) -> RustBuffer {
+    return FfiConverterTypeAgendaSyncRequest.lower(value)
+}
+
+
+public struct AgendaSyncResult: Equatable, Hashable {
+    public var maintenanceWarnings: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(maintenanceWarnings: [String]) {
+        self.maintenanceWarnings = maintenanceWarnings
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaSyncResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaSyncResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaSyncResult {
+        return
+            try AgendaSyncResult(
+                maintenanceWarnings: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaSyncResult, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.maintenanceWarnings, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaSyncResult_lift(_ buf: RustBuffer) throws -> AgendaSyncResult {
+    return try FfiConverterTypeAgendaSyncResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaSyncResult_lower(_ value: AgendaSyncResult) -> RustBuffer {
+    return FfiConverterTypeAgendaSyncResult.lower(value)
 }
 
 
@@ -8742,7 +9008,7 @@ public protocol AppleHost: AnyObject, Sendable {
     
     func decodePhoto(bytes: Data) throws  -> Data
     
-    func syncAgenda(records: [ImportRecord], preferences: Preferences) throws 
+    func syncAgenda(request: AgendaSyncRequest) throws  -> AgendaSyncResult
     
     func forgetCalendar() throws 
     
@@ -9000,24 +9266,22 @@ fileprivate struct UniffiCallbackInterfaceAppleHost {
         },
         syncAgenda: { (
             uniffiHandle: UInt64,
-            records: RustBuffer,
-            preferences: RustBuffer,
-            uniffiOutReturn: UnsafeMutableRawPointer,
+            request: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws -> () in
+                () throws -> AgendaSyncResult in
                 guard let uniffiObj = try? FfiConverterCallbackInterfaceAppleHost.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
                 return try uniffiObj.syncAgenda(
-                     records: try FfiConverterSequenceTypeImportRecord.lift(records),
-                     preferences: try FfiConverterTypePreferences_lift(preferences)
+                     request: try FfiConverterTypeAgendaSyncRequest_lift(request)
                 )
             }
 
             
-            let writeReturn = { () }
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeAgendaSyncResult_lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -9631,6 +9895,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAgendaOwnedRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [AgendaOwnedRecord]
+
+    public static func write(_ value: [AgendaOwnedRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAgendaOwnedRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AgendaOwnedRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AgendaOwnedRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAgendaOwnedRecord.read(from: &buf))
         }
         return seq
     }
@@ -10575,6 +10864,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_query_calendar_events() != 36807) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_refresh_agenda() != 46634) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_accept_and_save() != 28991) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -10788,7 +11080,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_applehost_decode_photo() != 9036) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 49796) {
+    if (uniffi_reha_ffi_checksum_method_applehost_sync_agenda() != 28434) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_applehost_forget_calendar() != 22829) {

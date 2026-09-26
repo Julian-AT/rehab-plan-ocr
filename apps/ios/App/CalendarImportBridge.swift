@@ -16,12 +16,18 @@ extension NativeBridge {
       reminderMinutes: value.unsignedReminderMinutes)
   }
   static func nativeRecord(_ record: ImportRecord) -> NativeCalendarRecord {
-    NativeCalendarRecord(
+    nativeRecord(
       id: record.id, calendarID: record.calendarId, externalID: record.externalId,
-      status: record.status, title: record.approved.title, startUTC: record.approved.startUtc,
-      endUTC: record.approved.endUtc, timezone: record.approved.timezone,
-      location: record.approved.location, notes: record.approved.notes,
-      reminderMinutes: record.approved.reminderMinutes.map(Int.init))
+      status: record.status, values: record.approved)
+  }
+  private static func nativeRecord(
+    id: String, calendarID: String, externalID: String?, status: String, values: EventValues
+  ) -> NativeCalendarRecord {
+    NativeCalendarRecord(
+      id: id, calendarID: calendarID, externalID: externalID, status: status,
+      title: values.title, startUTC: values.startUtc, endUTC: values.endUtc,
+      timezone: values.timezone, location: values.location, notes: values.notes,
+      reminderMinutes: values.reminderMinutes.map(Int.init))
   }
   func snapshot(records: [ImportRecord]) throws -> LiveCalendar {
     do {
@@ -62,17 +68,23 @@ extension NativeBridge {
         error: result.error, maintenanceWarnings: result.maintenanceWarnings)
     } catch { throw Self.appError(error) }
   }
-  func syncAgenda(records: [ImportRecord], preferences: Preferences) throws {
+  func syncAgenda(request: AgendaSyncRequest) throws -> AgendaSyncResult {
     do {
-      _ = try NativeServiceCall.waitValue(for: .agenda) { completion in
+      let result = try NativeServiceCall.waitValue(for: .agenda) { completion in
         NativeServices.shared.synchronizeAgenda(
-          records: records.map(Self.nativeRecord),
+          records: request.records.map {
+            Self.nativeRecord(
+              id: $0.id, calendarID: $0.calendarId, externalID: $0.externalId,
+              status: $0.status, values: $0.approved)
+          },
           preferences: ReminderPreferences(
-            enabled: preferences.appRemindersEnabled,
-            minutes: preferences.appReminderMinutes.map(Int.init),
-            sound: preferences.reminderSound, preview: preferences.reminderPreview),
-          displayCalendarIDs: preferences.displayCalendarIds, completion: completion)
+            enabled: request.preferences.enabled,
+            minutes: request.preferences.minutes.map(Int.init),
+            sound: request.preferences.sound, preview: request.preferences.preview),
+          displayCalendarIDs: request.displayCalendarIds, completion: completion)
       }
+      return AgendaSyncResult(
+        maintenanceWarnings: result.reminders.error.flatMap { $0.isEmpty ? nil : [$0] } ?? [])
     } catch { throw Self.appError(error) }
   }
   func forgetCalendar() throws {

@@ -11,7 +11,7 @@ import RehaCore
   }
 
   func synchronize() async throws {
-    _ = try await core.calendarRequest(command: "refreshAgenda", arguments: "{}")
+    _ = try await core.refreshAgenda()
   }
 
   func events(in week: AgendaWeek, scope: AgendaSelection) async throws -> CalendarQueryResponse {

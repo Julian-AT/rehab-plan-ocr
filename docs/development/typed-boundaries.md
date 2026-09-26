@@ -164,6 +164,39 @@ Mitteilungstests bestehen tatsächlich im Simulatorlauf `eventkit-20260926-s18-0
 Rohlogs und Quellhashes der Vertragsprüfung liegen unter
 `.local/runs/reminder-contracts-20260926-s18-001/`.
 
+## Typisierter Agenda-Abgleich
+
+Die interne Nachbearbeitung nach Kalenderänderungen, Speichern der Einstellungen
+und der normale Agenda-Refresh verwenden `Platform.synchronize_agenda` und den
+UniFFI-Auftrag `AgendaSyncRequest`. `AgendaOwnedRecord` erhält bestätigte Werte,
+Kalender-/Ereignisidentität, Herkunft, Importzuordnung und Operationsidentität auch
+für manuell erzeugte Termine. Diese Bestände bleiben unabhängig von den sichtbaren
+Kalendern: Ein ausgeblendeter eigener Termin wird weiterhin abgeglichen; eine leere
+sichtbare Auswahl bleibt leer.
+
+`AgendaSyncResult` führt Wartungswarnungen als getrennte Werte zurück. Bereits
+bestätigte Kalenderwrites und gespeicherte Einstellungen bleiben erfolgreich,
+wenn dieser nachgelagerte Abgleich scheitert. Fehlende ältere Erinnerungswerte
+behalten die bisherigen Vorgaben; `null` bleibt ausgeschaltet. Ungültige
+Minutenwerte werden vor dem Effekt zurückgewiesen, ohne die gespeicherten
+Einstellungen umzuschreiben.
+
+Die native Ansicht verwendet `NativeApplication.refreshAgenda`. Der alte
+`calendarRequest("refreshAgenda")` bleibt ein ausdrücklich abgegrenzter
+Kompatibilitätseingang: Er liefert weiterhin die vollständige bisherige JSON-
+Antwort mit Snapshot, Präsentation und Erinnerungsstatus. Nur dieser Eingang
+und ältere `Platform`-Hosts verwenden dafür noch den Stringcallback `agenda`.
+Die App und ihre interne Nachbearbeitung verwenden diesen Callback nicht mehr.
+Journale und Widgetdateien behalten ihre bestehenden Formate.
+
+237 Core-/FFI-Tests, Clippy ohne Warnungen und der tatsächliche Swift–Rust–Swift-
+Rundweg bestehen. Neue Regressionen prüfen ausgeblendete bestätigte Datensätze,
+fehlende Terminidentitäten, leere Anzeigeauswahl, ausgeschaltete Erinnerungen,
+Fehleridentität und unveränderte Legacyantworten. Der native Rundweg prüft zudem
+sämtliche Felder eines bestätigten Imports und mehrere Wartungswarnungen.
+Belege: `.local/runs/typed-agenda-effect-20260926-s19-001*.log`. Der gemeinsame
+Appbuild und die vollständige Simulatorabnahme des neuen Standes folgen separat.
+
 ## Ausstehende Mitteilungslinks
 
 Die App liest und quittiert ausstehende Terminidentitäten über
@@ -269,11 +302,10 @@ manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
 Systemeditor und weitere Plattformeffekte bleiben offen.
 Die Core-Import-/Undo-Abläufe verwenden inzwischen die typisierten
 `Platform.import_snapshot`-/`apply_import`-Methoden. Der aktive
-Core-Agenda-Abgleich verwendet weiterhin den Stringcallback
-`calendar_event_call("agenda", ...)`. Die neue typisierte Swift-Agenda-Methode
-ersetzt damit noch nicht sämtliche aktiven Core-Eingänge. Diese internen Grenzen
-müssen einschließlich Wartungswarnungen und bestehender Legacy-Ergebnisformen
-separat umgestellt werden.
+Core-Agenda-Abgleich verwendet ebenfalls typisierte Aufträge und Ergebnisse;
+`calendar_event_call("agenda", ...)` bleibt ausschließlich für den ausdrücklichen
+Legacy-Refresh erhalten. Die übrigen internen Grenzen müssen einschließlich
+Wartungswarnungen und bestehender Legacy-Ergebnisformen separat umgestellt werden.
 Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
