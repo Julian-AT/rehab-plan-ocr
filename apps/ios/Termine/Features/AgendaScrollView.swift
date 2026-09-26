@@ -41,10 +41,10 @@ private final class AxisVeto: UIGestureRecognizer {
 
 /// One vertical offset for three full-width, finger-driven day pages.
 /// Each page contains its own time axis, so empty days need no width change.
-/// New data, text measurements and size changes are applied only at rest.
+/// New data and size changes are applied only at rest.
 struct AgendaScrollView: UIViewControllerRepresentable {
   let date: Date
-  let projection: ReadableAgendaLayout
+  let projection: AgendaTimeScale
   let pages: (Double, Double) -> [AnyView]
   let showsTimeline: Bool
   let dataReady: Bool

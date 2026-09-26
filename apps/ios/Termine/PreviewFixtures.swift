@@ -21,7 +21,7 @@ import Foundation
         UserDefaults.standard.set(original.displayCalendarIds, forKey: "preview.originalDisplay")
         UserDefaults.standard.set(original.appearance, forKey: "preview.originalAppearance")
         UserDefaults.standard.set(
-          UserDefaults.standard.string(forKey: "agenda.density") ?? "overview",
+          UserDefaults.standard.string(forKey: "agenda.density") ?? "",
           forKey: "preview.originalDensity")
         UserDefaults.standard.set(
           UserDefaults.standard.bool(forKey: "agenda.list"), forKey: "preview.originalList")
@@ -41,9 +41,13 @@ import Foundation
         preferences.appearance =
           UserDefaults.standard.string(forKey: "preview.originalAppearance") ?? "system"
         _ = try await core.savePreferences(value: preferences)
-        UserDefaults.standard.set(
-          UserDefaults.standard.string(forKey: "preview.originalDensity") ?? "overview",
-          forKey: "agenda.density")
+        if let density = UserDefaults.standard.string(forKey: "preview.originalDensity"),
+          !density.isEmpty
+        {
+          UserDefaults.standard.set(density, forKey: "agenda.density")
+        } else {
+          UserDefaults.standard.removeObject(forKey: "agenda.density")
+        }
         UserDefaults.standard.set(
           UserDefaults.standard.bool(forKey: "preview.originalList"), forKey: "agenda.list")
         for key in [
@@ -52,7 +56,7 @@ import Foundation
         ] { UserDefaults.standard.removeObject(forKey: key) }
         return
       }
-      UserDefaults.standard.set("overview", forKey: "agenda.density")
+      UserDefaults.standard.removeObject(forKey: "agenda.density")
       UserDefaults.standard.set(false, forKey: "agenda.list")
       guard
         let source = store.sources.first(where: { $0.sourceType == .local })
@@ -108,6 +112,21 @@ import Foundation
             title, start: next.addingTimeInterval(Double(7 + index) * 3600),
             end: next.addingTimeInterval(Double(7 + index) * 3600 + 1800))
         }
+      }
+      if mode == "crowded" {
+        for minute in [0, 2, 4] {
+          try add(
+            "Kurztermin \(minute)", start: now.addingTimeInterval(Double(600 + minute * 60)),
+            end: now.addingTimeInterval(Double(660 + minute * 60)))
+        }
+      }
+      if mode == "long-title" {
+        try add(
+          "Physiotherapie mit ausführlicher Befundbesprechung und individuellen Übungen für den Alltag",
+          start: now.addingTimeInterval(600), end: now.addingTimeInterval(660))
+        try add(
+          "Bewegungstraining", start: now.addingTimeInterval(1800),
+          end: now.addingTimeInterval(5400))
       }
       if mode == "axis" {
         for offset in [1, 3] {
@@ -199,7 +218,7 @@ enum AgendaPreviewClock {
       let arguments = ProcessInfo.processInfo.arguments
       if let index = arguments.firstIndex(of: "--agenda-fixture"),
         arguments.indices.contains(index + 1),
-        ["timeline", "short", "full"].contains(arguments[index + 1])
+        ["timeline", "short", "full", "crowded", "long-title"].contains(arguments[index + 1])
       {
         return Calendar.current.startOfDay(for: actual).addingTimeInterval(10 * 3600)
       }

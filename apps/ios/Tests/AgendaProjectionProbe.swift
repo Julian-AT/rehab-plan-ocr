@@ -78,13 +78,13 @@ import Foundation
       DayAgenda(events: [short, adjacent, after], date: now, now: now, calendar: calendar).timed)
     precondition(layout[0].height == 44 && layout[1].height == 44)
     precondition(layout[0].column != layout[1].column && layout[0].columns == 2)
-    precondition(layout[2].columns == 1 && layout[2].height == 48)
+    precondition(layout[2].columns == 1 && layout[2].height == 56)
     let overlaps = AgendaLayout.place(day.timed)
     for a in overlaps {
       for b in overlaps where a.id != b.id && a.column == b.column {
         precondition(
-          a.segment.start + a.height / 96 * 60 <= b.segment.start
-            || b.segment.start + b.height / 96 * 60 <= a.segment.start)
+          a.segment.start + a.height / 112 * 60 <= b.segment.start
+            || b.segment.start + b.height / 112 * 60 <= a.segment.start)
       }
     }
     let autumn = DayAgenda(events: [dst], date: dstNow, now: dstNow, calendar: calendar)
@@ -152,26 +152,63 @@ import Foundation
     precondition(
       calendar.component(.year, from: firstOfYear) == 2027
         && calendar.component(.day, from: firstOfYear) == 1)
+    precondition(AgendaDensity.allCases.map(\.pointsPerHour) == [72, 112, 160])
+    precondition(AgendaDensity(rawValue: "overview") == .overview)
+    precondition(AgendaDensity(rawValue: "standard") == .standard)
+    precondition(AgendaDensity(rawValue: "spacious") == .spacious)
+    let longTitle = event(
+      String(repeating: "Sehr langer Behandlungstitel ", count: 40),
+      "2026-09-12T13:00:00Z", "2026-09-12T13:01:00Z")
     for density in AgendaDensity.allCases {
+      let scale = AgendaTimeScale(minutes: 1440, pointsPerHour: density.pointsPerHour)
       let segments = DayAgenda(
         events: [short, adjacent, next, overlap, after], date: now, now: now, calendar: calendar
       ).timed
-      let readable = ReadableAgendaLayout(
-        segments, minutes: 1440, pointsPerHour: density.pointsPerHour, heights: ["short": 180])
+      let layout = AgendaTimelineLayout(segments, scale: scale)
+      precondition(scale.height == 24 * density.pointsPerHour)
       for minute in stride(from: 0.0, through: 1440.0, by: 15) {
-        precondition(abs(readable.minute(at: readable.y(minute)) - minute) < 0.01)
+        precondition(abs(scale.minute(at: scale.y(minute)) - minute) < 0.01)
+        if minute <= 1380 {
+          precondition(abs(scale.y(minute + 60) - scale.y(minute) - density.pointsPerHour) < 0.01)
+        }
       }
-      precondition(readable.items.first { $0.id == "short" }!.height >= 180)
-      precondition(readable.items.allSatisfy { $0.height >= 100 })
-      precondition(zip(readable.positions, readable.positions.dropFirst()).allSatisfy { $0 <= $1 })
-      for a in readable.items {
-        for b in readable.items where a.id != b.id && a.placement.column == b.placement.column {
+      precondition(scale.y(-10) == 0 && scale.minute(at: -10) == 0)
+      precondition(scale.y(1500) == scale.height && scale.minute(at: scale.height + 10) == 1440)
+      precondition(layout.items.first { $0.id == "short" }!.height == 44)
+      precondition(layout.items.allSatisfy { $0.height >= 44 })
+      precondition(!layout.requiresList)
+      for a in layout.items {
+        precondition(abs(a.top - a.placement.segment.start * density.pointsPerHour / 60) < 0.01)
+        for b in layout.items where a.id != b.id && a.placement.column == b.placement.column {
           precondition(a.top + a.height <= b.top || b.top + b.height <= a.top)
         }
       }
       precondition(
-        readable.items.first { $0.id == "next" }!.top
-          == readable.items.first { $0.id == "overlap" }!.top)
+        layout.items.first { $0.id == "next" }!.top
+          == layout.items.first { $0.id == "overlap" }!.top)
+      let crowded = AgendaTimelineLayout(
+        DayAgenda(events: [short, adjacent, longTitle], date: now, now: now, calendar: calendar)
+          .timed,
+        scale: scale)
+      precondition(crowded.requiresList)
+      let long = AgendaTimelineLayout(
+        DayAgenda(events: [longTitle, adjacent], date: now, now: now, calendar: calendar).timed,
+        scale: scale)
+      precondition(long.items[0].top == layout.items.first { $0.id == "short" }!.top)
+      precondition(long.items[0].height == 44 && long.items[0].placement.columns == 2)
+      precondition(AgendaTimelineLayout([], scale: scale).items.isEmpty)
+      // A short card at the lower boundary stays tappable in the canvas padding.
+      let last = AgendaTimelineLayout(
+        window.timed, scale: AgendaTimeScale(pointsPerHour: density.pointsPerHour)
+      )
+      .items.first { $0.id == "crossing" }!
+      precondition(last.height == 44)
+      precondition(last.top + last.height <= 12 * density.pointsPerHour + 44)
+      for other in AgendaDensity.allCases {
+        let changed = AgendaTimeScale(minutes: 1440, pointsPerHour: other.pointsPerHour)
+        let anchor = scale.minute(at: scale.y(257.5))
+        precondition(abs(changed.minute(at: changed.y(anchor)) - 257.5) < 0.01)
+      }
     }
     var axis = AgendaAxisLock()
     precondition(axis.update(x: 3, y: 3) == nil)
@@ -180,19 +217,6 @@ import Foundation
     axis.reset()
     precondition(axis.update(x: -7, y: 6) == .horizontal)
     precondition(axis.update(x: 0, y: 100) == .horizontal)
-    let firstWindow = AgendaWindow(
-      agenda: DayAgenda(events: [short, adjacent], date: now, now: now, calendar: calendar),
-      now: now, calendar: calendar)
-    let secondWindow = AgendaWindow(agenda: day, now: now, calendar: calendar)
-    let common = ReadableAgendaLayout(
-      firstWindow.timed + secondWindow.timed, pointsPerHour: 72, heights: ["short": 200])
-    let a = ReadableAgendaLayout(segments: firstWindow.timed, projection: common, pointsPerHour: 72)
-    let b = ReadableAgendaLayout(
-      segments: secondWindow.timed, projection: common, pointsPerHour: 72)
-    for minute in stride(from: 0.0, through: 720.0, by: 5) {
-      precondition(a.y(minute) == b.y(minute))
-      precondition(abs(a.minute(at: b.y(minute)) - minute) < 0.001)
-    }
     var withNotes = next
     let json = try! JSONEncoder().encode(withNotes)
     var object = try! JSONSerialization.jsonObject(with: json) as! [String: Any]

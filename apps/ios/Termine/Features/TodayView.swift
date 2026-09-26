@@ -121,11 +121,10 @@ struct TodayView: View {
   let core: NativeApplication
   let scanner: ScanModel
   let refreshID: Int
-  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
+  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   @State private var model = TodayModel()
   @State private var visibleWeek = AgendaWeek(containing: .now).start
-  @State private var measuredHeights: [String: Double] = [:]
   @State private var scrollMinute: Double?
   @State private var scrollReset = 0
   @State private var selectedDate = Calendar.current.startOfDay(for: .now)
@@ -228,10 +227,9 @@ struct TodayView: View {
     }
     .sheet(isPresented: $create, onDismiss: reload) { EventEditorView(core: core, changed: reload) }
   }
-  private func usesList(_ agenda: DayAgenda) -> Bool {
-    let crowded = AgendaLayout.place(agenda.timed, minimumHeight: 0).contains { $0.columns > 2 }
-    let onlyOutside =
-      !agenda.events.isEmpty && AgendaWindow(agenda: agenda, now: agenda.date).timed.isEmpty
+  private func usesList(_ agenda: DayAgenda, layout: AgendaTimelineLayout) -> Bool {
+    let crowded = layout.requiresList
+    let onlyOutside = !agenda.events.isEmpty && layout.items.isEmpty
     return typeSize.isAccessibilitySize || listView || crowded || onlyOutside
   }
   @ViewBuilder private func day(_ agenda: DayAgenda, now: Date) -> some View {
@@ -284,15 +282,16 @@ struct TodayView: View {
     let dates = (-1...1).map { Calendar.current.date(byAdding: .day, value: $0, to: selectedDate)! }
     let agendas = dates.map { DayAgenda(events: model.events(on: $0) ?? [], date: $0, now: now) }
     let windows = agendas.map { AgendaWindow(agenda: $0, now: now) }
-    let density = AgendaDensity(rawValue: density) ?? .overview
-    let projection = ReadableAgendaLayout(
-      windows.flatMap(\.timed), pointsPerHour: density.pointsPerHour, heights: measuredHeights)
+    let density = AgendaDensity(rawValue: density) ?? .standard
+    let projection = AgendaTimeScale(pointsPerHour: density.pointsPerHour)
+    let layouts = windows.map { AgendaTimelineLayout($0.timed, scale: projection) }
     let selected = agendas[1]
     let visible =
-      !usesList(selected) && !windows[1].timed.isEmpty && !(selected.isComplete && !showPast)
+      !usesList(selected, layout: layouts[1]) && !windows[1].timed.isEmpty
+      && !(selected.isComplete && !showPast)
       && model.events(on: selectedDate) != nil
     return VStack(spacing: 0) {
-      if !usesList(selected) && !selected.allDay.isEmpty {
+      if !usesList(selected, layout: layouts[1]) && !selected.allDay.isEmpty {
         DisclosureGroup("Ganztägig · \(selected.allDay.count)") {
           ForEach(selected.allDay) { event in
             Button {
@@ -306,28 +305,27 @@ struct TodayView: View {
       AgendaScrollView(
         date: selectedDate, projection: projection,
         pages: { viewport, offset in
-          zip(agendas, windows).map { agenda, window in
-            let layout = ReadableAgendaLayout(
-              segments: window.timed, projection: projection, pointsPerHour: density.pointsPerHour)
-            if usesList(agenda) || agenda.events.isEmpty || (agenda.isComplete && !showPast)
+          zip(zip(agendas, windows), layouts).map { pair, layout in
+            let (agenda, window) = pair
+            if usesList(agenda, layout: layout) || agenda.events.isEmpty
+              || (agenda.isComplete && !showPast)
               || model.events(on: agenda.date) == nil
             {
               return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
             }
             return AnyView(
               HStack(alignment: .top, spacing: 0) {
-                TimelineGutter(start: window.start, layout: projection).frame(width: 56)
-                TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) {
-                  id, height in
-                  if abs((measuredHeights[id] ?? 0) - height) > 1 { measuredHeights[id] = height }
-                }
+                TimelineGutter(start: window.start, scale: projection).frame(width: 56)
+                TimelineCanvas(
+                  window: window, scale: projection, layout: layout, now: now,
+                  select: { editor = $0 })
               })
           }
         },
         showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil,
         initialMinute: windows[1].scrollMinute, reset: scrollReset,
         minute: $scrollMinute, selectDate: { selectedDate = $0 })
-      if !usesList(selected) && !windows[1].outside.isEmpty {
+      if !usesList(selected, layout: layouts[1]) && !windows[1].outside.isEmpty {
         DisclosureGroup("Außerhalb von 06:00–18:00") {
           ScrollView {
             ForEach(windows[1].outside) { event in
@@ -402,9 +400,8 @@ private struct WeekSelector: View {
         Button {
           move(-7)
         } label: {
-          Image(systemName: "chevron.left").foregroundStyle(AppPalette.tint).frame(
-            width: 44, height: 44
-          ).contentShape(.rect)
+          Image(systemName: "chevron.left").foregroundStyle(AppPalette.tint)
+            .frame(width: 44, height: 44).contentShape(.rect)
         }
         .accessibilityLabel("Vorherige Woche").accessibilityIdentifier("previous-week")
         Spacer()
@@ -413,9 +410,8 @@ private struct WeekSelector: View {
         Button {
           move(7)
         } label: {
-          Image(systemName: "chevron.right").foregroundStyle(AppPalette.tint).frame(
-            width: 44, height: 44
-          ).contentShape(.rect)
+          Image(systemName: "chevron.right").foregroundStyle(AppPalette.tint)
+            .frame(width: 44, height: 44).contentShape(.rect)
         }
         .accessibilityLabel("Nächste Woche").accessibilityIdentifier("next-week")
       }
@@ -459,24 +455,24 @@ private struct WeekSelector: View {
 
 private struct TimelineCanvas: View {
   let window: AgendaWindow
-  let layout: ReadableAgendaLayout
+  let scale: AgendaTimeScale
+  let layout: AgendaTimelineLayout
   let now: Date
   let select: (CalendarEvent) -> Void
-  let measured: (String, Double) -> Void
   var body: some View {
     GeometryReader { geometry in
       let width = max(0, geometry.size.width - 8)
       ZStack(alignment: .topLeading) {
         ForEach(0...Int(window.minutes / 60), id: \.self) { hour in
           Rectangle().fill(AppPalette.separator).frame(height: 0.5).offset(
-            y: layout.y(Double(hour) * 60) + 8)
+            y: scale.y(Double(hour) * 60) + 8)
         }
         ForEach(layout.items) { item in
           let columnWidth = width / Double(item.placement.columns)
           TimelineAppointment(
             event: item.placement.segment.event, now: now, width: columnWidth - 4,
             height: item.height,
-            select: select, measured: { measured(item.id, $0) }
+            select: select
           )
           .offset(x: Double(item.placement.column) * columnWidth, y: item.top + 8)
         }
@@ -486,14 +482,14 @@ private struct TimelineCanvas: View {
 }
 private struct TimelineGutter: View {
   let start: Date
-  let layout: ReadableAgendaLayout
+  let scale: AgendaTimeScale
   var body: some View {
     ZStack(alignment: .topTrailing) {
       ForEach(0...12, id: \.self) { hour in
         Text(eventTime(start.addingTimeInterval(Double(hour) * 3600)))
           .font(.caption).monospacedDigit().foregroundStyle(AppPalette.secondaryText)
           .frame(width: 48, height: 16, alignment: .trailing)
-          .offset(y: layout.y(Double(hour) * 60))
+          .offset(y: scale.y(Double(hour) * 60))
           .accessibilityIdentifier("timeline-hour-\(hour + 6)")
       }
     }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(
@@ -507,38 +503,63 @@ private struct TimelineAppointment: View {
   let width: Double
   let height: Double
   let select: (CalendarEvent) -> Void
-  let measured: (Double) -> Void
+  private var room: String? {
+    let location = event.values.location.trimmingCharacters(in: .whitespacesAndNewlines)
+    return location.isEmpty ? event.note(["Raum"]) : location
+  }
   var body: some View {
     Button {
       select(event)
     } label: {
-      VStack(alignment: .leading, spacing: 3) {
-        Text(event.values.title).font(.subheadline.weight(.semibold))
-        Text("\(eventTime(event.values.start))–\(eventTime(event.values.end))")
-          .font(.caption).monospacedDigit().foregroundStyle(AppPalette.secondaryText)
-        Text(event.placeDescription).font(.caption)
-        Text(event.therapistDescription).font(.caption)
-      }.foregroundStyle(.primary).frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8).frame(width: max(0, width), alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: Double.self) {
-          Double($0.size.height)
-        } action: {
-          measured($0)
+      ViewThatFits(in: .vertical) {
+        appointmentLabel(details: 2, titleLines: 2)
+        appointmentLabel(details: 1, titleLines: 2)
+        appointmentLabel(details: 0, titleLines: 2)
+        appointmentLabel(details: 0, titleLines: 1)
+        // Large standard text can outgrow a 44-point short card: keep both
+        // title and time on one line. Accessibility sizes use the day list.
+        HStack(spacing: 4) {
+          Text(event.values.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+          time.font(.caption2).fixedSize()
         }
-        .frame(height: height, alignment: .topLeading)
-        .background(EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 10))
-        .overlay(alignment: .leading) {
-          RoundedRectangle(cornerRadius: 2).fill(EventCategory.classify(event.values.title).color)
-            .frame(width: 3).padding(.vertical, 8)
-        }
-        .contentShape(.rect)
+      }
+      .foregroundStyle(.primary)
+      .padding(.horizontal, 8).padding(.vertical, 4)
+      .frame(width: max(0, width), height: height, alignment: .topLeading)
+      .clipped()
+      .background(EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 10))
+      .overlay(alignment: .leading) {
+        RoundedRectangle(cornerRadius: 2).fill(EventCategory.classify(event.values.title).color)
+          .frame(width: 3).padding(.vertical, 8)
+      }
+      .contentShape(.rect)
     }.buttonStyle(.plain)
       .accessibilityLabel(
         event.spoken + " " + event.placeDescription + (event.values.end <= now ? " Vorbei." : "")
       )
+      .accessibilityHint("Öffnet alle Terminangaben.")
       .accessibilityIdentifier("agenda-event-\(event.id)")
   }
+  private var time: some View {
+    Text("\(eventTime(event.values.start))–\(eventTime(event.values.end))")
+      .monospacedDigit().foregroundStyle(AppPalette.secondaryText).lineLimit(1)
+  }
+  private func appointmentLabel(details: Int, titleLines: Int) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(event.values.title).font(.subheadline.weight(.semibold)).lineLimit(titleLines)
+      time.font(.caption)
+      if let room, details > 0 {
+        Text(room).font(.caption).foregroundStyle(AppPalette.secondaryText).lineLimit(1)
+      }
+      if let therapist = event.therapist, details > (room == nil ? 0 : 1) {
+        Text(therapist).font(.caption).foregroundStyle(AppPalette.secondaryText).lineLimit(1)
+      }
+    }
+    .frame(width: max(0, width - 16), alignment: .leading)
+    .fixedSize(horizontal: false, vertical: true)
+  }
+
 }
 
 struct CalendarAgendaRow: View {

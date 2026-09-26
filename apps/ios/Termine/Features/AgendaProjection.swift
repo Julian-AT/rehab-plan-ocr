@@ -145,7 +145,8 @@ enum AgendaLayout {
   /// Use visual hit areas for collision detection as well as real durations.
   /// Short adjacent events therefore remain separately tappable.
   static func place(
-    _ segments: [DayAgenda.Segment], pointsPerHour: Double = 96, minimumHeight: Double = 44
+    _ segments: [DayAgenda.Segment], pointsPerHour: Double = AgendaDensity.standard.pointsPerHour,
+    minimumHeight: Double = 44
   ) -> [TimelinePlacement] {
     var result: [TimelinePlacement] = []
     var columnEnds: [Double] = []
@@ -196,17 +197,24 @@ enum AgendaDensity: String, CaseIterable {
   }
   var pointsPerHour: Double {
     switch self {
-    case .overview: 44
-    case .standard: 72
-    case .spacious: 112
+    case .overview: 72
+    case .standard: 112
+    case .spacious: 160
     }
   }
 }
 
-/// Preserve chronological positions and genuine overlaps, stretching only the
-/// intervals that need room for complete labels. Short appointments never hide
-/// their location/therapist or collide with a following appointment's hit area.
-struct ReadableAgendaLayout {
+/// A single linear scale for every day, independent of appointments and text.
+/// The inverse keeps the visible time stable when changing calendar size.
+struct AgendaTimeScale {
+  var minutes: Double = 720
+  let pointsPerHour: Double
+  var height: Double { y(minutes) }
+  func minute(at y: Double) -> Double { min(minutes, max(0, y * 60 / pointsPerHour)) }
+  func y(_ minute: Double) -> Double { min(minutes, max(0, minute)) * pointsPerHour / 60 }
+}
+
+struct AgendaTimelineLayout {
   struct Item: Identifiable {
     let placement: TimelinePlacement
     let top: Double
@@ -214,56 +222,13 @@ struct ReadableAgendaLayout {
     var id: String { placement.id }
   }
   let items: [Item]
-  let knots: [Double]
-  let positions: [Double]
-  var height: Double { positions.last ?? 0 }
-  func minute(at y: Double) -> Double {
-    guard let upper = positions.firstIndex(where: { $0 >= y }) else { return knots.last ?? 720 }
-    guard upper > 0 else { return 0 }
-    let fraction = (y - positions[upper - 1]) / max(1, positions[upper] - positions[upper - 1])
-    return knots[upper - 1] + fraction * (knots[upper] - knots[upper - 1])
-  }
-  func y(_ minute: Double) -> Double {
-    guard let upper = knots.firstIndex(where: { $0 >= minute }) else { return height }
-    guard upper > 0 else { return 0 }
-    let fraction = (minute - knots[upper - 1]) / (knots[upper] - knots[upper - 1])
-    return positions[upper - 1] + fraction * (positions[upper] - positions[upper - 1])
-  }
-  /// All pages share the projection; overlap columns remain specific to each day.
-  init(segments: [DayAgenda.Segment], projection: ReadableAgendaLayout, pointsPerHour: Double) {
-    knots = projection.knots
-    positions = projection.positions
-    items = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0).map {
-      item in
-      let top = projection.y(item.segment.start)
-      return Item(
-        placement: item, top: top,
-        height: max(44, projection.y(item.segment.start + item.segment.duration) - top - 4))
-    }
-  }
-  init(
-    _ segments: [DayAgenda.Segment], minutes: Double = 720, pointsPerHour: Double,
-    heights: [String: Double] = [:]
-  ) {
-    let placements = AgendaLayout.place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0)
-    let knots = Set([0, minutes] + segments.flatMap { [$0.start, $0.start + $0.duration] }).sorted()
-    var positions = knots.map { $0 / 60 * pointsPerHour }
-    for item in placements.sorted(by: {
-      $0.segment.start + $0.segment.duration < $1.segment.start + $1.segment.duration
-    }) {
-      let start = knots.firstIndex(of: item.segment.start)!
-      let end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
-      let missing = max(
-        0, max(100, heights[item.id] ?? 100) + 4 - (positions[end] - positions[start]))
-      if missing > 0 { for index in end..<positions.count { positions[index] += missing } }
-    }
-    self.knots = knots
-    self.positions = positions
-    self.items = placements.map { item in
-      let start = knots.firstIndex(of: item.segment.start)!
-      let end = knots.firstIndex(of: item.segment.start + item.segment.duration)!
-      return Item(
-        placement: item, top: positions[start], height: positions[end] - positions[start] - 4)
+  var requiresList: Bool { items.contains { $0.placement.columns > 2 } }
+
+  init(_ segments: [DayAgenda.Segment], scale: AgendaTimeScale) {
+    items = AgendaLayout.place(segments, pointsPerHour: scale.pointsPerHour).map { placement in
+      Item(
+        placement: placement, top: scale.y(placement.segment.start),
+        height: max(44, placement.height - 4))
     }
   }
 }

@@ -52,7 +52,7 @@ import XCTest
     let short = row("Kontrolle Tag 1")
     XCTAssertTrue(short.exists)
     XCTAssertTrue(short.label.contains("Erdgeschoss"))
-    XCTAssertGreaterThanOrEqual(short.frame.height, 100)
+    XCTAssertGreaterThanOrEqual(short.frame.height, 44)
     XCTAssertFalse(short.frame.intersects(next.frame))
     capture("01-kalender-uebersicht-ort-therapeut")
     let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch

@@ -48,7 +48,7 @@ struct SettingsSaveStatus: View {
 }
 
 struct SettingsView: View {
-  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.overview.rawValue
+  @SwiftUI.AppStorage("agenda.density") private var density = AgendaDensity.standard.rawValue
   @SwiftUI.AppStorage("agenda.list") private var listView = false
   enum Page { case appearance, reminders, recognition, storage }
   let core: NativeApplication
@@ -102,7 +102,7 @@ struct SettingsView: View {
             Text("Kalender")
           } footer: {
             Text(
-              "Übersicht zeigt mehr vom Tag. Kurze Termine erhalten immer genug Platz für Ort und Therapeut. Nach links wischen: nächster Tag. Nach rechts: vorheriger Tag."
+              "Standard zeigt etwa fünf bis sechs Stunden. Übersicht zeigt mehr vom Tag, Großzügig mehr Details. Jede Stunde bleibt gleich hoch. Antippen öffnet alle Terminangaben. Bei vielen Überschneidungen oder großer Bedienungshilfenschrift erscheint die Tagesliste."
             ).foregroundStyle(AppPalette.secondaryText)
           }
           Section("Terminfarben") {
