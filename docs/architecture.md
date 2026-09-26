@@ -21,8 +21,8 @@ flowchart LR
     Intake --> UI
 ```
 
-`crates/reha-core` enthält Bildaufbereitung, Parser, Validierung, Quellenzuordnung,
-Kalendervorschläge, Rücknahme, ICS und die Referenz-CLI. `crates/reha-ffi` stellt die
+`packages/rust/reha-core` enthält Bildaufbereitung, Parser, Validierung, Quellenzuordnung,
+Kalendervorschläge, Rücknahme, ICS und die Referenz-CLI. `packages/rust/reha-ffi` stellt die
 native Schnittstelle und synthetische Prüfdaten bereit. `packages/apple/AppleServices`
 kapselt Kalender, Mitteilungen, Bild-/Dokumenteingang, Dateischutz und lokale Diagnose.
 Die UI erstellt keine beliebigen Kalender-Schreibaufträge: bestätigte Vorschläge,

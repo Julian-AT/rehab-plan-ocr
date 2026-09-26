@@ -363,7 +363,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = Store::open(temp.path()).unwrap();
         let mut run: PipelineRun =
-            serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
         run.document.id = uuid::Uuid::new_v4().to_string();
         run.document.imported_at = 100;
         store.save_run(&run).unwrap();
@@ -387,7 +387,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let mut store = Store::open(temp.path()).unwrap();
         let run: PipelineRun =
-            serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
         let approved =
             crate::calendar::event_values(&run.appointments[0], "Europe/Vienna", None).unwrap();
         let mut op = CalendarOperation {

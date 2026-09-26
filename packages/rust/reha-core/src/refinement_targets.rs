@@ -365,7 +365,7 @@ mod tests {
     #[test]
     fn omissions_and_shared_headings_precede_optional_fields() {
         let mut run: PipelineRun =
-            serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
         run.config.prioritized_rereads = true;
         run.page_width = 1000;
         run.page_height = 3000;

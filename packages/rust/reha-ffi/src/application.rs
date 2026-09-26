@@ -1223,7 +1223,7 @@ mod trace_tests {
     #[test]
     fn trace_artifacts_require_debug_evidence_and_a_local_filename() {
         let mut run: domain::PipelineRun =
-            serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+            serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
         run.stages[0].artifacts = vec![
             "region-1.png".into(),
             "../private.png".into(),

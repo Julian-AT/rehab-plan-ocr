@@ -8,7 +8,7 @@ use std::sync::Arc;
 fn fixture() -> (tempfile::TempDir, Arc<Application>, PipelineRun) {
     let dir = tempfile::tempdir().unwrap();
     let mut run: PipelineRun =
-        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
     reha_core::review::migrate(&mut run).unwrap();
     let store = Store::open(dir.path()).unwrap();
     store.save_run(&run).unwrap();

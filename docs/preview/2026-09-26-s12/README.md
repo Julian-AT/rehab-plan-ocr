@@ -45,7 +45,7 @@ Die WAV-Dateien stammen unmittelbar aus dem produktiven Rust-Renderer mit dem fe
 
 - [Datum, Uhrzeit, Raum 2.14 und Laßnitzhöhe](martin-kalender.wav): 12,55 Sekunden, 0,95×. „Am 26.09.2026 um 09:15 Uhr beginnt deine Physiotherapie in Laßnitzhöhe. Bitte komm in Raum 2.14. Der Termin endet um 09:45 Uhr.“
 - [Langsam, ausgeschriebenes Datum und Raum 105](martin-langsam.wav): 17,175 Sekunden, 0,75×. „Am Dienstag, 26. September 2026, hast du um 13:05 Uhr Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.“
-- [Längere Antwort mit mehreren Terminen](martin-lange-antwort.wav): 25,975 Sekunden, 1,0×. Mehrere Uhrzeiten, Räume, „Laßnitzhöhe“, „30 Min.“ und der Hinweis zur Bestätigung von Kalenderänderungen. Der vollständige Text steht in [speech_probe.rs](../../../crates/reha-core/examples/speech_probe.rs).
+- [Längere Antwort mit mehreren Terminen](martin-lange-antwort.wav): 25,975 Sekunden, 1,0×. Mehrere Uhrzeiten, Räume, „Laßnitzhöhe“, „30 Min.“ und der Hinweis zur Bestätigung von Kalenderänderungen. Der vollständige Text steht in [speech_probe.rs](../../../packages/rust/reha-core/examples/speech_probe.rs).
 
 Die automatisierten Prüfungen bestätigen Format, nicht leeres Audio, lange Antworten, alte Stimmenkennungen und Abbruch laufender Inferenz. Verständlichkeit, Aussprache und angenehme Geschwindigkeit brauchen deine Hörbewertung.
 

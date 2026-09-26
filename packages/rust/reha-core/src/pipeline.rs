@@ -451,7 +451,7 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn heic_import_retains_source_identity_and_does_not_rotate_twice() {
-        let bytes = include_bytes!("../../../tests/fixtures/heic/orientation-6.heic");
+        let bytes = include_bytes!("../../../../tests/fixtures/heic/orientation-6.heic");
         for filename in ["photo.heic", "photo.HEIC", "photo.heif", "photo.HEIF"] {
             let temp = tempfile::tempdir().unwrap();
             let prepared = prepare(

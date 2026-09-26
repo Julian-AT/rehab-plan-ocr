@@ -51,7 +51,7 @@ fn v2_upgrade_preserves_exact_serialized_records_and_hashes() {
     let dir = tempfile::tempdir().unwrap();
     let store = Store::open(dir.path()).unwrap();
     let run: PipelineRun =
-        serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+        serde_json::from_str(include_str!("../../../../tests/fixtures/sample-run.json")).unwrap();
     store.save_run(&run).unwrap();
     store
         .set_setting(

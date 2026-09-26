@@ -37,7 +37,7 @@ def freeze_baseline(binary, models, config, root, destination):
     shutil.copy2(config, destination / "config.json")
     shutil.copy2(models / "manifest.json", destination / "model-manifest.json")
     source_files = [
-        ROOT / "crates/reha-core/src" / (name + ".rs")
+        ROOT / "packages/rust/reha-core/src" / (name + ".rs")
         for name in [
             "parser",
             "pipeline",

@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn heif_uses_primary_photo_instead_of_first_image() {
         let photo = decode_heif(include_bytes!(
-            "../../../tests/fixtures/heic/multiple-images.heic"
+            "../../../../tests/fixtures/heic/multiple-images.heic"
         ))
         .unwrap();
         let image = photo.image.into_rgb8();
@@ -193,7 +193,7 @@ mod tests {
         let input = image::DynamicImage::ImageRgb8(input);
         for orientation in 1..=8 {
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-                "../../tests/fixtures/heic/orientation-{orientation}.heic"
+                "../../../tests/fixtures/heic/orientation-{orientation}.heic"
             ));
             let decoded = decode_heif(&std::fs::read(path).unwrap())
                 .unwrap()

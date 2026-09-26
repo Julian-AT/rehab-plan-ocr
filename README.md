@@ -10,8 +10,8 @@ benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiter
 |---|---|
 | `apps/ios` | App, Erweiterungen, native Tests und XcodeGen-Konfiguration |
 | `packages/apple` | Apple-Dienste, UniFFI-Anbindung und eingebundener VAD |
-| `crates/reha-core` | Fachlogik, Speicherung, Erkennung und lokale Prüf-CLI |
-| `crates/reha-ffi` | Native Schnittstelle und Prüfdatenerzeugung |
+| `packages/rust/reha-core` | Fachlogik, Speicherung, Erkennung und lokale Prüf-CLI |
+| `packages/rust/reha-ffi` | Native Schnittstelle und Prüfdatenerzeugung |
 | `scripts` | Gemeinsame Qualitäts-, Build-, Auslieferungs- und Erkennungswerkzeuge |
 | `tests/fixtures` | Ausschließlich synthetische Prüfdaten |
 
