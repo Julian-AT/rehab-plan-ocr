@@ -4,7 +4,6 @@ public enum DiagnosticStep: String, Codable, Sendable {
   case intake, preparation, ocr, mapping, interpretation, refinement, confirmation
   case calendarRead, calendarWrite, reminderSettings, reminderSelection, reminderPlan,
     reminderConfirmed
-  case audioInput, speechEndpoint, bargeIn, firstPlayback
   case speechSession, speechRecognition, tools, synthesis, playback, interruption
 }
 public enum DiagnosticOutcome: String, Codable, Sendable {

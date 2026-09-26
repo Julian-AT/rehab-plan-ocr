@@ -7,7 +7,8 @@ Aufforderung auf **Laßnitzhöhe 0.3.0, Build 2026092614**, aktualisiert. Der Nu
 bewertete den neuen Stand anschließend als insgesamt schlechter und verlangte den
 Rückwechsel. **Auf dem iPhone ist wieder Build 2026092613 installiert und gestartet.**
 Die [Kalender- und Gesprächsüberarbeitung](uniform-calendar-conversation.md) ist nicht
-abgenommen. Der Quellcode bleibt als Entwicklungsstand erhalten.
+abgenommen. Auch der Quellcode wurde anschließend auf den Stand von Build 2026092613
+zurückgesetzt; der verworfene Versuch bleibt in der Git-Historie nachvollziehbar.
 
 Beide Installationen erfolgten ohne Deinstallation. App-Kennung und App-Gruppen bleiben
 gleich. Die signierten Pakete und Profile wurden geprüft; App und alle drei
@@ -51,5 +52,15 @@ Sicherungen, signierte Pakete, Gerätekennungen und Bildschirmaufnahmen bleiben 
   Installationsnachweis, bestätigte Buildnummer, beide Vergleichsberichte und App-Start.
 - `artifacts/private/quality-device-20260926-s13/Laßnitzhöhe.ipa`: wieder installierter Build.
 
-Der Rückwechsel betrifft die installierte App. Es wurden keine Kalenderaktionen zum
-Testen ausgelöst und keine gespeicherten Inhalte aus einer älteren Sicherung überschrieben.
+Es wurden keine Kalenderaktionen zum Testen ausgelöst und keine gespeicherten Inhalte
+aus einer älteren Sicherung überschrieben.
+
+## Quellcode zurückgesetzt
+
+Die drei Implementierungscommits `606565f`, `b94d43f` und `ad9d5c4` wurden durch einen
+neuen Rücknahmecommit aufgehoben. Sämtliche versionierten Dateien außerhalb der README
+und Dokumentation stimmen wieder exakt mit `97b2e5c` überein, einschließlich Quellcode,
+Tests, Buildkonfiguration und Buildnummer 2026092613. Die Dokumentation hält den Versuch
+und den erfolgten Rückwechsel fest. Das erzeugte Xcode-Projekt wurde neu generiert.
+Die Kalenderprojektions- und Gesprächsregel-Prüfprogramme sowie die Rust-Formatprüfung
+sind auf dem wiederhergestellten Stand erfolgreich.

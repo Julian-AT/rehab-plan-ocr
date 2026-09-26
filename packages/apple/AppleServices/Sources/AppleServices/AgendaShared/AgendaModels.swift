@@ -100,9 +100,8 @@ public enum AgendaFormat {
     formatter.dateFormat = "HH:mm"
     return formatter.string(from: event.startDate)
   }
-  public static func room(_ event: AgendaEvent) -> String? {
-    let value = event.room.trimmingCharacters(in: .whitespacesAndNewlines)
-    return value.isEmpty ? nil : value
+  public static func room(_ event: AgendaEvent) -> String {
+    event.room.isEmpty ? "Raum nicht angegeben" : event.room
   }
 }
 

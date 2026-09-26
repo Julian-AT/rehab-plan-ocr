@@ -22,7 +22,7 @@
       try require(events.count == 10 && events[1]["title"] as? String == "Prüftermin 2", "order")
       let detail = try object(await store.detail(reference: "", ordinal: 2, token: token))
       try require(
-        detail["therapist"] as? String == "Anna Beispiel"
+        detail["therapist"] as? String == "Therapeut: Anna Beispiel"
           && detail["location"] as? String != nil, "verified detail")
       let badOrdinal = try object(await store.detail(reference: "", ordinal: Int.min, token: token))
       try require(badOrdinal["error"] != nil, "invalid ordinal")
@@ -34,11 +34,6 @@
       try require(
         (second["events"] as? [[String: Any]])?.count == 2 && second["has_more"] as? Bool == false,
         "last page")
-      let withoutDetails = (second["events"] as! [[String: Any]])[1]
-      try require(
-        withoutDetails["title"] as? String == "Prüftermin 12"
-          && withoutDetails["location"] == nil && withoutDetails["therapist"] == nil,
-        "missing presentation fields omitted")
       let reference = events[1]["reference"] as! String
       let proposal = CalendarProposalTool.Arguments(
         action: "remove", reference: reference, title: nil, date: nil, time: nil, duration: nil)

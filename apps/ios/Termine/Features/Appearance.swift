@@ -9,30 +9,12 @@ enum AppPalette {
   static let separator = Color(uiColor: .separator).opacity(0.4)
   static let warning = Color.orange
   static let destructive = Color.red
-  static let action = tint
-  static let onAction = Color.black
-  @MainActor static func configureControls() {
-    let tabs = UITabBarAppearance()
-    for item in [
-      tabs.stackedLayoutAppearance, tabs.inlineLayoutAppearance, tabs.compactInlineLayoutAppearance,
-    ] {
-      item.normal.titleTextAttributes = [.foregroundColor: UIColor.label]
-      item.selected.titleTextAttributes = [.foregroundColor: UIColor.label]
-      item.selected.iconColor = UIColor(red: 0, green: 150.0 / 255, blue: 64.0 / 255, alpha: 1)
-    }
-    UITabBar.appearance().standardAppearance = tabs
-    UITabBar.appearance().scrollEdgeAppearance = tabs
-    UIBarButtonItem.appearance().setTitleTextAttributes(
-      [.foregroundColor: UIColor.label], for: .normal)
-    UIBarButtonItem.appearance().setTitleTextAttributes(
-      [.foregroundColor: UIColor.label], for: .highlighted)
-  }
+  static let action = Color(uiColor: .label)
+  static let onAction = Color(uiColor: .systemBackground)
 }
 
 struct AppAppearance: ViewModifier {
-  func body(content: Content) -> some View {
-    content.tint(AppPalette.tint).foregroundStyle(.primary).labelStyle(AppLabelStyle())
-  }
+  func body(content: Content) -> some View { content.tint(AppPalette.action) }
 }
 
 extension View {

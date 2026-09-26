@@ -157,10 +157,6 @@ pub fn normalize(text: &str) -> String {
             )
         },
     );
-    // Dictated clock forms share the same checked HH:mm pronunciation path.
-    text = replace(&text, r"\b([01]?\d|2[0-3])\s+Uhr\s+([0-5]?\d)\b", |c| {
-        format!("{}:{:02} Uhr", &c[1], c[2].parse::<u32>().unwrap())
-    });
     text = replace(&text, r"\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*Uhr)?\b", |c| {
         let hour: u32 = c[1].parse().unwrap();
         let minute: u32 = c[2].parse().unwrap();
@@ -186,14 +182,7 @@ pub fn normalize(text: &str) -> String {
                 "{} {} Punkt {}",
                 &c[1],
                 number(c[2].parse().unwrap()),
-                if c[3].starts_with('0') {
-                    c[3].chars()
-                        .map(|digit| number(digit.to_digit(10).unwrap()))
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                } else {
-                    number(c[3].parse().unwrap())
-                }
+                number(c[3].parse().unwrap())
             )
         },
     );
@@ -221,33 +210,6 @@ pub fn normalize(text: &str) -> String {
             .replace_all(&text, to)
             .into_owned();
     }
-    text = replace(
-        &text,
-        r"(?i)\b(Raum|Zimmer)\s+(\d{1,4})([,.!?;:]?\s|[,.!?;:]?$)",
-        |c| {
-            let spoken = if c[2].starts_with('0') {
-                c[2].chars()
-                    .map(|digit| number(digit.to_digit(10).unwrap()))
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            } else {
-                number(c[2].parse().unwrap())
-            };
-            format!("{} {}{}", &c[1], spoken, &c[3])
-        },
-    );
-    text = replace(&text, r"\b(\d{1,4})\s+(Minuten|Stunden|Uhr)\b", |c| {
-        let value: u32 = c[1].parse().unwrap();
-        format!(
-            "{} {}",
-            if value == 1 && &c[2] == "Uhr" {
-                "ein".into()
-            } else {
-                number(value)
-            },
-            &c[2]
-        )
-    });
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -260,7 +222,7 @@ mod tests {
             "Am vierzehnten September zweitausendsechsundzwanzig um neun Uhr fünfzehn, Raum zwei Punkt vierzehn in Laßnitzhöhe.");
         assert_eq!(
             normalize("01:00 Uhr – 13:05, 30 Min."),
-            "ein Uhr bis dreizehn Uhr fünf, dreißig Minuten"
+            "ein Uhr bis dreizehn Uhr fünf, 30 Minuten"
         );
         assert_eq!(
             normalize("1,05 und z. B. Dr. Muster"),
@@ -277,11 +239,6 @@ mod tests {
             normalize("Vitamin IV im Text, MIX und XIV"),
             "Vitamin IV im Text, MIX und XIV"
         );
-    }
-    #[test]
-    fn rooms_and_dictated_clocks_preserve_numbers() {
-        assert_eq!(normalize("Raum 105, Zimmer 007. Raum 2.04. Um 9 Uhr 15, für 30 Min."),
-            "Raum einhundertfünf, Zimmer null null sieben. Raum zwei Punkt null vier. Um neun Uhr fünfzehn, für dreißig Minuten");
     }
     #[test]
     fn invalid_dates_are_not_silently_changed() {

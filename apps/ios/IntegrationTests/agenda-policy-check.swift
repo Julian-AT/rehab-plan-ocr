@@ -99,7 +99,7 @@ struct AgendaPolicyChecks {
     check(
       AgendaSnapshot.empty(access: "unavailable").state(at: now) == "unavailable",
       "Unavailable distinct from empty")
-    check(AgendaFormat.room(event) == nil, "Missing room")
+    check(AgendaFormat.room(event) == "Raum nicht angegeben", "Missing room")
     var preferences = ReminderPreferences(enabled: true)
     var many: [AgendaEvent] = []
     for index in 0..<90 {

@@ -33,3 +33,26 @@ enum EventCategory: String, CaseIterable {
     return matches.count == 1 ? matches[0].0 : .other
   }
 }
+#if canImport(UIKit)
+  import SwiftUI
+  import UIKit
+  extension EventCategory {
+    private var systemColor: UIColor {
+      switch self {
+      case .therapy: .systemGreen
+      case .medical: .systemBlue
+      case .meal: .systemOrange
+      case .organization: .systemPurple
+      case .other: .systemGray
+      }
+    }
+    var color: Color { Color(uiColor: systemColor) }
+    var surface: Color {
+      let base = systemColor
+      return Color(
+        uiColor: UIColor { traits in
+          base.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.20 : 0.10)
+        })
+    }
+  }
+#endif

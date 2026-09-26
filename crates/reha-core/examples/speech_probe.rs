@@ -17,8 +17,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("victoria-kalender", "Am 14.09.2026 um 09:15 Uhr beginnt die Physiotherapie in Laßnitzhöhe, in Raum 2.14. Der Termin endet um 09:45 Uhr.", 0.95),
         ("victoria-langsam", "Am Dienstag, 15. September 2026, beginnt um 13:05 Uhr die Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.", 0.75),
         ("victoria-lange-antwort", "Heute stehen mehrere Termine an. Um 08:30 Uhr beginnt die Physiotherapie im Raum 2.14 in Laßnitzhöhe. Sie dauert 30 Min. Um 10:15 Uhr folgt Ergotherapie in Raum 105. Dieser Termin endet um 11:00 Uhr. Am Nachmittag, um 13:05 Uhr, beginnt die Rückengymnastik im Turnsaal. Bitte die Angaben auf dem Bildschirm prüfen. Kalenderänderungen werden erst nach Bestätigung auf dem Bildschirm gespeichert.", 1.0),
-        ("victoria-raumnummern", "Um 9 Uhr 15 beginnt die Physiotherapie bei Dr. Muster in Raum 105. Danach Frühstück II in Raum 2.04. Zimmer 007. Laßnitzhöhe.", 0.95),
-        ("victoria-ohne-zusatzangaben", "Am 14. September 2026 beginnt um 09:15 Uhr die Ergotherapie. Der Termin endet um 09:45 Uhr.", 0.95),
     ] {
         let started = Instant::now();
         let timed = engine.render_timed(text, "victoria", speed, 1, &latest)?;

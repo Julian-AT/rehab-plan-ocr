@@ -58,7 +58,7 @@ ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
-Auf dem iPhone ist nach dem [Rückwechsel](docs/fluid-device-update.md) wieder Build 2026092613 installiert.
-Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) beschreibt den Entwicklungsstand
+App und Quellcode sind nach dem [Rückwechsel](docs/fluid-device-update.md) wieder auf dem Stand von Build 2026092613.
+Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) dokumentiert den verworfenen Versuch
 mit [neuer Simulatorvorschau und Victoria-Hörproben](docs/preview/2026-09-26-s13-fluid/README.md).
 Die [vorherige Qualitätsüberarbeitung](docs/quality-overhaul.md) bleibt als Prüfverlauf erhalten. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.

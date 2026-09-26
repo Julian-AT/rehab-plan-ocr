@@ -3,28 +3,26 @@ import RehaCore
 import SwiftUI
 
 struct VoicePresentation {
-  enum Phase: String {
-    case idle, listening, recording, processing, playback, paused, confirmation, error
-  }
+  enum Phase: String { case idle, recording, processing, playback, confirmation, error }
   let phase: Phase
   let title: String
   let level: Double
   @MainActor init(model: VoiceModel, output: SpeechOutput) {
     if model.recorder.state == .recording {
-      phase = model.recorder.userSpeaking ? .recording : .listening
-      title = model.recorder.userSpeaking ? "Du sprichst" : "Ich höre zu"
+      phase = .recording
+      title = "Spracherkennung läuft"
       level = model.recorder.level
     } else if output.phase == .playing {
       phase = .playback
-      title = "Victoria spricht"
+      title = "Antwort wird vorgelesen"
       level = output.level
     } else if model.recorder.state != .idle || model.busy || model.edits.busy {
       phase = .processing
-      title = "Ich denke nach"
+      title = "Wird vorbereitet …"
       level = 0
     } else if output.phase == .preparing {
       phase = .processing
-      title = "Antwort vorbereiten"
+      title = "Stimme wird vorbereitet …"
       level = 0
     } else if model.recorder.failure != nil || model.failure != nil || output.phase == .failed
       || model.edits.error != nil
@@ -37,8 +35,8 @@ struct VoicePresentation {
       title = "Bitte Angaben bestätigen"
       level = 0
     } else {
-      phase = model.sessionState == .paused ? .paused : .idle
-      title = model.sessionState == .paused ? "Pausiert" : "Bereit"
+      phase = .idle
+      title = model.sessionState == .paused ? "Gespräch pausiert" : "Bereit zum Sprechen"
       level = 0
     }
   }
@@ -56,7 +54,7 @@ private struct VoiceOrbSurface: View {
   private static let deep = Color(red: 0, green: 0.38, blue: 0.22)
 
   var body: some View {
-    let drift = 0.095 + energy * 0.09
+    let drift = 0.055 + energy * 0.07
     let x = Float(sin(time * 0.55) * drift)
     let y = Float(cos(time * 0.43) * drift)
     MeshGradient(
@@ -96,15 +94,11 @@ struct VoiceOrb: View {
   @Environment(\.scenePhase) private var scenePhase
   var body: some View {
     TimelineView(
-      .animation(
-        minimumInterval: 1.0 / 60,
-        paused: reduceMotion || scenePhase != .active || state.phase == .paused)
+      .animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)
     ) { context in
       let energy = reduceMotion ? 0 : min(1, pow(max(0, state.level), 0.6))
       VoiceOrbSurface(
-        energy: energy,
-        time: reduceMotion || state.phase == .paused
-          ? 0 : context.date.timeIntervalSinceReferenceDate
+        energy: energy, time: reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
       )
       .frame(width: 224, height: 224)
       .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: energy)
@@ -121,6 +115,7 @@ struct VoiceView: View {
   @State private var output = SpeechOutput.shared
   @State private var settings = false
   @State private var details = false
+  @State private var alert: String?
   @Environment(\.dynamicTypeSize) private var typeSize
   private var failure: String? {
     model.failure ?? model.recorder.failure ?? model.edits.error
@@ -131,11 +126,6 @@ struct VoiceView: View {
     VStack(spacing: 0) {
       Spacer(minLength: 12)
       VoiceOrb(state: presentation)
-      Text(presentation.title).font(.subheadline).foregroundStyle(.secondary)
-        .accessibilityIdentifier("voice-phase-title")
-      if let failure {
-        Text(failure).font(.callout).multilineTextAlignment(.center).padding(.horizontal)
-      }
       Spacer(minLength: 12)
       if !model.response.isEmpty {
         SpokenResponseLine(output: output, fullText: model.response)
@@ -206,10 +196,16 @@ struct VoiceView: View {
           }
       }.interactiveDismissDisabled(model.edits.busy)
     }
+    .onChange(of: failure) { _, message in if let message { alert = message } }
     .onChange(of: model.question) { _, question in if question == .event { details = true } }
     .onChange(of: model.edits.systemEvent?.id) { _, id in if id != nil { details = true } }
     .onChange(of: model.failures) { _, failures in if failures >= 2 { details = true } }
-
+    .alert("Sprechen", isPresented: Binding(get: { alert != nil }, set: { if !$0 { alert = nil } }))
+    {
+      Button("OK", role: .cancel) { alert = nil }
+    } message: {
+      Text(alert ?? "")
+    }
   }
 }
 
@@ -219,166 +215,112 @@ private struct VoiceDetailsView: View {
   @State private var output = SpeechOutput.shared
   @State private var editor = false
   @State private var editingEvent: CalendarEvent?
-  @State private var history = false
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  private var blocked: Bool {
-    model.busy || model.edits.busy || model.edits.proposal != nil
-  }
+  @State private var message = ""
   var body: some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 20) {
-          if model.rounds.isEmpty {
-            Text("Hier erscheint dein Gespräch.").foregroundStyle(.secondary)
+    Form {
+      Section("Nachricht") {
+        TextField("Anliegen", text: $message, axis: .vertical).lineLimit(1...4)
+          .accessibilityIdentifier("voice-message")
+        Button("Senden", systemImage: "arrow.up") {
+          let text = message
+          message = ""
+          Task { await model.submitText(text) }
+        }.disabled(
+          message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy
+            || model.edits.busy || model.edits.proposal != nil
+        )
+        .accessibilityIdentifier("voice-send")
+      }
+      if !model.recorder.transcript.isEmpty {
+        Section("Erkannter Text") {
+          Text(model.recorder.transcript).textSelection(.enabled).accessibilityIdentifier(
+            "voice-transcript")
+        }
+      }
+      if !model.response.isEmpty {
+        Section("Antwort") {
+          Text(model.response).textSelection(.enabled)
+          Button("Wiederholen", systemImage: "arrow.counterclockwise") {
+            output.speak(model.response)
           }
-          ForEach(model.rounds) { round in
-            VStack(alignment: .leading, spacing: 12) {
-              VStack(alignment: .leading, spacing: 4) {
-                Text("Du").font(.caption).foregroundStyle(.secondary)
-                Text(round.user)
-              }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 12))
-              if !round.answer.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                  Text("Victoria").font(.caption).foregroundStyle(.secondary)
-                  Text(round.answer)
-                }.padding(.horizontal, 12)
-              }
-            }.textSelection(.enabled).id(round.id)
-          }
-          if !model.recorder.transcript.isEmpty {
-            Text(model.recorder.transcript).textSelection(.enabled).accessibilityIdentifier(
-              "voice-transcript")
-          }
-          if let failure = model.failure ?? model.recorder.failure ?? model.edits.error
-            ?? (output.phase == .failed ? output.status : nil)
-          {
-            Text(failure).foregroundStyle(AppPalette.destructive)
-          }
-          if model.busy { ProcessingRow(text: "Antwort vorbereiten …") }
-          if !model.response.isEmpty {
-            HStack {
-              Button("Wiederholen", systemImage: "arrow.counterclockwise") {
-                output.speak(model.response)
-              }
-              .disabled(blocked).accessibilityIdentifier("repeat-speech")
-              if output.speaking { Button("Stopp", systemImage: "stop") { output.stop() } }
-            }.frame(minHeight: 44)
-          }
-          if model.question == .event {
-            ForEach(model.candidates) { event in
-              Button {
-                Task { await model.choose(event) }
-              } label: {
-                CalendarAgendaRow(event: event, now: .now)
-              }
-              .buttonStyle(.plain).disabled(blocked)
+          .disabled(model.recorder.state != .idle || model.busy || model.edits.busy)
+          .accessibilityIdentifier("repeat-speech")
+          if output.speaking { Button("Wiedergabe beenden", systemImage: "stop") { output.stop() } }
+        }
+      }
+      if model.question == .event {
+        Section("Passende Termine") {
+          ForEach(model.candidates) { event in
+            Button {
+              Task { await model.choose(event) }
+            } label: {
+              CalendarAgendaRow(event: event, now: .now)
             }
           }
-          VStack(alignment: .leading, spacing: 12) {
-            if model.question == .title {
-              TextField("Bezeichnung", text: $model.title)
-              Button("Bezeichnung übernehmen") { Task { await model.editSlots() } }
-            }
-            if model.question == .date {
-              DatePicker("Datum", selection: $model.date, displayedComponents: .date)
-              Button("Datum übernehmen") { Task { await model.editSlots() } }
-            }
-            if model.question == .time {
-              DatePicker("Uhrzeit", selection: $model.time, displayedComponents: .hourAndMinute)
-              Button("Uhrzeit übernehmen") { Task { await model.editSlots() } }
-            }
-            if model.question == .duration {
-              TextField("Dauer in Minuten", value: $model.duration, format: .number).keyboardType(
-                .numberPad)
-              Button("Dauer übernehmen") { Task { await model.editSlots() } }
-            }
-            if model.question != .event {
-              ForEach(model.candidates) { event in
-                Button {
-                  Task { await model.choose(event) }
-                } label: {
-                  CalendarAgendaRow(event: event, now: .now)
-                }
-              }
-            }
-          }.disabled(model.busy || model.edits.busy)
-          Color.clear.frame(height: 1).id("conversation-bottom")
-        }.padding()
-      }.accessibilityIdentifier("conversation-transcript")
-        .scrollDismissesKeyboard(.interactively)
-        .onChange(of: model.rounds.count) { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
-        .onChange(of: model.busy) { _, busy in
-          if !busy {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-              proxy.scrollTo("conversation-bottom", anchor: .bottom)
+        }.disabled(model.busy || model.edits.busy)
+      }
+      Section("Manuell auswählen") {
+        Button("Nächster Termin") { Task { await model.submitAction(.next) } }
+          .accessibilityIdentifier("voice-next")
+        Button("Heute") { Task { await model.submitAction(.list) } }.accessibilityIdentifier(
+          "voice-today")
+        Button("Termin hinzufügen") { Task { await model.submitAction(.create) } }
+          .accessibilityIdentifier("voice-create")
+        Button("Termin ändern") { Task { await model.submitAction(.update) } }
+        Button("Kalendereintrag löschen") { Task { await model.submitAction(.remove) } }
+      }.disabled(model.busy || model.edits.busy)
+      Section {
+        if model.question == .title {
+          TextField("Bezeichnung", text: $model.title)
+          Button("Bezeichnung übernehmen") { Task { await model.editSlots() } }
+        }
+        if model.question == .date {
+          DatePicker("Datum", selection: $model.date, displayedComponents: .date)
+          Button("Datum übernehmen") { Task { await model.editSlots() } }
+        }
+        if model.question == .time {
+          DatePicker("Uhrzeit", selection: $model.time, displayedComponents: .hourAndMinute)
+          Button("Uhrzeit übernehmen") { Task { await model.editSlots() } }
+        }
+        if model.question == .duration {
+          TextField("Dauer in Minuten", value: $model.duration, format: .number).keyboardType(
+            .numberPad)
+          Button("Dauer übernehmen") { Task { await model.editSlots() } }
+        }
+        if model.question != .event {
+          ForEach(model.candidates) { event in
+            Button {
+              Task { await model.choose(event) }
+            } label: {
+              CalendarAgendaRow(event: event, now: .now)
             }
           }
         }
-    }
-    .safeAreaInset(edge: .bottom) {
-      HStack(alignment: .bottom, spacing: 8) {
-        TextField("Nachricht schreiben", text: $model.messageDraft, axis: .vertical)
-          .lineLimit(1...4).textFieldStyle(.roundedBorder).accessibilityIdentifier("voice-message")
-        Button {
-          send()
-        } label: {
-          Image(systemName: "arrow.up").font(.headline).foregroundStyle(.white)
-            .frame(width: 44, height: 44).background(AppPalette.tint, in: .circle)
-        }.buttonStyle(.plain).accessibilityLabel("Senden").accessibilityIdentifier("voice-send")
-          .disabled(
-            blocked || model.messageDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-      }.padding(12).background(Color(uiColor: .systemBackground))
-    }
-    .pageTitle("Gesprächsdetails")
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button("Fortsetzen", systemImage: "mic") {
-          dismiss()
-          Task { await model.beginTurn() }
-        }.disabled(blocked).accessibilityIdentifier("resume-conversation")
-      }
-      ToolbarItem(placement: .topBarTrailing) {
-        Menu {
-          Button("Nächster Termin") { Task { await model.submitAction(.next) } }
-            .accessibilityIdentifier("voice-next")
-          Button("Heute") { Task { await model.submitAction(.list) } }.accessibilityIdentifier(
-            "voice-today")
-          Button("Termin hinzufügen") { Task { await model.submitAction(.create) } }
-            .accessibilityIdentifier("voice-create")
-          Button("Termin ändern") { Task { await model.submitAction(.update) } }
-          Button("Kalendereintrag löschen") { Task { await model.submitAction(.remove) } }
-          Divider()
-          Button("Angaben direkt bearbeiten") {
-            editingEvent = model.selected
-            model.cancelSession()
-            editor = true
-          }
-          if let event = model.edits.systemEvent {
-            Button("Im Systemkalender öffnen") { Task { await model.edits.openSystem(event) } }
-          }
-          Button("Verlauf und Rückgängig") { history = true }
-          Divider()
-          Button("Gespräch abbrechen", role: .cancel) { model.cancelSession() }
-        } label: {
-          Image(systemName: "ellipsis.circle").foregroundStyle(AppPalette.tint)
-            .frame(width: 44, height: 44)
+        Button("Angaben direkt bearbeiten") {
+          editingEvent = model.selected
+          model.cancelSession()
+          editor = true
         }
-        .accessibilityLabel("Kalenderaktionen").accessibilityIdentifier("voice-actions").disabled(
-          blocked)
+        if let event = model.edits.systemEvent {
+          Button("Im Systemkalender öffnen") { Task { await model.edits.openSystem(event) } }
+        }
+        NavigationLink("Verlauf und Rückgängig") { EventHistoryView(core: core) }
+      }.disabled(model.busy || model.edits.busy)
+      if !model.rounds.isEmpty {
+        Section {
+          DisclosureGroup("Gesprächsverlauf") {
+            ForEach(model.rounds) { round in
+              VStack(alignment: .leading, spacing: 8) {
+                Text(round.user).fontWeight(.medium)
+                if !round.answer.isEmpty { Text(round.answer) }
+              }.textSelection(.enabled)
+            }
+          }
+        }
       }
-    }
-    .sheet(isPresented: $editor) { EventEditorView(core: core, original: editingEvent) {} }
-    .navigationDestination(isPresented: $history) { EventHistoryView(core: core) }
-  }
-  private func send() {
-    guard !blocked else { return }
-    let text = model.messageDraft
-    Task {
-      let success = await model.submitText(text)
-      if success && model.messageDraft == text { model.messageDraft = "" }
-    }
+      Section { Button("Gespräch abbrechen", role: .cancel) { model.cancelSession() } }
+    }.pageTitle("Gesprächsdetails")
+      .sheet(isPresented: $editor) { EventEditorView(core: core, original: editingEvent) {} }
   }
 }
 

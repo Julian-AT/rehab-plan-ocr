@@ -52,7 +52,7 @@ import XCTest
     let short = row("Kontrolle Tag 1")
     XCTAssertTrue(short.exists)
     XCTAssertTrue(short.label.contains("Erdgeschoss"))
-    XCTAssertGreaterThanOrEqual(short.frame.height, 44)
+    XCTAssertGreaterThanOrEqual(short.frame.height, 100)
     XCTAssertFalse(short.frame.intersects(next.frame))
     capture("01-kalender-uebersicht-ort-therapeut")
     let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch
@@ -159,7 +159,6 @@ import XCTest
     let message =
       app.textFields["voice-message"].exists
       ? app.textFields["voice-message"] : app.textViews["voice-message"]
-    app.buttons["voice-actions"].tap()
     app.buttons["voice-next"].tap()
     XCTAssertTrue(app.buttons["repeat-speech"].waitForExistence(timeout: 20))
     XCTAssertTrue(
@@ -336,10 +335,7 @@ import XCTest
     back("Erkennung")
     app.buttons["Kalender"].tap()
     let destination = app.buttons["Speicherziel ändern"]
-    for _ in 0..<6
-    where !destination.isHittable || destination.frame.maxY >= app.tabBars.firstMatch.frame.minY {
-      app.swipeUp()
-    }
+    for _ in 0..<6 where !destination.isHittable { app.swipeUp() }
     XCTAssertTrue(destination.waitForExistence(timeout: 5))
     destination.tap()
     XCTAssertTrue(app.navigationBars["Speicherziel"].waitForExistence(timeout: 5))
@@ -432,7 +428,7 @@ import XCTest
     XCTAssertTrue(app.buttons["speak"].isHittable)
     capture("20-sprechen-ruhe")
     app.buttons["voice-details"].tap()
-    XCTAssertTrue(app.buttons["voice-actions"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.buttons["voice-next"].waitForExistence(timeout: 5))
     capture("21-gespraechsdetails")
     back("Gesprächsdetails")
     app.buttons["speak"].tap()
@@ -500,7 +496,6 @@ import XCTest
     launch("one")
     app.tabBars.buttons["Sprechen"].tap()
     app.buttons["voice-details"].tap()
-    app.buttons["voice-actions"].tap()
     app.buttons["voice-create"].tap()
     let title = app.textFields["Bezeichnung"]
     for _ in 0..<4 where !title.isHittable { app.swipeUp() }
@@ -561,7 +556,6 @@ import XCTest
     launch("one", extra: ["--audio-evidence"])
     app.tabBars.buttons["Sprechen"].tap()
     app.buttons["voice-details"].tap()
-    app.buttons["voice-actions"].tap()
     app.buttons["voice-next"].tap()
     back("Gesprächsdetails")
     expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: voiceState)
@@ -575,7 +569,6 @@ import XCTest
     XCTAssertEqual(voiceState.value as? String, "idle")
     XCTAssertFalse(app.staticTexts["voice-response"].exists)
     app.buttons["voice-details"].tap()
-    app.buttons["voice-actions"].tap()
     app.buttons["voice-next"].tap()
     XCTAssertTrue(app.buttons["repeat-speech"].waitForExistence(timeout: 10))
     app.buttons["repeat-speech"].tap()

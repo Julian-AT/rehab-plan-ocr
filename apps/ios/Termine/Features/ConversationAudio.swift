@@ -19,40 +19,27 @@ final class VoiceActivityDetector: @unchecked Sendable {
     }
     self.detector = detector
     self.converter = converter
-    guard fvad_set_sample_rate(detector, 16_000) == 0, fvad_set_mode(detector, 2) == 0 else {
-      throw LocalSpeechError.message(
-        "Die Sprachaktivitätserkennung konnte nicht eingerichtet werden.")
-    }
+    fvad_set_sample_rate(detector, 16_000)
+    fvad_set_mode(detector, 2)
   }
   deinit { fvad_free(detector) }
-  func append(_ buffer: AVAudioPCMBuffer, frame: (Bool, Double) -> Void) throws {
+  func append(_ buffer: AVAudioPCMBuffer, frame: (Bool, Double) -> Void) {
     let capacity = AVAudioFrameCount(
       ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 320)
-    guard buffer.format == converter.inputFormat,
-      let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity)
-    else {
-      throw LocalSpeechError.message("Das Mikrofonformat hat sich geändert. Bitte erneut starten.")
-    }
+    guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return }
     let input = ConverterInput(buffer)
     var error: NSError?
-    let status = converter.convert(to: output, error: &error) { _, status in input.take(status) }
-    guard error == nil, status != .error, status != .endOfStream,
-      let channel = output.int16ChannelData?[0]
-    else {
-      throw LocalSpeechError.message(
-        "Das Mikrofonformat konnte nicht umgewandelt werden. Bitte erneut starten.")
-    }
+    converter.convert(to: output, error: &error) { _, status in input.take(status) }
+    guard error == nil, let channel = output.int16ChannelData?[0] else { return }
     samples.append(contentsOf: UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
     var offset = 0
     while samples.count - offset >= 320 {
       let part = Array(samples[offset..<(offset + 320)])
       let rms = sqrt(part.reduce(0.0) { $0 + pow(Double($1) / 32768, 2) } / 320)
-      let decision = part.withUnsafeBufferPointer { fvad_process(detector, $0.baseAddress!, 320) }
-      guard decision >= 0 else {
-        throw LocalSpeechError.message(
-          "Die Sprachaktivitätserkennung wurde unterbrochen. Bitte erneut starten.")
+      let speech = part.withUnsafeBufferPointer {
+        fvad_process(detector, $0.baseAddress!, 320) == 1
       }
-      frame(decision == 1 && rms > 0.003, min(1, pow(rms * 8, 0.65)))
+      frame(speech && rms > 0.003, min(1, pow(rms * 8, 0.65)))
       offset += 320
     }
     samples.removeFirst(offset)

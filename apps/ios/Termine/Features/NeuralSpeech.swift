@@ -1,5 +1,4 @@
 import AVFoundation
-import AppleServices
 import RehaCore
 import SwiftUI
 
@@ -35,11 +34,6 @@ struct PlaybackWord: Identifiable {
     modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-german").path)
   private var generation: UInt64 = 0
   private var task: Task<Void, Never>?
-  private var textTask: Task<Void, Never>?
-  private var warmTask: Task<Void, Never>?
-  private var warmed = false
-  var correlation = UUID().uuidString
-  private var firstPlayback = false
   private var meterTask: Task<Void, Never>?
   private var fadeTask: Task<Void, Never>?
   private var queue: [String] = []
@@ -65,29 +59,10 @@ struct PlaybackWord: Identifiable {
       }
     }
   #endif
-  func prewarm() {
-    guard !warmed, warmTask == nil, !speaking else { return }
-    let id = generation
-    warmTask = Task {
-      do {
-        _ = try await renderer.renderTimed(
-          text: "Bereit.", voice: "victoria", speed: Float(rate), request: id)
-        warmed = true
-      } catch {
-        // The actual utterance reports any persistent renderer error.
-      }
-      if generation == id { warmTask = nil }
-    }
-  }
   func speak(_ text: String) {
     beginResponse()
-    let id = generation
-    textTask = Task {
-      let prepared = await SpeechTextPreparation.shared.prepare(text)
-      guard !Task.isCancelled, generation == id else { return }
-      for phrase in prepared.phrases { appendPhrase(phrase) }
-      finishResponse()
-    }
+    for phrase in Self.phrases(text) { appendPhrase(phrase) }
+    finishResponse()
   }
   func beginResponse() {
     stop()
@@ -99,8 +74,6 @@ struct PlaybackWord: Identifiable {
     phase = .preparing
     status = "Stimme wird vorbereitet …"
     inputEnded = false
-    firstPlayback = false
-    LocalDiagnostics.shared.record(.synthesis, .started, correlation: correlation)
     guard !announced else { return }
     let id = generation
     let speed = Float(rate)
@@ -143,11 +116,6 @@ struct PlaybackWord: Identifiable {
           meterTask = Task { [weak self] in
             while !Task.isCancelled {
               guard let self, self.generation == id else { return }
-              if !self.firstPlayback, ConversationAudio.shared.playbackTime > 0 {
-                self.firstPlayback = true
-                LocalDiagnostics.shared.record(
-                  .firstPlayback, .started, correlation: self.correlation)
-              }
               self.updateWords(at: ConversationAudio.shared.playbackTime)
               self.level += (ConversationAudio.shared.level - self.level) * 0.4
               #if DEBUG && targetEnvironment(simulator)
@@ -233,10 +201,6 @@ struct PlaybackWord: Identifiable {
     renderer.setRequest(request: generation)
     task?.cancel()
     task = nil
-    textTask?.cancel()
-    textTask = nil
-    warmTask?.cancel()
-    warmTask = nil
     meterTask?.cancel()
     meterTask = nil
     fadeTask?.cancel()

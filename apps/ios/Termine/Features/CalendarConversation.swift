@@ -80,16 +80,14 @@ actor CalendarConversation {
       as: UTF8.self)
   }
   private func record(_ id: String, _ event: CalendarEvent) -> [String: Any] {
-    var fields: [String: Any] = [
+    [
       "reference": id, "title": String(event.values.title.prefix(160)),
       "date": Self.day(event.values.start),
       "start": eventTime(event.values.start), "end": eventDate(event.values.end),
       "all_day": event.isAllDay,
-      "timezone": event.values.timezone,
+      "timezone": event.values.timezone, "location": String(event.placeDescription.prefix(200)),
+      "therapist": String(event.therapistDescription.prefix(160)),
     ]
-    if let place = event.placeDescription { fields["location"] = String(place.prefix(200)) }
-    if let therapist = event.therapist { fields["therapist"] = String(therapist.prefix(160)) }
-    return fields
   }
   func context(compact: Bool = false) throws -> String {
     try json([

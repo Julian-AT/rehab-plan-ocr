@@ -4,9 +4,10 @@
 
 Stand 26. September 2026 · Version 0.3.0 · Build 2026092614.
 Die [Simulatorvorschau mit Victoria-Hörproben](preview/2026-09-26-s13-fluid/README.md)
-dokumentiert diesen Entwicklungsstand. Nach freigegebenem Geräteupdate wurde er wegen
+dokumentiert den verworfenen Entwicklungsstand. Nach freigegebenem Geräteupdate wurde er wegen
 verschlechterter Bedienung vom Nutzer abgelehnt und auf dem iPhone wieder durch
-Build 2026092613 ersetzt; siehe [Gerätebericht](fluid-device-update.md).
+Build 2026092613 ersetzt. Auch der Quellcode wurde auf diesen vorherigen Stand zurückgesetzt;
+siehe [Gerätebericht](fluid-device-update.md). Die folgenden Abschnitte beschreiben den zurückgenommenen Versuch.
 
 ## Kalender und Darstellung
 

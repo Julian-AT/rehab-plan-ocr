@@ -613,8 +613,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       ? "\(event.title) in \(minutes) Minuten" : "Termin in \(minutes) Minuten"
     content.body =
       state.preferences.preview
-      ? ([AgendaFormat.time(event)] + [AgendaFormat.room(event)].compactMap { $0 }).joined(
-        separator: " · ")
+      ? "\(AgendaFormat.time(event)) · \(AgendaFormat.room(event))"
       : "Termindetails in der App ansehen."
     content.categoryIdentifier = minutes > 5 ? Self.category : Self.noSnoozeCategory
     content.threadIdentifier = "reha-appointments"
