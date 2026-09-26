@@ -699,6 +699,11 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func importPhoto(request: PhotoRequest) async throws  -> ScanOutcome
     
+    /**
+     * Same pipeline as a regular import, with retained detector crops for tracing.
+     */
+    func importTracePhoto(request: PhotoRequest) async throws  -> ScanOutcome
+
     func jobProgress(id: String)  -> JobProgress?
     
     func loadScan(id: String) async throws  -> ReviewSnapshot
@@ -721,6 +726,11 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func recognitionBusy()  -> Bool
     
+    /**
+     * Full, local recognition evidence for the explicitly opened tracing workspace.
+     */
+    func recognitionTrace(id: String) async throws  -> String
+
     func reconcileCalendar() async throws  -> [CalendarResult]
     
     func resolvePending(attemptId: String, removalApplied: Bool) async throws 
@@ -744,6 +754,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
      */
     func stagePhoto(id: String, path: String) async throws  -> IntakeSummary
     
+    func traceArtifactPath(id: String, artifact: String) async throws  -> String
+
 }
 open class NativeApplication: NativeApplicationProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -1057,6 +1069,25 @@ open func importPhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
         )
 }
     
+    /**
+     * Same pipeline as a regular import, with retained detector crops for tracing.
+     */
+open func importTracePhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_import_trace_photo(
+                        self.uniffiCloneHandle(),FfiConverterTypePhotoRequest_lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeScanOutcome_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+
 open func jobProgress(id: String) -> JobProgress?  {
     return try!  FfiConverterOptionTypeJobProgress.lift(try! rustCall() {
         uniffiCallStatus in
@@ -1220,6 +1251,25 @@ open func recognitionBusy() -> Bool  {
 })
 }
     
+    /**
+     * Full, local recognition evidence for the explicitly opened tracing workspace.
+     */
+open func recognitionTrace(id: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_recognition_trace(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+
 open func reconcileCalendar()async throws  -> [CalendarResult]  {
     return
         try  await uniffiRustCallAsync(
@@ -1383,6 +1433,22 @@ open func stagePhoto(id: String, path: String)async throws  -> IntakeSummary  {
         )
 }
     
+open func traceArtifactPath(id: String, artifact: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_trace_artifact_path(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id),FfiConverterString.lower(artifact)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+
 
     
 }
@@ -6504,6 +6570,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_import_photo() != 31693) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_import_trace_photo() != 27536) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_job_progress() != 38349) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6537,6 +6606,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_recognition_busy() != 26646) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_recognition_trace() != 1077) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_calendar() != 29299) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6565,6 +6637,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_stage_photo() != 16907) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path() != 29378) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativespeech_render() != 36515) {

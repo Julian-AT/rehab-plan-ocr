@@ -525,6 +525,31 @@ impl NativeApplication {
         })
         .await
     }
+    /// Full, local recognition evidence for the explicitly opened tracing workspace.
+    pub async fn recognition_trace(&self, id: String) -> Result<String> {
+        self.blocking(move |s| {
+            let run = service::scan::load_scan(&s, id).map_err(failure)?;
+            serde_json::to_string(&run).map_err(storage)
+        })
+        .await
+    }
+    pub async fn trace_artifact_path(&self, id: String, artifact: String) -> Result<String> {
+        self.blocking(move |s| {
+            let store = s.store.lock().map_err(storage)?;
+            let run = store.load_run(&id).map_err(storage)?;
+            if !allowed_trace_artifact(&run, &artifact) {
+                return Err(AppError::Validation {
+                    message: "Unbekannter Tracing-Ausschnitt.".into(),
+                });
+            }
+            let path = store.scan_dir(&id).map_err(storage)?.join(artifact);
+            if !path.is_file() {
+                return Err(AppError::ExpiredScan);
+            }
+            Ok(path.to_string_lossy().into())
+        })
+        .await
+    }
     pub async fn artifact_path(&self, id: String, artifact: String) -> Result<String> {
         self.blocking(move |s| {
             if !["source.bin", "original.png", "page.png"].contains(&artifact.as_str()) {
@@ -948,6 +973,19 @@ impl NativeApplication {
         .await
     }
     pub async fn import_photo(&self, request: PhotoRequest) -> Result<ScanOutcome> {
+        self.import_photo_with_debug(request, false).await
+    }
+    /// Same pipeline as a regular import, with retained detector crops for tracing.
+    pub async fn import_trace_photo(&self, request: PhotoRequest) -> Result<ScanOutcome> {
+        self.import_photo_with_debug(request, true).await
+    }
+}
+impl NativeApplication {
+    async fn import_photo_with_debug(
+        &self,
+        request: PhotoRequest,
+        detailed_debug: bool,
+    ) -> Result<ScanOutcome> {
         let state = self.state.clone();
         let bridge = self.bridge.clone();
         let id = request.id.clone();
@@ -999,6 +1037,7 @@ impl NativeApplication {
                     })?)
                 };
                 let config = domain::PipelineConfig {
+                    detailed_debug,
                     timezone: request.timezone,
                     quarter_turns: request.quarter_turns,
                     mirrored: request.mirrored,
@@ -1153,5 +1192,61 @@ mod host_routing_tests {
             assert_eq!(result["arguments"], args);
         }
         assert!(bridge.call("unregistered-effect", json!({})).is_err());
+    }
+}
+
+fn allowed_trace_artifact(run: &domain::PipelineRun, artifact: &str) -> bool {
+    run.config.detailed_debug
+        && artifact.ends_with(".png")
+        && artifact
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+        && !artifact.contains("..")
+        && (run
+            .stages
+            .iter()
+            .any(|stage| stage.artifacts.iter().any(|name| name == artifact))
+            || run
+                .refinement_attempts
+                .iter()
+                .any(|attempt| artifact == format!("region-{}.png", attempt.id)))
+}
+
+#[cfg(test)]
+mod trace_tests {
+    use super::*;
+    #[test]
+    fn trace_artifacts_require_debug_evidence_and_a_local_filename() {
+        let mut run: domain::PipelineRun =
+            serde_json::from_str(include_str!("../../../tests/fixtures/sample-run.json")).unwrap();
+        run.stages[0].artifacts = vec![
+            "region-1.png".into(),
+            "../private.png".into(),
+            "/private.png".into(),
+        ];
+        assert!(!allowed_trace_artifact(&run, "region-1.png"));
+        run.config.detailed_debug = true;
+        assert!(allowed_trace_artifact(&run, "region-1.png"));
+        run.refinement_attempts.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "reread-0000", "target_ids": [], "reason": "unclear", "variant": "crop",
+                "crop_to_original": [1,0,0,0,1,0,0,0,1], "crop_to_page": [1,0,0,0,1,0,0,0,1],
+                "width": 20, "height": 10, "duration_ms": 1, "status": "complete",
+                "observation_ids": [], "detail": "Synthetic test"
+            }))
+            .unwrap(),
+        );
+        assert!(allowed_trace_artifact(&run, "region-reread-0000.png"));
+        for name in [
+            "../private.png",
+            "/private.png",
+            "unlisted.png",
+            "ledger.sqlite",
+            "",
+            "region-1.png/extra",
+            "region-reread-0001.png",
+        ] {
+            assert!(!allowed_trace_artifact(&run, name));
+        }
     }
 }

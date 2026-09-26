@@ -350,6 +350,11 @@ private struct MoreView: View {
         } label: {
           Label("Diagnose", systemImage: "info.circle")
         }
+        NavigationLink {
+          RecognitionTraceView(core: core)
+        } label: {
+          Label("Tracing", systemImage: "viewfinder")
+        }.accessibilityIdentifier("open-tracing")
       }
       Section {
       } footer: {
