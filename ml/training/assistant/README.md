@@ -81,6 +81,12 @@ prioritizes unsafe mutations, exact operation errors and family error before los
 Patience stops training; there is no eight-hour cap. A low-disk reserve protects
 existing artifacts. A process lock prevents concurrent writes to one run.
 
+Export verifies the complete receipt of the selected epoch, including its baseline,
+run identity, epoch and all checkpoint files. Historical runs retain their original
+source hashes: replay requires those recorded sources and the recorded environment.
+Changing validation code does not update or relax an existing run's identity;
+historical reports and weights remain unchanged.
+
 `verify_resume.py` compares every adapter/optimizer/random tensor, validation
 outputs and restored random draws against uninterrupted training. `export.py`
 fuses the selected checkpoint, preserves the pinned tokenizer, converts both base

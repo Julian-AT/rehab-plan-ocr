@@ -14,7 +14,12 @@ sys.path.insert(0, str(ROOT))
 from ml.evaluation.conversation.intent import InvalidIntent, parse  # noqa: E402
 from ml.evaluation.conversation.runtime_prompt import arguments as prompt_arguments  # noqa: E402
 from ml.training.assistant.contract import messages, references, sha, write  # noqa: E402
-from ml.training.assistant.train import BASE, current_identity, latest_checkpoint  # noqa: E402
+from ml.training.assistant.train import (  # noqa: E402
+    BASE,
+    current_identity,
+    latest_checkpoint,
+    verify_checkpoint,
+)
 
 CONVERTER = ROOT / ".local/upstream/llama.cpp"
 RUNTIME = ROOT / ".local/builds/assistant-runtime-41fc758/bin/llama-completion"
@@ -32,11 +37,7 @@ def selected_checkpoint(run):
     ):
         raise ValueError("Training did not finish with the recorded checkpoint selection")
     checkpoint = run / "checkpoints" / f"epoch-{latest['state']['best_epoch']:04d}"
-    receipt = json.loads((checkpoint / "checkpoint.json").read_text())
-    if receipt["run_identity"] != sha(run / "identity.json") or any(
-        sha(checkpoint / name) != value for name, value in receipt["files"].items()
-    ):
-        raise ValueError("Selected adapter or evidence changed")
+    verify_checkpoint(run, checkpoint)
     return settings, data, checkpoint
 
 

@@ -69,11 +69,8 @@ def current_identity(run):
     return settings, validate_dataset(Path(settings["dataset"]))
 
 
-def latest_checkpoint(run):
-    directories = sorted((run / "checkpoints").glob("epoch-*"))
-    if not directories:
-        return None, None
-    path = directories[-1]
+def verify_checkpoint(run, path):
+    """Require the complete checkpoint receipt even for an earlier selected epoch."""
     receipt = json.loads((path / "checkpoint.json").read_text())
     required = {
         "adapters.safetensors",
@@ -82,13 +79,30 @@ def latest_checkpoint(run):
         "adapter_config.json",
         "metrics.json",
     }
+    epoch, state, files = receipt.get("epoch"), receipt.get("state"), receipt.get("files")
     if (
-        receipt.get("run_identity") != sha(run / "identity.json")
+        type(epoch) is not int
+        or epoch < 1
+        or path.name != f"epoch-{epoch:04d}"
+        or not isinstance(state, dict)
+        or type(state.get("epoch")) is not int
+        or state["epoch"] != epoch
+        or receipt.get("run_identity") != sha(run / "identity.json")
         or receipt.get("baseline_sha256") != sha(run / "baseline.json")
-        or set(receipt["files"]) != required
-        or any(sha(path / name) != expected for name, expected in receipt["files"].items())
+        or not isinstance(files, dict)
+        or set(files) != required
+        or any(sha(path / name) != expected for name, expected in files.items())
     ):
         raise ValueError("Checkpoint weights, optimizer or provenance checksum mismatch")
+    return receipt
+
+
+def latest_checkpoint(run):
+    directories = sorted((run / "checkpoints").glob("epoch-*"))
+    if not directories:
+        return None, None
+    path = directories[-1]
+    receipt = verify_checkpoint(run, path)
     return path, receipt
 
 

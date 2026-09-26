@@ -6,10 +6,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from ml.training.assistant import contract, prepare, train  # noqa: E402
+from ml.training.assistant import contract, export, prepare, train  # noqa: E402
 
 
 class AssistantContractTests(unittest.TestCase):
@@ -115,6 +116,7 @@ class AssistantContractTests(unittest.TestCase):
             completed / "checkpoint.json",
             {
                 "epoch": 1,
+                "state": {"epoch": 1},
                 "run_identity": contract.sha(self.root / "identity.json"),
                 "baseline_sha256": contract.sha(self.root / "baseline.json"),
                 "files": {name: contract.sha(completed / name) for name in names},
@@ -124,6 +126,68 @@ class AssistantContractTests(unittest.TestCase):
         (completed / "optimizer.safetensors").write_bytes(b"changed")
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
             train.latest_checkpoint(self.root)
+
+    def test_selected_earlier_checkpoint_requires_complete_unchanged_receipt(self):
+        (self.root / "identity.json").write_text("{}")
+        (self.root / "baseline.json").write_text("{}")
+        paths = {}
+        for epoch in [1, 2]:
+            path = self.root / "checkpoints" / f"epoch-{epoch:04d}"
+            path.mkdir(parents=True)
+            files = {}
+            for name in [
+                "adapters.safetensors",
+                "optimizer.safetensors",
+                "random.safetensors",
+                "adapter_config.json",
+                "metrics.json",
+            ]:
+                (path / name).write_bytes(b"synthetic fixture")
+                files[name] = contract.sha(path / name)
+            receipt = {
+                "epoch": epoch,
+                "state": {"epoch": epoch, "best_epoch": 1},
+                "run_identity": contract.sha(self.root / "identity.json"),
+                "baseline_sha256": contract.sha(self.root / "baseline.json"),
+                "files": files,
+            }
+            contract.write(path / "checkpoint.json", receipt)
+            paths[epoch] = path
+        contract.write(
+            self.root / "result.json",
+            {
+                "selection": receipt["state"],
+                "identity_sha256": contract.sha(self.root / "identity.json"),
+            },
+        )
+        selected_receipt = paths[1] / "checkpoint.json"
+        valid = json.loads(selected_receipt.read_text())
+        invalid = {
+            "empty file ledger": valid | {"files": {}},
+            "extra file": valid | {"files": valid["files"] | {"unexpected": "digest"}},
+            "missing baseline": {k: v for k, v in valid.items() if k != "baseline_sha256"},
+            "changed baseline": valid | {"baseline_sha256": "changed"},
+            "changed run": valid | {"run_identity": "changed"},
+            "receipt epoch": valid | {"epoch": 2},
+            "state epoch": valid | {"state": {"epoch": 2, "best_epoch": 1}},
+            "boolean epoch": valid | {"epoch": True},
+        }
+        for name in valid["files"]:
+            invalid["missing " + name] = valid | {
+                "files": {k: v for k, v in valid["files"].items() if k != name}
+            }
+        with patch.object(export, "current_identity", return_value=({}, {})):
+            self.assertEqual(export.selected_checkpoint(self.root)[2], paths[1])
+            for reason, receipt in invalid.items():
+                with self.subTest(reason=reason):
+                    contract.write(selected_receipt, receipt)
+                    self.assertEqual(train.latest_checkpoint(self.root)[0], paths[2])
+                    with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                        export.selected_checkpoint(self.root)
+            contract.write(selected_receipt, valid)
+            (paths[1] / "adapters.safetensors").write_bytes(b"changed adapter")
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                export.selected_checkpoint(self.root)
 
 
 if __name__ == "__main__":
