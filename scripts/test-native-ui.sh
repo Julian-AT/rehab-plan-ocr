@@ -6,6 +6,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 if [ "${1:-}" = --built ]; then shift; else sh scripts/build-native.sh simulator; fi
 simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
+printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)
 cleanup() {
   if [ "${REHA_KEEP_SIMULATOR:-0}" != 1 ]; then
@@ -34,6 +35,21 @@ fi
 container=$(xcrun simctl get_app_container "$simulator" at.rehakalender.personal data)
 cargo run --locked --quiet -p reha-ffi --example seed_fixture -- "$container/Library/Application Support/at.rehakalender.personal" --ui
 xcrun simctl privacy "$simulator" grant calendar at.rehakalender.personal
+xcrun simctl privacy "$simulator" grant microphone at.rehakalender.personal
+xcrun simctl launch "$simulator" com.apple.DocumentsApp >/dev/null
+python3 - "$simulator" <<'PY'
+import plistlib, shutil, sys
+from pathlib import Path
+groups = Path.home() / "Library/Developer/CoreSimulator/Devices" / sys.argv[1] / "data/Containers/Shared/AppGroup"
+for metadata in groups.glob("*/.com.apple.mobile_container_manager.metadata.plist"):
+    if plistlib.loads(metadata.read_bytes()).get("MCMMetadataIdentifier") == "group.com.apple.FileProvider.LocalStorage":
+        folder = metadata.parent / "File Provider Storage"
+        folder.mkdir(exist_ok=True)
+        shutil.copy2("public/synthetic-day.png", folder / "Testplan.png")
+        break
+else:
+    raise RuntimeError("Test simulator has no local Files provider")
+PY
 if [ "${REHA_UI_NEW_PHOTO:-0}" = 1 ]; then
   # Different source bytes exercise new recognition instead of duplicate reuse.
   sips -s format jpeg public/synthetic-day.png --out "$staging/new-photo.jpg" >/dev/null

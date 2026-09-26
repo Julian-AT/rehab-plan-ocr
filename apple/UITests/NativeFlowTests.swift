@@ -51,7 +51,7 @@ import XCTest
         app.buttons["Abbrechen"].tap()
     }
     func testNeuralPlaybackStopAndRepeat() {
-        app.tabBars.buttons["Mehr"].tap(); app.buttons["Sprachhilfe"].tap()
+        app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-settings"].tap()
         let read = app.buttons["read-aloud"], stop = app.buttons["stop-speech"], repeatButton = app.buttons["repeat-speech"]
         XCTAssertTrue(read.waitForExistence(timeout: 8)); read.tap()
         let status = app.staticTexts["speech-status"]
@@ -74,11 +74,12 @@ import XCTest
         capture("Neural voice stopped independently")
     }
     func testAdjustableControlsAndMoreAppearance() {
+        app.tabBars.buttons["Sprechen"].tap()
         let initial = app.buttons["speak"].frame.height
         app.tabBars.buttons["Mehr"].tap(); capture("More consistent rows")
         app.buttons["settings"].tap()
         app.buttons["control-size"].tap(); app.buttons["Groß"].tap()
-        app.buttons["Speichern"].tap(); app.tabBars.buttons["Termine"].tap()
+        app.buttons["Speichern"].tap(); app.tabBars.buttons["Sprechen"].tap()
         XCTAssertGreaterThan(app.buttons["speak"].frame.height, initial)
         capture("Larger controls")
         app.tabBars.buttons["Mehr"].tap(); app.buttons["settings"].tap()
@@ -107,7 +108,7 @@ import XCTest
         capture("Agenda expanded into additional days")
         if app.buttons["past-events"].isHittable {
             app.buttons["past-events"].tap()
-            expectation(for: NSPredicate(format: "count >= 2"), evaluatedWith: app.staticTexts.matching(identifier: "Testtherapie 1")); waitForExpectations(timeout: 5)
+            expectation(for: NSPredicate(format: "count >= 1"), evaluatedWith: app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", "Testtherapie 1"))); waitForExpectations(timeout: 5)
             capture("Agenda completed appointments separate")
         }
     }
@@ -119,8 +120,8 @@ import XCTest
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "anzeigen und vorlesen")).firstMatch.exists)
         capture("Separate calendar display and destination")
         app.navigationBars["Kalender"].buttons.firstMatch.tap()
-        app.buttons["Sprachhilfe"].tap()
-        XCTAssertTrue(app.navigationBars["Sprachhilfe"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-settings"].tap()
+        XCTAssertTrue(app.navigationBars["Spracheinstellungen"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Stopp"].exists)
         XCTAssertTrue(app.buttons["Wiederholen"].exists)
         capture("Local voice setup and playback controls")
@@ -180,8 +181,8 @@ import XCTest
         capture("Saved with undo")
         app.tabBars.buttons["Termine"].tap()
         if app.buttons["past-events"].waitForExistence(timeout: 3) { app.buttons["past-events"].tap() }
-        XCTAssertTrue(app.staticTexts["Testtherapie 1"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "Testtherapie 1").count, 1)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Testtherapie 1")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", "Testtherapie 1")).count, 1)
         capture("Populated agenda no duplicate")
         app.tabBars.buttons["Archiv"].tap()
         app.buttons["undo-save"].tap()
@@ -196,8 +197,11 @@ import XCTest
         XCTAssertTrue(app.staticTexts["2 Änderungen rückgängig gemacht · 0 offen oder fehlgeschlagen"].waitForExistence(timeout: 10))
         app.navigationBars["Importverlauf"].buttons["Fertig"].tap()
         app.tabBars.buttons["Termine"].tap()
-        XCTAssertTrue(app.staticTexts["Heute keine Termine"].waitForExistence(timeout: 10))
-        capture("Empty agenda after undo")
+        // Saving chooses a destination, not an additional display calendar.
+        // Once the last import is undone the dedicated selection state returns.
+        XCTAssertTrue(app.staticTexts["Kalender auswählen"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", "Testtherapie 1")).firstMatch.exists)
+        capture("No imported appointments after undo")
     }
     func testPartialSaveAndMultiPageSummary() {
         openPlan(sampleID)
@@ -248,6 +252,50 @@ import XCTest
         XCTAssertTrue(app.buttons["Erneut versuchen"].waitForExistence(timeout: 20))
         capture("Retryable capture failure")
     }
+    func testVoiceTabIsExplicitAndPlaybackStopsOnTabChange() {
+        app.tabBars.buttons["Sprechen"].tap()
+        let state = app.staticTexts["voice-state"]
+        XCTAssertTrue(state.waitForExistence(timeout: 5))
+        XCTAssertEqual(state.value as? String, "idle")
+        XCTAssertFalse(app.buttons["finish-speaking"].exists)
+        capture("Voice idle pearl orb")
+        app.buttons["repeat-speech"].tap()
+        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
+        waitForExpectations(timeout: 45)
+        capture("Voice orb with real Kokoro playback")
+        app.tabBars.buttons["Archiv"].tap(); app.tabBars.buttons["Sprechen"].tap()
+        XCTAssertEqual(state.value as? String, "idle")
+        XCTAssertFalse(app.buttons["stop-speech"].isEnabled)
+        app.buttons["repeat-speech"].tap(); app.buttons["stop-speech"].tap()
+        XCTAssertEqual(state.value as? String, "idle")
+        XCTAssertFalse(app.buttons["stop-speech"].isEnabled)
+    }
+    func testVoiceCreationPreviewIsRevokedOnTabChange() {
+        app.tabBars.buttons["Sprechen"].tap()
+        app.buttons["voice-create"].tap()
+        let title = app.textFields["Bezeichnung"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Test Sprachbereich")
+        app.buttons["Bezeichnung übernehmen"].tap()
+        for label in ["Datum übernehmen", "Uhrzeit übernehmen"] {
+            let button = app.buttons[label]
+            for _ in 0..<6 where !button.isHittable { app.swipeUp() }
+            XCTAssertTrue(button.waitForExistence(timeout: 5)); button.tap()
+        }
+        let duration = app.textFields["Dauer in Minuten"]
+        for _ in 0..<6 where !duration.isHittable { app.swipeUp() }
+        duration.tap(); duration.typeText("30")
+        let accept = app.buttons["Dauer übernehmen"]
+        for _ in 0..<6 where !accept.isHittable { app.swipeUp() }
+        accept.tap()
+        let confirm = app.buttons["confirm-event"]
+        for _ in 0..<6 where !confirm.isHittable { app.swipeUp() }
+        XCTAssertTrue(confirm.waitForExistence(timeout: 15))
+        capture("Voice concrete preview before confirmation")
+        app.tabBars.buttons["Termine"].tap(); app.tabBars.buttons["Sprechen"].tap()
+        XCTAssertFalse(confirm.exists)
+        XCTAssertEqual(app.staticTexts["voice-state"].value as? String, "idle")
+        capture("Voice proposal revoked after tab change")
+    }
     func testZPhotoPickerImportsARealImage() {
         app.buttons["add-plan"].tap(); app.buttons["plan-menu-photos"].tap()
         XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
@@ -275,5 +323,28 @@ import XCTest
         if #available(iOS 17.0, *) {
             try app.performAccessibilityAudit(for: [.elementDetection, .sufficientElementDescription, .trait])
         }
+    }
+    func testZZFilePickerImportsAPublicPlan() {
+        app.buttons["add-plan"].tap(); app.buttons["plan-menu-files"].tap()
+        XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
+        if app.buttons["Durchsuchen"].isHittable { app.buttons["Durchsuchen"].tap() }
+        let local = app.staticTexts["Auf meinem iPhone"]
+        if local.waitForExistence(timeout: 3) { local.tap() }
+        let file = app.staticTexts.matching(NSPredicate(format: "label == %@ OR label == %@", "Testplan", "Testplan.png")).firstMatch
+        XCTAssertTrue(file.waitForExistence(timeout: 8))
+        capture("File picker with public test plan")
+        let thumbnail = app.cells.matching(NSPredicate(format: "identifier BEGINSWITH %@", "Testplan,")).firstMatch
+        XCTAssertTrue(thumbnail.exists)
+        // The provider's filename label is not its open target. Tap inside the
+        // visible document thumbnail, using the cell's reported frame.
+        thumbnail.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        let open = app.buttons["Öffnen"]
+        if open.waitForExistence(timeout: 5) { open.tap() }
+        XCTAssertTrue(app.navigationBars["Plan"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["plan-summary"].waitForExistence(timeout: 90))
+        let destination = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Speichern in:")).firstMatch
+        XCTAssertTrue(destination.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.frame.contains(destination.frame), "The entire calendar destination must fit on screen: \(destination.frame)")
+        capture("Public plan imported through Files")
     }
 }
