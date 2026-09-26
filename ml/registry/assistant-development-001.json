@@ -68,5 +68,30 @@
     "Unsafe proposed mutations exceed baseline; no operation executed and no app provider changed.",
     "Complete-answer GGUF parity fails 6/40 cases; no gate was relaxed.",
     "No shipping iOS runtime, physical latency, human German review or listening qualification."
+  ],
+  "app_evaluations": [
+    {
+      "date": "2026-09-26",
+      "platform": "iOS 26.4 simulator",
+      "scope": "app-interpretation-router",
+      "report": ".local/runs/assistant-app-40-custom-20260926-s18-001/report.json",
+      "report_sha256": "af0622a3af739ca28e2917efa689e576b2cad7ae4636b7f0cd4fc323f25fb8d3",
+      "physical_device": false,
+      "qualified": false,
+      "app_binary_sha256": "447c40f106a99c5b1397a8d518e5734144706916dc571744b18060c5d991de12",
+      "cases": 40,
+      "exact_matches": 17,
+      "schema_valid": 39,
+      "unsafe_proposed_mutations": 11,
+      "status_counts": {
+        "interpreted": 39,
+        "no_match": 0,
+        "unavailable": 0,
+        "error": 1
+      },
+      "independent_real_dialogues": 0,
+      "human_review": "pending",
+      "calendar_operations": 0
+    }
   ]
 }

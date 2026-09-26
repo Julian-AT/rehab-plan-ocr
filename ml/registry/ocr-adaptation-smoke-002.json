@@ -70,5 +70,27 @@
   "offline_export": "network-denied subprocess, optional post-optimizer explicitly disabled",
   "quality_improvement_established": false,
   "physical_ios_verified": false,
-  "promoted": false
+  "promoted": false,
+  "app_evaluations": [
+    {
+      "date": "2026-09-26",
+      "platform": "iOS 26.4 simulator",
+      "scope": "normal-app-import-native-reread-persistence",
+      "report": ".local/runs/ocr-app-provider-20260926-s18-004/report.json",
+      "report_sha256": "c1f29eefb48e636b8a58c05916c5d5532d3fd829c7f09e968599109e1dfb3f4f",
+      "physical_device": false,
+      "qualified": false,
+      "app_binary_sha256": "0b623f5711b476e6a9063b2269e6e9a33fbe5d1d9b84914463da3faaad91be6a",
+      "variant": "frozen-backbone",
+      "independent_synthetic_sources": 1,
+      "forced_imports": 2,
+      "appointments_per_import": [
+        8,
+        8
+      ],
+      "native_reread_calls": 12,
+      "calendar_calls": 0,
+      "quality_improvement_established": false
+    }
+  ]
 }

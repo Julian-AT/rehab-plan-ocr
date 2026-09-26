@@ -109,6 +109,20 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Current device package and model-card evidence — 2026-09-26
+
+The current normal Release iPhone build passes without installation. Shared
+verification checks all four components, assets/dictionary, dependency notices and
+privacy manifests. Simulator-only assistant/OCR probe switches are absent from
+the main executable. Evidence: `.local/runs/device-bundle-20260926-s18-004`, verifier
+SHA-256 `5600d8081b50bda9c9ea8097a7d0f5a9a0e57460996e51acbebfa996ad83b500`;
+main binary `871deff9d9cd234abe1a43b69d53364826112570368333c81bd90d44500f350c`.
+This is unsigned package verification, not a signed archive or device acceptance.
+
+The OCR, tuned-assistant and untuned-comparator model cards now link their later
+native-app reports and hashes without replacing earlier desktop results. Report
+and artifact identities were rechecked; all qualification flags remain false.
+
 ### Bounded hosted UI execution and retained console evidence — 2026-09-26
 
 The fourth hosted run has passed restore, all headless tests, binding checks,
