@@ -64,6 +64,18 @@ import UniformTypeIdentifiers
               CGImageSourceCreateWithData(normalizedAgain as CFData, nil)!, 0, nil)!),
         "Normalized photo rotated a second time")
     }
+    let multiImage = try Data(
+      contentsOf: URL(
+        fileURLWithPath:
+          "ml/evaluation/fixtures/heic/multiple-images.heic"))
+    let primaryOutput = try NativePhoto.decode(multiImage)
+    let primary = CGImageSourceCreateImageAtIndex(
+      CGImageSourceCreateWithData(primaryOutput as CFData, nil)!, 0, nil)!
+    precondition(primary.width == 32 && primary.height == 48)
+    let middle = pixels(primary)[24 * 32 + 16]
+    precondition(
+      middle[2] > 220 && middle[0] < 40 && middle[1] < 40,
+      "HEIF primary photo must be selected rather than image zero")
     rejects(Data())
     rejects(Data("corrupt photo".utf8))
     rejects(Data(repeating: 0, count: NativePhoto.maximumBytes + 1))
@@ -85,7 +97,7 @@ import UniformTypeIdentifiers
     }
     rejects(oversized)
     print(
-      "Binary photo: eight orientations, normalization, malformed input and byte/pixel limits passed"
+      "Binary photo: eight orientations, HEIF primary photo, normalization, malformed input and byte/pixel limits passed"
     )
   }
 }

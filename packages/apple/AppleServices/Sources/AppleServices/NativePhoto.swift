@@ -12,15 +12,18 @@ public enum NativePhoto {
   public static func decode(_ bytes: Data) throws -> Data {
     guard !bytes.isEmpty, bytes.count <= maximumBytes,
       let source = CGImageSourceCreateWithData(
-        bytes as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
-      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+        bytes as CFData, [kCGImageSourceShouldCache: false] as CFDictionary)
+    else { throw NativeServiceError.invalidInput("Foto nicht lesbar oder zu groß.") }
+    let index = CGImageSourceGetPrimaryImageIndex(source)
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any],
       let width = properties[kCGImagePropertyPixelWidth] as? Int,
       let height = properties[kCGImagePropertyPixelHeight] as? Int,
       width > 0, height > 0, width <= maximumPixels / height
     else { throw NativeServiceError.invalidInput("Foto nicht lesbar oder zu groß.") }
     guard
       let image = CGImageSourceCreateThumbnailAtIndex(
-        source, 0,
+        source, index,
         [
           kCGImageSourceCreateThumbnailFromImageAlways: true,
           kCGImageSourceCreateThumbnailWithTransform: true,
