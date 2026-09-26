@@ -329,6 +329,7 @@ def tests(portable):
             "calendar-answers",
             "calendar-read-contracts",
             "calendar-mutation-contracts",
+            "calendar-import-contracts",
             "calendar-timezone",
             "interpretation-provider",
             "assistant-request",

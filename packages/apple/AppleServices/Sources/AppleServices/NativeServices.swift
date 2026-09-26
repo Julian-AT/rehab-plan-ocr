@@ -149,8 +149,8 @@ public final class NativeServices: @unchecked Sendable {
       switch command {
       case "camera", "photos", "decodePhoto": .intake
       case "recognize": .ocr
-      case "apply", "mutateEvent": .calendarWrite
-      case "snapshot", "queryEvents", "getEvent", "calendarStatus", "inspectCalendarLinks":
+      case "mutateEvent": .calendarWrite
+      case "queryEvents", "getEvent", "calendarStatus", "inspectCalendarLinks":
         .calendarRead
       case "enableReminders": .reminderSettings
       default: nil
@@ -171,7 +171,7 @@ public final class NativeServices: @unchecked Sendable {
       switch command {
       case "eventCalendars", "queryEvents", "getEvent", "mutateEvent", "editSystemEvent",
         "resolveOwnedEvent", "inspectCalendarLinks":
-        EventEditingService.shared.perform(command, request)
+        calendarReads.perform(command, request)
       case "calendarStatus":
         calendarQueue.async { request.resolve(self.agendaService.calendarStatus().legacyValue) }
       case "calendars": try calendars(request)
@@ -227,9 +227,6 @@ public final class NativeServices: @unchecked Sendable {
     self.agendaService.start()
     Task { @MainActor in NativePresentation.shared.start() }
   }
-  private func dictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
-    try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]
-  }
   private func values(_ event: EKEvent) -> Values {
     Values(
       title: event.title ?? "", start_utc: iso.string(from: event.startDate),
@@ -243,9 +240,11 @@ public final class NativeServices: @unchecked Sendable {
   private func owns(_ event: EKEvent, _ id: String) -> Bool {
     event.url?.absoluteString == marker(id)
   }
-  private func checkAccess(_ invoke: ServiceRequest) -> Bool {
+  private func calendarAccess<Value>(
+    _ completion: (Result<Value, Error>) -> Void
+  ) -> Bool {
     guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-      invoke.reject(NativeServiceError.permissionDenied)
+      completion(.failure(NativeServiceError.permissionDenied))
       return false
     }
     return true
@@ -284,108 +283,156 @@ public final class NativeServices: @unchecked Sendable {
       }
     }
   }
-  func snapshot(_ invoke: ServiceRequest) throws {
-    let args = try invoke.parseArgs(SnapshotArgs.self)
-    guard checkAccess(invoke) else { return }
-    calendarQueue.async {
-      var current: [String: Any] = [:]
-      var protected: [String] = []
-      for record in args.records {
-        if let external = record.external_id,
-          let event = self.store.event(withIdentifier: external), self.owns(event, record.id),
-          event.calendar.calendarIdentifier == record.calendar_id
-        {
-          current[record.id] = try? self.dictionary(self.values(event))
-          if CalendarEventProtection.protectsImport(event)
-            || self.agendaService.alarmIsProtected(
-              event, approvedMinutes: record.approved.reminder_minutes)
+  public func importSnapshot(
+    _ records: [NativeCalendarRecord],
+    completion: @escaping @Sendable (Result<NativeImportSnapshot, Error>) -> Void
+  ) {
+    measured(.calendarRead) { done in
+      guard calendarAccess(done) else { return }
+      calendarQueue.async {
+        var current: [String: NativeImportValues] = [:]
+        var protected: [String] = []
+        for record in records {
+          if let external = record.externalID,
+            let event = self.store.event(withIdentifier: external), self.owns(event, record.id),
+            event.calendar.calendarIdentifier == record.calendarID
           {
-            protected.append(record.id)
+            current[record.id] = NativeImportValues(self.values(event))
+            if CalendarEventProtection.protectsImport(event)
+              || self.agendaService.alarmIsProtected(
+                event, approvedMinutes: record.reminderMinutes)
+            {
+              protected.append(record.id)
+            }
           }
         }
+        done(.success(NativeImportSnapshot(current: current, protectedIDs: protected)))
       }
-      invoke.resolve(["current": current, "protected_ids": protected])
+    } completion: {
+      completion($0)
+    }
+  }
+  public func importOverlaps(
+    events: [String: NativeImportValues], exclude: [String],
+    completion: @escaping @Sendable (Result<[NativeImportOverlap], Error>) -> Void
+  ) {
+    measured(.calendarRead) { done in
+      guard calendarAccess(done) else { return }
+      calendarQueue.async {
+        var overlaps: [NativeImportOverlap] = []
+        for (id, values) in events.sorted(by: { $0.key < $1.key }) {
+          guard let start = self.iso.date(from: values.startUTC),
+            let end = self.iso.date(from: values.endUTC)
+          else { continue }
+          let predicate = self.store.predicateForEvents(withStart: start, end: end, calendars: nil)
+          for event in self.store.events(matching: predicate) {
+            guard event.startDate < end, event.endDate > start,
+              !exclude.contains(where: { self.owns(event, $0) })
+            else { continue }
+            overlaps.append(
+              NativeImportOverlap(
+                appointmentID: id, externalID: event.eventIdentifier ?? "",
+                title: event.title ?? "Termin", startUTC: self.iso.string(from: event.startDate),
+                endUTC: self.iso.string(from: event.endDate)))
+          }
+        }
+        overlaps.sort {
+          ($0.appointmentID, $0.externalID, $0.startUTC, $0.endUTC, $0.title)
+            < ($1.appointmentID, $1.externalID, $1.startUTC, $1.endUTC, $1.title)
+        }
+        done(.success(overlaps))
+      }
+    } completion: {
+      completion($0)
+    }
+  }
+  public func forgetCalendar(
+    completion: @escaping @Sendable (Result<Void, Error>) -> Void
+  ) {
+    calendarQueue.async {
+      do {
+        try self.agendaService.forget()
+        try self.calendarReads.forget()
+        self.dedicatedCalendar.forget()
+        completion(.success(()))
+      } catch { completion(.failure(error)) }
+    }
+  }
+  // Existing JSON clients delegate to the same typed operations.
+  func snapshot(_ invoke: ServiceRequest) throws {
+    let args = try invoke.parseArgs(SnapshotArgs.self)
+    importSnapshot(args.records.map(NativeCalendarRecord.init)) { result in
+      switch result {
+      case .success(let value): invoke.resolve(value.legacyValue)
+      case .failure(let error): invoke.reject(error)
+      }
     }
   }
   func overlaps(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(OverlapArgs.self)
-    guard checkAccess(invoke) else { return }
-    calendarQueue.async {
-      var overlaps: [[String: String]] = []
-      for (id, values) in args.events.sorted(by: { $0.key < $1.key }) {
-        guard let start = self.iso.date(from: values.start_utc),
-          let end = self.iso.date(from: values.end_utc)
-        else { continue }
-        let predicate = self.store.predicateForEvents(withStart: start, end: end, calendars: nil)
-        for event in self.store.events(matching: predicate) {
-          guard event.startDate < end, event.endDate > start,
-            !args.exclude.contains(where: { self.owns(event, $0) })
-          else { continue }
-          overlaps.append([
-            "appointment_id": id, "external_id": event.eventIdentifier ?? "",
-            "title": event.title ?? "Termin", "start_utc": self.iso.string(from: event.startDate),
-            "end_utc": self.iso.string(from: event.endDate),
-          ])
-        }
+    importOverlaps(events: args.events.mapValues(NativeImportValues.init), exclude: args.exclude) {
+      result in
+      switch result {
+      case .success(let value): invoke.resolve(["overlaps": value.map(\.legacyValue)])
+      case .failure(let error): invoke.reject(error)
       }
-      overlaps.sort {
-        (
-          $0["appointment_id"] ?? "", $0["external_id"] ?? "", $0["start_utc"] ?? "",
-          $0["end_utc"] ?? "", $0["title"] ?? ""
-        ) < (
-          $1["appointment_id"] ?? "", $1["external_id"] ?? "", $1["start_utc"] ?? "",
-          $1["end_utc"] ?? "", $1["title"] ?? ""
-        )
-      }
-      invoke.resolve(["overlaps": overlaps])
     }
   }
   func forgetCalendar(_ invoke: ServiceRequest) {
-    calendarQueue.async {
-      do {
-        try self.agendaService.forget()
-        try EventEditingService.shared.forget()
-        self.dedicatedCalendar.forget()
-        invoke.resolve()
-      } catch { invoke.reject(error) }
+    forgetCalendar { result in
+      switch result {
+      case .success: invoke.resolve()
+      case .failure(let error): invoke.reject(error)
+      }
     }
   }
-  func apply(_ invoke: ServiceRequest) throws {
-    let args = try invoke.parseArgs(WriteArgs.self)
-    guard checkAccess(invoke) else { return }
+  public func applyImport(
+    _ operation: NativeImportOperation, recoveryOnly: Bool,
+    completion: @escaping @Sendable (Result<NativeImportWriteResult, Error>) -> Void
+  ) {
+    measured(.calendarWrite) { done in
+      writeImport(operation, recoveryOnly: recoveryOnly, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
+  private func writeImport(
+    _ op: NativeImportOperation, recoveryOnly: Bool,
+    completion: @escaping @Sendable (Result<NativeImportWriteResult, Error>) -> Void
+  ) {
+    guard calendarAccess(completion) else { return }
     calendarQueue.async {
-      let op = args.operation
       func finish(
-        _ status: String, _ event: EKEvent? = nil, _ message: String? = nil,
+        _ status: NativeImportWriteStatus, _ event: EKEvent? = nil, _ message: String? = nil,
         warnings: [String] = []
       ) {
-        var output: [String: Any] = ["id": op.id, "status": status]
-        if let identifier = event?.eventIdentifier { output["external_id"] = identifier }
-        if let message { output["error"] = message }
-        if !warnings.isEmpty { output["maintenance_warnings"] = warnings }
-        invoke.resolve(output)
+        completion(
+          .success(
+            NativeImportWriteResult(
+              id: op.id, status: status, externalID: event?.eventIdentifier,
+              error: message, maintenanceWarnings: warnings)))
       }
-      guard UUID(uuidString: op.id) != nil, !op.requires_resolution,
-        ["create", "update", "remove"].contains(op.kind),
-        let calendar = self.store.calendar(withIdentifier: op.calendar_id),
+      guard UUID(uuidString: op.id) != nil, !op.requiresResolution,
+        [.create, .update, .remove].contains(op.kind),
+        let calendar = self.store.calendar(withIdentifier: op.calendarID),
         calendar.allowsContentModifications
       else {
-        finish("failed", nil, "Ungültiger Auftrag oder nicht beschreibbarer Kalender.")
+        finish(.failed, nil, "Ungültiger Auftrag oder nicht beschreibbarer Kalender.")
         return
       }
       var existing: EKEvent?
-      if let external = op.external_id { existing = self.store.event(withIdentifier: external) }
+      if let external = op.externalID { existing = self.store.event(withIdentifier: external) }
       if let event = existing,
-        !self.owns(event, op.id) || event.calendar.calendarIdentifier != op.calendar_id
+        !self.owns(event, op.id) || event.calendar.calendarIdentifier != op.calendarID
       {
-        finish("conflict", nil, "Eintrag ist nicht diesem App-Import zugeordnet.")
+        finish(.conflict, nil, "Eintrag ist nicht diesem App-Import zugeordnet.")
         return
       }
-      if op.kind == "create" || (args.recovery_only && existing == nil) {
+      if op.kind == .create || (recoveryOnly && existing == nil) {
         guard let expected = op.after ?? op.before,
-          let date = self.iso.date(from: expected.start_utc)
+          let date = self.iso.date(from: expected.startUTC)
         else {
-          finish("failed", nil, "Datum fehlt.")
+          finish(.failed, nil, "Datum fehlt.")
           return
         }
         let predicate = self.store.predicateForEvents(
@@ -393,73 +440,77 @@ public final class NativeServices: @unchecked Sendable {
           calendars: [calendar])
         let matches = self.store.events(matching: predicate).filter { self.owns($0, op.id) }
         if matches.count > 1 {
-          finish("conflict", nil, "Mehrere zugeordnete Einträge: manuell prüfen.")
+          finish(.conflict, nil, "Mehrere zugeordnete Einträge: manuell prüfen.")
           return
         }
         existing = matches.first ?? existing
       }
-      if args.recovery_only {
-        if op.kind == "remove" {
+      if recoveryOnly {
+        if op.kind == .remove {
           finish(
-            "uncertain", existing,
+            .uncertain, existing,
             "Löschstatus kann nicht sicher bewiesen werden. Im Kalender prüfen.")
           return
         }
-        if let event = existing, let after = op.after, self.values(event) == after {
-          finish("saved", event)
+        if let event = existing, let after = op.after,
+          NativeImportValues(self.values(event)) == after
+        {
+          finish(.saved, event)
           return
         }
         finish(
-          "uncertain", existing, "Schreibergebnis noch unklar. Kein neuer Termin wurde erstellt.")
+          .uncertain, existing, "Schreibergebnis noch unklar. Kein neuer Termin wurde erstellt.")
         return
       }
-      if op.kind == "create", let event = existing {
-        if let after = op.after, self.values(event) == after {
-          finish("saved", event)
+      if op.kind == .create, let event = existing {
+        if let after = op.after, NativeImportValues(self.values(event)) == after {
+          finish(.saved, event)
         } else {
-          finish("conflict", event, "Vorhandener App-Termin weicht ab.")
+          finish(.conflict, event, "Vorhandener App-Termin weicht ab.")
         }
         return
       }
-      if op.kind != "create" {
+      if op.kind != .create {
         if let event = existing,
           CalendarEventProtection.protectsImport(event)
             || self.agendaService.alarmIsProtected(
-              event, approvedMinutes: op.before?.reminder_minutes)
+              event, approvedMinutes: op.before?.reminderMinutes)
         {
           finish(
-            "conflict", event,
+            .conflict, event,
             "Zusätzliche Kalenderangaben, Serien, Einladungen und veränderte Alarme bleiben geschützt."
           )
           return
         }
-        guard let event = existing, let before = op.before, self.values(event) == before else {
+        guard let event = existing, let before = op.before,
+          NativeImportValues(self.values(event)) == before
+        else {
           finish(
-            "conflict", existing,
+            .conflict, existing,
             "Kalender wurde seit der Vorschau verändert. Vorschau erneut erstellen.")
           return
         }
       }
       do {
-        if op.kind == "remove", let event = existing {
+        if op.kind == .remove, let event = existing {
           try self.store.remove(event, span: .thisEvent, commit: true)
-          finish("saved")
+          finish(.saved)
           return
         }
-        guard let after = op.after, let start = self.iso.date(from: after.start_utc),
-          let end = self.iso.date(from: after.end_utc), end > start,
+        guard let after = op.after, let start = self.iso.date(from: after.startUTC),
+          let end = self.iso.date(from: after.endUTC), end > start,
           let timezone = TimeZone(identifier: after.timezone)
         else {
-          finish("failed", nil, "Ungültige Terminzeit.")
+          finish(.failed, nil, "Ungültige Terminzeit.")
           return
         }
         let event = existing ?? EKEvent(eventStore: self.store)
         let alarmChanged =
-          op.kind == "create" || op.before?.reminder_minutes != after.reminder_minutes
+          op.kind == .create || op.before?.reminderMinutes != after.reminderMinutes
         if alarmChanged, existing != nil,
-          self.agendaService.alarmIsProtected(event, approvedMinutes: op.before?.reminder_minutes)
+          self.agendaService.alarmIsProtected(event, approvedMinutes: op.before?.reminderMinutes)
         {
-          finish("conflict", event, "Manuell veränderte Kalenderalarme bleiben geschützt.")
+          finish(.conflict, event, "Manuell veränderte Kalenderalarme bleiben geschützt.")
           return
         }
         event.calendar = calendar
@@ -471,32 +522,60 @@ public final class NativeServices: @unchecked Sendable {
         event.notes = after.notes
         event.url = URL(string: self.marker(op.id))
         if alarmChanged {
-          event.alarms = after.reminder_minutes.map { [EKAlarm(relativeOffset: -Double($0) * 60)] }
+          event.alarms = after.reminderMinutes.map { [EKAlarm(relativeOffset: -Double($0) * 60)] }
         }
         try self.store.save(event, span: .thisEvent, commit: true)
         var warnings: [String] = []
         if alarmChanged {
           do {
-            try self.agendaService.approvedAlarmChanged(id: op.id, minutes: after.reminder_minutes)
+            try self.agendaService.approvedAlarmChanged(id: op.id, minutes: after.reminderMinutes)
           } catch { warnings.append(CalendarMaintenance.alarmWarning) }
         }
-        finish("saved", event, warnings: warnings)
+        finish(.saved, event, warnings: warnings)
       } catch {
-        finish("uncertain", existing, "EventKit konnte den Schreibstatus nicht sicher bestätigen.")
+        finish(.uncertain, existing, "EventKit konnte den Schreibstatus nicht sicher bestätigen.")
       }
+    }
+  }
+  func apply(_ invoke: ServiceRequest) throws {
+    let args = try invoke.parseArgs(WriteArgs.self)
+    let op = args.operation
+    let operation = NativeImportOperation(
+      kind: NativeImportKind(rawValue: op.kind) ?? .unsupported,
+      id: op.id, calendarID: op.calendar_id, externalID: op.external_id,
+      before: op.before.map(NativeImportValues.init), after: op.after.map(NativeImportValues.init),
+      requiresResolution: op.requires_resolution)
+    applyImport(operation, recoveryOnly: args.recovery_only) { result in
+      switch result {
+      case .success(let value): invoke.resolve(value.legacyValue)
+      case .failure(let error): invoke.reject(error)
+      }
+    }
+  }
+  public func synchronizeAgenda(
+    records: [NativeCalendarRecord], preferences: ReminderPreferences,
+    displayCalendarIDs: [String],
+    completion: @escaping @Sendable (Result<NativeAgendaStatus, Error>) -> Void
+  ) {
+    calendarQueue.async {
+      do {
+        try self.agendaService.sync(
+          AgendaSyncArgs(
+            records: records.map(\.ownedRecord), preferences: preferences,
+            display_calendar_ids: displayCalendarIDs), completion: completion)
+      } catch { completion(.failure(error)) }
     }
   }
   func agenda(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(AgendaSyncArgs.self)
-    calendarQueue.async {
-      do {
-        try self.agendaService.sync(args) { result in
-          switch result {
-          case .success(let value): Self.resolveAgenda(value, for: invoke)
-          case .failure(let error): invoke.reject(error)
-          }
-        }
-      } catch { invoke.reject(error) }
+    synchronizeAgenda(
+      records: args.records.map(NativeCalendarRecord.init), preferences: args.preferences,
+      displayCalendarIDs: args.display_calendar_ids ?? []
+    ) { result in
+      switch result {
+      case .success(let value): Self.resolveAgenda(value, for: invoke)
+      case .failure(let error): invoke.reject(error)
+      }
     }
   }
   func enableReminders(_ invoke: ServiceRequest) throws {

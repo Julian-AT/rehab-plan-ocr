@@ -10,7 +10,6 @@ import UIKit
 // Mutable state and EventKit objects stay on agenda.queue. The system editor
 // has a separate main-actor store and receives only immutable occurrence identity.
 final class EventEditingService: @unchecked Sendable {
-  static let shared = EventEditingService()
   private let agenda: AgendaService
   private var store: EKEventStore { agenda.store }
   private var queue: DispatchQueue { agenda.queue }

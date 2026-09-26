@@ -113,6 +113,12 @@ public struct ReminderPreferences: Codable, Equatable, Sendable {
   public var minutes: Int? = 10
   public var sound = true
   public var preview = true
+  public init(enabled: Bool = false, minutes: Int? = 10, sound: Bool = true, preview: Bool = true) {
+    self.enabled = enabled
+    self.minutes = minutes
+    self.sound = sound
+    self.preview = preview
+  }
 }
 
 struct AlarmJournalEntry: Codable {

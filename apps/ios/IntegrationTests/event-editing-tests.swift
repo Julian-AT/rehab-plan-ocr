@@ -12,6 +12,83 @@ final class EventEditingTests: XCTestCase {
     }
     return try JSONSerialization.jsonObject(with: response) as? [String: Any] ?? [:]
   }
+  func testTypedImportRecoveryCannotCreateMissingEvents() async throws {
+    #if targetEnvironment(simulator)
+      guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        throw XCTSkip("Simulator calendar access required")
+      }
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let agenda = AgendaService(storageRoot: root, widgetRoot: root)
+      agenda.start(registerBackground: false)
+      let native = NativeServices(agenda: agenda)
+      let store = agenda.store
+      let calendar = EKCalendar(for: .event, eventStore: store)
+      calendar.title = "Erfundener typisierter Import"
+      calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+      try store.saveCalendar(calendar, commit: true)
+      defer { try? store.removeCalendar(calendar, commit: true) }
+      let calendarID = calendar.calendarIdentifier
+      let id = UUID().uuidString
+      let start = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) + 7200)
+      let iso = ISO8601DateFormatter()
+      let values = NativeImportValues(
+        title: "Erfundene Therapie", startUTC: iso.string(from: start),
+        endUTC: iso.string(from: start.addingTimeInterval(1800)), timezone: "Europe/Vienna",
+        location: "Raum 3", notes: "Nur synthetische Notiz", reminderMinutes: 10)
+      func apply(_ kind: NativeImportKind, recovery: Bool, externalID: String? = nil)
+        async throws -> NativeImportWriteResult
+      {
+        let operation = NativeImportOperation(
+          kind: kind, id: id, calendarID: calendarID, externalID: externalID,
+          before: values, after: values, requiresResolution: false)
+        return try await withCheckedThrowingContinuation { continuation in
+          native.applyImport(operation, recoveryOnly: recovery) {
+            continuation.resume(with: $0)
+          }
+        }
+      }
+      func events() -> [EKEvent] {
+        store.events(
+          matching: store.predicateForEvents(
+            withStart: start.addingTimeInterval(-60), end: start.addingTimeInterval(3600),
+            calendars: [calendar]))
+      }
+      let missing = try await apply(.create, recovery: true)
+      XCTAssertEqual(missing.status, .uncertain)
+      XCTAssertTrue(events().isEmpty, "Recovery is not authorization to create")
+      let saved = try await apply(.create, recovery: false)
+      XCTAssertEqual(saved.status, .saved)
+      let externalID = try XCTUnwrap(saved.externalID)
+      let recovered = try await apply(.create, recovery: true)
+      XCTAssertEqual(recovered.status, .saved)
+      XCTAssertEqual(recovered.externalID, externalID)
+      let repeated = try await apply(.create, recovery: false)
+      XCTAssertEqual(repeated.status, .saved)
+      XCTAssertEqual(events().count, 1, "A repeated create must not duplicate the owned event")
+      let removal = try await apply(.remove, recovery: true, externalID: externalID)
+      XCTAssertEqual(removal.status, .uncertain)
+      XCTAssertEqual(events().count, 1, "Recovery never retries an uncertain deletion")
+      let record = NativeCalendarRecord(
+        id: id, calendarID: calendarID, externalID: externalID, status: "saved",
+        title: values.title, startUTC: values.startUTC, endUTC: values.endUTC,
+        timezone: values.timezone, location: values.location, notes: values.notes,
+        reminderMinutes: values.reminderMinutes)
+      let snapshot: NativeImportSnapshot = try await withCheckedThrowingContinuation {
+        continuation in
+        native.importSnapshot([record]) { continuation.resume(with: $0) }
+      }
+      XCTAssertEqual(snapshot.current[id], values)
+      XCTAssertTrue(snapshot.protectedIDs.isEmpty)
+      let overlaps: [NativeImportOverlap] = try await withCheckedThrowingContinuation {
+        continuation in
+        native.importOverlaps(events: [id: values], exclude: [id]) {
+          continuation.resume(with: $0)
+        }
+      }
+      XCTAssertFalse(overlaps.contains { $0.externalID == externalID })
+    #endif
+  }
   func testImportProtectsMetadataOutsideApprovedValues() async throws {
     #if targetEnvironment(simulator)
       guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {

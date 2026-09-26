@@ -68,6 +68,27 @@
   und den bereits gespeicherten Prüfabschluss `acknowledged`. Dauerhafter
   Schreibstatus und nachgelagerte Erinnerungs-/Widgetwarnungen bleiben getrennt.
 
+## Import, Überschneidungen und Agenda-Abgleich
+
+`CalendarImportBridge` überträgt Snapshot, Importoperation und -ergebnis,
+Überschneidungen, Agenda-Abgleich und lokales Vergessen direkt als `Sendable`-Werte
+zu `NativeServices`. Schreibstatus, geschützte Identitäten und Wartungswarnungen
+bleiben getrennt. Die älteren JSON-Eingänge delegieren an dieselben Operationen;
+Kalenderjournal und Datenbank werden nicht umgeschrieben.
+
+Die vorhandenen Schutzregeln bleiben im seriellen EventKit-Worker: Wiederanlauf
+beobachtet nur, identische Wiederholung erzeugt keinen zweiten Termin, fremde
+Änderungen und Alarmmetadaten verhindern überschreibende Änderungen. Nicht als
+vorzeichenlose Minuten darstellbare externe Alarme erzeugen jetzt einen
+Speicherfehler, statt beim FFI-Übergang in eine andere Erinnerung überzulaufen.
+
+`make test-calendar-import-contracts`, 71 Agenda-/Wiederanlaufprüfungen und die
+vollständige native Swift-6-Typprüfung mit Warnungen als Fehler sind bestanden.
+Die Typprüfung umfasst den neuen EventKit-Regressionstest, beide bestehenden
+Agenda-/Mitteilungstests und die Erweiterungen. Belege liegen unter
+`.local/runs/import-contracts-20260926-s18-001/`. Tatsächliche Simulatorausführung
+und der gemeinsame Appbuild werden getrennt geprüft.
+
 ## Kalenderstatus und Verlaufsverwaltung
 
 Status, lokaler Bookkeeping-Abgleich, Wiederanlauf unklarer Terminänderungen,
@@ -195,12 +216,9 @@ Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtba
 `NativeApplication.calendar_request` und Teile von `NativeServices.perform`
 transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
 gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
-Importdetails sowie Agenda-Abgleich. Status, Terminverlauf, Wiederanlauf und
+Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
 Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
-Auch unterhalb der bereits typisierten Import-FFI verwendet `NativeBridge` für
-Snapshot, Importoperation, Überschneidungen und Agenda-Abgleich noch den
-String-/JSON-Adapter zu `NativeServices`.
 Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
