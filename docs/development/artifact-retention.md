@@ -56,7 +56,7 @@ Originale, Modellgewichte, Checkpoints und Sicherungen sind nicht zulässig.
 Es werden keine Pfade gelöscht. Die beobachtete Volume-Differenz wird getrennt
 von logischen Größen ausgewiesen und ist kein garantierter APFS-Speichergewinn.
 
-Die 15 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
+Die 17 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
 APFS-Klone, unabhängig beschreibbarer Kopien, Abbruch/Wiederanlauf, verweigerter
 Clone-Unterstützung, ACL-/Attributschutz, veränderter Belege und konkurrierender
 Zieländerung. Ein echtes C-Archiv lässt sich nach Zusammenführung weiterhin
@@ -64,6 +64,10 @@ gegen beide Pfade linken und ausführen. Die vorhandenen Bereinigungs- und
 Dokumentationsprüfungen bestehen ebenfalls. Quellen und Rohlogs liegen unter
 `.local/runs/archive-objects-development-20260926-s20-001`. Dies prüft das Werkzeug;
 die 17 historischen Archivpfade werden erst in einem ruhigen Fenster bearbeitet.
+Zusätzlich wurden alle 34 tatsächlichen XCTest-Aufrufdateien dieser Läufe
+unverändert gelesen: Sie verwenden das von diesem Projekt erzeugte Format 1.
+Der Prüfer unterstützt dessen direkte Testziele und die Konfigurationen von
+Format 2; unbekannte Versionen und unvollständige Zielangaben scheitern.
 
 ## Bestehender Bereinigungsvertrag
 

@@ -142,6 +142,36 @@ class ArchiveObjectTests(unittest.TestCase):
             )
             subprocess.run([str(executable)], check=True, capture_output=True)
 
+    def test_emitted_version_one_invocations_preserve_all_their_bytes(self):
+        for run in self.runs:
+            path = run / "products/Termine.xctestrun"
+            value = plistlib.loads(path.read_bytes())
+            targets = value.pop("TestConfigurations")[0]["TestTargets"]
+            value["__xctestrun_metadata__"]["FormatVersion"] = 1
+            value["TermineUITests"] = targets[0]
+            path.write_bytes(plistlib.dumps(value))
+        before = [(run / "products/Termine.xctestrun").read_bytes() for run in self.runs]
+        self.plan()
+        objects.apply(self.root, self.manifest)
+        self.assertEqual(
+            [(run / "products/Termine.xctestrun").read_bytes() for run in self.runs], before
+        )
+
+    def test_unknown_or_incomplete_invocation_formats_fail_closed(self):
+        for value in [
+            {"__xctestrun_metadata__": {"FormatVersion": 3}, "TestBundlePath": "a"},
+            {"__xctestrun_metadata__": {"FormatVersion": True}, "Tests": {"TestBundlePath": "a"}},
+            {"__xctestrun_metadata__": {"FormatVersion": 1}},
+            {"__xctestrun_metadata__": {"FormatVersion": 1}, "Tests": {}},
+            {"__xctestrun_metadata__": {"FormatVersion": 2}, "TestConfigurations": []},
+            {
+                "__xctestrun_metadata__": {"FormatVersion": 2},
+                "TestConfigurations": [{"TestTargets": [{"TestBundlePath": "a"}, {}]}],
+            },
+        ]:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                objects.test_targets(value)
+
     def test_archive_change_before_apply_rejects_all_replacements(self):
         self.plan()
         before = self.paths[0].stat().st_ino

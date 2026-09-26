@@ -37,6 +37,37 @@ def eligible(name):
     return re.fullmatch(r"\.local/runs/[a-z0-9-]+/" + re.escape(ARCHIVE), name) is not None
 
 
+def test_targets(value):
+    """Read both emitted XCTest layouts; never treat missing targets as evidence."""
+    version = value.get("__xctestrun_metadata__", {}).get("FormatVersion")
+    if type(version) is not int or version not in {1, 2}:
+        raise ValueError("Unsupported XCTest invocation format")
+    if version == 1:
+        targets = [
+            target
+            for name, target in value.items()
+            if not name.startswith("__") and name != "CodeCoverageBuildableInfos"
+        ]
+    else:
+        configurations = value.get("TestConfigurations")
+        if not isinstance(configurations, list) or not configurations:
+            raise ValueError("Missing XCTest configurations")
+        targets = []
+        for configuration in configurations:
+            values = configuration.get("TestTargets") if isinstance(configuration, dict) else None
+            if not isinstance(values, list) or not values:
+                raise ValueError("Missing XCTest targets")
+            targets.extend(values)
+    if not targets or any(
+        not isinstance(target, dict)
+        or not isinstance(target.get("TestBundlePath"), str)
+        or not target["TestBundlePath"]
+        for target in targets
+    ):
+        raise ValueError("Expected actual XCTest bundle invocation paths")
+    return targets
+
+
 def identity(path):
     before = path.lstat()
     if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
@@ -96,14 +127,7 @@ def proof(root, run):
         raise ValueError("Retained archive needs its associated test invocation")
     for path in invocations:
         local_path(root, str(path.relative_to(root)))
-        value = plistlib.loads(path.read_bytes())
-        configurations = value.get("TestConfigurations", [])
-        if value.get("__xctestrun_metadata__", {}).get("FormatVersion") != 2 or not any(
-            target.get("TestBundlePath")
-            for configuration in configurations
-            for target in configuration.get("TestTargets", [])
-        ):
-            raise ValueError("Expected an actual version-two XCTest bundle invocation")
+        test_targets(plistlib.loads(path.read_bytes()))
     result = {}
     # Check the complete retained run, including sources, logs, result bundles,
     # apps, test runners, symbols and failure evidence.
