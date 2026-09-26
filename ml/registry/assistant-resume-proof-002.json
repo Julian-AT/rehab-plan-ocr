@@ -67,5 +67,36 @@
     "Invented development families only; no final holdout.",
     "One unsafe proposed mutation still fails quality gate; no operation executed.",
     "Desktop only; no shipping iOS runtime, physical latency or user qualification."
-  ]
+  ],
+  "sigterm_interruption": {
+    "schema_version": 1,
+    "kind": "sigterm-during-second-epoch",
+    "qualified": false,
+    "source": ".local/runs/assistant-resume-proof-002",
+    "continuous": ".local/runs/assistant-continuous-proof-002",
+    "source_checkpoint_sha256": "eddaf24980e49b9c8256778cbb4622ad9320b5d88e657ba23ab468a2a86e911e",
+    "runner_sha256": "0ed4d0198ecc8f8030a874990cf72b5d3afe111ee2c808f7b2914bff98f87b21",
+    "signal": "SIGTERM",
+    "trigger_step": 16,
+    "status": "interruption-resume-parity-passed",
+    "interrupted": true,
+    "returncode": -15,
+    "parity_sha256": "fb9eebc4b1b9eb554ab39356db0baf37ccd9e6277e8a92bf7fe9e855681d2299",
+    "parity": {
+      "schema_version": 1,
+      "kind": "complete-epoch-resume-parity",
+      "qualified": false,
+      "exact": true,
+      "compared_tensors": 171,
+      "mismatches": [],
+      "validation_equal": true,
+      "random_round_trip": true,
+      "epoch": 2,
+      "steps": 28,
+      "run_identity_sha256": [
+        "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
+        "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25"
+      ]
+    }
+  }
 }

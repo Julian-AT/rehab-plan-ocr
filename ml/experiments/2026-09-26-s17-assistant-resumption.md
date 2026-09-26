@@ -18,8 +18,7 @@ then resumed in a new process. `assistant-continuous-proof-002` ran uninterrupte
 All 171 adapter/optimizer/random tensors, final selection state and complete
 validation outputs match exactly. Restoring the random state also reproduces 32
 random draws. Checkpoint publication ignores incomplete directories; a portable
-regression rejects altered optimizer data. A kill during an epoch is not yet
-covered by this two-process pause experiment.
+regression rejects altered optimizer data. A subsequent real SIGTERM proof is recorded below.
 
 The initial proof run (`001`) exposed MLX 0.32's read-only random-state sentinel.
 It is preserved as failed evidence. Run `002` restores the two-word Threefry key
@@ -48,3 +47,24 @@ German listening, resource/latency and comprehension gates remain open.
 The [artifact card](../registry/assistant-resume-proof-002.json) records hashes,
 denominators, full-answer parity and limits. Private weights and detailed outputs
 remain under `.local/runs/assistant-resume-proof-002`.
+
+## Mid-epoch termination and replay
+
+`make verify-assistant-interruption` copies the first complete checkpoint into a
+new ignored proof run, validates lineage and starts only its own trainer process.
+`assistant-sigterm-proof-001` sends SIGTERM after step 16 (two steps into epoch two).
+The process exits with -15 before publishing epoch two; the first checkpoint retains
+its exact hash. A new process resumes from the complete epoch and replays it.
+All 171 adapter/optimizer/random tensors and validation outputs match the original
+uninterrupted two-epoch run, including the 32-draw random-state round trip.
+The model card records the interruption receipt and complete parity report.
+
+```sh
+make verify-assistant-interruption \
+  SOURCE_RUN=.local/runs/assistant-resume-proof-002 \
+  CONTINUOUS_RUN=.local/runs/assistant-continuous-proof-002 \
+  RUN=.local/runs/assistant-sigterm-proof-001
+```
+
+Choose a new `RUN` directory when repeating the proof. Existing runs/checkpoints
+are never overwritten. This verifies recovery, not model quality or iOS deployment.
