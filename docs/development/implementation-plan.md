@@ -109,6 +109,20 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Reproducible OCR model cards — 2026-09-26
+
+`make register-ocr` creates a new experimental card directly from complete training
+and export evidence. It verifies current lineage and dataset evidence, selected
+checkpoint/baseline hashes, scores recomputed from all validation predictions and
+every sample/width export case. Numeric failures remain visible as failed parity;
+active runs, mixed identities, missing/duplicate cases and changed tolerances fail.
+Compared variants must share their data and validation configuration. Private
+labels and predictions are excluded from the card; runtime locks remain independent.
+
+Four isolated registration regressions and all 206 tool tests pass. Actual new-run
+registration follows completion of the ongoing synthetic training and exports;
+the tooling tests alone do not establish model or app qualification.
+
 ### German host file-ASR evaluation — 2026-09-26
 
 Both de-AT and de-DE configurations now finish the same 100 retained audio files,

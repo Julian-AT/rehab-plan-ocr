@@ -4,6 +4,10 @@ Runtime lockfiles under `runtime/` pin normal application assets. Experimental m
 cards retain training/deployment identities and their original evaluation results.
 They do not change the application's selected model.
 
+`make register-ocr` creates a new OCR card from completed training and full export
+evidence, checking lineage and recomputing crop scores. Passing and failed parity
+are retained separately. See the [registration guide](../training/ocr/README.md#register-retained-results).
+
 `app_evaluations` adds later observations through the native simulator app, with
 the raw private report and its SHA-256. Earlier desktop results remain separate:
 prompt routing, rejection and strict output decoding can change the counts. The

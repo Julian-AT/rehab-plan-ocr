@@ -194,7 +194,7 @@ verify-augmentation:
 	@test -n "$(SOURCE_DATASET)" -a -n "$(RUN)" || { echo 'Set SOURCE_DATASET and a new verification RUN directory'; exit 2; }
 	/usr/bin/env uv run --locked python ml/data/augmentation/verify.py --source "$(SOURCE_DATASET)" --output "$(RUN)" --font "$(FONT)" --limit "$(SYNTHETIC_SOURCES)"
 
-.PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data prepare-ocr-synthetic train-ocr resume-ocr export-ocr
+.PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data prepare-ocr-synthetic train-ocr resume-ocr export-ocr register-ocr
 restore-ocr-assets: restore-ocr-training
 	.local/envs/ocr/bin/python ml/training/ocr/restore.py
 
@@ -221,6 +221,10 @@ resume-ocr:
 export-ocr:
 	@test -n "$(RUN)" || { echo 'Set RUN to a completed training run'; exit 2; }
 	.local/envs/ocr/bin/python ml/training/ocr/export.py --run "$(RUN)"
+
+register-ocr:
+	@test -n "$(RUN)" -a -n "$(MODEL_CARD)" || { echo 'Set RUN and a new ml/registry MODEL_CARD path'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/model_card.py --run "$(RUN)" $(if $(COMPARE_RUN),--run "$(COMPARE_RUN)") --output "$(MODEL_CARD)"
 
 ASSISTANT_PER_FAMILY ?= 16
 ASSISTANT_EPOCHS ?= 20

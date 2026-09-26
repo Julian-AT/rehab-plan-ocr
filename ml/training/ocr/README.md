@@ -142,3 +142,25 @@ export can be retried with `export.py --output NEW_LOCAL_DIRECTORY`.
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.
+
+## Register retained results
+
+After training and export finish, create a new model card from their evidence:
+
+```sh
+make register-ocr RUN=.local/runs/ocr-frozen-fold0 \
+  COMPARE_RUN=.local/runs/ocr-full-fold0 MODEL_CARD=ml/registry/ocr-fold0.json
+```
+
+`COMPARE_RUN` is optional. Compared runs must have the same dataset, seed, width,
+batch and validation policy; adaptation mode and learning rate may differ. The
+command checks current training lineage, labels and pixels, selected checkpoint
+and baseline hashes, predicted-text scores, complete parity case coverage and
+unchanged tolerances. Failed numeric/token parity remains a failed experimental
+variant in the card. Incomplete training or export evidence cannot be registered.
+
+Cards disclose train/validation field and source-group counts, newly incorrect
+critical crops, selection, stop reason, hashes and export results. Private targets,
+predictions and pixels stay in the run directory. Registration creates a new card
+without overwriting an existing one or changing runtime locks. It never grants
+human approval, physical verification or model promotion.

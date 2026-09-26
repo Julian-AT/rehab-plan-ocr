@@ -43,7 +43,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 Rust workspace tests, 202 tool tests and repository lint pass. Relevant headless Swift probes are recorded in the ledger. |
+| Portable/native logic | 178 Rust workspace tests and 206 tool tests pass. Repository lint passed before the later model-card helper; its Python formatting/lint and documentation checks pass. Relevant headless Swift probes are recorded in the ledger. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Run 35295159442 tests `0597aab`; portable and pre-UI Apple stages pass, full UI is running. Run 35297619578 tests the later evaluation/tooling candidate `a303bc2` on a separate branch. No complete candidate pass is claimed yet. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
