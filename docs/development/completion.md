@@ -68,7 +68,7 @@ Protokoll erwähnten 61 GiB waren ein früherer Messstand.
 | Gemeinsamer Werkzeugstand | **verifiziert**: 232 Werkzeugtests, 16 Monitorfälle, aktuelle Verweise/Referenzhashes und Laufzeitinventar. Kein vollständiger App-/UI-/CI-Nachweis. |
 
 Die obigen Ergebnisse schließen A–K nicht pauschal. Insbesondere bleiben die
-vollständig typisierten Plattformgrenzen, Pfadmigration aller Entwicklungsprodukte,
+vollständig typisierten Plattformgrenzen, frischer Offline-Build nach Pfadmigration,
 visuelle und assistive Abnahme, Datenprüfung, Modellverbesserung, Stimmenauswahl,
 gemeinsame Abnahme des eSpeak-freien Releasepfads und Geräte-/Pilotqualifizierung
 offen. Große Änderungen werden erst mit ihren konkreten Build-/Testbelegen als
@@ -92,14 +92,28 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
 - Typisierte native Fehler, echte Timeout-Unterscheidung und binäre Bildübergabe:
   `ef2add8`, `9582a7d`; vollständiger Fehler-Rundweg und acht Bildorientierungen.
 - Headerfallback und Abbruchpunkte: `ba51cb0`; 65 relevante Rusttests und
-  [separater Host-Mikrobenchmark](archive:workspace/.local/runs/parser-header-complexity-20260926-s18-001/evidence.json).
+  separater Host-Mikrobenchmark unter
+  `.local/runs/parser-header-complexity-20260926-s18-001/evidence.json`.
 - Große Schrift und fester Aufnahmevertrag: `557eba0`, `c7da4df`;
   [visuelle Diagnose und unveränderte Referenzen](../product/visual-baseline/capture-contract.md).
 - Releaseabhängigkeiten: `d76f22e`; OCR aktiviert kein Kokoro/eSpeak mehr,
   experimentelle Nachweise bleiben erhalten. Neue [Systemsprachausgabe](system-speech.md)
   und deren Hostprobes: `c746a2d`. Gemeinsame App-/Stimmenabnahme läuft noch.
 - Reproduzierbare Werkzeugauswahl und zentraler Workspace-Vertrag: `ae0cae2`,
-  `e8f7e37`; tatsächlicher Bestandsumzug und frischer Offline-Build folgen getrennt.
+  `e8f7e37`, `bcacee2`; vollständiger hashgeprüfter Bestandsumzug und Wiederanlauf
+  bestanden. Kompatibilitätslinks bleiben privat (`11bbb28`); frischer Offline-Build
+  wird gesondert geprüft.
+- Erfolgreiche Kalenderwirkungen bei Wartungsfehlern und atomare lokale Reparatur:
+  `d91fd22`, `3471c8c`; acht neue Wiederanlauffälle, 13 Terminänderungs- und sieben
+  FFI-Prüfungen sowie echter Swift–Rust-Rundweg bestanden.
+- Begrenzte noch laufende Mitteilungsaufträge: `c077703`; Timeout, Überlast,
+  verspäteter Abschluss und erneute Aufnahme deterministisch geprüft.
+- Assistentenschutz: `130f494`; vier Swiftprobes und zehn Werkzeugtests,
+  [historische Ausgaben durch aktuellen Router](assistant-safety.md). Keine
+  zusätzliche falsche Änderung in diesen Fällen; neue Modellinferenz und der
+  vollständige Gesprächsablauf sind weiterhin getrennt zu prüfen.
+- Release-Symbole: `44502ed`; echte kleine Release-Kompilierung mit Quellzeilen und
+  übereinstimmender Binär-/dSYM-UUID. Das abschließende App-Archiv bleibt separat.
 
 Der zuletzt vorhandene CI-Lauf `35316081873` an `8d81c4c` wurde erneut lesend geprüft:
 beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.

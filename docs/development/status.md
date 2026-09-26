@@ -4,41 +4,57 @@
 
 ## Continuation from 8d81c4c
 
-The [completion ledger](completion.md) now tracks the full remaining user plan.
-This continuation is **not complete product acceptance**. Current slices:
+The [completion ledger](completion.md) tracks the full remaining user plan.
+This continuation is **not complete product acceptance**. Storage is no longer
+blocking work: after the user's cleanup, the reserve check measured 93.12 GiB
+free and passed the additional 8 GiB peak allowance. Subsequent builds and the
+verified workspace migration retained more than 80 GiB free.
 
-- All 668 current files have an explicit consumer/ownership group; a complete
-  content audit remains open. The stale container recipe and duplicate speech
-  availability probe are removed. Vision/rule experiments have executed Make entries.
-- Guarded cleanup removed 4,518 compiler intermediates. Hashes of 116,748 protected
-  files/links agreed before and after; observed volume gain was 129.1 MiB.
-  A second run removed 584 probe cache files while preserving all 116,779 protected
-  entries, including the new model object. Probe module caches now expire with
-  their compiler invocation. The host still has only about 2 GiB free.
-- Five identical baseline GGUF paths retain their bytes in separate APFS clones
-  of one hash-addressed object. Actual clone/write independence and native model
-  reload passed. This step showed **no measured disk-space gain**.
-- Native request completion now has compiler-checked Sendable state. Its race,
-  re-entry and invalid-input probe passes; all AppleServices sources typecheck
-  with Swift 6/complete concurrency for their existing iOS 17 package minimum.
-  The application still targets iOS 26.0.
-- 232 tool tests in 46 suites and 16 CI-monitor tests pass. Runtime inventory and
-  current documentation/reference checks pass. These are local checks, not a
-  full application build, UI acceptance or hosted-CI pass.
-- Heavy supported Make workflows now require 20 GiB reserve plus their expected
-  peak. This host remains below that reserve. Full builds, clean-checkout/offline
-  rebuild and model training/export are blocked on storage; the gates are not bypassed.
+Current verified implementation slices:
 
-See [inventory decisions](inventory.md) and [cleanup evidence](artifact-retention.md).
-Human reference/listening/usability reviews, unseen consented data, CI billing,
-publisher details, physical-device checks and approval of new previews/samples
-remain outstanding. eSpeak removal/system-voice selection and both model
-qualification gates remain open; no device update or public distribution occurred.
+- Repository files have explicit consumer/ownership groups; a complete content
+  audit remains open. Proven obsolete service wrappers and tools are removed,
+  while distinct executable experiments and original visual references remain.
+- Guarded cleanup removed 5,102 compiler/cache intermediates with protected-file
+  hash checks. The measured first volume gain was 129.1 MiB. Hash-addressed GGUF
+  copies preserve independent writes; no disk saving is claimed for APFS clones.
+- Tools, the shared Python environment, Cargo and Xcode products now live under
+  `.local`. A resumable hash/mode/link-checked migration preserved every inventoried
+  entry and compatibility symlinks. The relocated environment passes `make doctor`.
+  A clean-checkout/offline build is being checked separately.
+- Typed native errors distinguish read timeouts from uncertain calendar writes.
+  Binary photo decoding covers all eight orientations and the primary HEIF image.
+  Request completion, stale settings replies, temporary-file erasure and partial
+  intake recovery have focused native regressions.
+- Durable calendar writes and saved preferences remain successful when later
+  maintenance fails. Atomically recorded local bookkeeping is repaired on reopen
+  without repeating calendar effects. Eight new recovery tests and thirteen
+  event-mutation tests pass on the recorded slice.
+- The public build no longer enables or packages the experimental Kokoro/eSpeak
+  path. Installed German system voices now render through the app's shared audio
+  graph. Host rendering, word progress, cancellation and restart pass; human
+  voice selection and physical offline/audio-route qualification remain open.
+- The current interpretation boundary preserves requested dates, time bounds,
+  intent and event references. Replaying the existing 40 historical outputs gives
+  zero unsafe proposals (trained: 33 exact; untuned/rules: 24 exact). This is neither
+  fresh inference nor complete conversation acceptance; the cases form one
+  connected development group. See [assistant safety](assistant-safety.md).
 
-All four milestones in the [implementation ledger](implementation-plan.md) remain
-open. Completed implementation and experimental artifacts are recorded separately
-from human, physical-device and release acceptance. Important verified slices are
-committed individually. No physical device was updated during this work.
+The complete local baseline at `9b5eef3` passed 178 Rust tests, 232 tool tests,
+native probes and bindings. Later slices have their own evidence; these counts
+are not a final combined-candidate pass. The first updated simulator app compiled
+and linked, but its enclosing Make invocation failed after a concurrent script
+edit. A stable complete build, UI/visual checks and package verification must pass
+on the combined candidate.
+
+See [inventory decisions](inventory.md), [cleanup evidence](artifact-retention.md),
+[workspace/build evidence](build-reproducibility.md) and
+[native boundaries](typed-boundaries.md). All four milestones in the
+[implementation ledger](implementation-plan.md) remain open. Human reference,
+listening and usability reviews, unseen consented data, CI billing, publisher
+information, physical-device tests and explicit approval of current previews and
+samples remain outstanding. No physical device was updated or public version
+released.
 
 ## Application and data
 
@@ -79,7 +95,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The current local tool suite passes 232 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
-| Current CI prerequisite | Run 35306312405 at `404f68e` is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. Exact annotations are retained; the user was asked to check account billing. No retry, payment or limit change was made. |
+| Current CI prerequisite | The latest inspected run 35316081873 at `8d81c4c` is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. Exact annotations are retained; the user was asked to check account billing. No retry, payment or limit change was made. |
 | Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
 | Local audio/UI | Local CoreAudio aborts also occur in an independent minimal app. CI run 35295159442 instead shows actual playback while retained accessibility values are stale. Current-query/scroll corrections compile and await hosted behavioral verification. The corrected public-plan share test passes locally. Complete audio acceptance remains open. |
@@ -158,7 +174,7 @@ natural endpoints and the complete iPhone route remain required.
 - Older iOS/non-Apple-Intelligence hardware and eligible Apple hardware; denied or
   revoked permissions, airplane mode, Bluetooth, backgrounding and long sessions.
 - Human voice/comprehension and patient usability studies; a justified provider/voice choice.
-- Publisher/contact details, eSpeak-NG/public-distribution and branding-rights decisions,
+- Publisher/contact details, final public-package rights and branding-rights checks,
   complete privacy/support materials, internal acceptance and a small TestFlight pilot.
 - Explicit current preview/listening approval, then a fresh complete backup,
   in-place installation and persistent-data comparison. Historical approvals cover
