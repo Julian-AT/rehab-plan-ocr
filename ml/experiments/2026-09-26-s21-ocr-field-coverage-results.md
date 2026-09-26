@@ -61,5 +61,7 @@ hashes were unchanged before and after execution.
 Evidence: `.local/runs/ocr-conv3-tile16-20260926-s21-001/report.json`, protocol SHA256
 `3a38a125498895855f5b688ddb5dd5c8143525beeaafa93e951fe6ee88d97823`.
 This is one isolated operation with fixed tile size 16. It does not repair or
-qualify either complete export. A separately frozen complete-graph comparison,
-all prior controls and the full corpus are required before any deployment change.
+qualify either complete export. The subsequent [cumulative complete-graph comparison](2026-09-26-s21-ocr-cumulative-export-results.md)
+also fails its numerical gate. It preserves exact tokens but introduces regressions
+against earlier successful cells. No full-corpus promotion follows. The same
+report records a separate, still unmeasured preprocessing concern for long notes.
