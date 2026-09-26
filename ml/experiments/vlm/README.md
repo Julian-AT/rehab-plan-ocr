@@ -58,9 +58,12 @@ long phases. Build and conversion receipts record that choice. The VLM product
 lock uses the same phase deadline. Reader and individual CLI smoke limits remain
 60 and 10 seconds respectively.
 
-Tools run in isolated process groups. A timeout or interruption terminates the
-group, allows up to ten seconds for nested wrappers to clean their own children,
-then kills remaining members and reaps the direct child. Build/conversion logs
+Each outer tool phase owns an isolated process group. Nested VLM wrappers and
+their children remain in that group; a nested timeout cancels the containing
+phase. A timeout or interruption terminates the group, allows up to ten seconds
+for cleanup, then kills remaining members and reaps the direct child. The final
+group kill covers descendants even if nested cleanup deadlines overlap.
+Unrelated groups are never enumerated or signalled. Build/conversion logs
 and failed receipts remain; old products and compatibility manifests are never
 replaced by failed work. Download partials and interrupted restore staging remain
 available for inspection, without becoming successful provenance receipts.

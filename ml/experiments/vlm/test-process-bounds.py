@@ -87,9 +87,64 @@ class ProcessBounds(unittest.TestCase):
                 wrapper.kill()
             wrapper.communicate(timeout=5)
 
-    def test_outer_deadline_allows_nested_wrapper_to_clean_separate_child_group(self):
+    def test_outer_deadline_cleans_nested_wrapper_and_child(self):
         with self.assertRaises(subprocess.TimeoutExpired):
             vlm_process.run(self.wrapper(), timeout=1, capture_output=True)
+        self.assert_tree_stopped()
+
+    def test_equal_nested_cleanup_budgets_cannot_orphan_term_ignoring_leaf(self):
+        leaf = (
+            "import os,json,signal,time; from pathlib import Path; "
+            "signal.signal(signal.SIGTERM,signal.SIG_IGN); "
+            f"Path({str(self.pids)!r}).write_text(json.dumps([os.getppid(),os.getpid()])); "
+            "time.sleep(60)"
+        )
+        wrapper = (
+            "import sys,time; "
+            f"sys.path.insert(0,{str(Path(__file__).parent)!r}); "
+            "import vlm_process; vlm_process.CLEANUP_SECONDS=0.15; "
+            # A small scheduling delay makes the parent's equal-budget race deterministic.
+            "original=vlm_process.stop_group; "
+            "vlm_process.stop_group=lambda *a,**k:(time.sleep(0.03),original(*a,**k))[-1]; "
+            f"vlm_process.run([sys.executable,'-c',{leaf!r}],timeout=60)"
+        )
+        foreign = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True
+        )
+        try:
+            with (
+                patch.object(vlm_process, "CLEANUP_SECONDS", 0.15),
+                self.assertRaises(subprocess.TimeoutExpired),
+            ):
+                vlm_process.run([sys.executable, "-c", wrapper], timeout=0.5, capture_output=True)
+            self.assertIsNone(foreign.poll(), "an unrelated process group must remain untouched")
+            self.assert_tree_stopped()
+        finally:
+            foreign.kill()
+            foreign.wait(timeout=2)
+
+    def test_inner_deadline_reaches_group_owner_through_an_ordinary_parent(self):
+        leaf = (
+            "import os,json,signal,time; from pathlib import Path; "
+            "signal.signal(signal.SIGTERM,signal.SIG_IGN); "
+            f"Path({str(self.pids)!r}).write_text(json.dumps([os.getppid(),os.getpid()])); "
+            "time.sleep(60)"
+        )
+        nested = (
+            "import sys; "
+            f"sys.path.insert(0,{str(Path(__file__).parent)!r}); "
+            "import vlm_process; vlm_process.CLEANUP_SECONDS=0.15; "
+            f"vlm_process.run([sys.executable,'-c',{leaf!r}],timeout=0.3,env={{}})"
+        )
+        ordinary = (
+            f"import subprocess,sys; subprocess.run([sys.executable,'-c',{nested!r}],check=True)"
+        )
+        started = time.monotonic()
+        with self.assertRaises(subprocess.CalledProcessError):
+            vlm_process.run(
+                [sys.executable, "-c", ordinary], timeout=5, capture_output=True, check=True
+            )
+        self.assertLess(time.monotonic() - started, 3)
         self.assert_tree_stopped()
 
     def test_invalid_deadlines_fail_before_process_creation(self):
