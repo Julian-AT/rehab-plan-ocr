@@ -98,20 +98,19 @@ struct RecognitionTraceView: View {
         self.photo = nil
       }
       do {
-        guard let bytes = try await photo.loadTransferable(type: Data.self), !bytes.isEmpty,
-          bytes.count <= 40 * 1024 * 1024
+        guard let transferred = try await photo.loadTransferable(type: StagedPhoto.self)
         else { throw AppError.Validation(message: "Bitte ein Bild bis 40 MB auswählen.") }
+        var adopted = false
+        defer {
+          if !adopted { try? FileManager.default.removeItem(at: transferred.url) }
+        }
         try Task.checkCancellation()
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-          .appendingPathExtension(
-            photo.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg")
-        try bytes.write(
-          to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         inputError = nil
-        model.start(url, timezone: timezone)
-        // The model owns its own copy before ingestion; keep this selection
-        // until that copy is made, then dispose it with the view's task.
-        stagedPhoto = url
+        model.start(transferred.url, timezone: timezone)
+        // The file representation checks size before copying. Keep its bounded
+        // copy until the model finishes or the view closes; never load full Data here.
+        stagedPhoto = transferred.url
+        adopted = true
       } catch is CancellationError {
       } catch { inputError = userMessage(error) }
     }
@@ -146,6 +145,7 @@ private struct RecognitionTraceStepView: View {
   let page: URL?
   let core: NativeApplication
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var image: UIImage?
   @State private var imageError: String?
   @State private var selectedID: String?
@@ -278,7 +278,9 @@ private struct RecognitionTraceStepView: View {
         }
       }
       .onChange(of: selectedID) {
-        withAnimation { scroll.scrollTo("trace-image-section", anchor: .top) }
+        withAnimation(reduceMotion ? nil : .default) {
+          scroll.scrollTo("trace-image-section", anchor: .top)
+        }
       }
     }
     .pageTitle(step.title)

@@ -327,6 +327,7 @@ def tests(portable):
             "service-request",
             "diagnostics",
             "intake-erasure",
+            "intake-size",
             "native-bindings",
         ]:
             run("sh", f"tooling/checks/test-{probe}.sh")
