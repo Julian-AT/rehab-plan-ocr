@@ -41,3 +41,26 @@ Preparation performs no inference. Execution requires twenty GiB reserve plus tw
 GiB temporary capacity and a separate serial model window after simulator work.
 Originals and historical reports remain hash-checked. Complete controls, isolated
 graphs, inputs, parameters and outputs are retained; copied full graphs are removed.
+
+## Actual result
+
+Tool/protocol commit before inference: `bea6558`. Run
+`.local/runs/ocr-batchnorm-replay-20260926-s19-001` completes with all controls exact:
+both full outputs are unchanged by instrumentation, both retained BatchNorm tensors
+reproduce, preceding inputs and all four parameter vectors are identical, and
+both isolated native operations reproduce their corresponding saved output.
+
+The ONNX-source expression reproduces the ONNX native result bit-for-bit. The
+Paddle-source grouping alone does **not** reproduce Paddle: maximum difference
+remains 0.00000095367431640625. Its change relative to native ONNX is only
+0.0000000298023223876953125. All 184,320 intermediate values remain within the
+unchanged tolerance, but the existing full-model failure is unresolved. This
+rules out regrouping alone as a demonstrated correction; compiler fusion and
+primitive coefficient arithmetic remain untested explanations. No correction,
+full-corpus run or model promotion was produced. Original sources remain unchanged.
+
+Protocol SHA-256:
+`ef1e62256017bf4f098aaac13261c91c46452da629e10f41b57a9de6c5046919`.
+
+Report SHA-256:
+`d653d35a8e439e907bf0b22754ee5190a90c30ec197c89f20577a7cc2a8bec9f`.
