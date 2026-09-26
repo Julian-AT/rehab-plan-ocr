@@ -1,0 +1,127 @@
+[
+  {
+    "text": "Am",
+    "start": 0.575,
+    "end": 0.675
+  },
+  {
+    "text": "vierzehnten",
+    "start": 0.725,
+    "end": 1.35
+  },
+  {
+    "text": "September",
+    "start": 1.4,
+    "end": 2.025
+  },
+  {
+    "text": "zweitausendsechsundzwanzig",
+    "start": 2.075,
+    "end": 3.975
+  },
+  {
+    "text": "um",
+    "start": 4.025,
+    "end": 4.125
+  },
+  {
+    "text": "neun",
+    "start": 4.175,
+    "end": 4.45
+  },
+  {
+    "text": "Uhr",
+    "start": 4.5,
+    "end": 4.65
+  },
+  {
+    "text": "fünfzehn",
+    "start": 4.725,
+    "end": 5.275
+  },
+  {
+    "text": "beginnt",
+    "start": 5.325,
+    "end": 5.7
+  },
+  {
+    "text": "die",
+    "start": 5.725,
+    "end": 5.8
+  },
+  {
+    "text": "Physiotherapie",
+    "start": 5.85,
+    "end": 6.8
+  },
+  {
+    "text": "in",
+    "start": 6.85,
+    "end": 6.975
+  },
+  {
+    "text": "Laßnitzhöhe,",
+    "start": 7.025,
+    "end": 8.1
+  },
+  {
+    "text": "in",
+    "start": 8.15,
+    "end": 8.225
+  },
+  {
+    "text": "Raum",
+    "start": 8.275,
+    "end": 8.65
+  },
+  {
+    "text": "zwei",
+    "start": 8.7,
+    "end": 9.125
+  },
+  {
+    "text": "Punkt",
+    "start": 9.2,
+    "end": 9.525
+  },
+  {
+    "text": "vierzehn.",
+    "start": 9.575,
+    "end": 10.7
+  },
+  {
+    "text": "Der",
+    "start": 10.75,
+    "end": 10.825
+  },
+  {
+    "text": "Termin",
+    "start": 10.875,
+    "end": 11.3
+  },
+  {
+    "text": "endet",
+    "start": 11.375,
+    "end": 11.725
+  },
+  {
+    "text": "um",
+    "start": 11.775,
+    "end": 11.875
+  },
+  {
+    "text": "neun",
+    "start": 11.925,
+    "end": 12.2
+  },
+  {
+    "text": "Uhr",
+    "start": 12.25,
+    "end": 12.4
+  },
+  {
+    "text": "fünfundvierzig.",
+    "start": 12.475,
+    "end": 13.575
+  }
+]

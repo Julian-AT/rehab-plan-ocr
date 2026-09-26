@@ -1,0 +1,17 @@
+{
+  "channels": [
+    1,
+    2
+  ],
+  "format_change_detected": true,
+  "meter_independent_of_vad": true,
+  "real_microphone": false,
+  "sample_rates": [
+    16000,
+    44100,
+    48000
+  ],
+  "synthetic_pcm": true,
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

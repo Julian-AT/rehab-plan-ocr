@@ -58,5 +58,6 @@ ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
-Die [laufende Qualitätsüberarbeitung](docs/quality-overhaul.md) nennt Prüfergebnisse und offene
-Abnahmegrenzen. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.
+Die [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) beschreibt den aktuellen Stand
+mit [neuer Simulatorvorschau und Victoria-Hörproben](docs/preview/2026-09-26-s13-fluid/README.md).
+Die [vorherige Qualitätsüberarbeitung](docs/quality-overhaul.md) bleibt als Prüfverlauf erhalten. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.

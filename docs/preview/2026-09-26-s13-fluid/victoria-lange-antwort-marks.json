@@ -1,0 +1,327 @@
+[
+  {
+    "text": "Heute",
+    "start": 0.55,
+    "end": 0.9
+  },
+  {
+    "text": "stehen",
+    "start": 0.975,
+    "end": 1.3
+  },
+  {
+    "text": "mehrere",
+    "start": 1.35,
+    "end": 1.7
+  },
+  {
+    "text": "Termine",
+    "start": 1.75,
+    "end": 2.225
+  },
+  {
+    "text": "an.",
+    "start": 2.275,
+    "end": 2.9
+  },
+  {
+    "text": "Um",
+    "start": 2.95,
+    "end": 3.075
+  },
+  {
+    "text": "acht",
+    "start": 3.125,
+    "end": 3.375
+  },
+  {
+    "text": "Uhr",
+    "start": 3.4,
+    "end": 3.5
+  },
+  {
+    "text": "dreißig",
+    "start": 3.55,
+    "end": 4.05
+  },
+  {
+    "text": "beginnt",
+    "start": 4.1,
+    "end": 4.45
+  },
+  {
+    "text": "die",
+    "start": 4.475,
+    "end": 4.55
+  },
+  {
+    "text": "Physiotherapie",
+    "start": 4.6,
+    "end": 5.425
+  },
+  {
+    "text": "im",
+    "start": 5.475,
+    "end": 5.575
+  },
+  {
+    "text": "Raum",
+    "start": 5.625,
+    "end": 5.975
+  },
+  {
+    "text": "zwei",
+    "start": 6.025,
+    "end": 6.475
+  },
+  {
+    "text": "Punkt",
+    "start": 6.55,
+    "end": 6.875
+  },
+  {
+    "text": "vierzehn",
+    "start": 6.925,
+    "end": 7.425
+  },
+  {
+    "text": "in",
+    "start": 7.45,
+    "end": 7.55
+  },
+  {
+    "text": "Laßnitzhöhe.",
+    "start": 7.6,
+    "end": 8.85
+  },
+  {
+    "text": "Sie",
+    "start": 8.9,
+    "end": 9.0
+  },
+  {
+    "text": "dauert",
+    "start": 9.05,
+    "end": 9.4
+  },
+  {
+    "text": "dreißig",
+    "start": 9.45,
+    "end": 9.925
+  },
+  {
+    "text": "Minuten",
+    "start": 9.975,
+    "end": 10.4
+  },
+  {
+    "text": "Um",
+    "start": 10.45,
+    "end": 10.6
+  },
+  {
+    "text": "zehn",
+    "start": 10.65,
+    "end": 10.95
+  },
+  {
+    "text": "Uhr",
+    "start": 11.0,
+    "end": 11.125
+  },
+  {
+    "text": "fünfzehn",
+    "start": 11.2,
+    "end": 11.75
+  },
+  {
+    "text": "folgt",
+    "start": 11.825,
+    "end": 12.125
+  },
+  {
+    "text": "Ergotherapie",
+    "start": 12.15,
+    "end": 12.9
+  },
+  {
+    "text": "in",
+    "start": 12.95,
+    "end": 13.075
+  },
+  {
+    "text": "Raum",
+    "start": 13.125,
+    "end": 13.45
+  },
+  {
+    "text": "einhundertfünf.",
+    "start": 13.525,
+    "end": 14.8
+  },
+  {
+    "text": "Dieser",
+    "start": 14.85,
+    "end": 15.1
+  },
+  {
+    "text": "Termin",
+    "start": 15.15,
+    "end": 15.575
+  },
+  {
+    "text": "endet",
+    "start": 15.65,
+    "end": 15.95
+  },
+  {
+    "text": "um",
+    "start": 15.975,
+    "end": 16.1
+  },
+  {
+    "text": "elf",
+    "start": 16.15,
+    "end": 16.45
+  },
+  {
+    "text": "Uhr.",
+    "start": 16.5,
+    "end": 17.125
+  },
+  {
+    "text": "Am",
+    "start": 17.175,
+    "end": 17.325
+  },
+  {
+    "text": "Nachmittag,",
+    "start": 17.375,
+    "end": 18.05
+  },
+  {
+    "text": "um",
+    "start": 18.075,
+    "end": 18.15
+  },
+  {
+    "text": "dreizehn",
+    "start": 18.2,
+    "end": 18.75
+  },
+  {
+    "text": "Uhr",
+    "start": 18.8,
+    "end": 18.975
+  },
+  {
+    "text": "fünf,",
+    "start": 19.05,
+    "end": 19.5
+  },
+  {
+    "text": "beginnt",
+    "start": 19.55,
+    "end": 19.9
+  },
+  {
+    "text": "die",
+    "start": 19.925,
+    "end": 20.0
+  },
+  {
+    "text": "Rückengymnastik",
+    "start": 20.025,
+    "end": 20.875
+  },
+  {
+    "text": "im",
+    "start": 20.9,
+    "end": 21.025
+  },
+  {
+    "text": "Turnsaal.",
+    "start": 21.1,
+    "end": 22.05
+  },
+  {
+    "text": "Bitte",
+    "start": 22.1,
+    "end": 22.275
+  },
+  {
+    "text": "die",
+    "start": 22.3,
+    "end": 22.375
+  },
+  {
+    "text": "Angaben",
+    "start": 22.45,
+    "end": 22.975
+  },
+  {
+    "text": "auf",
+    "start": 23.025,
+    "end": 23.225
+  },
+  {
+    "text": "dem",
+    "start": 23.875,
+    "end": 24.0
+  },
+  {
+    "text": "Bildschirm",
+    "start": 24.05,
+    "end": 24.525
+  },
+  {
+    "text": "prüfen.",
+    "start": 24.6,
+    "end": 25.575
+  },
+  {
+    "text": "Kalenderänderungen",
+    "start": 25.625,
+    "end": 26.775
+  },
+  {
+    "text": "werden",
+    "start": 26.825,
+    "end": 27.05
+  },
+  {
+    "text": "erst",
+    "start": 27.1,
+    "end": 27.425
+  },
+  {
+    "text": "nach",
+    "start": 27.475,
+    "end": 27.775
+  },
+  {
+    "text": "Bestätigung",
+    "start": 27.825,
+    "end": 28.575
+  },
+  {
+    "text": "auf",
+    "start": 28.625,
+    "end": 28.775
+  },
+  {
+    "text": "dem",
+    "start": 28.8,
+    "end": 28.925
+  },
+  {
+    "text": "Bildschirm",
+    "start": 28.975,
+    "end": 29.425
+  },
+  {
+    "text": "gespeichert.",
+    "start": 29.475,
+    "end": 30.325
+  }
+]

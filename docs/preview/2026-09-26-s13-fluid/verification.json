@@ -1,0 +1,378 @@
+{
+  "version": "0.3.0",
+  "build": "2026092614",
+  "date": "2026-09-26",
+  "source_commit": "606565f96dcc0df5ef2d32cd0bf96eab2a222fb8",
+  "environment": "iPhone 17 simulator, iOS 26.4 (23E244), Xcode 26.4 (17E192)",
+  "latest_ui_cases_passed": 46,
+  "latest_ui_outcomes": {
+    "TermineUITests.AgendaPreviewTests/testActivityCalendarStatusAndReminderFeedback": {
+      "result": "passed",
+      "seconds": 24.075,
+      "run": "before-isolation"
+    },
+    "TermineUITests.AgendaPreviewTests/testAxisLockFixedTimeColumnAndAnchorAcrossEmptyDay": {
+      "result": "passed",
+      "seconds": 20.839,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testCalendarDensityAndListPersistAfterRestart": {
+      "result": "passed",
+      "seconds": 30.491,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testConversationWithoutAssetSetup": {
+      "result": "passed",
+      "seconds": 32.563,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testEmptyAndNoSelectionAreDistinct": {
+      "result": "passed",
+      "seconds": 16.256,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testFinishedDayAndAutomaticCompletion": {
+      "result": "passed",
+      "seconds": 31.38,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testLargestTypeUsesDayListAndNativeSettings": {
+      "result": "passed",
+      "seconds": 16.827,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testMoreNavigationImmediateSettingsAndRestart": {
+      "result": "passed",
+      "seconds": 45.705,
+      "run": "before-isolation"
+    },
+    "TermineUITests.AgendaPreviewTests/testOverlapsAllDayAndDarkAppearance": {
+      "result": "passed",
+      "seconds": 24.399,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt": {
+      "result": "passed",
+      "seconds": 38.761,
+      "run": "isolated"
+    },
+    "TermineUITests.AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable": {
+      "result": "passed",
+      "seconds": 12.705,
+      "run": "reduced-motion"
+    },
+    "TermineUITests.AgendaPreviewTests/testReminderIsConfirmedPendingBySystem": {
+      "result": "passed",
+      "seconds": 22.113,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testSettingsFailureShowsSavedValueAndRetry": {
+      "result": "passed",
+      "seconds": 19.015,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testShortEventsHaveSeparateHitAreas": {
+      "result": "passed",
+      "seconds": 16.76,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testSwipingAndCompleteAppointmentLabels": {
+      "result": "passed",
+      "seconds": 24.043,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testVoiceCreationRequiresExplicitConfirmation": {
+      "result": "passed",
+      "seconds": 41.748,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testVoiceIdleDetailsCancelAndUnavailableRecognition": {
+      "result": "passed",
+      "seconds": 20.704,
+      "run": "full"
+    },
+    "TermineUITests.AgendaPreviewTests/testWeekNavigationAndTimeline": {
+      "result": "passed",
+      "seconds": 22.459,
+      "run": "full"
+    },
+    "TermineUITests.ContinuousCalendarTests/testColoursDarkAndLegend": {
+      "result": "passed",
+      "seconds": 15.652,
+      "run": "isolated"
+    },
+    "TermineUITests.ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag": {
+      "result": "passed",
+      "seconds": 26.307,
+      "run": "full"
+    },
+    "TermineUITests.ContinuousCalendarTests/testTimedRealPlaybackAndCancel": {
+      "result": "passed",
+      "seconds": 33.658,
+      "run": "full"
+    },
+    "TermineUITests.ContinuousCalendarTests/testTypedCalendarToolsKeepChangesAsDrafts": {
+      "result": "passed",
+      "seconds": 7.767,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testColorsHelpAndPersistence": {
+      "result": "passed",
+      "seconds": 30.265,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testContextHelpWithLargestType": {
+      "result": "passed",
+      "seconds": 17.815,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testDenseShortEventsKeepMinimumTargets": {
+      "result": "passed",
+      "seconds": 10.0,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testDestinationDoneSavesAndShowsPermissionStatus": {
+      "result": "passed",
+      "seconds": 28.826,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testSyntheticAudioFormatsMeterAndFailure": {
+      "result": "passed",
+      "seconds": 7.725,
+      "run": "isolated"
+    },
+    "TermineUITests.FluidCalendarTests/testTranscriptComposerKeepsFailedInputAndResumeVisible": {
+      "result": "passed",
+      "seconds": 21.741,
+      "run": "reduced-motion"
+    },
+    "TermineUITests.FluidCalendarTests/testUniformHoursAndNoResetAfterRefreshOrEmptyPage": {
+      "result": "passed",
+      "seconds": 32.583,
+      "run": "isolated"
+    },
+    "TermineUITests.NativeFlowTests/testCalendarAndVoiceSettingsAreVisible": {
+      "result": "passed",
+      "seconds": 12.397,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testCaptureMenuPresentsAllSources": {
+      "result": "passed",
+      "seconds": 29.01,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testFailedCaptureRetry": {
+      "result": "passed",
+      "seconds": 13.812,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testNativeTabsArchiveSettingsAndColdLaunch": {
+      "result": "passed",
+      "seconds": 26.893,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testNeuralPlaybackStopAndRepeat": {
+      "result": "passed",
+      "seconds": 18.892,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testOneActionSaveAndUndo": {
+      "result": "passed",
+      "seconds": 40.476,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testPartialSaveAndMultiPageSummary": {
+      "result": "passed",
+      "seconds": 20.202,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testRecognitionKeepsOtherTabsAvailable": {
+      "result": "passed",
+      "seconds": 23.604,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testRetainedEditorAndOriginal": {
+      "result": "passed",
+      "seconds": 30.85,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testSystemControlsAndMoreAppearance": {
+      "result": "passed",
+      "seconds": 10.637,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testTextSizeAndDarkAppearance": {
+      "result": "passed",
+      "seconds": 24.109,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testUpcomingDaysExpandAndPastIsSeparate": {
+      "result": "passed",
+      "seconds": 21.043,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testVoiceCreationPreviewIsRevokedOnBackground": {
+      "result": "passed",
+      "seconds": 22.358,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testVoiceTabIsExplicitAndCancelEndsConversation": {
+      "result": "passed",
+      "seconds": 11.432,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testZPhotoPickerImportsARealImage": {
+      "result": "passed",
+      "seconds": 15.958,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testZZFilePickerImportsAPublicPlan": {
+      "result": "passed",
+      "seconds": 21.314,
+      "run": "full"
+    },
+    "TermineUITests.NativeFlowTests/testZZZShareExtensionAcceptsPublicPlan": {
+      "result": "passed",
+      "seconds": 34.05,
+      "run": "full"
+    }
+  },
+  "runs": [
+    {
+      "run": "full",
+      "passedTests": 41,
+      "failedTests": 3,
+      "skippedTests": 1,
+      "totalTestCount": 45,
+      "result": "Failed"
+    },
+    {
+      "run": "before-isolation",
+      "passedTests": 9,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "totalTestCount": 11,
+      "result": "Failed"
+    },
+    {
+      "run": "isolated",
+      "passedTests": 10,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "totalTestCount": 10,
+      "result": "Passed"
+    },
+    {
+      "run": "reduced-motion",
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "totalTestCount": 2,
+      "result": "Passed"
+    }
+  ],
+  "resolved_test_setup_issues": [
+    "A navigation test tapped a destination row covered by the floating tab bar; it now scrolls the complete row into view.",
+    "The tool probe expected a presentation prefix in a raw therapist field; it now checks the raw name and omission of missing fields.",
+    "A retest was interrupted by insufficient host disk space. Generated build recordings were removed after retaining result summaries.",
+    "Mutating import tests intentionally retained owned synthetic appointments. Calendar-only tests were rerun with a fresh synthetic application store; the prior synthetic state was preserved. Tool queries also use an isolated future date."
+  ],
+  "quality": {
+    "rust_tests_passed": 138,
+    "python_tests": "passed via scripts/quality.py test",
+    "swift_probes": "agenda projection including uniform spacing/dense targets/DST, 56 agenda policy cases, endpoints 1.0/2.2 seconds, protected facts and abbreviations, color contrast and persistence, voice rules, ordered settings, diagnostics, erasure and native bindings passed",
+    "native_eventkit": {
+      "passed": 11,
+      "skipped": 1,
+      "failed": 0,
+      "skip_reason": "Device file-protection attributes cannot be tested in the simulator."
+    },
+    "lint": "Rust fmt/clippy, Ruff, shfmt and ShellCheck passed; final Swift strict formatting lint passed.",
+    "simulator_build": "passed",
+    "unsigned_ios_release_build": "passed",
+    "speech_engine": "Six real Victoria WAV syntheses, word-mark bounds, legacy voice mapping and inference cancellation passed."
+  },
+  "audio_samples": [
+    {
+      "file": "victoria-fruehstueck.wav",
+      "source_text": "Frühstück I, um 07:00 Uhr im Speisesaal. Frühstück II, um 07:30 Uhr. Danach Behandlung XII, bei Dr. Muster in Raum 2.14.",
+      "speed": 0.95,
+      "duration_seconds": 10.95,
+      "word_marks": 24
+    },
+    {
+      "file": "victoria-kalender.wav",
+      "source_text": "Am 26.09.2026 um 09:15 Uhr beginnt die Physiotherapie in Laßnitzhöhe, in Raum 2.14. Der Termin endet um 09:45 Uhr.",
+      "speed": 0.95,
+      "duration_seconds": 13.625,
+      "word_marks": 25
+    },
+    {
+      "file": "victoria-langsam.wav",
+      "source_text": "Am Dienstag, 26. September 2026, beginnt um 13:05 Uhr die Ergotherapie. Treffpunkt ist Raum 105. Danach geht es um 14:00 Uhr zur Rückengymnastik in den Turnsaal.",
+      "speed": 0.75,
+      "duration_seconds": 19.5,
+      "word_marks": 27
+    },
+    {
+      "file": "victoria-lange-antwort.wav",
+      "source_text": "Heute stehen mehrere Termine an. Um 08:30 Uhr beginnt die Physiotherapie im Raum 2.14 in Laßnitzhöhe. Sie dauert 30 Min. Um 10:15 Uhr folgt Ergotherapie in Raum 105. Dieser Termin endet um 11:00 Uhr. Am Nachmittag, um 13:05 Uhr, beginnt die Rückengymnastik im Turnsaal. Bitte die Angaben auf dem Bildschirm prüfen. Kalenderänderungen werden erst nach Bestätigung auf dem Bildschirm gespeichert.",
+      "speed": 1.0,
+      "duration_seconds": 30.375,
+      "word_marks": 65
+    },
+    {
+      "file": "victoria-raumnummern.wav",
+      "source_text": "Um 9 Uhr 15 beginnt die Physiotherapie bei Dr. Muster in Raum 105. Danach Frühstück II in Raum 2.04. Zimmer 007. Laßnitzhöhe.",
+      "speed": 0.95,
+      "duration_seconds": 13.025,
+      "word_marks": 25
+    },
+    {
+      "file": "victoria-ohne-zusatzangaben.wav",
+      "source_text": "Am 26. September 2026 beginnt um 09:15 Uhr die Ergotherapie. Der Termin endet um 09:45 Uhr.",
+      "speed": 0.95,
+      "duration_seconds": 10.025,
+      "word_marks": 18
+    }
+  ],
+  "audio_pipeline": {
+    "channels": [
+      1,
+      2
+    ],
+    "format_change_detected": true,
+    "meter_independent_of_vad": true,
+    "real_microphone": false,
+    "sample_rates": [
+      16000,
+      44100,
+      48000
+    ],
+    "synthetic_pcm": true
+  },
+  "real_playback_meter": {
+    "peak_level": 0.6096088927380997,
+    "playing_frames": 127,
+    "spoken_text": "",
+    "visible_words": 0
+  },
+  "physical_device_updated": false,
+  "preview_approval": "pending",
+  "human_listening_acceptance": "pending",
+  "unverified_on_physical_iphone": [
+    "Microphone transcription over several conversational rounds, thinking pauses, short replies and background noise.",
+    "Echo cancellation and barge-in with actual audio routes and interruptions.",
+    "Meter response <=150 ms and playback stop <=250 ms after confirmed barge-in.",
+    "Prepared simple calendar replies: first audible output median <=3 s and p95 <=5 s after speech ends; cold starts separately.",
+    "VoiceOver behavior and iOS file-protection attributes."
+  ],
+  "media_sources": "media-sources.json",
+  "artifact_hashes": "sha256.json",
+  "media_validation": {
+    "mp4_complete_decode": "Five videos decoded fully with ffmpeg -xerror; no errors.",
+    "reduced_motion_video": "The final reduced-motion run produced an unreadable Xcode video; the valid isolated-run conversation video is used. Final reduced-motion and conversation screenshots come from the reduced-motion run."
+  },
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}
