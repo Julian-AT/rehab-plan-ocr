@@ -3,9 +3,11 @@
 import argparse
 import hashlib
 import json
+import os
 import platform
 import shutil
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -16,7 +18,12 @@ BUNDLE = "at.rehakalender.tests.audioengine"
 
 def command(*args, timeout=120, stdout=subprocess.PIPE):
     return subprocess.run(
-        args, check=True, text=True, stdout=stdout, stderr=subprocess.STDOUT, timeout=timeout
+        args,
+        check=True,
+        text=True,
+        stdout=stdout,
+        stderr=subprocess.PIPE if stdout == subprocess.PIPE else subprocess.STDOUT,
+        timeout=timeout,
     )
 
 
@@ -36,6 +43,13 @@ def verify(output, simulator=None, attempts=3):
         raise ValueError("Use a new run directory under .local/runs")
     if not 1 <= attempts <= 10:
         raise ValueError("Use between one and ten attempts")
+    profile = os.environ.get("REHA_SIMULATOR_PROFILE", "local")
+    runtime = command(
+        sys.executable,
+        str(ROOT / "tooling/checks/native-simulator.py"),
+        "--profile",
+        profile,
+    ).stdout.strip()
     devices = json.loads(command("xcrun", "simctl", "list", "devices", "--json").stdout)
     all_devices = [d for group in devices["devices"].values() for d in group]
     if any(d["state"] == "Booted" and d["udid"] != simulator for d in all_devices):
@@ -43,10 +57,12 @@ def verify(output, simulator=None, attempts=3):
     if simulator and not any(
         d["udid"] == simulator
         and d["state"] == "Booted"
+        and d.get("isAvailable")
+        and d.get("deviceTypeIdentifier") == "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
         and d["name"].startswith(("Termine-Native-Test-", "Reha-Audio-Test-"))
-        for d in all_devices
+        for d in devices["devices"].get(runtime, [])
     ):
-        raise ValueError("Only a booted disposable test simulator can be reused")
+        raise ValueError("Reuse requires an owned booted iPhone 17 on the pinned runtime")
     output.mkdir(parents=True)
     source = ROOT / "apps/ios/Tests/AudioRuntime"
     report = {
@@ -54,6 +70,13 @@ def verify(output, simulator=None, attempts=3):
         "attempts": [],
         "host": platform.platform(),
         "source_sha256": hashlib.sha256((source / "Probe.swift").read_bytes()).hexdigest(),
+        "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "project_sha256": hashlib.sha256((source / "project.yml").read_bytes()).hexdigest(),
+        "simulator_profile": profile,
+        "runtime": runtime,
+        "runtime_config_sha256": hashlib.sha256(
+            (ROOT / "config/testing/simulator.json").read_bytes()
+        ).hexdigest(),
         "xcode": command("xcodebuild", "-version").stdout.strip(),
         "sdk": command("xcrun", "--sdk", "iphonesimulator", "--show-sdk-version").stdout.strip(),
     }
@@ -85,6 +108,7 @@ def verify(output, simulator=None, attempts=3):
                 "generic/platform=iOS Simulator",
                 "-derivedDataPath",
                 str(output / "build"),
+                "ARCHS=arm64",
                 "CODE_SIGNING_ALLOWED=NO",
                 "build",
                 timeout=300,
@@ -97,6 +121,7 @@ def verify(output, simulator=None, attempts=3):
                 "create",
                 f"Reha-Audio-Test-{uuid.uuid4()}",
                 "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+                runtime,
             ).stdout.strip()
             command("xcrun", "simctl", "boot", simulator)
             command("xcrun", "simctl", "bootstatus", simulator, "-b")
@@ -154,12 +179,16 @@ def verify(output, simulator=None, attempts=3):
             cleanup += [["shutdown", simulator], ["delete", simulator]]
         for operation in cleanup:
             try:
-                subprocess.run(
+                cleanup_result = subprocess.run(
                     ["xcrun", "simctl", *operation],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     timeout=30,
                 )
+                if cleanup_result.returncode:
+                    report.setdefault("cleanup_warnings", []).append(
+                        {"operation": operation, "exit_code": cleanup_result.returncode}
+                    )
             except (OSError, subprocess.SubprocessError) as error:
                 report.setdefault("cleanup_warnings", []).append(str(error))
         (output / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
