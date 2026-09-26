@@ -33,7 +33,7 @@ class OfflineAssetTests(unittest.TestCase):
         registry = self.root / "ml/registry/runtime"
         registry.mkdir(parents=True)
         for name in ["small", "kokoro"]:
-            root = self.root / "models/private" / name
+            root = self.root / ".local/models/runtime" / name
             entry = pin(root / "model.bin") | {"path": "model.bin"}
             manifest = {"files": [entry], "bundle_directory": name}
             if name == "small":
@@ -41,7 +41,9 @@ class OfflineAssetTests(unittest.TestCase):
             data = json.dumps(manifest)
             (registry / f"{name}.lock.json").write_text(data)
             (root / "manifest.json").write_text(data)
-        self.library = self.root / "models/private/runtime/aarch64-apple-ios-sim/libonnxruntime.a"
+        self.library = (
+            self.root / ".local/models/runtime/runtime/aarch64-apple-ios-sim/libonnxruntime.a"
+        )
         runtime = {"libraries": {"aarch64-apple-ios-sim": pin(self.library)}}
         (registry / "ios-runtime.lock.json").write_text(json.dumps(runtime))
         notices = self.root / "docs/third-party/licenses"
@@ -74,7 +76,7 @@ class OfflineAssetTests(unittest.TestCase):
         self.assertFalse(self.library.exists())
 
     def test_dictionary_and_manifest_changes_are_rejected(self):
-        dictionary = self.root / "models/private/small/dictionary.json"
+        dictionary = self.root / ".local/models/runtime/small/dictionary.json"
         dictionary.write_text('["b"]')
         with self.assertRaisesRegex(ValueError, "dictionary"):
             self.verify()

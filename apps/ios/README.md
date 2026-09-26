@@ -2,12 +2,14 @@
 
 Die App und ihre drei Erweiterungen werden aus `project.yml` mit XcodeGen erzeugt.
 Gemeinsame Swift-Pakete liegen unter `../../packages/apple`, Rust-Fachlogik und FFI unter
-`../../crates`. Die aktuelle Einrichtung steht im [Repository-Einstieg](../../README.md).
+`../../packages/rust`. Die aktuelle Einrichtung steht im [Repository-Einstieg](../../README.md).
 
 Alle Befehle laufen vom Repository-Stamm:
 
 ```sh
 make bootstrap
+make restore
+make convert TARGET=all
 make build
 make test-ios
 python3 tooling/dev/quality.py build check-bindings
@@ -27,4 +29,8 @@ ohne Deinstallation und Vergleich dauerhafter Daten.
 
 Die App-Kennung `at.rehakalender.personal`, Erweiterungskennungen, App Groups und der
 Speicher `Library/Application Support/at.rehakalender.personal` bleiben erhalten.
-Datenbankschema 8 ergänzt gemeinsame Terminzuordnungen, ohne historische Importbelege umzuschreiben.
+Schema 8 ergänzt gemeinsame Terminzuordnungen, Schema 9 die wiederaufnehmbare
+Quellenlöschung und Schema 10/11 kompakte, paginierte Archivabfragen. Historische
+Importbelege und vorhandene Einstellungen bleiben erhalten. Die App lädt Modelle
+aus `.local/models/runtime` in unverändert benannte Bundle-Ressourcen; Bibliotheken
+für die Phonemisierung werden unter `.local/builds/phonemizer` erzeugt.

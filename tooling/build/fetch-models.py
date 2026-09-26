@@ -30,7 +30,7 @@ def main():
         "--offline", action="store_true", help="Verify local assets without downloading"
     )
     args = parser.parse_args()
-    destination = ROOT / "models/private" / args.tier
+    destination = ROOT / ".local/models/runtime" / args.tier
     destination.mkdir(parents=True, exist_ok=True)
     manifest_path = ROOT / "ml/registry/runtime" / f"{args.tier}.lock.json"
     if not manifest_path.exists() and not args.update_lock:

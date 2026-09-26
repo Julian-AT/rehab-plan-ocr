@@ -365,7 +365,7 @@ def build(transcriptions, root, baseline):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("transcriptions", type=Path)
-    p.add_argument("--root", type=Path, default=Path("data/private"))
+    p.add_argument("--root", type=Path, default=Path(".local/datasets/private"))
     p.add_argument("--baseline", type=Path, required=True)
     a = p.parse_args()
     print(json.dumps(build(a.transcriptions, a.root, a.baseline)))

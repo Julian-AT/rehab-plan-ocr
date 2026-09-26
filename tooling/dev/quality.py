@@ -161,6 +161,7 @@ def files(suffix):
                 (
                     "packages/apple/VoiceActivity/Sources/",
                     "packages/apple/RehaCore/Sources/",
+                    ".local/",
                     "artifacts/",
                     "models/private/",
                     "data/private/",

@@ -21,7 +21,7 @@ lock_path = ROOT / "ml/registry/runtime/ios-runtime.lock.json"
 lock = json.loads(lock_path.read_text())
 if not lock.get("sha256") or not lock.get("bytes"):
     raise SystemExit("iOS runtime needs a committed checksum and size before restoration")
-root = ROOT / "models/private/runtime"
+root = ROOT / ".local/models/runtime/runtime"
 root.mkdir(parents=True, exist_ok=True)
 cache = root / "onnxruntime-1.22.0.zip"
 if cache.exists() and lock.get("sha256") == hashlib.sha256(cache.read_bytes()).hexdigest():

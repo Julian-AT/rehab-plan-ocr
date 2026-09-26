@@ -59,12 +59,12 @@ def main():
     args = parser.parse_args()
     registry = ROOT / "ml/registry/runtime"
     manifest = json.loads((registry / "kokoro.lock.json").read_text())
-    target = ROOT / "models/private" / manifest["bundle_directory"]
+    target = ROOT / ".local/models/runtime" / manifest["bundle_directory"]
     entries = {entry["path"]: entry for entry in manifest["files"]}
     if args.mode == "restore":
         sources = json.loads((registry / "victoria-source.lock.json").read_text())
         for name, entry in sources["files"].items():
-            restore(ROOT / "models/private/kikiri-victoria-source" / name, entry)
+            restore(ROOT / ".local/models/runtime/kikiri-victoria-source" / name, entry)
         for name, entry in entries.items():
             if "remote" not in entry and "remote_url" not in entry:
                 continue
@@ -98,7 +98,7 @@ def main():
         ("docs/third-party/licenses/kokoro-source.txt", "NOTICE"),
     ]:
         shutil.copyfile(ROOT / source, target / name)
-    data = ROOT / "models/private/espeak/host/espeak-ng-data"
+    data = ROOT / ".local/builds/phonemizer/host/espeak-ng-data"
     if not (data / "de_dict").is_file():
         raise RuntimeError("Phonemizer data missing; run make convert.")
     for name in entries:

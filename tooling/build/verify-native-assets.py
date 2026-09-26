@@ -35,7 +35,7 @@ def model_bundle(root, lock):
 
 def verify(root, targets):
     registry = root / "ml/registry/runtime"
-    assets = root / "models/private"
+    assets = root / ".local/models/runtime"
     ocr = json.loads((registry / "small.lock.json").read_text())
     speech = json.loads((registry / "kokoro.lock.json").read_text())
     runtime = json.loads((registry / "ios-runtime.lock.json").read_text())

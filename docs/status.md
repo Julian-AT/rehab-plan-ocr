@@ -39,7 +39,9 @@ a fresh backup and a persistent-data comparison without uninstalling.
 - iOS sources now live by feature; Apple and Rust packages, model development,
   tooling, runtime model manifests and notices have dedicated locations. Normal
   builds verify assets/bindings without restoring or converting them. An offline
-  simulator build passed; private-asset migration and documentation cleanup remain.
+  simulator build passed. All 38,570 private files were relocated to `.local/` with
+  their hashes preserved; active paths use that storage. Historical references use
+  ignored compatibility links. Other build-cache moves and documentation cleanup remain.
 - Agenda timestamps are parsed once per event value. A paired desktop projection
   microbenchmark improved from 220.14 ms to 13.37 ms median including construction;
   this does not establish real-device or full-interaction performance.

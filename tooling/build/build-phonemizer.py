@@ -9,7 +9,8 @@ import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = ROOT / "models/private/espeak"
+BASE = ROOT / ".local/models/runtime/espeak"
+BUILD_BASE = ROOT / ".local/builds/phonemizer"
 VERSION = "1.52.0"
 SHA256 = "bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23"
 VARIANTS = ["host", "aarch64-apple-ios", "aarch64-apple-ios-sim"]
@@ -174,7 +175,7 @@ def main():
         "cmake",
     ]
     for variant in args.variants or VARIANTS:
-        build = BASE / variant
+        build = BUILD_BASE / variant
         options, toolchain = configuration(variant)
         expected = identity(source, variant, options, toolchain)
         if cache_matches(build, expected):

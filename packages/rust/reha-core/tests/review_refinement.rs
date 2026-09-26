@@ -494,8 +494,8 @@ fn experiment_crop_records_original_pixel_transform_and_never_approves() {
 #[test]
 fn exhausted_or_cancelled_pass_does_not_schedule_inference_or_change_the_draft() {
     use std::sync::atomic::AtomicBool;
-    let models =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../models/private/small");
+    let models = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../.local/models/runtime/small");
     if !models.join("manifest.json").exists() {
         return;
     }

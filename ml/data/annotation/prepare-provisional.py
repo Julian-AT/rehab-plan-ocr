@@ -116,6 +116,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("baseline", type=Path)
     p.add_argument("conversion", type=Path)
-    p.add_argument("--output", type=Path, default=Path("data/private"))
+    p.add_argument("--output", type=Path, default=Path(".local/datasets/private"))
     a = p.parse_args()
     print(json.dumps(prepare(a.baseline, a.conversion, a.output)))

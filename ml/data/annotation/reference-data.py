@@ -760,7 +760,7 @@ def readiness(root):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--root", type=Path, default=Path("data/private"))
+    p.add_argument("--root", type=Path, default=Path(".local/datasets/private"))
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("freeze")
     sub.add_parser("recipes")

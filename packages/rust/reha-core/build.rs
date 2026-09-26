@@ -8,7 +8,7 @@ fn main() {
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| {
                 std::path::PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap())
-                    .join("../../../models/private/runtime")
+                    .join("../../../.local/models/runtime/runtime")
                     .join(std::env::var("TARGET").unwrap())
             });
         assert!(
@@ -31,7 +31,7 @@ fn phonemizer() {
     }
     let target = std::env::var("TARGET").unwrap();
     let root =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../models/private/espeak");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.local/builds/phonemizer");
     let directory = std::env::var_os("REHA_ESPEAK_LIB_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {

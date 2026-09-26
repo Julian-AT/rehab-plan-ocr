@@ -45,7 +45,7 @@ framework() {
     python3 tooling/dev/quality.py space 1.5
     IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --release -p reha-ffi --lib --features onnx --target "$triple"
     xcrun libtool -static -o "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" \
-      "target/$triple/release/libreha_ffi.a" "models/private/runtime/$triple/libonnxruntime.a"
+      "target/$triple/release/libreha_ffi.a" ".local/models/runtime/runtime/$triple/libonnxruntime.a"
     xcrun nm -g "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" 2> /dev/null | rg -q ' T _OrtGetApiBase$'
     if [ "${REHA_LOW_DISK:-0}" = 1 ]; then rm -r "target/$triple/release"; fi
   done

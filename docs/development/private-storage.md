@@ -36,8 +36,10 @@ Completed journal entries are not rolled back when later normal work adds or edi
 files; reruns check their locations and preserve subsequent work.
 
 Compatibility links intentionally preserve historical absolute/relative references
-and the linked llama.cpp worktree. They must remain until consumers and saved
-references have been migrated and verified. Changing active default paths, moving
+and the linked llama.cpp worktree. They must remain while saved references still use
+the old names. Active dataset, model restoration, evaluation and app-resource paths
+now use `.local/` directly. New phonemizer caches live in `.local/builds/phonemizer`;
+the old cache contents remain preserved with the migrated collection. Moving other
 toolchains/build caches and removing obsolete previews are separate follow-up work.
 Private inventories, backups, sources and model weights remain excluded from Git.
 
@@ -56,3 +58,9 @@ The ignored progress journal records each collection as verified.
 All 38,570 regular files retained their hashes. The four internal links retained
 their targets. Legacy compatibility links and `.local/` are explicitly ignored;
 no private file lists or contents are included in this report.
+
+After switching active paths, offline phonemizer conversion for host/simulator/device,
+all 15 bundled voice-asset hashes, native model/runtime/notice verification, 54 Python
+tests, the pinned VAD speech probe and an offline simulator build passed. The linked
+llama.cpp checkout retained its revision and clean status; all eight pinned Qwen base
+files passed verification. Dataset readiness remains 20 originals and zero approvals.

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PRIVATE = ROOT / "data/private"
+PRIVATE = ROOT / ".local/datasets/private"
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
 
 

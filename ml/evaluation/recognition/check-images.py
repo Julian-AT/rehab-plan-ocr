@@ -144,7 +144,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("conversion", type=Path, help="Private conversion manifest")
     parser.add_argument("output", type=Path, help="New private results directory")
-    parser.add_argument("--models", type=Path, default=ROOT / "models/private/small")
+    parser.add_argument("--models", type=Path, default=ROOT / ".local/models/runtime/small")
     parser.add_argument("--binary", type=Path, default=ROOT / "target/release/reha")
     parser.add_argument("--config", type=Path)
     args = parser.parse_args()

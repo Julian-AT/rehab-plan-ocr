@@ -66,7 +66,7 @@ image.save(out / "synthetic-day.png")
 public = root / "public"
 public.mkdir(exist_ok=True)
 image.save(public / "synthetic-day.png")
-variants = root / "artifacts/private/synthetic-variants"
+variants = root / ".local/datasets/synthetic-variants"
 variants.mkdir(parents=True, exist_ok=True)
 image.rotate(90, expand=True).save(variants / "rotated.png")
 image.rotate(5, fillcolor="white").save(variants / "skewed.png")

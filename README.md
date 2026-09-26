@@ -16,6 +16,7 @@ benötigen eine sichtbare Bestätigung. Widgets, Teilen- und Mitteilungserweiter
 | `tooling` | Qualitätsprüfung, Build, Auslieferung und Teststarter |
 | `ml` | Datenaufbereitung, Training, Evaluation und Modellregister |
 | `ml/evaluation/fixtures` | Ausschließlich synthetische Prüfdaten |
+| `.local` | Ausgeschlossene Datensätze, Modelle, Läufe und neue Build-Caches |
 
 Die [native Architektur](docs/architecture.md) beschreibt Zuständigkeiten, Datenhaltung und Abbruchgrenzen.
 
@@ -56,9 +57,9 @@ und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befeh
 Für einen vollständigen kalten Build werden mindestens 8 GB freier Speicher empfohlen.
 Build-Schritte prüfen vorab ihre Mindestreserve und entfernen keine privaten Dateien.
 
-`make build` erzeugt eine Simulator-App. `python3 tooling/dev/quality.py build device` prüft den
-unsignierten Gerätebuild. Beide laden erforderliche, festgelegte Modelle über prüfsummengesicherte
-Werkzeuge. `make test-ios` verwendet Wegwerfsimulatoren und erfundene Termine.
+`make build` erzeugt eine Simulator-App; `make build TARGET=device` prüft den
+unsignierten Gerätebuild. Beide verwenden die zuvor geprüften lokalen Artefakte.
+`make test-ios` verwendet Wegwerfsimulatoren und erfundene Termine.
 
 ## Daten und Auslieferung
 
@@ -69,6 +70,13 @@ Prüfablauf; eine reine Aktualisierung wiederholt keine Schreibvorgänge.
 Private Originale, Referenzen, Modellgewichte, Sicherungen und Buildprodukte bleiben aus Git
 und dem Buildkontext ausgeschlossen. Technische Diagnosen bleiben lokal, begrenzt und standardmäßig
 ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
+Die vorhandenen privaten Sammlungen wurden [mit vollständigem Hashvergleich](docs/development/private-storage.md)
+nach `.local/` verlegt. Aktive Daten- und Modellwerkzeuge verwenden diese Pfade;
+Kompatibilitätslinks erhalten historische Referenzen und Sicherungspfade.
+
+Der [Umsetzungsstand](docs/status.md) unterscheidet bestandene Tests, experimentelle
+Trainingsartefakte und offene Abnahmeprüfungen. Beide Modell-Testwege haben lokale
+Artefakte erzeugt; daraus folgt noch keine Freigabe für den Einsatz in der App.
 
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.

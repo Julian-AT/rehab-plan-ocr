@@ -107,7 +107,7 @@ if __name__ == "__main__":
     p.add_argument("run", type=Path)
     p.add_argument("output", type=Path)
     p.add_argument(
-        "--manifest", type=Path, default=ROOT / "models/private/experiments/candidates.json"
+        "--manifest", type=Path, default=ROOT / ".local/models/runtime/experiments/candidates.json"
     )
     p.add_argument("--candidate", choices=["glm-ocr", "paddleocr-vl-1.6"])
     p.add_argument("--cancel-file", type=Path)

@@ -5,7 +5,7 @@
 """Convert pinned Victoria weights locally; no model code or pickle code is loaded.
 
 Run through make convert after make restore. This step never downloads model
-assets. All products remain under models/private.
+assets. All products remain under .local/models/runtime.
 """
 
 import hashlib
@@ -20,8 +20,8 @@ from kokoro import KModel
 from kokoro.model import KModelForONNX
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "models/private/kikiri-victoria-source"
-TARGET = ROOT / "models/private/kokoro-german"
+SOURCE = ROOT / ".local/models/runtime/kikiri-victoria-source"
+TARGET = ROOT / ".local/models/runtime/kokoro-german"
 source_manifest = json.loads((ROOT / "ml/registry/runtime/victoria-source.lock.json").read_text())
 REVISION = source_manifest["revision"]
 for name, entry in source_manifest["files"].items():

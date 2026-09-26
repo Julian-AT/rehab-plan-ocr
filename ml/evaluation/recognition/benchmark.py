@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PRIVATE = ROOT / "data/private"
+PRIVATE = ROOT / ".local/datasets/private"
 
 
 def sha(path):
@@ -282,7 +282,7 @@ def main():
     }
     output = (
         ROOT
-        / "artifacts/private"
+        / ".local/runs/recognition"
         / f"benchmark-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
     )
     output.mkdir(parents=True, exist_ok=False)

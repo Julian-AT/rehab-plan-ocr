@@ -124,7 +124,12 @@ Feature, Apple/Rust package, tooling and ML moves preserve source behavior and
 resource contents. Build targets separate online restoration, offline conversion,
 binding generation, compilation and packaging; normal builds verify pinned assets.
 An offline simulator build passed. Source/toolchain caches cover phonemizer builds;
-broader cache work, private working-asset migration and cleanup remain open.
+broader cache work and cleanup remain open. Private datasets, model/runtime working
+files and previous artifacts/backups have moved to `.local/`: all 38,570 regular
+files passed before/after SHA-256 checks. Active consumers use canonical paths;
+ignored aliases preserve old references and the linked converter checkout. New
+phonemizer caches build outside model storage, under `.local/builds`. Asset/VAD
+checks, 54 Python tests and an offline simulator build passed after relocation.
 Agenda event projections now cache parsed timestamps, with wire values preserved
 through edits and encoding. Two targeted agenda/voice UI tests passed. A five-pair
 desktop microbenchmark is recorded in

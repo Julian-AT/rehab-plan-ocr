@@ -20,7 +20,7 @@ class RestorationTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.assets = self.root / "models/private/small"
+        self.assets = self.root / ".local/models/runtime/small"
         self.assets.mkdir(parents=True)
         self.content = b"PostProcess:\n  character_dict: ['a', 'b']\n"
         self.dictionary = json.dumps(["", "a", "b", " "], ensure_ascii=False).encode()

@@ -31,11 +31,11 @@ targets:
       - path: Features
       - path: Shared
       - path: Tests/Support
-      - path: ../../models/private/small
+      - path: ../../.local/models/runtime/small
         name: models
         type: folder
         buildPhase: resources
-      - path: ../../models/private/kokoro-german
+      - path: ../../.local/models/runtime/kokoro-german
         type: folder
         buildPhase: resources
       - path: ../../docs/third-party/licenses
