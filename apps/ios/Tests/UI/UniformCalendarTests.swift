@@ -36,6 +36,54 @@ import XCTest
     if !app.buttons["agenda-density"].exists { app.buttons["Darstellung"].tap() }
     XCTAssertTrue(app.buttons["agenda-density"].waitForExistence(timeout: 5))
   }
+
+  func testManyAllDayEventsRemainReachableAlongsideTimeline() throws {
+    launch("all-day-many")
+    pager.swipeLeft()
+    XCTAssertTrue(event("Tagesprogramm").waitForExistence(timeout: 8))
+    let disclosure = app.buttons.matching(
+      NSPredicate(format: "label BEGINSWITH %@", "Ganztägig ·")
+    ).firstMatch
+    XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+    disclosure.tap()
+    let allDay = app.scrollViews["agenda-all-day-events"]
+    XCTAssertTrue(allDay.waitForExistence(timeout: 5))
+    XCTAssertLessThanOrEqual(allDay.frame.height, 200)
+    XCTAssertGreaterThan(timeline.frame.height, 100)
+    let rows = allDay.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "agenda-event-"))
+    XCTAssertEqual(rows.count, 20)
+    let last = rows.element(boundBy: 19)
+    for _ in 0..<30 where !last.isHittable { allDay.swipeUp() }
+    XCTAssertTrue(last.isHittable)
+    last.tap()
+    XCTAssertTrue(app.navigationBars["Termin bearbeiten"].waitForExistence(timeout: 5))
+    app.buttons["Fertig"].tap()
+    XCTAssertTrue(event("Tagesprogramm").isHittable)
+    XCTAssertTrue(disclosure.isHittable)
+    try app.performAccessibilityAudit(for: [
+      .elementDetection, .sufficientElementDescription, .trait,
+    ])
+    disclosure.tap()
+    XCTAssertTrue(event("Tagesprogramm").isHittable)
+    capture("all-day-many-reachable")
+  }
+
+  func testSingleAllDayEventKeepsItsNaturalHeight() {
+    launch("all-day-one")
+    pager.swipeLeft()
+    XCTAssertTrue(event("Tagesprogramm").waitForExistence(timeout: 8))
+    let heightBefore = timeline.frame.height
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Ganztägig ·")).firstMatch.tap()
+    let allDay = app.scrollViews["agenda-all-day-events"]
+    XCTAssertTrue(allDay.waitForExistence(timeout: 5))
+    XCTAssertTrue(event("Ganztagsplan 1").isHittable)
+    XCTAssertLessThan(allDay.frame.height, 200)
+    XCTAssertEqual(heightBefore - timeline.frame.height, allDay.frame.height, accuracy: 8)
+    XCTAssertTrue(event("Tagesprogramm").isHittable)
+    capture("all-day-one-natural-height")
+  }
+
   /// Measure the actual rendered axis, including UIKit's preserved scroll offset.
   private func checkScale(_ points: Double) throws -> Double {
     let hours = (6...18).compactMap { hour -> (Int, XCUIElement)? in

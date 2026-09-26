@@ -158,6 +158,16 @@ import Foundation
           }
         }
       }
+      if mode == "all-day-many" || mode == "all-day-one" {
+        let date = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
+        for index in 1...(mode == "all-day-many" ? 20 : 1) {
+          try add("Ganztagsplan \(index)", start: date, end: end, allDay: true)
+        }
+        try add(
+          "Tagesprogramm", start: date.addingTimeInterval(9 * 3600),
+          end: date.addingTimeInterval(9.5 * 3600))
+      }
       if mode == "readable" {
         for offset in 0...8 {
           let date = Calendar.current.date(byAdding: .day, value: offset, to: day)!

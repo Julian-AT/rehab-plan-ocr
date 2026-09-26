@@ -307,53 +307,51 @@ struct TodayView: View {
       !usesList(selected, layout: layouts[1]) && !windows[1].timed.isEmpty
       && !(selected.isComplete && !showPast && model.unavailableCalendars.isEmpty)
       && model.events(on: selectedDate) != nil
-    return VStack(spacing: 0) {
-      if !usesList(selected, layout: layouts[1]) && !selected.allDay.isEmpty {
-        DisclosureGroup("Ganztägig · \(selected.allDay.count)") {
-          ForEach(selected.allDay) { event in
-            Button {
-              editor = event
-            } label: {
-              CalendarAgendaRow(event: event, now: now)
-            }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
-          }
-        }.padding(.horizontal)
-      }
-      AgendaScrollView(
-        date: selectedDate, projection: projection,
-        pages: { viewport, offset in
-          zip(zip(agendas, windows), layouts).map { pair, layout in
-            let (agenda, window) = pair
-            if usesList(agenda, layout: layout) || agenda.events.isEmpty
-              || (agenda.isComplete && !showPast)
-              || model.events(on: agenda.date) == nil
-            {
-              return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
+    return GeometryReader { geometry in
+      VStack(spacing: 0) {
+        if !usesList(selected, layout: layouts[1]) && !selected.allDay.isEmpty {
+          DisclosureGroup("Ganztägig · \(selected.allDay.count)") {
+            AllDayAgendaEvents(
+              events: selected.allDay, now: now,
+              maximumHeight: min(200, geometry.size.height * 0.4), select: { editor = $0 })
+          }.padding(.horizontal)
+        }
+        AgendaScrollView(
+          date: selectedDate, projection: projection,
+          pages: { viewport, offset in
+            zip(zip(agendas, windows), layouts).map { pair, layout in
+              let (agenda, window) = pair
+              if usesList(agenda, layout: layout) || agenda.events.isEmpty
+                || (agenda.isComplete && !showPast)
+                || model.events(on: agenda.date) == nil
+              {
+                return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
+              }
+              return AnyView(
+                HStack(alignment: .top, spacing: 0) {
+                  TimelineGutter(start: window.start, scale: projection).frame(width: 56)
+                  TimelineCanvas(
+                    window: window, scale: projection, layout: layout, now: now,
+                    select: { editor = $0 })
+                })
             }
-            return AnyView(
-              HStack(alignment: .top, spacing: 0) {
-                TimelineGutter(start: window.start, scale: projection).frame(width: 56)
-                TimelineCanvas(
-                  window: window, scale: projection, layout: layout, now: now,
-                  select: { editor = $0 })
-              })
-          }
-        },
-        showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil,
-        initialMinute: windows[1].scrollMinute, reset: scrollReset,
-        minute: $scrollMinute, selectDate: { selectedDate = $0 })
-      if !usesList(selected, layout: layouts[1]) && !windows[1].outside.isEmpty {
-        DisclosureGroup("Außerhalb von 06:00–18:00") {
-          ScrollView {
-            ForEach(windows[1].outside) { event in
-              Button {
-                editor = event
-              } label: {
-                CalendarAgendaRow(event: event, now: now)
-              }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
-            }
-          }.frame(maxHeight: 200)
-        }.padding().accessibilityIdentifier("agenda-outside-hours")
+          },
+          showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil,
+          initialMinute: windows[1].scrollMinute, reset: scrollReset,
+          minute: $scrollMinute, selectDate: { selectedDate = $0 })
+        if !usesList(selected, layout: layouts[1]) && !windows[1].outside.isEmpty {
+          DisclosureGroup("Außerhalb von 06:00–18:00") {
+            ScrollView {
+              ForEach(windows[1].outside) { event in
+                Button {
+                  editor = event
+                } label: {
+                  CalendarAgendaRow(event: event, now: now)
+                }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
+              }
+            }.frame(maxHeight: 200)
+          }.padding().accessibilityIdentifier("agenda-outside-hours")
+        }
       }
     }
   }
@@ -412,6 +410,39 @@ struct TodayView: View {
       }
     case .ready: EmptyView()
     }
+  }
+}
+
+/// Keep a short disclosure at its natural height; larger collections scroll
+/// inside a bounded part of the day so the timeline remains reachable.
+private struct AllDayAgendaEvents: View {
+  let events: [CalendarEvent]
+  let now: Date
+  let maximumHeight: CGFloat
+  let select: (CalendarEvent) -> Void
+  @State private var contentHeight: CGFloat?
+
+  var body: some View {
+    ScrollView {
+      VStack {
+        ForEach(events) { event in
+          Button {
+            select(event)
+          } label: {
+            CalendarAgendaRow(event: event, now: now)
+          }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
+        }
+      }
+      .onGeometryChange(for: CGFloat.self) {
+        $0.size.height
+      } action: {
+        contentHeight = $0
+      }
+    }
+    .frame(height: min(contentHeight ?? maximumHeight, maximumHeight))
+    .scrollBounceBehavior(.basedOnSize)
+    .accessibilityLabel("Ganztägige Termine")
+    .accessibilityIdentifier("agenda-all-day-events")
   }
 }
 
