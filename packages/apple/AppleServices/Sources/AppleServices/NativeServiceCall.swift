@@ -41,7 +41,11 @@ public enum NativeOperation: String, Sendable {
 /// thread. Completion state is owned by the lock; late replies are discarded.
 public enum NativeServiceCall {
   public typealias Completion = @Sendable (Result<Data, Error>) -> Void
-  private enum State<Payload: Sendable> { case waiting, completed(Result<Payload, Error>), expired }
+  private enum State<Payload: Sendable> {
+    case waiting
+    case completed(Result<Payload, Error>)
+    case expired
+  }
 
   public static func wait(
     for operation: NativeOperation, timeout: TimeInterval = 60,
