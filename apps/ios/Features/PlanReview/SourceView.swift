@@ -260,15 +260,18 @@ struct DiagnosticsView: View {
   var id: String? = nil
   @State private var diagnostics: Diagnostics?
   @State private var capabilities: Capabilities?
+  @State private var assistantName = "Wird geprüft …"
+  @State private var assistantUnavailable: String?
   @State private var error: String?
   @State private var showSource = false
   var body: some View {
     Form {
       if let error { Text(error) }
       Section("Sprache") {
-        LabeledContent("Stimme", value: "Kokoro · Victoria · Deutsch")
+        LabeledContent("Stimme", value: SpeechOutput.shared.voiceName)
         LabeledContent("Audio", value: "24 kHz · lokal")
-        LabeledContent("Gesprächsmodell", value: "Apple Intelligence")
+        LabeledContent("Gesprächsmodell", value: assistantName)
+        if let assistantUnavailable { Text(assistantUnavailable) }
       }
       if let capabilities {
         Section("Verfügbarkeit") {
@@ -310,6 +313,14 @@ struct DiagnosticsView: View {
         if let id { SourceView(core: core, id: id, polygons: []) }
       }
       .task {
+        let provider = AssistantProviderSelection.make()
+        assistantName =
+          provider.identity.provider == "apple-intelligence"
+          ? "Apple Intelligence" : "Lokales Testmodell"
+        switch provider.availability {
+        case .available: assistantUnavailable = nil
+        case .unavailable(let reason): assistantUnavailable = reason
+        }
         do {
           capabilities = try await core.capabilities()
           if let id { diagnostics = try await core.diagnostics(id: id) }
