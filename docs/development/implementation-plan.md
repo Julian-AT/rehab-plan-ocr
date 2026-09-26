@@ -172,6 +172,14 @@ has been claimed. Milestones 1–4 remain open until their complete exit gates p
 
 ## Verified implementation slices — 2026-09-26
 
+Synthetic table generation v2 draws each shared date/column heading once, links
+rows to day evidence and lays out actual wrapped glyphs without clipping. Lossless
+exports validate complete text pixels and field values. Two exports of 200 inputs
+(180 schedules, 10 non-plans, 10 unusable images; 1,950 invented appointments) match
+in all 400 image/label files. Five new and eight existing reference tests pass.
+This adds no independent real examples and does not approve real references or
+qualify a model. See the [experiment](../../ml/experiments/2026-09-26-s17-synthetic-layout.md).
+
 The shared import policy now also protects all-day semantics, location geometry
 and availability that compact approvals cannot represent. Plain room text remains
 eligible. Alarm ownership rejects proximity metadata in addition to absolute and

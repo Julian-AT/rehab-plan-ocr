@@ -106,7 +106,13 @@ OCR_MODE ?= frozen-backbone
 OCR_EPOCHS ?= 100
 OCR_PATIENCE ?= 5
 FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
+SYNTHETIC_COUNT ?= 200
 FOLD ?= 0
+.PHONY: generate-synthetic
+generate-synthetic:
+	@test -n "$(DATASET)" || { echo 'Set DATASET to a new synthetic export directory'; exit 2; }
+	uv run --locked python ml/data/synthesis/synthetic-plans.py "$(DATASET)" --font "$(FONT)" --count "$(SYNTHETIC_COUNT)"
+
 .PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data train-ocr resume-ocr export-ocr
 restore-ocr-assets: restore-ocr-training
 	.local/envs/ocr/bin/python ml/training/ocr/restore.py
