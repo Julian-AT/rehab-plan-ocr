@@ -83,6 +83,7 @@ Comparisons recheck the first revision after the second read and describe **OCR 
 differences**, not asserted appointment additions/removals. Complete structured
 revision matching remains a later qualification task. Missing, unreadable, cropped
 and conflicting field states stay distinct in the evidence response.
+The truncation flag also covers capped field and region references, not only text.
 
 Apple guided generation gains insight and plan-evidence requests; read-only calendar
 questions use a smaller output schema. Custom Qwen's pinned compact contract and
@@ -119,20 +120,28 @@ controls remain distinct from natural dialogue or physical-device qualification.
 
 ## Verified preview and experiments
 
-- Simulator build, focused audio/recognition/voice/calendar/evidence checks, Rust
+- Simulator and unsigned arm64 iPhone Release builds, focused audio/recognition/voice/calendar/evidence checks, Rust
   evidence projection, generated-binding parity and repository lint pass.
+  The unsigned iPhone bundle passes identity, extension, model-resource, privacy
+  and runtime-inventory validation. Signatures and physical acceptance remain pending.
 - 14 intake/group/qualification tests pass. They exercise permission separation,
   related-source leakage, failed-turn timing, unsafe results and paired identities.
+  All tool-test files pass across the full run and serial completion (879 cases).
+  The initial release-artifact test and binding check encountered the active
+  simulator build lease; both passed when rerun after capture. Rust evidence-bound
+  regression and Clippy checks also pass after the final metadata correction.
 - Generated German host files pass through the actual app audio/provider pipeline:
   correction sample 30 updates/1 final, 217 ms end-of-input to completion; long
-  sample 90 updates/1 final, 157 ms. Long sample used installed assets without
-  downloading. These two controls do not measure conversational accuracy or latency.
-- Fresh visual run `ai-upgrade-visual-20260927-001`: 3 UI tests pass; **17/22 exact
+  sample 90 updates/1 final, 157 ms; a 48 kHz stereo room sample 21 updates/1 final,
+  162 ms. Long/stereo samples used installed assets without downloading. These
+  three controls do not measure conversational accuracy or latency.
+- Final visual run `ai-upgrade-visual-20260927-002` at `0bde8d3`: 3 UI tests pass; **17/22 exact
   images, comparison fails**. Four differences are confined to the nine-pixel-wide
   scroll indicator. The dark completed-day view differs in 1,559 pixels with maximum
   channel delta four, matching the previously documented system-control pattern.
   Baselines and tolerances remain unchanged. Local `review.html` and `triage.json`
-  retain the evidence; full appearance qualification remains open.
+  retain the evidence; all 22 images match run 001 below the status bar. Full
+  appearance qualification remains open.
 - `ai-upgrade-listening-20260927-001/listening.html` contains 90 host-rendered Apple
   samples (nine voices). Human preference/comprehension and phone playback are pending.
 - [NVIDIA runtime feasibility](../../ml/experiments/2026-09-27-nemotron-ios-feasibility.md):
@@ -141,6 +150,9 @@ controls remain distinct from natural dialogue or physical-device qualification.
 
 Physical installation still requires explicit approval of these previews and
 listening samples under AGENTS.md, followed by a fresh backup and in-place update.
+The fresh read-only device listing reports the iPhone disconnected; connect and
+unlock it for the approved backup/install/session. The Release build is unsigned,
+so signing/provisioning must be verified for the actual installable package.
 The next critical step is the guided natural-speech session. Parakeet/Ultra,
 WhisperKit, neural VAD, compact Qwen comparisons, Pocket TTS, whole-plan Apple OCR
 and accelerated OCR remain unqualified; training awaits purpose-approved grouped
