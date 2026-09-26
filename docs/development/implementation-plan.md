@@ -109,6 +109,21 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Bounded hosted UI execution and retained console evidence — 2026-09-26
+
+The fourth hosted run has passed restore, all headless tests, binding checks,
+both builds/package checks and EventKit. Its full UI step has exceeded 50 minutes;
+the original 90-minute job gives no separate deadline for collecting failures.
+The next candidate uses a 120-minute job, a 75-minute UI step and a ten-minute
+evidence-upload limit. Each XCTest case has a 300-second ceiling. These are hang
+limits, not product latency objectives. Console output is retained with the result
+bundle; Bash pipeline failure propagation keeps failed tests red. Upload is also
+attempted after cancellation, subject to the runner's remaining lifetime.
+
+Current GitHub syntax and installed Xcode help were checked. YAML structure,
+pinned action identities and repository lint pass. Hosted execution of these new
+limits remains pending; the ongoing run continues under its original configuration.
+
 ### Real reduced-motion setting without a skipped test — 2026-09-26
 
 The existing accessibility UI case now opens Settings on the disposable simulator,
