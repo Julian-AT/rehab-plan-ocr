@@ -21,3 +21,28 @@ targets:
       path: ../../.local/builds/assistant-app-trial/Info.plist
       properties:
         REHAExperimentalAssistant: true
+  AssistantVoiceTrialUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/AssistantVoiceTrialUI
+      - path: Tests/Support/AssistantVoiceTrialSignal.swift
+    dependencies:
+      - target: Termine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.assistant-voice-tests
+        CODE_SIGN_ENTITLEMENTS: App/Termine.entitlements
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG REHA_CUSTOM_ASSISTANT_TRIAL"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  AssistantVoiceTrial:
+    build:
+      targets:
+        Termine: all
+        AssistantVoiceTrialUITests: [test]
+    test:
+      targets: [AssistantVoiceTrialUITests]
+      deleteScreenshotsWhenEachTestSucceeds: false
+      preferredScreenCaptureFormat: screenRecording

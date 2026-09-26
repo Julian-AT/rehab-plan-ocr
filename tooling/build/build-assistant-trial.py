@@ -163,12 +163,21 @@ def prepare(variant):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=MODEL_REGISTRIES, default="tuned")
+    parser.add_argument(
+        "--voice-ui-tests",
+        action="store_true",
+        help="Build the separate five-case voice integration target",
+    )
     args = parser.parse_args()
+    if args.voice_ui_tests and args.model != "tuned-v2":
+        parser.error("The predeclared voice integration uses only tuned-v2")
     with product_generation.leased(ROOT) as (_, descriptor):
-        build_trial(args.model, descriptor)
+        build_trial(args.model, descriptor, voice_ui_tests=args.voice_ui_tests)
 
 
-def build_trial(model, descriptor):
+def build_trial(model, descriptor, *, voice_ui_tests=False):
+    if voice_ui_tests and model != "tuned-v2":
+        raise ValueError("The predeclared voice integration uses only tuned-v2")
     BASE.mkdir(parents=True, exist_ok=True)
     sources = source_snapshot()
     # These paths perform read-only manifest verification and normal source builds.
@@ -190,7 +199,7 @@ def build_trial(model, descriptor):
             "-project",
             "apps/ios/Termine.xcodeproj",
             "-scheme",
-            "Termine",
+            "AssistantVoiceTrial" if voice_ui_tests else "Termine",
             "-configuration",
             "Debug",
             "-sdk",
@@ -201,7 +210,7 @@ def build_trial(model, descriptor):
             str(BASE / "DerivedData"),
             "ARCHS=arm64",
             "CODE_SIGNING_ALLOWED=NO",
-            "build",
+            "build-for-testing" if voice_ui_tests else "build",
         )
         app = BASE / "DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
         info = plistlib.loads((app / "Info.plist").read_bytes())
@@ -233,10 +242,29 @@ def build_trial(model, descriptor):
             "builder_sha256": assembly.sha(Path(__file__)),
             "activation_argument": "--assistant-model-trial",
         }
+        if voice_ui_tests:
+            report["voice_ui_tests"] = voice_test_products()
         (BASE / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report, indent=2))
     finally:
         run("xcodegen", "generate", "--spec", "apps/ios/project.yml", "--project", "apps/ios")
+
+
+def voice_test_products():
+    products = BASE / "DerivedData/Build/Products"
+    runs = list(products.glob("AssistantVoiceTrial_iphonesimulator*.xctestrun"))
+    if len(runs) != 1:
+        raise ValueError("Expected one isolated assistant voice test product")
+    tests = products / "Debug-iphonesimulator/AssistantVoiceTrialUITests-Runner.app"
+    if not tests.is_dir():
+        raise ValueError("Missing assistant voice UI test runner")
+    return {
+        "scheme": "AssistantVoiceTrial",
+        "xctestrun": str(runs[0].relative_to(ROOT)),
+        "xctestrun_sha256": assembly.sha(runs[0]),
+        "runner": str(tests.relative_to(ROOT)),
+        "runner_inventory": product_generation.inventory(tests),
+    }
 
 
 if __name__ == "__main__":

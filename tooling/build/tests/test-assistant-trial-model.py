@@ -91,6 +91,66 @@ class TrialModelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             builder.model_artifact("untuned")
 
+    def test_voice_mode_cannot_select_another_model_before_build(self):
+        with patch.object(builder, "source_snapshot") as snapshot:
+            for model in ["untuned", "tuned"]:
+                with self.assertRaises(ValueError):
+                    builder.build_trial(model, 42, voice_ui_tests=True)
+            snapshot.assert_not_called()
+
+    def test_voice_receipt_requires_one_isolated_run_and_binds_runner_bytes(self):
+        base = self.root / "trial"
+        products = base / "DerivedData/Build/Products"
+        products.mkdir(parents=True)
+        run = products / "AssistantVoiceTrial_iphonesimulator26.0-arm64.xctestrun"
+        runner = products / "Debug-iphonesimulator/AssistantVoiceTrialUITests-Runner.app"
+        with patch.object(builder, "BASE", base):
+            with self.assertRaisesRegex(ValueError, "one isolated"):
+                builder.voice_test_products()
+            run.write_bytes(b"invented xctestrun")
+            with self.assertRaisesRegex(ValueError, "Missing"):
+                builder.voice_test_products()
+            runner.mkdir(parents=True)
+            (runner / "runner").write_bytes(b"invented test code")
+            receipt = builder.voice_test_products()
+            self.assertEqual(receipt["scheme"], "AssistantVoiceTrial")
+            self.assertEqual(receipt["xctestrun_sha256"], builder.assembly.sha(run))
+            (runner / "runner").write_bytes(b"modified test code")
+            self.assertNotEqual(
+                receipt["runner_inventory"], builder.voice_test_products()["runner_inventory"]
+            )
+            (products / "AssistantVoiceTrial_iphonesimulator-stale.xctestrun").write_bytes(b"stale")
+            with self.assertRaisesRegex(ValueError, "one isolated"):
+                builder.voice_test_products()
+
+    def test_voice_build_selects_only_separate_scheme_and_restores_project(self):
+        commands = []
+
+        def fail_xcode(*command):
+            commands.append(command)
+            if command[0] == "xcodebuild":
+                self.assertIn("AssistantVoiceTrial", command)
+                self.assertEqual(command[-1], "build-for-testing")
+                raise subprocess.CalledProcessError(65, command)
+
+        with (
+            patch.object(builder, "BASE", self.root / "trial"),
+            patch.object(builder, "source_snapshot", return_value={}),
+            patch.object(builder, "prepare", return_value={}),
+            patch.object(
+                builder.product_generation,
+                "delegate",
+                return_value=subprocess.CompletedProcess([], 0),
+            ),
+            patch.object(builder, "run", side_effect=fail_xcode),
+        ):
+            with self.assertRaises(subprocess.CalledProcessError):
+                builder.build_trial("tuned-v2", 42, voice_ui_tests=True)
+        self.assertEqual(
+            commands[-1],
+            ("xcodegen", "generate", "--spec", "apps/ios/project.yml", "--project", "apps/ios"),
+        )
+
     def test_active_native_build_refuses_trial_before_project_or_asset_work(self):
         generation = builder.product_generation
         with (

@@ -89,7 +89,12 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
     self.core = core
     _preferences = State(initialValue: PreferencesStore(core: core))
     _scanner = State(initialValue: ScanModel(core: core))
-    _voice = State(initialValue: VoiceModel(core: core))
+    #if DEBUG && REHA_CUSTOM_ASSISTANT_TRIAL && targetEnvironment(simulator)
+      _voice = State(
+        initialValue: AssistantVoiceTrial.makeIfRequested(core: core) ?? VoiceModel(core: core))
+    #else
+      _voice = State(initialValue: VoiceModel(core: core))
+    #endif
     _linkRequests = State(
       initialValue: AgendaLinkRequests(
         resolve: { try await core.resolveOwnedEvent(id: $0) },

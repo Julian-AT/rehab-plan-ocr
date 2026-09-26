@@ -16,7 +16,11 @@ import RehaCore
     var pending: CheckedContinuation<String, Never>?
     var suspend = false
     var monitors = 0
-    func beginTurn(preRoll: Bool) async throws { state = .recording }
+    var didBegin: (() -> Void)?
+    func beginTurn(preRoll: Bool) async throws {
+      state = .recording
+      didBegin?()
+    }
     func endTurn() async throws -> String {
       state = .finishing
       if suspend { return await withCheckedContinuation { pending = $0 } }
@@ -52,7 +56,9 @@ import RehaCore
   @MainActor final class FlowProvider: InterpretationProvider {
     let identity = InterpretationIdentity(
       provider: "flow-fixture", model: "invented", schemaVersion: 1)
-    let capabilities: Set<InterpretationCapability> = [.calendar, .mutation, .conversation, .appHelp]
+    let capabilities: Set<InterpretationCapability> = [
+      .calendar, .mutation, .conversation, .appHelp,
+    ]
     var availability = InterpretationAvailability.available
     var requests: [InterpretationRequest] = []
     var discards = 0
@@ -93,7 +99,8 @@ import RehaCore
     }
     func event(_ id: String, title: String, hour: Int, room: String) -> CalendarEvent {
       CalendarEvent(
-        id: id, external_id: id, calendar_id: "visible", calendar_title: "Privat", source: "fixture",
+        id: id, external_id: id, calendar_id: "visible", calendar_title: "Privat",
+        source: "fixture",
         occurrence: "", recurring: false, system_only: false, writable: true,
         values: CalendarEventValues(
           title: title,
@@ -107,7 +114,9 @@ import RehaCore
       reads += 1
       if failRead { throw CocoaError(.fileReadNoPermission) }
       let scope = AgendaSelection(calendarIDs: ["visible"])
-      guard expected == nil || expected == scope else { throw CalendarQueryFailure.selectionChanged }
+      guard expected == nil || expected == scope else {
+        throw CalendarQueryFailure.selectionChanged
+      }
       return CalendarQueryResponse(
         scope: scope, events: events.filter { $0.values.start < end && $0.values.end > start },
         unavailableCalendarIDs: [])
