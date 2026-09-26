@@ -43,12 +43,12 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 macOS Rust tests, 174 Linux Rust tests and 208 tool tests pass on the recorded candidates. Thirteen monitor tests pass after download changes. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledger. |
+| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded candidates. The latest local tool suite passes 214 tests; fourteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledger. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
-| Hosted CI | Run 35295159442 fails at `0597aab`; portable and pre-UI Apple stages pass, and console logs record 62 passed UI cases and four failures. Result-bundle analysis is pending. Run 35297619578 tests `a303bc2` on a separate branch and remains active. No complete candidate pass is claimed. |
-| Portable CI scope | Runs 35299521071 (`9c8d31c`) and 35300286611 (`b8d31a2`) pass with their Apple jobs explicitly skipped. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
+| Hosted CI | Run 35295159442 fails at `0597aab`: the complete result confirms 62 UI passes, four failures and zero skips on iOS 26.5. Run 35297619578 at `a303bc2` also fails; its console records 65 passes and one picker-cancellation failure. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
+| Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
-| Local audio/UI | Full local runs reproduce CoreAudio aborts, also seen in an independent minimal app. Earlier hosted passes do not resolve this: neural preview fails again in run 35295159442. Failure cause and complete audio acceptance remain open. |
+| Local audio/UI | Local CoreAudio aborts also occur in an independent minimal app. CI run 35295159442 instead shows actual playback while retained accessibility values are stale. Current-query/scroll corrections compile and await hosted behavioral verification. The corrected public-plan share test passes locally. Complete audio acceptance remains open. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
 | Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. No baseline replacement or tolerance hides these differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
@@ -81,7 +81,9 @@ remain unqualified. Full adaptation finishes five epochs, selects epoch two at
 91/91 exact crops, and fails 39/1,206 numeric export checks with identical token
 sequences. The original pretrained route also fails 19 numeric comparisons.
 Both completed experiments are registered with failed parity. These results cannot
-qualify real-photo recognition. Critical-field metric
+qualify real-photo recognition. Stage diagnosis reproduces the saved Paddle graph
+bit-for-bit after the official reparameterization on all 18/39 failed cases;
+static-Paddle-to-ONNX differences remain separate and unresolved. Critical-field metric
 version 2 covers appointment identity, room and therapist as well as dates/times,
 and row-level regression checks catch relocated missing/invented appointments.
 

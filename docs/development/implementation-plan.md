@@ -109,6 +109,17 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Third completed portable CI candidate — 2026-09-26
+
+[Run 35302894860](archive:github/run-35302894860)
+passes at `10c5f39e099962a93794b48389911b4b0c7e6de2`: 174 Linux Rust,
+211 tool and fourteen monitor tests, with the Apple job explicitly skipped.
+Its complete job log and exact run/dispatch identities are retained under
+`.local/runs/hosted-ci-portable-20260926-s18-003`; summary SHA-256
+`d6ee642236980a4fb8dc81df43aaa8c49b49f2153ab57e58fb9ceff9994022c5`.
+Later clone-preservation, UI-query and simulator-profile changes are not covered
+by this run. Complete native acceptance remains open.
+
 ### Explicit simulator runtime identity — 2026-09-26
 
 UI tests now require the configured runtime identifier, version and OS build
