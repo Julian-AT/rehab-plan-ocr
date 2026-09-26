@@ -91,8 +91,11 @@ Fehlende oder abgebrochene Auswertungen werden ausdrücklich gekennzeichnet.
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus
 `tooling/dev/quality.py`; auf Linux entfällt ausschließlich die Apple-spezifische Prüfung.
-Für einen vollständigen kalten Build werden mindestens 8 GB freier Speicher empfohlen.
-Build-Schritte prüfen vorab ihre Mindestreserve und entfernen keine privaten Dateien.
+Ein normaler App-Build benötigt vorab mindestens 20 GiB Arbeitsreserve plus
+4 GiB eingeplanten Spitzenbedarf. Größere isolierte Builds und Trainings prüfen
+ihren zusätzlichen Bedarf separat; diese Planwerte ersetzen keine Messung des
+tatsächlichen Maximums. `make check-storage PEAK_GIB=4` prüft die verfügbare Kapazität
+nach der [Aufbewahrungsregel](docs/development/artifact-retention.md).
 
 `make build` erzeugt eine Simulator-App; `make build TARGET=device` prüft den
 unsignierten Gerätebuild. Beide verwenden die zuvor geprüften lokalen Artefakte.
