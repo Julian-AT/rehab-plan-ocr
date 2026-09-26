@@ -92,9 +92,9 @@ struct PlanPagesView: View {
   let core: NativeApplication
   let scanner: ScanModel
   let id: String
-  @State private var pageIDs: [String] = []
-  @State private var reviews: [String: ReviewSnapshot] = [:]
-  @State private var error: String?
+  @State private var model = PlanPagesModel()
+  private var pageIDs: [String] { model.snapshot.pageIDs }
+  private var reviews: [String: ReviewSnapshot] { model.snapshot.reviews }
   @State private var calendar = false
   @State private var remove: String?
   @State private var original = false
@@ -134,7 +134,7 @@ struct PlanPagesView: View {
           }
         }
       }
-      if let error { Text(error).foregroundStyle(AppPalette.destructive) }
+      if let error = model.error { Text(error).foregroundStyle(AppPalette.destructive) }
     }
     .pageTitle("Seiten")
     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
@@ -158,17 +158,12 @@ struct PlanPagesView: View {
           do {
             _ = try await core.setPageGroup(id: id, pageIds: pageIDs.filter { $0 != remove })
             await load()
-          } catch { self.error = userMessage(error) }
+          } catch { model.error = userMessage(error) }
         }
       }
     }
   }
   private func load() async {
-    do {
-      pageIDs = try await core.pageGroup(id: id)
-      var loaded: [String: ReviewSnapshot] = [:]
-      for page in pageIDs { loaded[page] = try? await core.loadScan(id: page) }
-      reviews = loaded
-    } catch { self.error = userMessage(error) }
+    await model.load(core: core, id: id)
   }
 }
