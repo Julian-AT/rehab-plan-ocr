@@ -78,6 +78,15 @@ impl Store {
             ));
         }
         self.scan_dir(source)?;
+        if self
+            .intakes()?
+            .iter()
+            .any(|i| i.id == source && i.status == "deleted")
+        {
+            return Err(Error::Invalid(
+                "Die Originaldatei wurde gelöscht und wird nicht erneut eingelesen.".into(),
+            ));
+        }
         let key = format!("document:{source}");
         if let Some(saved) = self.setting(&key)? {
             let ids: Vec<String> = serde_json::from_str(&saved)?;
