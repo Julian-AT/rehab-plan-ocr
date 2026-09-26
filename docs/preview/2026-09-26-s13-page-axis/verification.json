@@ -1,0 +1,73 @@
+{
+  "date": "2026-09-26",
+  "build": "2026092615",
+  "source_commit": "722ffedd808918d8b12a7f4f9355d110019c2cf8",
+  "baseline_build": "2026092613",
+  "environment": "iPhone 17 simulator, iOS 26.4, Xcode 26.4",
+  "ui_tests": [
+    {
+      "test": "TermineUITests.AgendaPreviewTests/testDayTimeAxisPagesWithContentAcrossEmptyDay",
+      "passed": true,
+      "seconds": 26.0
+    },
+    {
+      "test": "TermineUITests.AgendaPreviewTests/testSwipingAndCompleteAppointmentLabels",
+      "passed": true,
+      "seconds": 24.218
+    },
+    {
+      "test": "TermineUITests.ContinuousCalendarTests/testNativePagesWeeksAndCancelledDrag",
+      "passed": true,
+      "seconds": 27.705
+    }
+  ],
+  "checks": [
+    "Full-width pager before and after entering an empty day.",
+    "Time labels are descendants of the day pager and travel with the page (UI test and video frames inspected).",
+    "Empty-day heading remains centered; no hour labels are hittable on the empty day.",
+    "Vertical diagonal gesture keeps the date; cancelled horizontal drags keep date and time anchor.",
+    "Horizontal paging across empty days and week boundaries, then back.",
+    "Complete appointment labels and separate overlap hit areas retained.",
+    "Agenda projection probe passed.",
+    "Changed Swift files pass strict swift-format lint.",
+    "Simulator build and UI-test build passed.",
+    "Restored Rust backend rebuilt for iOS device and simulator.",
+    "Exported MP4 completely decoded with ffmpeg -xerror."
+  ],
+  "source_result_bundle": "apps/ios/build/PageAxis.xcresult",
+  "media_test": "AgendaPreviewTests/testDayTimeAxisPagesWithContentAcrossEmptyDay()",
+  "media": [
+    {
+      "file": "termine.png",
+      "source_attachment": "DE7106D1-6C08-42B4-8D19-877AA5841748.png",
+      "source_sha256": "33568696a7cdd1e533f67f6b9568dc8905ea99c17b8f4d48df805a8034b1efb3",
+      "transformation": "unchanged",
+      "sha256": "33568696a7cdd1e533f67f6b9568dc8905ea99c17b8f4d48df805a8034b1efb3"
+    },
+    {
+      "file": "leerer-tag.png",
+      "source_attachment": "C686D94C-9916-4B02-A63F-F89BA0DF157A.png",
+      "source_sha256": "5048e2bcb87f3c62c41993261aec904c149cda42de8635a6986727ba1f0a926d",
+      "transformation": "unchanged",
+      "sha256": "5048e2bcb87f3c62c41993261aec904c149cda42de8635a6986727ba1f0a926d"
+    },
+    {
+      "file": "naechster-tag.png",
+      "source_attachment": "364C8443-F09B-4C28-A611-4062C5DB64A1.png",
+      "source_sha256": "0cf3fe031c28fcbdea669098232159b57d50ad8d6ca8d7ae3fb3ee0af4bfc457",
+      "transformation": "unchanged",
+      "sha256": "0cf3fe031c28fcbdea669098232159b57d50ad8d6ca8d7ae3fb3ee0af4bfc457"
+    },
+    {
+      "file": "tageswechsel.mp4",
+      "source_attachment": "C426FE3D-782C-44BA-AAB9-1DED68628E9C.mp4",
+      "source_sha256": "27f65706fa77e33be864d77431d0e37c087aa3b1a653fb850fea16287d4e0f75",
+      "transformation": "H.264, width 590 px, CRF 25, no audio",
+      "sha256": "ac7b910e9d5cddbbffb11ffab5e1ad0216cb972e075da98e47486beb67f26bfa"
+    }
+  ],
+  "physical_device_updated": false,
+  "installed_iphone_build": "2026092613",
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}
