@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/../.."
-event_simulator=$(xcrun simctl create "Calendar-Events-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
+runtime=$(python3 tooling/checks/native-simulator.py --profile "${REHA_SIMULATOR_PROFILE:-local}")
+event_simulator=$(xcrun simctl create "Calendar-Events-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$runtime")
 trap 'xcrun simctl shutdown "$event_simulator" >/dev/null 2>&1 || true; xcrun simctl delete "$event_simulator" >/dev/null 2>&1 || true' EXIT
 xcrun simctl boot "$event_simulator"
 xcrun simctl bootstatus "$event_simulator" -b
