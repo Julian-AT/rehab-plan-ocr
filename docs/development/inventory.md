@@ -30,6 +30,21 @@ ausgewählte synthetische Ergebnisse. Diese Inhaltsprüfung ist keine neue
 Sicherheitsdatenbank-Abfrage und keine bestandene gehostete CI-Ausführung. Die
 übrige vollständige Inhaltsprüfung bleibt offen.
 
+Die 13 Dateien im Repository-Hauptverzeichnis wurden anschließend ebenfalls
+inhaltlich beziehungsweise – bei den generierten Lockdateien – anhand von Herkunft
+und Verbrauchern geprüft. Alle bleiben erforderlich. Die 71 ausdrücklich im
+Makefile genannten Hilfsdateien existieren; dynamische native Probes werden per
+Wildcard eingebunden. `Cargo.lock` enthält 228 externe Pakete mit Prüfsummen und
+drei Workspace-Pakete; `uv.lock` neun externe Pakete mit Artefaktprüfsummen und
+das lokale Werkzeugprojekt. Das ist keine neue Sicherheitsdatenbank- oder
+vollständige Fremdcodeprüfung.
+
+Belege: `.local/maintenance/root-workspace-content-review-20260926-s20-001.json`
+und der getrennte Prüfabschluss
+`.local/maintenance/root-workspace-content-verification-20260926-s20-001.json`.
+Alle geprüften Dateien blieben während `make lint` und `make test` an `4ea7fd2`
+unverändert; beide Befehle bestanden. Die Gesamtinhaltsprüfung bleibt offen.
+
 ## Geprüfte Kandidaten ab 8d81c4c
 
 | Kandidat | Verbraucher/Prüfung | Entscheidung |

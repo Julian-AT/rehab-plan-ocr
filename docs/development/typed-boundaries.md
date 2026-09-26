@@ -547,8 +547,16 @@ Beschädigte/übergroße Eingaben und vor Arbeitsbeginn abgelaufene Aufträge we
 geprüft. Rust prüft Routing, Byteerhalt, ungültige Aufträge und alle nativen
 Fehleridentitäten. Workspace-Tests, Clippy, iOS-ONNX-Compile, vollständige native
 Swift-6-Typprüfung und Bindings-Rundweg bestehen unter
-`.local/runs/typed-vision-native-20260926-s20-001`. Die tatsächliche gemeinsame
-App-Ausführung und Geräteabnahme bleiben separate Nachweise.
+`.local/runs/typed-vision-native-20260926-s20-001`.
+
+Der anschließende gemeinsame Simulator-Appbuild an `4ea7fd2` besteht ebenfalls.
+Zwei erzwungene Importe desselben synthetischen Plans liefern jeweils acht
+Termine, zwölf native Ausschnittprüfungen und anschließend erneut gelesene,
+passende persistierte Traces. Kein Kalenderaufruf wurde versucht. Der zweite
+Import verwendet die warme Modellsitzung, keinen Ergebnis-Cache. App, Modell-
+und Quellidentitäten sind unter `.local/runs/typed-vision-app-20260926-s20-001`
+erhalten. Dieser eine synthetische Quellfall ist ein Integrationsnachweis;
+Geräte-, Genauigkeits- und Leistungskriterien bleiben offen.
 
 ## Prüfungen
 

@@ -2,7 +2,7 @@
 
 # Zuständigkeit, Abbruch und Lebensdauer nebenläufiger Arbeit
 
-Quellprüfung vom 26. September 2026. Diese Bestandsaufnahme betrifft eigenen
+Quellprüfung vom 26. September 2026, ergänzt am 26. September 2026. Diese Bestandsaufnahme betrifft eigenen
 Swift-, Rust- und nativen Adaptercode. Sie ist kein Geräte-, Energie- oder
 Latenznachweis. Automatisch erzeugte UniFFI-Bindings und eingebundener Fremdcode
 werden nicht durch manuelle Änderungen ihrer Sendable-Deklarationen qualifiziert.
@@ -18,8 +18,9 @@ Datei-, Datenbank-, Modell- und synchrone Hostoperationen wechseln auf
 `spawn_blocking` beziehungsweise eigene serielle native Queues.
 
 Die Inventarsuche erfasste 14 eigene `@unchecked Sendable`-Deklarationen und
-25 `Task.detached`-Stellen: 12 beziehungsweise 19 gehören zu Produkt- oder
-expliziten Diagnosepfaden, zwei beziehungsweise sechs zu Tests. Die Tabellen
+26 `Task.detached`-Stellen: 12 beziehungsweise 19 stehen außerhalb von
+Testverzeichnissen, zwei beziehungsweise sieben in Tests einschließlich des
+expliziten Simulator-Diagnosehosts unter `Tests/Support`. Die Tabellen
 benennen auch die nur bedingt erfüllten Verträge; die Annotation allein belegt
 weder eine sichere Lebensdauer noch wirksamen Abbruch.
 
@@ -65,6 +66,15 @@ ist ebenfalls compilergeprüft: unveränderliche Argumentbytes und ein
 `OSAllocatedUnfairLock` besitzen die einmalige Completion. Sie wird unter dem
 Lock entnommen und außerhalb ausgeführt, damit Wiedereintritt nicht blockiert.
 
+Die ausgelagerte `NativeTextRecognition` führt ihre synchrone Bild-/Vision-Arbeit
+auf einer Workerqueue aus. Request und Ergebnis sind reguläre `Sendable`-Werte;
+es kam keine eigene `@unchecked Sendable`-Deklaration hinzu. Das kontinuierliche
+Zeitbudget beginnt vor dem Einreihen und wird vor/nach Decoder und Vision sowie
+vor Ergebnisrückgabe geprüft. Der Deadline-Timer hält den Vision-Request schwach;
+die aktive Workerfunktion hält ihn bis zu ihrer tatsächlichen Rückkehr. Der
+bestehende synchrone FFI-Adapter verwirft verspätete Antworten. Das garantiert
+keinen harten Abbruch eines bereits laufenden Systemcodecs.
+
 ## Abgekoppelte Aufgaben und ihre Besitzer
 
 | Stellen | Besitzer, Ergebnisübergabe und Ende |
@@ -78,6 +88,7 @@ Lock entnommen und außerhalb ausgeführt, damit Wiedereintritt nicht blockiert.
 | `Tests/IntakeErasureProbe.swift`, zwei Tasks | Kontrollierter Writer und Eraser, explizite Semaphorefreigabe testet tatsächliches Warten auf Writer. |
 | `Tests/IntakeReceiptProbe.swift`, zwei Tasks | Test wartet auf Recovery und Erasure; gemeinsame Datei-Gategeneration entscheidet den Gewinner. |
 | `Tests/SpeechInputChannelProbe.swift`, ein Task | Begrenzter Testproducer; Verbraucher und Producer werden beide abgewartet. |
+| `Tests/NativeTextRecognitionProbe.swift`, ein Task | Führt bisherigen und typisierten Vision-Worker mit identischen synthetischen Bildbytes aus; nur das boolesche Vergleichsergebnis geht zum abwartenden Test zurück. Beide Requestobjekte bleiben im Worker. |
 | `Tests/Support/RecognitionProviderScenario.swift`, ein Task | Prüft ausschließlich Dateien der Simulatorprobe; Rückkehr wird vor Modellinitialisierung abgewartet. |
 
 Die 13 ScanModel-Stellen verwenden keinen gemeinsam beschreibbaren Buffer über
