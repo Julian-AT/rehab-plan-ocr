@@ -296,6 +296,21 @@ class ArchiveObjectTests(unittest.TestCase):
         self.assertEqual(self.paths[0].read_bytes(), b"!<arch>\nnew unreviewed producer output")
         self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
 
+    def test_change_between_precheck_and_clone_entry_is_not_overwritten(self):
+        self.plan()
+        real = objects.replace_clone
+
+        def changed(source, destination, expected):
+            if destination == self.paths[0]:
+                destination.write_bytes(b"!<arch>\nnew output after the precheck")
+            real(source, destination, expected)
+
+        with patch.object(objects, "replace_clone", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "reviewed identity"):
+                objects.apply(self.root, self.manifest)
+        self.assertEqual(self.paths[0].read_bytes(), b"!<arch>\nnew output after the precheck")
+        self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
+
     def test_helper_change_invalidates_a_previously_reviewed_plan(self):
         self.plan()
         identities = objects.implementation_sources()

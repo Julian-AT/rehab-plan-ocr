@@ -56,7 +56,7 @@ Originale, Modellgewichte, Checkpoints und Sicherungen sind nicht zulässig.
 Es werden keine Pfade gelöscht. Die beobachtete Volume-Differenz wird getrennt
 von logischen Größen ausgewiesen und ist kein garantierter APFS-Speichergewinn.
 
-Die 17 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
+Die 18 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
 APFS-Klone, unabhängig beschreibbarer Kopien, Abbruch/Wiederanlauf, verweigerter
 Clone-Unterstützung, ACL-/Attributschutz, veränderter Belege und konkurrierender
 Zieländerung. Ein echtes C-Archiv lässt sich nach Zusammenführung weiterhin
@@ -68,6 +68,10 @@ Zusätzlich wurden alle 34 tatsächlichen XCTest-Aufrufdateien dieser Läufe
 unverändert gelesen: Sie verwenden das von diesem Projekt erzeugte Format 1.
 Der Prüfer unterstützt dessen direkte Testziele und die Konfigurationen von
 Format 2; unbekannte Versionen und unvollständige Zielangaben scheitern.
+Eine zusätzliche negative Gegenprobe zeigt, dass der Vorgänger eine Änderung
+zwischen Vorprüfung und Eintritt in den Clone-Helfer überschreiben konnte.
+Die erneute Prüfung gegen die freigegebene Identität schließt dieses Fenster;
+derselbe Test scheitert am Vorgänger und besteht mit der Korrektur.
 
 ## Bestehender Bereinigungsvertrag
 

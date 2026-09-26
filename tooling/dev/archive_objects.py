@@ -212,6 +212,8 @@ def plan(root, review_path, destination):
 def replace_clone(source, destination, expected):
     temporary = destination.with_name(f".{destination.name}.clone-{uuid.uuid4().hex}")
     previous = identity(destination) if destination.exists() else None
+    if previous is not None and previous != expected:
+        raise ValueError("Destination no longer matches the reviewed identity")
     try:
         clone(source, temporary)
         temporary.chmod(expected["mode"])
