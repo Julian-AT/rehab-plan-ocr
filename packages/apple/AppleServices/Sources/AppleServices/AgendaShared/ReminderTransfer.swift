@@ -61,12 +61,13 @@ struct CalendarAlarmDescriptor {
   var relativeOffset: Double
   var absolute: Bool = false
   var location: Bool = false
+  var proximity: Bool = false
 }
 enum AlarmOwnership {
   static func matches(_ alarms: [CalendarAlarmDescriptor], minutes: Int?) -> Bool {
     guard let minutes else { return alarms.isEmpty }
     guard alarms.count == 1, let alarm = alarms.first else { return false }
-    return !alarm.absolute && !alarm.location
+    return !alarm.absolute && !alarm.location && !alarm.proximity
       && abs(alarm.relativeOffset + Double(minutes * 60)) < 0.01
   }
   static func manageable(

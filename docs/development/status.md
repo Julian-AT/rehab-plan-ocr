@@ -21,6 +21,9 @@ establish current device behavior or authorize an update.
   alarm-journal failures. Current ownership resolves repaired event identities
   without rewriting approved historical values. Replacement previews reject stale
   comparisons/resolutions and clear deletion approval after invalidation.
+- Shared final-write protections cover import/revision/undo and manual/voice edits.
+  Compact imports protect externally added all-day/location geometry/availability;
+  proximity alarms retain ownership. The native metadata regression passes.
 - New stores default to 30-day completed-source retention. Aggregate/PDF deletion
   has a recovery journal; unfinished reviews and existing preferences survive.
   Schemas 10–11 add disposable summaries, indexed batch membership and typed
@@ -38,7 +41,7 @@ establish current device behavior or authorize an update.
   verify pinned assets; archive/XCFramework caches verify complete input/output
   identities. Locked training environments remain separate from app dependencies.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
-  broad Rust evidence is 173 tests; native EventKit evidence is 15 tests with one
+  broad Rust evidence is 173 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
   exactly below the system status bar. These are not a whole-app visual pass.
 
@@ -82,7 +85,7 @@ No calendar operation was executed by these evaluations and no provider was prom
 
 ## Still required
 
-Shared mutation-protection coverage, complete uncertainty/dialogue regressions,
+Complete uncertainty/dialogue regressions,
 full simulator/visual and persistence gates; remaining cleanup, CI/packaging and
 paired device performance; reviewed/grouped OCR data and qualified deployment;
 checked German dialogues, provider comparisons and shipping custom-model integration;

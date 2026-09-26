@@ -25,7 +25,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Immutable calendar scope; explicit empty selection; stale-result rejection.
 - [x] Resolve repaired identities without rewriting historical approved values.
 - [x] Durable save outcomes independent of reminder/widget failures.
-- [ ] Shared external-edit, invitation, recurrence and alarm protection.
+- [x] Shared external-edit, invitation, recurrence and alarm protection.
 - [x] Replacement-preview invalidation on changed inputs and calendar snapshots.
 - [x] Local erasure despite calendar access loss, with restoration limitations.
 - [x] Aggregate retention including PDF originals; no expired-page resurrection.
@@ -171,6 +171,16 @@ device was updated. No real-device speed, energy, thermal or usability improveme
 has been claimed. Milestones 1–4 remain open until their complete exit gates pass.
 
 ## Verified implementation slices — 2026-09-26
+
+The shared import policy now also protects all-day semantics, location geometry
+and availability that compact approvals cannot represent. Plain room text remains
+eligible. Alarm ownership rejects proximity metadata in addition to absolute and
+location alarms. A new actual EventKit regression first reproduced an incorrectly
+accepted external-metadata update; update and removal now conflict without losing
+the original event. The native suite passes 17 tests with one expected simulator
+file-protection skip; 57 agenda/alarm policy checks and the current app build pass.
+The [route matrix](../architecture/calendar-protection.md) records final checks,
+metadata preservation and the remaining physical-account acceptance limits.
 
 The app and its three extensions now carry audited privacy manifests. Packaging
 rejects missing, altered, duplicate or unexpected declarations; a discoverable

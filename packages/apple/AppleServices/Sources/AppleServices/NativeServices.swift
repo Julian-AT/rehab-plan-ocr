@@ -325,7 +325,8 @@ public final class NativeServices: @unchecked Sendable {
         {
           finish(
             "conflict", event,
-            "Serien, Einladungen und manuell veränderte Alarme bleiben geschützt.")
+            "Zusätzliche Kalenderangaben, Serien, Einladungen und veränderte Alarme bleiben geschützt."
+          )
           return
         }
         guard let event = existing, let before = op.before, self.values(event) == before else {

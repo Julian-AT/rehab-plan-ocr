@@ -1,3 +1,4 @@
+import CoreLocation
 import EventKit
 import XCTest
 
@@ -10,6 +11,95 @@ final class EventEditingTests: XCTestCase {
       editing.perform(command, request)
     }
     return try JSONSerialization.jsonObject(with: response) as? [String: Any] ?? [:]
+  }
+  func testImportProtectsMetadataOutsideApprovedValues() async throws {
+    #if targetEnvironment(simulator)
+      guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        throw XCTSkip("Simulator calendar access required")
+      }
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let agenda = AgendaService(storageRoot: root, widgetRoot: root)
+      agenda.start(registerBackground: false)
+      let native = NativeServices(agenda: agenda)
+      func invoke(_ command: String, _ args: [String: Any]) async throws -> [String: Any] {
+        let data = try JSONSerialization.data(withJSONObject: args)
+        let response: Data = try await withCheckedThrowingContinuation { continuation in
+          native.perform(command, arguments: data) { continuation.resume(with: $0) }
+        }
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: response) as? [String: Any])
+      }
+      let store = agenda.store
+      let calendar = EKCalendar(for: .event, eventStore: store)
+      calendar.title = "Erfundener Metadatenschutz"
+      calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+      try store.saveCalendar(calendar, commit: true)
+      defer { try? store.removeCalendar(calendar, commit: true) }
+      let iso = ISO8601DateFormatter()
+      let start = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
+      for allDay in [false, true] {
+        let id = UUID().uuidString
+        let values: [String: Any] = [
+          "title": "Erfundene Therapie", "start_utc": iso.string(from: start),
+          "end_utc": iso.string(from: start.addingTimeInterval(86400)),
+          "timezone": TimeZone.current.identifier, "location": "Raum 1", "notes": "",
+          "reminder_minutes": NSNull(),
+        ]
+        var operation: [String: Any] = [
+          "kind": "create", "id": id, "calendar_id": calendar.calendarIdentifier,
+          "requires_resolution": false, "after": values,
+        ]
+        let saved = try await invoke("apply", ["operation": operation, "recovery_only": false])
+        XCTAssertEqual(saved["status"] as? String, "saved")
+        let external = try XCTUnwrap(saved["external_id"] as? String)
+        let record: [String: Any] = [
+          "id": id, "status": "saved", "calendar_id": calendar.calendarIdentifier,
+          "external_id": external, "approved": values,
+        ]
+        let baseline = try await invoke("snapshot", ["records": [record]])
+        XCTAssertEqual(baseline["protected_ids"] as? [String], [])
+        let event = try XCTUnwrap(store.event(withIdentifier: external))
+        if allDay {
+          event.isAllDay = true
+        } else {
+          let place = EKStructuredLocation(title: "Raum 1")
+          place.geoLocation = CLLocation(latitude: 0, longitude: 0)
+          place.radius = 25
+          event.structuredLocation = place
+        }
+        try store.save(event, span: .thisEvent, commit: true)
+        let snapshot = try await invoke("snapshot", ["records": [record]])
+        XCTAssertEqual(snapshot["protected_ids"] as? [String], [id])
+        // Even a fresh compact preview cannot authorize deletion of metadata
+        // that it cannot show or restore. Revision and import undo use this route.
+        let current = try XCTUnwrap((snapshot["current"] as? [String: Any])?[id])
+        operation["before"] = current
+        operation["external_id"] = external
+        for kind in ["update", "remove"] {
+          operation["kind"] = kind
+          let result = try await invoke("apply", ["operation": operation, "recovery_only": false])
+          XCTAssertEqual(
+            result["status"] as? String, "conflict", "Protected \(kind), allDay=\(allDay)")
+        }
+        let retained = try XCTUnwrap(store.event(withIdentifier: external))
+        XCTAssertEqual(retained.isAllDay, allDay)
+        if !allDay { XCTAssertNotNil(retained.structuredLocation?.geoLocation) }
+      }
+    #endif
+  }
+  func testImportProtectionRetainsUnsupportedAvailability() {
+    // Local simulator calendars expose no availability choices. Exercise the
+    // account-independent policy with values supported by other account types.
+    for availability in [EKEventAvailability.busy, .notSupported] {
+      XCTAssertFalse(
+        CalendarEventProtection.protectsImportMetadata(
+          allDay: false, locationGeometry: false, availability: availability))
+    }
+    for availability in [EKEventAvailability.free, .tentative, .unavailable] {
+      XCTAssertTrue(
+        CalendarEventProtection.protectsImportMetadata(
+          allDay: false, locationGeometry: false, availability: availability))
+    }
   }
   func testCommittedWritesSurviveAlarmJournalFailure() async throws {
     #if targetEnvironment(simulator)

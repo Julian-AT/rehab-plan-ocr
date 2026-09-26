@@ -349,7 +349,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     (event.alarms ?? []).map {
       CalendarAlarmDescriptor(
         relativeOffset: $0.relativeOffset,
-        absolute: $0.absoluteDate != nil, location: $0.structuredLocation != nil)
+        absolute: $0.absoluteDate != nil, location: $0.structuredLocation != nil,
+        proximity: $0.proximity != .none)
     }
   }
   private func matches(_ event: EKEvent, minutes: Int?) -> Bool {

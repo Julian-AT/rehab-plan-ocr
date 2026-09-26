@@ -135,6 +135,7 @@ struct AgendaPolicyChecks {
       [], [CalendarAlarmDescriptor(relativeOffset: -300)], ours + ours,
       [CalendarAlarmDescriptor(relativeOffset: -600, absolute: true)],
       [CalendarAlarmDescriptor(relativeOffset: -600, location: true)],
+      [CalendarAlarmDescriptor(relativeOffset: -600, proximity: true)],
     ] {
       check(
         !AlarmOwnership.manageable(alarms, recurring: false, writable: true, entry: original),
