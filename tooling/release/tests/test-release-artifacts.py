@@ -169,6 +169,93 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertIn("Set RELEASE_RUN", result.stderr)
         self.assertNotIn("Compiling", result.stderr)
 
+    def test_wrong_extension_signer_blocks_publication_after_valid_main_app(self):
+        archive, app, _ = self.archive()
+        spec = importlib.util.spec_from_file_location(
+            "native_package_signer_probe", release.ROOT / "tooling/release/package-native.py"
+        )
+        package = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(package)
+        for component, suffix in [
+            (app, ""),
+            (app / "PlugIns/RehaWidgets.appex", ".widgets"),
+            (app / "PlugIns/RehaNotificationContent.appex", ".notification"),
+            (app / "PlugIns/RehaShare.appex", ".share"),
+        ]:
+            component.mkdir(parents=True, exist_ok=True)
+            (component / "Info.plist").write_bytes(
+                plistlib.dumps({"CFBundleIdentifier": package.BUNDLE + suffix})
+            )
+            (component / "embedded.mobileprovision").write_bytes(b"mock profile")
+        original = {
+            path.relative_to(archive): path.read_bytes()
+            for path in archive.rglob("*")
+            if path.is_file()
+        }
+        extracted = []
+
+        def entitlements(component):
+            identifier = plistlib.loads((component / "Info.plist").read_bytes())[
+                "CFBundleIdentifier"
+            ]
+            groups = (
+                [package.GROUP, package.INTAKE_GROUP]
+                if identifier == package.BUNDLE
+                else ([package.INTAKE_GROUP] if identifier.endswith(".share") else [package.GROUP])
+            )
+            return {
+                "application-identifier": package.TEAM + "." + identifier,
+                "com.apple.developer.team-identifier": package.TEAM,
+                "com.apple.security.application-groups": groups,
+            }, identifier
+
+        def invoke(*args):
+            if args[0] == "ditto":
+                shutil.copytree(args[1], args[2])
+            elif args[:2] == ("security", "cms"):
+                allowed, identifier = entitlements(Path(args[-1]).parent)
+                return plistlib.dumps(
+                    {
+                        "Entitlements": allowed,
+                        "TeamIdentifier": [package.TEAM],
+                        "ProvisionedDevices": ["synthetic-device"],
+                        "ExpirationDate": datetime.datetime(2099, 1, 1),
+                        "DeveloperCertificates": [identifier.encode()],
+                    }
+                )
+            elif args[0] == "codesign" and "--entitlements" in args:
+                return plistlib.dumps(entitlements(Path(args[-1]))[0])
+            elif args[:2] == ("codesign", "--display"):
+                _, identifier = entitlements(Path(args[-1]))
+                extracted.append(identifier)
+                prefix = args[2].split("=", 1)[1]
+                Path(prefix + "0").write_bytes(
+                    b"unlisted signer" if identifier.endswith(".share") else identifier.encode()
+                )
+            return b""
+
+        stored = release.load(self.value, self.root)
+        with (
+            patch.object(release, "load", return_value=stored),
+            patch.object(release, "symbols", return_value=[]),
+            patch.object(package, "run", side_effect=invoke),
+            patch.object(package, "verify", return_value={}),
+        ):
+            with self.assertRaisesRegex(ValueError, "not authorized"):
+                package.package(self.value)
+        self.assertIn(package.BUNDLE, extracted)
+        self.assertIn(package.BUNDLE + ".share", extracted)
+        self.assertFalse((stored[0] / "Laßnitzhöhe.ipa").exists())
+        self.assertFalse((stored[0] / "package-verification.json").exists())
+        self.assertEqual(
+            original,
+            {
+                path.relative_to(archive): path.read_bytes()
+                for path in archive.rglob("*")
+                if path.is_file()
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

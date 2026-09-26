@@ -228,6 +228,27 @@ Der UUID-Helfer wurde zusätzlich lesend gegen alle vier arm64-Binärdateien und
 dSYMs des aufbewahrten Altarchivs geprüft. Dessen unbekannter Quellcommit wird
 beim erneuten Paketieren nicht aus dem heutigen Checkout erfunden.
 
+Die private Gerätepaketierung vergleicht außerdem das tatsächlich extrahierte
+Signaturzertifikat jeder Komponente mit `DeveloperCertificates` ihres Profils.
+Apples `security verify-cert` prüft die Kette zum aktuellen UTC-Zeitpunkt mit
+der `codeSign`-Policy, Systemvertrauensankern und ausschließlich lokal verfügbaren
+Zertifikaten/Widerrufsinformationen. Ein mitgeliefertes Wurzelzertifikat wird nicht
+zum zusätzlichen Vertrauensanker. Der Bericht hält Zertifikat-/Kettenhashes und
+Prüfzeitpunkt fest. Eine frische Widerrufsauskunft oder die Annahme durch das
+Zielgerät sind damit ausdrücklich nicht belegt; der bestehende Gerätepaketpfad
+ist kein App-Store-Export. Die getrennte Profilablaufprüfung bleibt verbindlich.
+Grundlage: Apples [Provisionierungsvertrag](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles)
+und [Signaturzertifikate](https://developer.apple.com/documentation/technotes/tn3161-inside-code-signing-certificates).
+
+Die native Gegenprobe unter
+`.local/runs/package-signer-audit-20260926-s20-001` prüft alle vier Komponenten des
+unveränderten historischen Archivs: vier autorisierte Ketten bestehen, vier
+falsche Zertifikatslisten und acht Zeitpunkte außerhalb der Zertifikatsgültigkeit
+werden abgewiesen. Die bereits abgelaufenen Geräteprofile dieses Archivs werden
+dadurch nicht wieder gültig; es wurde kein neues Paket erstellt. Die Regressionen
+prüfen zusätzlich, dass ein falscher Erweiterungssignierer nach gültiger Haupt-App
+die gesamte Paketveröffentlichung verhindert und das Quellarchiv unverändert lässt.
+
 
 ## Product generations after resource changes
 

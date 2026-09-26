@@ -3686,10 +3686,11 @@
     "tooling/build/product_generation.py": "71a6c9947c135749db4612a3ecc5ca71d642a3f92f88a2b988fccc5d85757bb9",
     "tooling/build/verify-native-assets.py": "8e1ff5a15286f69a35cb97ad53dfc6a2e85fb8df6282e5f1d7cede9326fc006d",
     "tooling/dev/workspace.py": "e10e418ac6b4a36e8a84c9f21313a8d409cd3bad133558de8395acc775dc6034",
-    "tooling/release/package-native.py": "f1104804c1df41662c515a78720d859c95eb2f5afba7fbe5eba340acde285db4",
+    "tooling/release/package-native.py": "f86d17fb4d67812f06f767a90920812b7e615f73cacbf4e4877b733e952ae3fe",
     "tooling/release/release_artifacts.py": "717598465b3b6d41dd5898b97cba3e4392d2e0debc0f7e693b9d9d46641c4249",
-    "tooling/release/runtime_inventory.py": "87d9f4cf90c194126f32691545dd1fae0b291ae21d5c73b854b6961fafd41049",
-    "tooling/release/runtime_policy.py": "3c4083d7d95c915d2e4f119009b4f12c7ef3f2c1cf23b7bfc9edffcf197c0af0"
+    "tooling/release/runtime_inventory.py": "e4ae8f1d8796b2d0f2fa67c75128a693c13a6164bcf846ad3b297f59f59f0b09",
+    "tooling/release/runtime_policy.py": "3c4083d7d95c915d2e4f119009b4f12c7ef3f2c1cf23b7bfc9edffcf197c0af0",
+    "tooling/release/signing.py": "9c564baeeb27c7797f4a868b4c35563f0ac0451bbd79eb9d96d6d620c645e62e"
   },
   "system_components": {
     "bundled_by_app": false,
