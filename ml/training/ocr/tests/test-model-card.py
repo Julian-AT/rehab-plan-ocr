@@ -57,8 +57,20 @@ class ModelCardTests(unittest.TestCase):
             robustness=summary([]),
             new_critical_errors=[],
         )
-        self.save("settings.json", dict(mode="frozen-backbone", learning_rate=1e-4, width=320))
-        self.progress = dict(status="validation-stopped", best_epoch=1, epoch=4, steps=4)
+        self.save(
+            "settings.json",
+            dict(mode="frozen-backbone", learning_rate=1e-4, width=320, patience=3, max_epochs=100),
+        )
+        self.progress = dict(
+            status="validation-stopped",
+            best_epoch=1,
+            epoch=4,
+            steps=4,
+            best_score=[0, 0.0, 0],
+            stale_epochs=3,
+            stopped=True,
+            qualified=False,
+        )
         self.save("progress.json", self.progress)
         self.save("baseline.json", self.metrics)
         self.selection = dict(
@@ -75,8 +87,31 @@ class ModelCardTests(unittest.TestCase):
             training_sha256=sha(self.checkpoint / "training.pdstate"),
             baseline_sha256=sha(self.run / "baseline.json"),
             metrics=self.metrics,
+            state=dict(
+                epoch=1,
+                steps=1,
+                best_epoch=1,
+                best_score=[0, 0.0, 0],
+                stale_epochs=0,
+                stopped=False,
+            ),
         )
         self.save("checkpoints/epoch-0001/checkpoint.json", self.receipt)
+        last = self.run / "checkpoints/epoch-0004"
+        last.mkdir()
+        (last / "training.pdstate").write_bytes((self.checkpoint / "training.pdstate").read_bytes())
+        self.save(
+            "checkpoints/epoch-0004/checkpoint.json",
+            self.receipt
+            | {
+                "epoch": 4,
+                "state": {
+                    key: value
+                    for key, value in self.progress.items()
+                    if key not in {"status", "qualified"}
+                },
+            },
+        )
         self.parity = dict(
             artifact_sha256=sha(self.deployment / "recognizer.onnx"),
             checkpoint_sha256=self.selection["sha256"],

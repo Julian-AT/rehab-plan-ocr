@@ -154,6 +154,14 @@ the parent directory are synchronized before continuation. An incomplete directo
 is ignored. A corrupted completed checkpoint fails explicitly. Keep the complete
 run and its prepared dataset; do not rename or edit them during a run.
 
+Resume verifies both the latest and previously selected best checkpoint against
+the identity and mandatory baseline hash, their directory/receipt/state epochs,
+validation score and stopping state. Export and registration use the same strict
+checkpoint contract and require a completed selection. Missing fields are never
+treated as a historical compatibility exception. Original synthetic runs retain
+their byte-identical archived numerical implementation with this current guard;
+other old source identities require their recorded sources and environment.
+
 Each epoch has its recorded deterministic seed. An interrupted epoch replays from
 the most recent complete epoch with the same optimizer and data order. A deliberate
 pause is available as `--pause-after-epoch 1`; resume continues normally. There is

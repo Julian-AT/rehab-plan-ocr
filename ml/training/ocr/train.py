@@ -22,7 +22,7 @@ import uuid
 from collections import defaultdict
 from pathlib import Path
 
-from contract import CRITICAL, advance, field_name, sha, validate_dataset, write
+from contract import CRITICAL, advance, field_name, selection, sha, validate_dataset, write
 from preflight import ROOT
 
 sys.path.insert(0, str(ROOT))
@@ -172,18 +172,108 @@ def checkpoint(run, epoch, model, optimizer, state, metrics):
         os.close(descriptor)
 
 
+def verify_checkpoint(run, path):
+    """Check complete recovery evidence before loading any serialized tensors."""
+    if path.is_symlink() or path.parent != run / "checkpoints":
+        raise ValueError("Checkpoint must be a completed directory in this run")
+    receipt = json.loads((path / "checkpoint.json").read_text())
+    epoch = receipt.get("epoch")
+    state = receipt.get("state")
+    if (
+        type(epoch) is not int
+        or epoch < 1
+        or path.name != f"epoch-{epoch:04d}"
+        or not isinstance(state, dict)
+        or type(state.get("epoch")) is not int
+        or state["epoch"] != epoch
+        or any(type(state.get(key)) is not int or state[key] < 1 for key in ["steps", "best_epoch"])
+        or state["best_epoch"] > epoch
+        or type(state.get("stale_epochs")) is not int
+        or state["stale_epochs"] != epoch - state["best_epoch"]
+        or type(state.get("stopped")) is not bool
+        or not isinstance(receipt.get("metrics"), dict)
+    ):
+        raise ValueError("Checkpoint epoch or complete recovery state is invalid")
+    config = json.loads((run / "settings.json").read_text())
+    if epoch > config["max_epochs"] or state["stopped"] != (
+        state["stale_epochs"] >= config["patience"]
+    ):
+        raise ValueError("Checkpoint stopping state disagrees with recorded patience")
+    score = state.get("best_score")
+    if (
+        not isinstance(score, list)
+        or len(score) != 3
+        or any(
+            type(value) not in {int, float} or not math.isfinite(value) or value < 0
+            for value in score
+        )
+        or not isinstance(receipt["metrics"].get("overall"), dict)
+        or not {"critical_errors", "group_mean_error", "character_errors"}
+        <= receipt["metrics"]["overall"].keys()
+    ):
+        raise ValueError("Checkpoint validation or best score is incomplete")
+    current_score = selection(receipt["metrics"]["overall"])
+    if score > current_score or (state["best_epoch"] == epoch and score != current_score):
+        raise ValueError("Checkpoint best score disagrees with its validation")
+    if receipt.get("run_identity") != sha(run / "identity.json") or receipt.get(
+        "training_sha256"
+    ) != sha(path / "training.pdstate"):
+        raise ValueError("Checkpoint identity or optimizer/weights checksum mismatch")
+    if receipt.get("baseline_sha256") != sha(run / "baseline.json"):
+        raise ValueError("Baseline evidence changed since the checkpoint")
+    return receipt
+
+
+def best_checkpoint(run, state):
+    path = run / "checkpoints" / f"epoch-{state['best_epoch']:04d}"
+    receipt = verify_checkpoint(run, path)
+    if (
+        receipt["state"]["best_epoch"] != receipt["epoch"]
+        or selection(receipt["metrics"]["overall"]) != state["best_score"]
+    ):
+        raise ValueError("Best checkpoint disagrees with the recovery state")
+    return path, receipt
+
+
 def latest_checkpoint(run):
-    choices = sorted((run / "checkpoints").glob("epoch-*"))
+    choices = list((run / "checkpoints").glob("epoch-*"))
     if not choices:
         return None, None
-    path = choices[-1]
-    receipt = json.loads((path / "checkpoint.json").read_text())
-    if receipt["run_identity"] != sha(run / "identity.json") or receipt["training_sha256"] != sha(
-        path / "training.pdstate"
+    # Numeric ordering also handles epochs beyond the four-digit minimum width.
+    if any(not path.name.removeprefix("epoch-").isdigit() for path in choices):
+        raise ValueError("Invalid completed checkpoint directory")
+    path = max(choices, key=lambda item: int(item.name.removeprefix("epoch-")))
+    receipt = verify_checkpoint(run, path)
+    best_checkpoint(run, receipt["state"])
+    return path, receipt
+
+
+def selected_checkpoint(run):
+    """Require a completed selection bound to the same strict resume evidence."""
+    chosen = json.loads((run / "selection.json").read_text())
+    progress = json.loads((run / "progress.json").read_text())
+    _, latest = latest_checkpoint(run)
+    config = json.loads((run / "settings.json").read_text())
+    if (
+        latest is None
+        or type(chosen.get("epoch")) is not int
+        or chosen.get("qualified") is not False
+        or progress.get("qualified") is not False
+        or progress.get("status") not in {"validation-stopped", "epoch-limit"}
+        or any(progress.get(key) != value for key, value in latest["state"].items())
+        or chosen["epoch"] != latest["state"]["best_epoch"]
+        or progress["status"]
+        != ("validation-stopped" if latest["state"]["stopped"] else "epoch-limit")
+        or (not latest["state"]["stopped"] and latest["epoch"] != config["max_epochs"])
     ):
-        raise ValueError("Checkpoint identity or optimizer/weights checksum mismatch")
-    if receipt.get("baseline_sha256") and receipt["baseline_sha256"] != sha(run / "baseline.json"):
-        raise ValueError("Baseline evidence changed since the checkpoint")
+        raise ValueError("A completed, unchanged experimental selection is required")
+    path, receipt = best_checkpoint(run, latest["state"])
+    if (
+        chosen.get("metrics") != receipt["metrics"]
+        or chosen.get("sha256") != sha(run / "selected.pdparams")
+        or chosen.get("export_config_sha256") != sha(run / "export.yml")
+    ):
+        raise ValueError("Selected checkpoint, weights or export configuration changed")
     return path, receipt
 
 
@@ -429,10 +519,7 @@ def execute(run, pause_after_epoch=None):
             "qualified": False,
         },
     )
-    best = run / "checkpoints" / f"epoch-{state['best_epoch']:04d}"
-    selected = json.loads((best / "checkpoint.json").read_text())
-    if selected["training_sha256"] != sha(best / "training.pdstate"):
-        raise ValueError("Selected checkpoint checksum changed")
+    best, selected = best_checkpoint(run, state)
     require_storage(ROOT, run, 4, checkpoint_peak(model.state_dict(), {}))
     paddle.save(
         paddle.load(str(best / "training.pdstate"))["model"], str(run / "selected.pdparams")

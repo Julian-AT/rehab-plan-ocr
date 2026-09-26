@@ -10,7 +10,7 @@ from pathlib import Path
 
 from contract import sha, write
 from run_identity import validate_inputs
-from train import ROOT, UPSTREAM
+from train import ROOT, UPSTREAM, selected_checkpoint
 
 
 def main():
@@ -23,14 +23,10 @@ def main():
     if not output.is_relative_to(ROOT / ".local"):
         parser.error("Exported artifacts must remain below .local")
     _, identity_verification = validate_inputs(run)
-    selection = json.loads((run / "selection.json").read_text())
-    if selection["sha256"] != sha(run / "selected.pdparams"):
-        raise ValueError("Selected weights changed")
+    selected_checkpoint(run)
     subprocess.run(
         [sys.executable, str(Path(__file__).with_name("restore.py")), "--offline"], check=True
     )
-    if selection["export_config_sha256"] != sha(run / "export.yml"):
-        raise ValueError("Export configuration changed since checkpoint selection")
     output.mkdir(parents=True, exist_ok=False)
     report = {
         "schema_version": 1,

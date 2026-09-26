@@ -124,6 +124,7 @@ def legacy_engine(run):
     for name in ["CRITICAL", "advance", "field_name", "sha", "write"]:
         setattr(engine, name, getattr(old_contract, name))
     engine.validate_dataset = contract.validate_dataset
+    engine.latest_checkpoint = train.latest_checkpoint
     dataset = Path(json.loads((run / "settings.json").read_text())["dataset"])
 
     def original_lineage(path):
@@ -149,7 +150,12 @@ def resume_legacy(run, pause_after_epoch=None):
         "resume_adapter": {
             "source_sha256": sha(Path(__file__)),
             "restore_bridge_sha256": sha(ARCHIVE / "restore.py"),
-            "overrides": ["lineage verification", "dataset validation", "live reference review"],
+            "overrides": [
+                "lineage verification",
+                "dataset validation",
+                "live reference review",
+                "complete checkpoint verification",
+            ],
         }
     }
     target = run / "compatibility" / (digest(proof) + ".json")

@@ -121,6 +121,8 @@ class TrainingContractTests(unittest.TestCase):
 
     def test_incomplete_epoch_is_ignored_and_corruption_is_not_silently_resumed(self):
         (self.root / "identity.json").write_text("identity")
+        contract.write(self.root / "settings.json", {"patience": 2, "max_epochs": 2})
+        contract.write(self.root / "baseline.json", {"invented": True})
         checkpoint = self.root / "checkpoints/epoch-0001"
         checkpoint.mkdir(parents=True)
         weights = checkpoint / "training.pdstate"
@@ -129,6 +131,18 @@ class TrainingContractTests(unittest.TestCase):
             checkpoint / "checkpoint.json",
             {
                 "epoch": 1,
+                "state": {
+                    "epoch": 1,
+                    "steps": 1,
+                    "best_epoch": 1,
+                    "best_score": [0, 0, 0],
+                    "stale_epochs": 0,
+                    "stopped": False,
+                },
+                "metrics": {
+                    "overall": {"critical_errors": 0, "group_mean_error": 0, "character_errors": 0}
+                },
+                "baseline_sha256": contract.sha(self.root / "baseline.json"),
                 "training_sha256": contract.sha(weights),
                 "run_identity": contract.sha(self.root / "identity.json"),
             },

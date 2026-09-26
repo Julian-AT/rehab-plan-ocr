@@ -16,8 +16,11 @@ Real reference runs have no legacy exception.
 
 On resume, the original `train.py` numerical training implementation and original
 contract helpers are actually loaded from these files. The entry point explicitly
-replaces lineage verification, dataset validation and live reference review with
-current guards. The local `restore.py` bridge calls the current offline upstream
+replaces lineage verification, dataset validation, live reference review and
+completed-checkpoint verification with current guards. Resume checks both the
+latest checkpoint and its earlier best checkpoint, including the required baseline
+binding and directory/receipt/state epochs. Missing evidence is not a legacy
+exception. The local `restore.py` bridge calls the current offline upstream
 verifier. A separate, content-addressed `run/compatibility/*.json` receipt records
 the original identity and actual current guard hashes. The optimizer/checkpoint
 format, original identity, model card and recovery journals stay unchanged.
@@ -25,3 +28,7 @@ format, original identity, model card and recovery journals stay unchanged.
 Use the normal `make resume-ocr` entry point. These snapshots are not standalone
 commands and must not be used to bypass current validation. Replaying provenance
 or resuming an experiment never grants a dataset approval or model promotion.
+
+Other source revisions have no compatibility exception: replay them only with
+their recorded sources and environment, or start a new run. The current export
+and registration gates also require a complete, internally consistent selection.

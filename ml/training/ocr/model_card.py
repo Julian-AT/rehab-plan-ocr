@@ -12,7 +12,7 @@ from pathlib import Path
 
 from contract import CRITICAL, sha
 from run_identity import validate_inputs
-from train import ROOT, summary
+from train import ROOT, selected_checkpoint, summary
 
 
 def read(path):
@@ -71,16 +71,7 @@ def describe(run, dataset, root=ROOT):
         or selection["export_config_sha256"] != sha(run / "export.yml")
     ):
         raise ValueError("A completed, unchanged experimental selection is required")
-    checkpoint = run / "checkpoints" / f"epoch-{selection['epoch']:04d}"
-    receipt = read(checkpoint / "checkpoint.json")
-    if (
-        receipt["run_identity"] != sha(run / "identity.json")
-        or receipt["training_sha256"] != sha(checkpoint / "training.pdstate")
-        or receipt["baseline_sha256"] != sha(run / "baseline.json")
-        or receipt["metrics"] != selection["metrics"]
-        or receipt["epoch"] != selection["epoch"]
-    ):
-        raise ValueError("Selected checkpoint or baseline evidence changed")
+    checkpoint, _ = selected_checkpoint(run)
     baseline = read(run / "baseline.json")
     baseline_metrics = checked_metrics(baseline, dataset["samples"])
     selected_metrics = checked_metrics(selection["metrics"], dataset["samples"])
