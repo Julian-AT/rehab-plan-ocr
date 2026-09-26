@@ -68,7 +68,8 @@ import Speech
       let (transcriber, locale) = try await module(args[1])
       let before = await AssetInventory.status(forModules: [transcriber])
       var requested = false
-      if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber])
+      if before != .installed,
+        let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber])
       {
         requested = true
         try await request.downloadAndInstall()

@@ -38,6 +38,12 @@ SHA-256 `e270da9cf8e1a00eb6fe90f28abbd9b6dc823538b0d02a844b3f7da8c9d7e847`.
 The initial actual installation and successful single-file canary remain in
 `speech-file-setup-20260926-s18-001`.
 
+The follow-up setup guard skips installation requests when assets are already
+installed. Its actual compiled run `speech-file-setup-20260926-s18-003` confirms
+installed → installed with `download_requested: false`. The 100-file transcription
+evidence retains the preceding source implementation in Git (`ae237f8`); its
+transcription branch is unchanged. No result was regenerated to replace that run.
+
 Five new isolated verifier tests, all 202 tool tests, repository lint and actual
 Swift compilation pass. The Make commands and API references are in the
 [speech evaluation guide](../evaluation/speech/README.md). File analysis times
