@@ -456,6 +456,33 @@ final class EventEditingTests: XCTestCase {
       XCTAssertEqual(visibleEvents.count, 4)
       XCTAssertEqual(visibleEvents.filter { $0["import_id"] as? String == id }.count, 1)
       XCTAssertEqual((visible["unavailable_events"] as? [Any])?.count, 0)
+      let originalEvents = try XCTUnwrap(query["events"] as? [[String: Any]])
+      for var value in visibleEvents {
+        let original = try XCTUnwrap(
+          originalEvents.first { $0["id"] as? String == value["id"] as? String })
+        value.removeValue(forKey: "import_id")
+        XCTAssertEqual(
+          NSDictionary(dictionary: value), NSDictionary(dictionary: original),
+          "Deduplicating an owned occurrence must preserve its metadata and fingerprint")
+      }
+      let repeatedRecord = try JSONDecoder().decode(
+        OwnedRecord.self, from: JSONSerialization.data(withJSONObject: linked))
+      let typedQuery = NativeCalendarQuery(
+        calendarIDs: [calendar.calendarIdentifier],
+        startUTC: iso.string(from: date.addingTimeInterval(-3600)),
+        endUTC: iso.string(from: date.addingTimeInterval(3600)), timezone: "Europe/Vienna",
+        selectionRevision: 0,
+        records: [NativeCalendarRecord(repeatedRecord), NativeCalendarRecord(repeatedRecord)])
+      let typedResult: NativeCalendarReadResult = try await withCheckedThrowingContinuation { c in
+        editing.readQuery(typedQuery) { c.resume(with: $0) }
+      }
+      let typedEvents = try typedResult.events.map { try $0.legacyValue }
+      XCTAssertEqual(typedEvents.count, visibleEvents.count)
+      for value in typedEvents {
+        let expected = try XCTUnwrap(
+          visibleEvents.first { $0["id"] as? String == value["id"] as? String })
+        XCTAssertEqual(NSDictionary(dictionary: value), NSDictionary(dictionary: expected))
+      }
     #endif
   }
   func testExternalMetadataOccurrenceAndUndo() async throws {

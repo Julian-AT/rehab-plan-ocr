@@ -287,11 +287,15 @@ final class EventEditingService: @unchecked Sendable {
     let selectedIDs = Set(request.calendarIDs)
     let calendars = request.calendarIDs.compactMap { store.calendar(withIdentifier: $0) }
     var unavailable = selectedIDs.subtracting(calendars.map(\.calendarIdentifier))
-    var found =
-      calendars.isEmpty
-      ? []
-      : store.events(
+    // Owned lookups below replace fetched occurrences before the final snapshot.
+    var found: [String: EKEvent] = [:]
+    if !calendars.isEmpty {
+      for event in store.events(
         matching: store.predicateForEvents(withStart: start, end: end, calendars: calendars))
+      {
+        found[identity(event).id] = event
+      }
+    }
     var imports: [String: String] = [:]
     var unavailableEvents: [NativeCalendarUnavailableEvent] = []
     for record in request.records where record.externalID != nil {
@@ -312,18 +316,17 @@ final class EventEditingService: @unchecked Sendable {
         event.url?.absoluteString == "reha-calendar://event/\(record.id)",
         event.startDate < end, event.endDate > start
       else { continue }
-      let value = try NativeCalendarEvent(snapshot: snapshot(event))
-      imports[value.id] = record.id
-      found.append(event)
+      let id = identity(event).id
+      imports[id] = record.id
+      found[id] = event
     }
-    var unique: [String: NativeCalendarEvent] = [:]
-    for event in found {
+    let events = try found.map { id, event in
       var value = try NativeCalendarEvent(snapshot: snapshot(event))
-      value.importID = imports[value.id]
-      unique[value.id] = value
+      value.importID = imports[id]
+      return value
     }
     return NativeCalendarReadResult(
-      events: unique.values.sorted {
+      events: events.sorted {
         $0.values.startUTC < $1.values.startUTC
       }, unavailableCalendarIDs: unavailable.sorted(), unavailableEvents: unavailableEvents)
   }
@@ -382,8 +385,15 @@ final class EventEditingService: @unchecked Sendable {
       "count": rule.recurrenceEnd?.occurrenceCount ?? 0,
     ]
   }
+  private func identity(_ event: EKEvent) -> (id: String, externalID: String, occurrence: String) {
+    let occurrence = iso.string(from: event.occurrenceDate ?? event.startDate!)
+    let externalID = event.eventIdentifier ?? event.calendarItemIdentifier
+    return (
+      "\(event.calendar.calendarIdentifier)|\(externalID)|\(occurrence)", externalID, occurrence
+    )
+  }
   private func snapshot(_ event: EKEvent) -> [String: Any] {
-    let occurrence = event.occurrenceDate ?? event.startDate!
+    let reference = identity(event)
     let firstReminder = event.alarms?.first(where: {
       $0.absoluteDate == nil && $0.structuredLocation == nil && $0.relativeOffset <= 0
     }).map { Int(-$0.relativeOffset / 60) }
@@ -425,13 +435,12 @@ final class EventEditingService: @unchecked Sendable {
       (try? JSONSerialization.data(
         withJSONObject: ["values": values, "metadata": metadata], options: [.sortedKeys])) ?? Data()
     let fingerprint = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-    let external = event.eventIdentifier ?? event.calendarItemIdentifier
     return [
-      "id": "\(event.calendar.calendarIdentifier)|\(external)|\(iso.string(from: occurrence))",
-      "external_id": external,
+      "id": reference.id,
+      "external_id": reference.externalID,
       "calendar_id": event.calendar.calendarIdentifier, "calendar_title": event.calendar.title,
       "source": event.calendar.source.title,
-      "occurrence": iso.string(from: occurrence),
+      "occurrence": reference.occurrence,
       "recurring": event.hasRecurrenceRules || event.isDetached,
       "system_only": CalendarEventProtection.requiresSystemEditor(event),
       "writable": event.calendar.allowsContentModifications, "values": values, "metadata": metadata,
