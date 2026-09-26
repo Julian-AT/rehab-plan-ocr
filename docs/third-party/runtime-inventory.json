@@ -3704,10 +3704,12 @@
     "packages/rust/reha-ffi/Cargo.toml": "56bc3fa650fa7dff6dfa47a0662a172ba8618595784c135de15bf49b9d81f53e",
     "rust-toolchain.toml": "09d61e489c122ee1374fc258ed39367f8a34a60be0f38db55fe081d3e1c69f24",
     "tooling/build/assemble-native.py": "aea3d47197f94acb1448aa0d1dc6b68fe8f4a3e35be336bd7be0501a036d1608",
-    "tooling/build/build-native.sh": "d5be26970c1086cd4bff442b75044ef24c283f1493f2399f0c45e3704a342273",
+    "tooling/build/build-native.sh": "8ef60db9b1609c8dc48bb1d3893a26b8005362bcb85ac5c9578eed0e7fb9e7b7",
     "tooling/build/verify-native-assets.py": "8e1ff5a15286f69a35cb97ad53dfc6a2e85fb8df6282e5f1d7cede9326fc006d",
     "tooling/dev/workspace.py": "e10e418ac6b4a36e8a84c9f21313a8d409cd3bad133558de8395acc775dc6034",
-    "tooling/release/runtime_inventory.py": "00805bf6544ba805b4bd3b9294dcd05bafb217faa3eb8cc8157beb6ae607a676",
+    "tooling/release/package-native.py": "f1104804c1df41662c515a78720d859c95eb2f5afba7fbe5eba340acde285db4",
+    "tooling/release/release_artifacts.py": "717598465b3b6d41dd5898b97cba3e4392d2e0debc0f7e693b9d9d46641c4249",
+    "tooling/release/runtime_inventory.py": "caa525e04557fb17b114d48d96f8407f838530865e51699284a52047e8a93357",
     "tooling/release/runtime_policy.py": "51c318ec5b3ea62c36ed92e3f820de82b34e889695442f878fbac5f7aa39adcd"
   },
   "system_components": {

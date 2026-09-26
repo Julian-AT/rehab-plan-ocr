@@ -91,3 +91,59 @@ Dies belegt die Symbolerzeugung der Toolchain, noch nicht die Vollständigkeit d
 Symbole eines ausgelieferten App-Archivs. Dessen dSYMs, UUIDs und Herkunft müssen
 bei der gesonderten Paketabnahme mit dem tatsächlich verteilten Build verglichen
 und aufbewahrt werden.
+
+## Frischer Checkout und Offline-Wiederholung
+
+Der lokale Nachweis unter `.local/runs/fresh-checkout-20260926-s18-001` verwendet den
+separaten Checkout `11fc45ae99dab589168602a2616e786d259a6665`. UV-Cache,
+Python-Installation, Cargo-Registry und Buildverzeichnis wurden dort neu angelegt;
+Xcode und die ausdrücklich vorausgesetzte Rustup-Toolchain blieben Hostwerkzeuge.
+`make bootstrap` und `make restore` luden die gesperrten Werkzeuge, Abhängigkeiten,
+OCR-Dateien und beide iOS-Laufzeiten. Ein vorheriger Offline-Metadatenaufruf mit
+leerem Cargo-Cache scheiterte erwartungsgemäß; `make restore-rust` schließt diese
+Lücke im getrennten Einrichtungsschritt.
+
+Mit `CARGO_NET_OFFLINE=true`, `UV_OFFLINE=true` und zusätzlich der macOS-Regel
+`sandbox-exec -p '(version 1) (allow default) (deny network*)'` bestanden danach:
+
+- `make bootstrap` sowie `make doctor check-workspace convert TARGET=all verify-runtime-inventory`;
+- `make check-bindings` mit tatsächlicher FFI-Kompilierung in 108,2 Sekunden;
+- dieselbe Prüfung erneut in 5,9 Sekunden bei erhaltenem Compilerzustand.
+
+`git status --porcelain` blieb leer, `git diff --exit-code HEAD` bestand. Dies
+qualifiziert Einrichtung und Host-FFI-/Bindingspfad dieses Kandidaten. Der ganze
+Xcode-Appbuild und spätere gemeinsame Kandidaten benötigen eigene Nachweise.
+
+## Archive und Paketierung
+
+Ein neuer Archivlauf benötigt einen bisher unbenutzten Ordner:
+
+```sh
+make archive RELEASE_RUN=.local/releases/2026-09-26-candidate-001
+```
+
+Der Einstieg reserviert den Ordner vor dem ersten Build. Er enthält anschließend
+Archiv, dSYMs, IPA, Herkunft und Paketprüfbericht. Auch ein fehlgeschlagener Lauf
+wird nicht überschrieben. `.local/releases` gehört zum geschützten Bestand.
+`make package RELEASE_RUN=<reservierter-lauf>` prüft ein vorhandenes neues Archiv
+und erstellt nur bislang fehlende Ausgaben; ein abgeschlossener oder bereits
+begonnener Paketlauf kann nicht wiederverwendet werden.
+
+Ein historisches Archiv wird ausschließlich ausdrücklich als Quelle ausgewählt,
+mit einem neuen Ausgabeordner:
+
+```sh
+make package RELEASE_RUN=.local/releases/2026-09-26-repackage-001 \
+  RELEASE_ARCHIVE=apps/ios/build/Laßnitzhöhe.xcarchive
+```
+
+Der alte Kompatibilitätspfad bleibt lesbar. Die Paketierung verändert die Quelle
+nicht, prüft Signaturen und Profilablauf erneut und vergleicht für App und jede
+Erweiterung die UUID-/Architekturmenge mit genau einer aufbewahrten dSYM-Datei.
+Der Bericht erfasst Binär- und Symbolhashes; die verpackten Binärdateien müssen
+dazu identisch sein. Die gezielten Regressionen decken bestehende Ausgaben,
+falsche UUIDs/Architekturen, fehlende Symbole, ungültige Pfade und abgelaufene
+Profile ab. Eine aktuelle signierte Gerätepaketabnahme ersetzt das nicht.
+Der UUID-Helfer wurde zusätzlich lesend gegen alle vier arm64-Binärdateien und
+dSYMs des aufbewahrten Altarchivs geprüft. Dessen unbekannter Quellcommit wird
+beim erneuten Paketieren nicht aus dem heutigen Checkout erfunden.

@@ -26,6 +26,7 @@ endif
 # Apple Make resolves bare executables before applying this exported PATH.
 # env performs lookup in the recipe environment, including bootstrapped tools.
 TARGET ?= simulator
+export RELEASE_RUN
 .DEFAULT_GOAL := help
 
 WORKSPACE_MANIFEST ?= .local/migrations/workspace.json
@@ -101,7 +102,8 @@ help:
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
 	@echo 'Experimental Victoria: make restore-experimental-speech convert-experimental-speech; make prepare-listening-experimental RUN=<new-local-run>'
-	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package'
+	@echo 'Archive: make archive RELEASE_RUN=.local/releases/<new-name>; package again only into a new run with explicit RELEASE_ARCHIVE=<existing-archive>'
+	@echo 'Packaging: make verify-bundle APP_BUNDLE=<built-app> [TARGET=simulator|device]; make package RELEASE_RUN=<reserved-run>'
 	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Hosted CI: make ci-status; make test-ci-monitor; node tooling/dev/ci_monitor.cjs --help'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
@@ -110,6 +112,16 @@ help:
 	@echo 'Common provider app trial: make build-assistant-trial; make test-assistant-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>"'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
 	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
+	@echo 'Reference privacy: make reference-privacy-draft DATASET=<reference-root>; reference-privacy-approve additionally requires SOURCE_SHA256 and REVIEWER'
+
+.PHONY: reference-privacy-draft reference-privacy-approve
+reference-privacy-draft:
+	@test -n "$(DATASET)" || { echo 'Set DATASET to the private reference root'; exit 2; }
+	/usr/bin/env uv run --locked python ml/data/annotation/reference-data.py --root "$(DATASET)" privacy-draft
+
+reference-privacy-approve:
+	@test -n "$(DATASET)" -a -n "$(SOURCE_SHA256)" -a -n "$(REVIEWER)" || { echo 'Set DATASET, SOURCE_SHA256 and REVIEWER after human privacy review'; exit 2; }
+	/usr/bin/env uv run --locked python ml/data/annotation/reference-data.py --root "$(DATASET)" privacy-approve "$(SOURCE_SHA256)" --reviewer "$(REVIEWER)"
 
 bootstrap doctor format lint test:
 	python3 tooling/dev/quality.py $@
@@ -193,8 +205,13 @@ convert-experimental-speech:
 verify-assets:
 	python3 tooling/build/verify-native-assets.py $(TARGET)
 
+.PHONY: archive
+archive: TARGET = archive
+archive: build
+
 package:
-	python3 tooling/release/package-native.py
+	@test -n "$(RELEASE_RUN)" || { echo 'Set RELEASE_RUN below .local/releases'; exit 2; }
+	python3 tooling/release/package-native.py --run "$(RELEASE_RUN)" $(if $(RELEASE_ARCHIVE),--archive "$(RELEASE_ARCHIVE)")
 
 .PHONY: verify-bundle
 verify-bundle:

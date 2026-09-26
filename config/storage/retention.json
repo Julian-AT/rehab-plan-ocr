@@ -5,6 +5,7 @@
     ".local/datasets",
     ".local/models",
     ".local/runs",
+    ".local/releases",
     ".local/migrations",
     ".local/upstream",
     ".local/envs",

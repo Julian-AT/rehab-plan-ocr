@@ -215,6 +215,8 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "tooling/build/verify-native-assets.py",
         "tooling/release/runtime_inventory.py",
         "tooling/release/runtime_policy.py",
+        "tooling/release/package-native.py",
+        "tooling/release/release_artifacts.py",
         "config/toolchains/versions.json",
         "rust-toolchain.toml",
         "config/storage/workspace.json",

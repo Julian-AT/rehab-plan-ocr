@@ -5,6 +5,10 @@ cd "$(dirname "$0")/../.."
 eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 mode=${1:-simulator}
+if [ "$mode" = archive ]; then
+  : "${RELEASE_RUN:?Set RELEASE_RUN to a new directory below .local/releases}"
+  archive_path=$(python3 tooling/release/release_artifacts.py "$RELEASE_RUN")
+fi
 bindings() {
   cargo build --locked --offline -p reha-ffi --features bindgen
   generated=$(mktemp -d)
@@ -64,8 +68,8 @@ case "$mode" in
       simulator) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
       device) xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build ;;
       archive)
-        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath "$REHA_IOS_BUILD_DIR/Laßnitzhöhe.xcarchive" ARCHS=arm64 -allowProvisioningUpdates archive
-        python3 tooling/release/package-native.py
+        xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Release -destination 'generic/platform=iOS' -archivePath "$archive_path" ARCHS=arm64 -allowProvisioningUpdates archive
+        python3 tooling/release/package-native.py --run "$RELEASE_RUN"
         ;;
       test)
         xcodebuild -project apps/ios/Termine.xcodeproj -scheme Termine -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$REHA_IOS_BUILD_DIR/DerivedData" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build

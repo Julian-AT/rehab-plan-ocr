@@ -1,7 +1,6 @@
 """The selected release profile must retain source lines for crash symbolication."""
 
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +11,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import workspace  # noqa: E402
+
+sys.path.insert(0, str(workspace.ROOT / "tooling/release"))
+import release_artifacts  # noqa: E402
 
 
 @unittest.skipUnless(sys.platform == "darwin" and shutil.which("xcrun"), "Apple DWARF tools")
@@ -59,12 +61,7 @@ class ReleaseSymbolsTests(unittest.TestCase):
                     ["xcrun", "dwarfdump", option, str(path)], text=True, timeout=30
                 )
 
-            def identity(path):
-                found = re.findall(r"UUID: ([A-Fa-f0-9-]+) \(([^)]+)\)", dwarf("--uuid", path))
-                self.assertTrue(found, "Missing build UUID")
-                return found
-
-            self.assertEqual(identity(executable), identity(symbols))
+            self.assertEqual(release_artifacts.uuids(executable), release_artifacts.uuids(symbols))
             self.assertIn("symbol_source.rs", dwarf("--debug-line", symbols))
 
 
