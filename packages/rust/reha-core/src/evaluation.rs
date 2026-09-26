@@ -286,6 +286,14 @@ pub fn development_groups(references: &[Annotation]) -> Result<serde_json::Value
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Metrics {
+    /// Versioned row identities distinguish relocated omissions/hallucinations
+    /// from aggregate counts. Older reports must be rescored before comparison.
+    #[serde(default)]
+    pub row_identity_version: u32,
+    #[serde(default)]
+    pub missed_reference_ids: Vec<String>,
+    #[serde(default)]
+    pub invented_appointments: BTreeMap<String, usize>,
     /// Stable reference-row/field keys let comparisons detect new critical errors
     /// even when the total error count improves. They contain no printed text.
     pub critical_errors: Vec<String>,
@@ -345,6 +353,7 @@ pub fn compare(
         return Err(Error::Invalid("Final holdout is locked. Use the explicit final-evaluation command after freezing configuration.".into()));
     }
     let mut m = Metrics {
+        row_identity_version: 1,
         reference_count: reference.appointments.len(),
         predicted_count: predicted.len(),
         ..Default::default()
@@ -370,14 +379,20 @@ pub fn compare(
         })
         .collect();
     let matches = assignment(&costs);
+    let mut matched_predictions = HashSet::new();
     for (i, truth) in reference.appointments.iter().enumerate() {
         let matched = matches
             .get(i)
             .copied()
             .filter(|j| *j < predicted.len() && costs[i][*j] < 1000.)
-            .map(|j| &predicted[j]);
+            .map(|j| {
+                matched_predictions.insert(j);
+                &predicted[j]
+            });
         if matched.is_some() {
             m.matched_count += 1;
+        } else {
+            m.missed_reference_ids.push(truth.id.clone());
         }
         let mut full = matched.is_some()
             && fields.iter().all(|f| {
@@ -518,6 +533,24 @@ pub fn compare(
         .then(|| m.character_errors as f64 / m.reference_characters as f64);
     m.missed_count = m.reference_count - m.matched_count;
     m.invented_count = m.predicted_count - m.matched_count;
+    for (index, appointment) in predicted.iter().enumerate() {
+        if !matched_predictions.contains(&index) {
+            // Generated IDs, detection geometry and issue messages may change
+            // between runs without changing the invented calendar facts.
+            let fingerprint = canonical_hash(serde_json::json!([
+                appointment.date,
+                appointment.start,
+                appointment.end,
+                appointment.end_date,
+                appointment.duration_minutes,
+                appointment.title,
+                appointment.location,
+                appointment.therapist,
+                appointment.notes,
+            ]));
+            *m.invented_appointments.entry(fingerprint).or_default() += 1;
+        }
+    }
     m.unresolved_count = predicted
         .iter()
         .filter(|a| {
@@ -846,11 +879,70 @@ mod tests {
         let mut r = approved_fixture();
         let m = compare(&r, &[], false).unwrap();
         assert_eq!(m.missed_count, 2);
+        assert_eq!(m.row_identity_version, 1);
+        assert_eq!(m.missed_reference_ids, ["a0", "a1"]);
+        assert!(m.invented_appointments.is_empty());
         assert_eq!(m.printed_fields["therapist"], 2);
         assert_eq!(m.appointment_recall, Some(0.));
         assert!(!m.schedule_without_correction);
         r.lines[0].polygon[0].x += 1.;
         assert!(compare(&r, &[], false).is_err());
+    }
+    #[test]
+    fn row_identities_retain_unmatched_references_and_duplicate_invented_facts() {
+        let r = approved_fixture();
+        let mut invented = r.appointments[0].clone();
+        invented.id = "unstable-detection-id".into();
+        invented.row_polygon = crate::geometry::rect(0., 900., 900., 40.);
+        invented.title = "Erfundener Termin".into();
+        let first = compare(&r, &[r.appointments[0].clone(), invented.clone()], false).unwrap();
+        assert_eq!(first.missed_reference_ids, ["a1"]);
+        assert_eq!(first.invented_count, 1);
+        let fingerprint = first.invented_appointments.keys().next().unwrap();
+        assert_eq!(fingerprint.len(), 64);
+
+        invented.id = "new-id-for-same-facts".into();
+        invented.row_polygon = crate::geometry::rect(0., 950., 900., 40.);
+        invented.fields.clear();
+        let second = compare(
+            &r,
+            &[
+                invented.clone(),
+                r.appointments[0].clone(),
+                invented.clone(),
+            ],
+            false,
+        )
+        .unwrap();
+        assert_eq!(second.invented_count, 2);
+        assert_eq!(second.invented_appointments[fingerprint], 2);
+        assert_eq!(second.invented_appointments.len(), 1);
+        assert_eq!(second.missed_reference_ids, first.missed_reference_ids);
+
+        invented.location = "Anderer Raum".into();
+        let changed = compare(&r, &[r.appointments[0].clone(), invented], false).unwrap();
+        assert_eq!(changed.invented_count, first.invented_count);
+        assert_ne!(changed.invented_appointments, first.invented_appointments);
+        let relocated = compare(&r, &[r.appointments[1].clone()], false).unwrap();
+        assert_eq!(relocated.missed_count, first.missed_count);
+        assert_eq!(relocated.missed_reference_ids, ["a0"]);
+    }
+    #[test]
+    fn legacy_metrics_remain_readable_without_claiming_row_identity_evidence() {
+        let r = approved_fixture();
+        let mut json = serde_json::to_value(compare(&r, &[], false).unwrap()).unwrap();
+        let object = json.as_object_mut().unwrap();
+        for key in [
+            "row_identity_version",
+            "missed_reference_ids",
+            "invented_appointments",
+        ] {
+            object.remove(key);
+        }
+        let legacy: Metrics = serde_json::from_value(json).unwrap();
+        assert_eq!(legacy.row_identity_version, 0);
+        assert_eq!(legacy.missed_count, 2);
+        assert!(legacy.missed_reference_ids.is_empty());
     }
     #[test]
     fn unreadable_fields_do_not_count_as_correct_empty_fields() {

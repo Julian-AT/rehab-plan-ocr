@@ -109,6 +109,22 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Row-level recognition regression gate — 2026-09-26
+
+The comparison formerly detected additional missing/invented appointments by total
+count, allowing a changed error on the same photo to hide behind an improvement.
+Versioned evaluator output now retains unmatched reference IDs and calendar-value
+fingerprints with multiplicity for invented rows. Comparison reports the affected
+source and repeat, and blocks newly missing or changed/additional invented facts
+even at equal totals. Generated detection IDs and geometry do not create spurious
+new identities. Older count-only reports remain readable, but must be rescored
+from retained predictions before entering this gate.
+
+Regression tests first reproduce the missing gate. All 177 Rust workspace tests,
+191 tool tests and repository lint then pass, including twelve comparison cases
+and Rust matching/duplicate/legacy-serialization coverage. No reference approval,
+inference result, patient-data change or model promotion follows from this fix.
+
 ### Signed private archive and documentation gate — 2026-09-26
 
 The signed archive and IPA at `21ff054` pass all four component/signature/profile

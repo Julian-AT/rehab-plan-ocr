@@ -35,6 +35,7 @@ def compare(base, candidate):
     def index(rows):
         result = {}
         for row in rows:
+            validate_row_identities(row["metrics"])
             repeat = row.get("repeat", 0)
             key = (row["source_hash"], repeat)
             if (
@@ -57,9 +58,23 @@ def compare(base, candidate):
     if repeats != list(range(len(repeats))) or len(old) != len(photos) * len(repeats):
         raise ValueError("Every photo needs the same consecutive repeats starting at zero.")
     new_critical, new_invented, new_missed, new_false_acceptances = [], [], [], []
+    new_missing_rows, new_invented_rows = [], []
     for row in candidate:
         prior = old[(row["source_hash"], row.get("repeat", 0))]["metrics"]
         current = row["metrics"]
+        identity = {"source_hash": row["source_hash"], "repeat": row.get("repeat", 0)}
+        new_missing_rows.extend(
+            dict(identity, reference_id=reference_id)
+            for reference_id in sorted(
+                set(current["missed_reference_ids"]) - set(prior["missed_reference_ids"])
+            )
+        )
+        for fingerprint, count in sorted(current["invented_appointments"].items()):
+            additional = count - prior["invented_appointments"].get(fingerprint, 0)
+            if additional > 0:
+                new_invented_rows.append(
+                    dict(identity, fingerprint=fingerprint, additional_count=additional)
+                )
         if current["reference_count"] != prior["reference_count"]:
             raise ValueError("Reference counts changed between candidates.")
         for key, destination in [
@@ -97,17 +112,53 @@ def compare(base, candidate):
         "photos_with_additional_invented_rows": new_invented,
         "photos_with_additional_missed_rows": new_missed,
         "new_critical_false_acceptances": new_false_acceptances,
+        "new_missing_appointments": new_missing_rows,
+        "new_invented_appointments": new_invented_rows,
         "quality_by_repeat": quality_by_repeat,
         "desktop_quality_improved": improved,
         "desktop_timing_not_slower": speed,
         "eligible_for_iphone_comparison": bool(
             improved
             and speed
-            and not (new_critical or new_invented or new_missed or new_false_acceptances)
+            and not (
+                new_critical
+                or new_invented
+                or new_missed
+                or new_false_acceptances
+                or new_missing_rows
+                or new_invented_rows
+            )
         ),
         "eligible_as_default": False,
         "default_blocker": "Physical iPhone cold/warm, thermal and memory evidence required.",
     }
+
+
+def validate_row_identities(metrics):
+    missing = metrics.get("missed_reference_ids")
+    invented = metrics.get("invented_appointments")
+    if (
+        type(metrics.get("row_identity_version")) is not int
+        or metrics["row_identity_version"] != 1
+        or not isinstance(missing, list)
+        or any(not isinstance(row, str) or not row for row in missing)
+        or len(set(missing)) != len(missing)
+        or type(metrics.get("missed_count")) is not int
+        or len(missing) != metrics["missed_count"]
+        or not isinstance(invented, dict)
+        or any(
+            not isinstance(key, str)
+            or not re.fullmatch(r"[a-f0-9]{64}", key)
+            or type(count) is not int
+            or count < 1
+            for key, count in invented.items()
+        )
+        or type(metrics.get("invented_count")) is not int
+        or sum(invented.values()) != metrics["invented_count"]
+    ):
+        raise ValueError(
+            "Complete version-1 row identities required; rescore retained predictions."
+        )
 
 
 def run(root, suite_path, destination, evaluator, canary, repeats):

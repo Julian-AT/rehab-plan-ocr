@@ -149,6 +149,11 @@ are prepared; publisher/contact information and public distribution review remai
 
 ## Dataset and custom models
 
+The recognition comparison now detects relocated omissions and changed or repeated
+hallucinated appointments at individual-row level, even when total counts improve.
+Versioned evidence is required; old retained predictions must be rescored without
+replacing their historical reports. All 177 Rust tests, 191 tool tests and lint pass.
+
 There are **20 real originals, zero approved references/crops, no frozen source
 groups and no independent final holdout**. All existing images remain development
 data. The [collection guide](../product/research/collection-guide.md) and consent

@@ -18,6 +18,11 @@ spec.loader.exec_module(comparison)
 def result(*, errors=(), corrections=2, elapsed=100, repeat=0):
     metrics = defaultdict(int)
     metrics.update(
+        row_identity_version=1,
+        missed_reference_ids=[],
+        invented_appointments={},
+        missed_count=0,
+        invented_count=0,
         critical_errors=list(errors),
         critical_false_acceptances=[],
         field_corrections_needed=corrections,
@@ -100,9 +105,74 @@ class ComparisonTests(unittest.TestCase):
     def test_new_missing_rows_are_reported_and_block_promotion(self):
         base, candidate = [result()], [result(corrections=1, elapsed=50)]
         candidate[0]["metrics"]["missed_count"] = 1
+        candidate[0]["metrics"]["missed_reference_ids"] = ["row3"]
         checked = comparison.compare(base, candidate)
         self.assertEqual(checked["photos_with_additional_missed_rows"], ["invented-photo"])
         self.assertFalse(checked["eligible_for_iphone_comparison"])
+
+    def test_relocated_missing_and_invented_rows_cannot_hide_behind_equal_counts(self):
+        base, candidate = [result()], [result(corrections=1, elapsed=50)]
+        for row, missing, invented in [(base[0], "row1", "a"), (candidate[0], "row2", "b")]:
+            row["metrics"].update(
+                missed_count=1,
+                invented_count=1,
+                missed_reference_ids=[missing],
+                invented_appointments={invented * 64: 1},
+            )
+        checked = comparison.compare(base, candidate)
+        self.assertEqual(
+            checked["new_missing_appointments"],
+            [{"source_hash": "invented-photo", "repeat": 0, "reference_id": "row2"}],
+        )
+        self.assertEqual(
+            checked["new_invented_appointments"],
+            [
+                {
+                    "source_hash": "invented-photo",
+                    "repeat": 0,
+                    "fingerprint": "b" * 64,
+                    "additional_count": 1,
+                }
+            ],
+        )
+        self.assertFalse(checked["eligible_for_iphone_comparison"])
+
+    def test_extra_identical_hallucination_keeps_multiplicity_and_repeat(self):
+        base = [result(repeat=i) for i in range(2)]
+        candidate = [result(corrections=1, elapsed=50, repeat=i) for i in range(2)]
+        for row in base + candidate:
+            row["metrics"].update(invented_count=1, invented_appointments={"a" * 64: 1})
+        candidate[1]["metrics"].update(invented_count=2, invented_appointments={"a" * 64: 2})
+        checked = comparison.compare(base, candidate)
+        self.assertEqual(
+            checked["new_invented_appointments"],
+            [
+                {
+                    "source_hash": "invented-photo",
+                    "repeat": 1,
+                    "fingerprint": "a" * 64,
+                    "additional_count": 1,
+                }
+            ],
+        )
+        self.assertFalse(checked["eligible_for_iphone_comparison"])
+
+    def test_incomplete_row_identity_evidence_is_rejected(self):
+        for change in [
+            {"row_identity_version": 0},
+            {"row_identity_version": True},
+            {"missed_count": 1},
+            {"missed_count": 2, "missed_reference_ids": ["row1", "row1"]},
+            {"missed_count": 1, "missed_reference_ids": [""]},
+            {"invented_count": 1},
+            {"invented_count": 1, "invented_appointments": {"invalid": 1}},
+            {"invented_count": 1, "invented_appointments": {"a" * 64: True}},
+            {"invented_count": 0, "invented_appointments": {"a" * 64: 0}},
+        ]:
+            row = result()
+            row["metrics"].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                comparison.compare([row], [result(corrections=1, elapsed=50)])
 
     def test_changed_reference_count_blocks_comparison(self):
         base, candidate = [result()], [result(corrections=1, elapsed=50)]

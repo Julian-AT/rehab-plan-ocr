@@ -1,5 +1,19 @@
 # Recognition evaluation
 
+`compare-recognition.py` retains case-level regressions even when overall scores
+improve. The evaluator's version-1 row identities list missing reference IDs and
+count unmatched predicted appointments by a hash of their calendar values.
+Generated IDs, geometry and diagnostic messages are excluded from that hash;
+duplicate invented appointments retain their multiplicity. New omissions or
+changed/additional hallucinations block eligibility even when their totals stay
+constant. Findings retain the source and process-repeat number.
+
+Old count-only metrics remain readable by Rust, but cannot qualify a comparison.
+Rescore the retained predictions with the current evaluator and the same approved
+references into a new evidence directory; do not replace historical reports or
+invent identity fields. These hashes remain private evaluation data, not an
+anonymization guarantee. This gate never promotes a model to the shipping default.
+
 Run the corrected pretrained baseline and the registered frozen-backbone experiment
 through the ordinary simulator app's import, native field rereading and persistence:
 
