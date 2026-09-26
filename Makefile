@@ -131,6 +131,8 @@ help:
 	@echo 'Common provider app trial: make build-assistant-trial; make test-assistant-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>"'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
 	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
+	@echo 'Isolated OCR convolution fixture: make prepare-ocr-convolution-lowering DIAGNOSTIC_RUN=.local/runs/<new-experiment> (preparation only)'
+	@echo 'Execute prepared OCR convolution fixture: make diagnose-ocr-convolution-lowering DIAGNOSTIC_RUN=.local/runs/<prepared-experiment>'
 	@echo 'Human reference review: make reference-review-packet DATASET=<private-root> RUN=.local/runs/<new-packet> (creates no approvals)'
 	@echo 'Reference privacy: make reference-privacy-draft DATASET=<reference-root>; reference-privacy-approve additionally requires SOURCE_SHA256 and REVIEWER'
 
@@ -453,3 +455,13 @@ diagnose-ocr-operation-parity: PEAK_GIB = 8
 diagnose-ocr-operation-parity: check-storage
 	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" || { echo 'Set RUN and a new DIAGNOSTIC_RUN below .local/runs'; exit 2; }
 	.local/envs/ocr/bin/python ml/evaluation/recognition/operation_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)" --batch-size "$(OCR_TRACE_BATCH)" $(if $(ALL_FAILURES),--all-failures)
+
+.PHONY: prepare-ocr-convolution-lowering diagnose-ocr-convolution-lowering
+prepare-ocr-convolution-lowering:
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to a new private experiment directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_lowering.py prepare --output "$(DIAGNOSTIC_RUN)"
+
+diagnose-ocr-convolution-lowering: PEAK_GIB = 1
+diagnose-ocr-convolution-lowering: check-storage
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private experiment directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_lowering.py execute --output "$(DIAGNOSTIC_RUN)"
