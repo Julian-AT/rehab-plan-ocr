@@ -61,3 +61,39 @@ A successful bounded comparison only selects a graph for a **separately frozen
 full intended corpus comparison**, including every previously successful case.
 It does not qualify OCR accuracy, real plans, CoreML/iOS execution or model
 distribution. No full-corpus run or deployment promotion starts automatically.
+
+## Actual result
+
+Implementation/protocol commit before inference: `a958c96`. Run
+`.local/runs/ocr-batchnorm-stage-20260926-s19-001` completed all twelve original
+controls and 48 exact serialized-graph reload controls. All 74 retained artifacts
+and all original source hashes were rechecked successfully. Eight new independent
+graph/decision tests passed before execution. Every original BatchNorm mapped to
+its unchanged native inference attributes; both transformations retained all
+original parameters and public tensor identities.
+
+| Variant | Optimizer | Numeric and token passes | Values outside tolerance |
+|---|---|---:|---:|
+| Division | Disabled | 11/12 | 1 |
+| Division | All | 7/12 | 7 |
+| Division plus two convolutions | Disabled | 10/12 | 2 |
+| Division plus two convolutions | All | 8/12 | 6 |
+
+All 48 candidate text-token comparisons match. All four previously passing
+cases remain passing in every configuration. This does not override the failed
+numeric gate: **neither variant is selected for full-corpus evaluation**. The
+frozen width-640 `plan-053` title fails both unoptimized variants; the first full
+training-run location case fails both fully optimized variants. The isolated
+BatchNorm correction therefore does not resolve full-graph parity, and optimizer
+effects remain material. The next OCR step is a separately frozen intermediate
+trace of the remaining failure, with unchanged final-output controls.
+
+Complete logs, clean source archive and result verification remain in
+`.local/runs/ocr-batchnorm-graph-development-20260926-s19-001`. No app model, original
+report, threshold, selected checkpoint or deployment registry changed.
+
+Protocol SHA-256:
+`cfe6f5f8a198544e2e4973d84249ecec371eb13e078941b257b46f4984426ec2`.
+
+Report SHA-256:
+`46644e38da56f3758d58367fb9e0bd03390d31dd791993ae116ce2f3a31b9590`.
