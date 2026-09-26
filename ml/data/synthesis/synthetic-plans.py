@@ -19,8 +19,9 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 from PIL import __version__ as PILLOW_VERSION
 
-VERSION = 2
+VERSION = 3
 SEED = 814_620
+PARTITION_SEED = 20260918
 TITLES = [
     "Frühstück",
     "Mittagessen",
@@ -51,6 +52,63 @@ ROOMS = [
     "OG Therapie 8",
     "Speisesaal",
 ]
+NOTES = [
+    "bitte feste Schuhe mitbringen",
+    "Handtuch mitnehmen",
+    "Bitte Getränk mitbringen",
+    "Treffpunkt vor dem Raum",
+    "Übungsblatt bereithalten",
+    "Bequeme Kleidung mitbringen",
+]
+# Development vocabulary is allocated before rendering or crop selection. This
+# is deliberately not a final test set or a claim of unseen clinical layouts.
+VALIDATION_VOCABULARY = {
+    "title": [
+        "Atemrhythmus üben",
+        "Schulterbeweglichkeit",
+        "Greifen mit beiden Händen",
+        "Sicheres Aufstehen",
+        "Wechselnde Schrittfolge",
+        "Gedächtniswerkstatt",
+        "Ruhe nach Bewegung",
+        "Gelenkschonender Alltag",
+        "Wege im Haus",
+        "Aufmerksamkeit und Orientierung",
+        "Balance auf weicher Unterlage",
+        "Feine Handbewegungen",
+    ],
+    "location": [
+        "Raum 214",
+        "Raum 308",
+        "2. Stock Wartebereich S",
+        "UG Bewegungsraum 6",
+        "Atrium West",
+        "Werkraum B",
+        "Therapieraum Nord",
+        "Ruhezone Süd",
+    ],
+    "therapist": [
+        "Fr. K. Galdorin, MSc",
+        "Hr. E. Hentavor, BSc",
+        "Fr. N. Ilvarin",
+        "Hr. Dr. P. Jondela",
+        "Fr. S. Kelmora-Astorin, BSc",
+        "Hr. Mag. D. Luvendra, BA",
+    ],
+    "notes": [
+        "Brille für die Leseaufgabe mitnehmen",
+        "Bitte vorher an der Anmeldung warten",
+        "Übungsmappe und Stift mitbringen",
+        "Nach der Einheit kurze Pause einplanen",
+        "Jacke für den Innenhof bereithalten",
+        "Hilfsmittel wie vereinbart verwenden",
+    ],
+}
+
+
+def partition(group, seed=PARTITION_SEED):
+    encoded = json.dumps([seed, group], sort_keys=True, ensure_ascii=False).encode()
+    return "validation" if int(hashlib.sha256(encoded).hexdigest(), 16) % 5 == 0 else "train"
 
 
 def rect(x, y, w, h):
@@ -96,8 +154,22 @@ def bounds(polygon):
     )
 
 
-def render(index, font_path):
-    rng = random.Random(SEED + index)
+def render(index, font_path, *, seed=SEED, partition_seed=PARTITION_SEED):
+    rng = random.Random(seed + index)
+    group = f"synthetic-v{VERSION}-{seed}-{index}"
+    split = partition(group, partition_seed)
+    # Fixed before rendering: exercise valid minutes outside the training grid.
+    time_offset = 0 if split == "train" else 1 + index % 4
+    vocabulary = (
+        VALIDATION_VOCABULARY
+        if split == "validation"
+        else {
+            "title": TITLES,
+            "location": ROOMS,
+            "therapist": NAMES,
+            "notes": NOTES,
+        }
+    )
     width = 1600
     font_size = [22, 24, 27][index % 3]
     font = ImageFont.truetype(str(font_path), font_size)
@@ -129,11 +201,23 @@ def render(index, font_path):
         return ids
 
     kind = "non_plan" if index % 20 == 18 else "unusable" if index % 20 == 19 else "schedule"
-    order = (["title", "location", "therapist"], ["therapist", "title", "location"])[index % 2]
+    orders = [
+        ["title", "location", "therapist"],
+        ["therapist", "title", "location"],
+        ["location", "therapist", "title"],
+        ["title", "therapist", "location"],
+        ["location", "title", "therapist"],
+        ["therapist", "location", "title"],
+    ]
+    order = orders[index % len(orders)]
     columns = [("start", 60, 98), ("end", 190, 110)]
     x = 350
     for field in order:
-        cell_width = {"title": 500, "location": 260, "therapist": 350}[field]
+        cell_width = {
+            "title": [450, 500, 540],
+            "location": [300, 250, 230],
+            "therapist": [360, 360, 340],
+        }[field][index % 3]
         columns.append((field, x, cell_width))
         x += cell_width + 35
     labels = {
@@ -163,28 +247,26 @@ def render(index, font_path):
             members = []
             for n in range(rng.randint(5, 7) if index % 3 == 0 else rng.randint(8, 13)):
                 rid = f"synthetic-{index:03}-{day_number}-{n:02}"
-                start = rng.choice([420, 450, 480]) + n * rng.choice([20, 30, 40])
+                start = rng.choice([420, 450, 480]) + n * rng.choice([20, 30, 40]) + time_offset
                 end = start + rng.choice([15, 20, 30, 45])
                 row = {
                     "id": rid,
                     "date": day,
                     "start": f"{start // 60:02}:{start % 60:02}",
                     "end": f"{end // 60:02}:{end % 60:02}",
-                    "title": rng.choice(TITLES),
-                    "location": rng.choice(ROOMS),
-                    "therapist": rng.choice(NAMES),
-                    "notes": rng.choice(
-                        ["", "", "bitte feste Schuhe mitbringen", "Handtuch mitnehmen"]
-                    ),
+                    "title": rng.choice(vocabulary["title"]),
+                    "location": rng.choice(vocabulary["location"]),
+                    "therapist": rng.choice(vocabulary["therapist"]),
+                    "notes": rng.choice(["", "", *vocabulary["notes"]]),
                 }
                 if rng.random() < 0.15:
                     row["location"] = ""
                 if rng.random() < 0.2:
                     row["therapist"] = ""
                 if n == 2:
-                    row["therapist"] = "Fr. L. Elandora-Windorin, BSc"
+                    row["therapist"] = vocabulary["therapist"][4]
                 if n == 3 and index % 4 == 0:
-                    row["therapist"] += " / Hr. M. Belvara, MSc"
+                    row["therapist"] += " / " + vocabulary["therapist"][1]
                 if n == 4 and index % 5 == 0:
                     row.update(
                         {
@@ -247,8 +329,12 @@ def render(index, font_path):
         "independent_final_test": False,
         "input_kind": kind,
         "column_order": [field for field, _, _ in columns] if kind == "schedule" else [],
-        "seed": SEED + index,
-        "group": f"synthetic-v{VERSION}-{index}",
+        "seed": seed + index,
+        "group": group,
+        "partition": split,
+        "partition_seed": partition_seed,
+        "vocabulary": split,
+        "time_offset_minutes": time_offset,
         "font_size": font_size,
         "font_sha256": hashlib.sha256(font_path.read_bytes()).hexdigest(),
         "width": width,
@@ -321,13 +407,13 @@ def validate(image, labels, font_path):
         raise ValueError("Negative input contains appointment targets")
 
 
-def generate(output, font_path, count=200):
+def generate(output, font_path, count=200, *, seed=SEED, partition_seed=PARTITION_SEED):
     if not 1 <= count <= 10000:
         raise ValueError("Use 1–10000 synthetic inputs per versioned export")
     output.mkdir(parents=True, exist_ok=False)
     records = []
     for index in range(count):
-        image, labels = render(index, font_path)
+        image, labels = render(index, font_path, seed=seed, partition_seed=partition_seed)
         validate(image, labels, font_path)
         name = f"plan-{index:03}"
         path = output / f"{name}.png"
@@ -344,7 +430,8 @@ def generate(output, font_path, count=200):
                 "id": name,
                 "group": labels["group"],
                 "input_kind": labels["input_kind"],
-                "seed": SEED + index,
+                "seed": seed + index,
+                "partition": labels["partition"],
                 "image_sha256": labels["image_sha256"],
                 "labels_sha256": hashlib.sha256((output / f"{name}.json").read_bytes()).hexdigest(),
             }
@@ -352,7 +439,10 @@ def generate(output, font_path, count=200):
     manifest = {
         "schema_version": VERSION,
         "synthetic": True,
-        "seed": SEED,
+        "seed": seed,
+        "partition_seed": partition_seed,
+        "vocabulary_policy": "disjoint development vocabulary chosen before rendering",
+        "time_policy": "training five-minute grid; validation offsets 1..4 chosen before rendering",
         "count": count,
         "font_sha256": hashlib.sha256(font_path.read_bytes()).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -371,6 +461,8 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path)
     parser.add_argument("--font", type=Path)
     parser.add_argument("--count", type=int, default=200)
+    parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--partition-seed", type=int, default=PARTITION_SEED)
     args = parser.parse_args()
     font_path = args.font or next(
         p
@@ -382,6 +474,15 @@ if __name__ == "__main__":
     )
     print(
         json.dumps(
-            {"generated": generate(args.output, font_path, args.count)["count"], "synthetic": True}
+            {
+                "generated": generate(
+                    args.output,
+                    font_path,
+                    args.count,
+                    seed=args.seed,
+                    partition_seed=args.partition_seed,
+                )["count"],
+                "synthetic": True,
+            }
         )
     )

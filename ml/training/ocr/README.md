@@ -23,8 +23,9 @@ validation epochs without improvement. These are recorded before training.
 The pixel-checked table generator can supply a larger experimental dataset:
 
 ```sh
-make prepare-ocr-synthetic SOURCE_DATASET=.local/datasets/synthetic-v2-002 \
-  DATASET=.local/datasets/ocr-synthetic-development-001
+make generate-synthetic DATASET=.local/datasets/synthetic-v3-example SYNTHETIC_COUNT=200
+make prepare-ocr-synthetic SOURCE_DATASET=.local/datasets/synthetic-v3-example \
+  DATASET=.local/datasets/ocr-synthetic-v3-example
 ```
 
 Use the same `FONT` as the source generator. The adapter verifies every original
@@ -36,16 +37,40 @@ headers and blank cells supply no positive text target.
 
 Selection balances the available fields using a fixed seed, with defaults of
 512 training and 128 validation crops. The `prepare.py` CLI exposes the limits
-and seed. These are maximums: exclusions may leave fewer crops or no novel text
-for a field. The receipt retains complete source group assignments, exclusions,
+and seed. These are maximums. Version 3 requires date, start/end, title,
+room, therapist and note coverage in both partitions, with at least the requested
+partition limit divided by seven (rounded down, at least one) crops per field.
+It also requires novel validation text for title, room and notes relative to
+**all** training-source crops. Missing
+coverage fails rather than silently producing a weaker validation set. The
+partition seed is fixed before rendering and cannot be changed during preparation.
+The receipt retains per-field sample, independent source-group and distinct/novel
+text counts, complete source group assignments, exclusions,
 source/label/crop identities and geometry. Crops have four pixels of uniform
 background padding and no unrecorded augmentation. Source pixels and labels are
 rechecked before training, resume and export; altered prepared targets, partitions
 or source evidence fail. No patient reference or crop is approved by this route.
 
+The frozen [v2 adapter](compat/synthetic_data_v1.py) and
+[v2 generator](../../data/synthesis/compat/synthetic_plans_v2.py) replay existing
+version 2 dataset receipts byte-for-byte. This compatibility path does not add
+coverage claims to historical results. Historical training identities are retained;
+the current reference/privacy contract remains mandatory for later training and export.
+
 Synthetic validation measures development robustness only. Repeated text, fonts
 and generator patterns prevent any claim of unseen real-photo accuracy; real
 grouped references, separate augmentation comparisons and device gates still apply.
+
+The verified v3 development preparation on 2026-09-26 uses 200 generated sources
+(180 schedules, 10 non-plans, 10 unusable images). The selected 512 training crops
+cover 136 source groups; 128 validation crops cover 37 groups, with 18–19 crops per
+field. There are no cross-partition group, source-image or crop-image intersections.
+Validation contains 9 distinct title, 11 room and 6 note targets absent from every
+training-source crop. Local evidence is
+`.local/runs/ocr-synthetic-v3-qualification-20260926-s18-002/report.json`, for dataset
+`ocr-synthetic-development-004` (SHA-256
+`463743f227578148be5f517dd15410dc2eea08374bfc67582fbc4c7db87234dd`).
+No training or human language/clinical approval is implied.
 
 ## Reviewed data
 
@@ -183,6 +208,14 @@ alternative architecture. See the [stage results](../../experiments/2026-09-26-s
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.
+
+`make diagnose-ocr-operation-parity RUN=<run> DIAGNOSTIC_RUN=<new-private-directory>`
+compares saved Paddle and ONNX intermediate outputs while retaining the original
+graphs and checking instrumented outputs against immutable controls. `OCR_TRACE_BATCH`
+defaults to 32; `ALL_FAILURES=1` selects all retained failures. This remains an
+operation-level diagnostic, not deployment qualification. The
+[recorded results](../../experiments/2026-09-26-s18-ocr-operation-parity.md) identify the
+first reproducible rounding difference and preserve the original parity failures.
 
 ## Register retained results
 

@@ -85,6 +85,35 @@ class SyntheticTests(unittest.TestCase):
         self.assertGreater(len(arrangements), 1)
         self.assertGreater(blanks, 0)
 
+    def test_language_vocabulary_is_disjoint_before_rendering(self):
+        vocabularies = {
+            split: {field: set() for field in ["title", "location", "notes"]}
+            for split in ["train", "validation"]
+        }
+        layouts = {split: set() for split in vocabularies}
+        for index in range(40):
+            _, labels = synthetic.render(index, FONT)
+            split = synthetic.partition(labels["group"], labels["partition_seed"])
+            self.assertEqual(labels["partition"], split)
+            self.assertEqual(labels["vocabulary"], split)
+            expected_offset = 0 if split == "train" else 1 + index % 4
+            self.assertEqual(labels["time_offset_minutes"], expected_offset)
+            if labels["input_kind"] == "schedule":
+                layouts[split].add(tuple(labels["column_order"]))
+            for row in labels["appointments"]:
+                for field in ["start", "end"]:
+                    if row[field]:
+                        self.assertEqual(int(row[field].split(":")[1]) % 5, expected_offset)
+                for field in vocabularies[split]:
+                    if row[field]:
+                        vocabularies[split][field].add(row[field])
+        for field in vocabularies["train"]:
+            self.assertTrue(vocabularies["train"][field])
+            self.assertTrue(vocabularies["validation"][field])
+            self.assertFalse(vocabularies["train"][field] & vocabularies["validation"][field])
+        self.assertGreater(len(layouts["train"]), 2)
+        self.assertGreater(len(layouts["validation"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

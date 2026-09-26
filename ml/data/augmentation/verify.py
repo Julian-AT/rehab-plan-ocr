@@ -23,17 +23,23 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def verify(source, output, font, limit):
-    synthetic_path = ROOT / "ml/data/synthesis/synthetic-plans.py"
-    synthetic = load("synthetic", synthetic_path)
-    refs = load("references", ROOT / "ml/data/annotation/reference-data.py")
-    manifest = json.loads((source / "manifest.json").read_text())
-    if (
-        manifest.get("synthetic") is not True
-        or manifest.get("schema_version") != 2
-        or manifest.get("generator_sha256") != sha(synthetic_path)
+def source_renderer(manifest):
+    paths = {2: "compat/synthetic_plans_v2.py", 3: "synthetic-plans.py"}
+    version = manifest.get("schema_version")
+    if version not in paths:
+        raise ValueError("Use a supported verified synthetic generator export")
+    synthetic_path = ROOT / "ml/data/synthesis" / paths[version]
+    if manifest.get("synthetic") is not True or manifest.get("generator_sha256") != sha(
+        synthetic_path
     ):
         raise ValueError("Use a current verified synthetic generator export")
+    return load("synthetic", synthetic_path)
+
+
+def verify(source, output, font, limit):
+    manifest = json.loads((source / "manifest.json").read_text())
+    synthetic = source_renderer(manifest)
+    refs = load("references", ROOT / "ml/data/annotation/reference-data.py")
     if not 1 <= limit <= len(manifest["records"]) or sha(font) != manifest["font_sha256"]:
         raise ValueError("Source count or font differs from the synthetic export")
     output.mkdir(parents=True, exist_ok=False)

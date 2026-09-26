@@ -3,12 +3,25 @@
 Generate a new local dataset through the locked tooling environment:
 
 ```sh
-make generate-synthetic DATASET=.local/datasets/synthetic-v2-example SYNTHETIC_COUNT=200
+make generate-synthetic DATASET=.local/datasets/synthetic-v3-example SYNTHETIC_COUNT=200
 ```
 
 `FONT` selects a local font file; its checksum, size, generator checksum, Python,
-Pillow and seeds are recorded. Version 2 exports lossless PNGs and JSON labels.
-Existing version 1 JPEG datasets are historical and are not rewritten.
+Pillow and seeds are recorded. Version 3 exports lossless PNGs and JSON labels.
+Existing datasets are not rewritten. The frozen [v2 generator](compat/synthetic_plans_v2.py)
+remains executable solely to verify existing source/adapter hashes and training runs.
+
+Whole source groups receive their development partition before rendering, using
+the recorded partition seed (default 20260918). Validation uses disjoint invented
+title, room, name and note vocabularies, so duplicate-pixel exclusion cannot erase
+all validation coverage for title/room/notes. Six column orders and three width
+arrangements vary independently of the vocabulary. Validation start/end times use
+minute offsets
+1–4 beyond the training five-minute grid, selected before rendering so identical
+clock pixels do not erase time coverage. This is a deliberate development challenge,
+not a claim about the frequency of such times on real rehabilitation plans. Both
+partitions share the renderer and font; this is a controlled vocabulary challenge,
+not an unseen real-world test. Language and clinical review remain pending.
 
 Dates and column headings are drawn and labeled once. Each appointment links to
 its shared day heading. Row heights follow actual wrapped text, including long
