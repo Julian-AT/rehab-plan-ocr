@@ -8,9 +8,11 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
     private var held: [CheckedContinuation<Void, Never>] = []
     private var hold = false
     private var failure = false
+    private var installBeforeHolding = false
     private var onHold: (() -> Void)?
     private func locked<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
-    func suspendAdds(_ callback: @escaping () -> Void) { locked { hold = true; onHold = callback } }
+    func suspendAdds(installed: Bool = false, _ callback: @escaping () -> Void) { locked { hold = true; installBeforeHolding = installed; onHold = callback } }
+    func allowNewAdds() { locked { hold = false } }
     func failAdds() { locked { failure = true } }
     func resumeAdds() {
         let callbacks = locked { let result = held; held = []; hold = false; return result }
@@ -22,7 +24,7 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
     func add(_ request: UNNotificationRequest) async throws {
         await withCheckedContinuation { continuation in
             let callback: (() -> Void)? = locked {
-                if hold { held.append(continuation); return onHold }
+                if hold { if installBeforeHolding { requests[request.identifier] = request }; held.append(continuation); return onHold }
                 continuation.resume(); return nil
             }
             callback?()
@@ -84,9 +86,65 @@ final class NotificationRaceTests: XCTestCase {
         // Queue barrier is insufficient because completion includes an async snapshot.
         try await Task.sleep(for: .milliseconds(100))
         let snapshot = await adapter.snapshot()
-        XCTAssertFalse(snapshot.pending.contains { $0.identifier == "reha.test" })
+        XCTAssertFalse(snapshot.pending.contains { $0.identifier.hasPrefix("reha.test") })
         let retry = try await testNotification(service)
         XCTAssertEqual(retry["accepted"] as? Bool, true)
+    }
+    func testLateTimedOutTestCannotRemoveItsSuccessfulReplacement() async throws {
+        let adapter = ControlledNotifications()
+        let (service, root) = try fixture(adapter, timeout: 0.15)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let held = expectation(description: "First test suspended")
+        adapter.suspendAdds { held.fulfill() }
+        let first = Task { try await self.testNotification(service) }
+        await fulfillment(of: [held], timeout: 2)
+        do { _ = try await first.value; XCTFail("Expected timeout") } catch {}
+        adapter.allowNewAdds()
+        let replacement = try await testNotification(service)
+        XCTAssertEqual(replacement["confirmed_pending"] as? Bool, true)
+        let before = await adapter.snapshot().pending.map(\.identifier)
+        adapter.resumeAdds()
+        try await Task.sleep(for: .milliseconds(100))
+        let after = await adapter.snapshot().pending.map(\.identifier)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(after.count, 1)
+    }
+    func testUnresolvedBatchCannotLoseCalendarReserveDuringRetry() async throws {
+        #if targetEnvironment(simulator)
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw XCTSkip("Simulator calendar access required") }
+        let adapter = ControlledNotifications()
+        let (service, root) = try fixture(adapter, timeout: 0.15)
+        let store = service.store
+        let calendar = EKCalendar(for: .event, eventStore: store)
+        calendar.title = "Erfundene verzögerte Erinnerung"
+        calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+        try store.saveCalendar(calendar, commit: true)
+        defer { try? store.removeCalendar(calendar, commit: true); try? FileManager.default.removeItem(at: root) }
+        let id = UUID().uuidString
+        let event = EKEvent(eventStore: store); event.calendar = calendar
+        event.title = "Erfundener Termin"
+        event.startDate = Date().addingTimeInterval(7200); event.endDate = event.startDate.addingTimeInterval(1800)
+        event.url = URL(string: "reha-calendar://event/\(id)")
+        event.timeZone = TimeZone(identifier: "Europe/Vienna"); event.alarms = [EKAlarm(relativeOffset: -600)]
+        try store.save(event, span: .thisEvent)
+        let iso = ISO8601DateFormatter()
+        let record = OwnedRecord(status: "saved", id: id, calendar_id: calendar.calendarIdentifier, external_id: event.eventIdentifier,
+            approved: Values(title: event.title, start_utc: iso.string(from: event.startDate), end_utc: iso.string(from: event.endDate), timezone: "Europe/Vienna", location: "", notes: "", reminder_minutes: 10))
+        let held = expectation(description: "OS installed request before stalled callback")
+        adapter.suspendAdds(installed: true) { held.fulfill() }
+        let first = Task { try await self.sync(service, records: [record], enabled: true) }
+        await fulfillment(of: [held], timeout: 2)
+        _ = try await first.value
+        adapter.allowNewAdds()
+        _ = try await sync(service, records: [record], enabled: true)
+        XCTAssertEqual(store.event(withIdentifier: event.eventIdentifier)?.alarms?.first?.relativeOffset, -600)
+        adapter.resumeAdds()
+        try await Task.sleep(for: .milliseconds(200))
+        _ = try await sync(service, records: [record], enabled: true)
+        let snapshot = await adapter.snapshot()
+        XCTAssertEqual(snapshot.pending.filter { $0.identifier.hasPrefix("reha.event.") }.count, 1)
+        XCTAssertTrue(store.event(withIdentifier: event.eventIdentifier)?.alarms?.isEmpty ?? true)
+        #endif
     }
     func testSnoozeReservationsAndDisableDuringAdd() async throws {
         #if targetEnvironment(simulator)

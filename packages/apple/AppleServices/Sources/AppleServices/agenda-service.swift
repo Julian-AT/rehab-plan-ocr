@@ -49,6 +49,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private var refreshAgain = false
   private var confirming = false
   private var cycleID = UUID().uuidString
+  private var unresolvedBatchAdds: [String: String] = [:]
   private var completions: [(Result<[String: Any], Error>) -> Void] = []
   private var state = AgendaPrivateState()
   private var privateURL: URL?
@@ -193,7 +194,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         try self.refresh()
         let requests = Array(self.additions.values)
         let reservation = UUID()
-        for request in requests { self.reservations[request.identifier] = reservation }
+        for request in requests { self.reservations[request.identifier] = reservation; self.unresolvedBatchAdds[request.identifier] = token }
         LocalDiagnostics.shared.record(.reminderPlan, .started, correlation: token, count: requests.count)
         self.additions = [:]
         self.deadline.run(operation: {
@@ -201,10 +202,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
           for request in requests {
             guard await self.cycleIsCurrent(token, version: version) else { break }
             do { try await self.notifications.add(request) } catch { failures = true }
-            if !(await self.cycleIsCurrent(token, version: version)) {
-              self.notifications.removePending([request.identifier])
-            }
+            await self.batchAddFinished(request.identifier, token: token, version: version)
           }
+          for request in requests { await self.batchAddFinished(request.identifier, token: token, version: version) }
           return (await self.notifications.snapshot(), failures)
         }, late: { _ in
           self.release(requests, reservation: reservation)
@@ -225,6 +225,21 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       } catch {
         self.lastError = error.localizedDescription
         self.finishRefresh()
+      }
+    }
+  }
+  private func batchAddFinished(_ id: String, token: String, version: UInt64) async {
+    await withCheckedContinuation { continuation in
+      queue.async {
+        if self.unresolvedBatchAdds[id] == token {
+          let current = self.refreshing && self.cycleID == token && self.generation == version
+          // Retire the stale physical request before permitting a new cycle to
+          // submit or adopt this logical identifier. Timeout alone never releases it.
+          if !current { self.notifications.removePending([id]); self.pendingRequests.removeValue(forKey: id) }
+          self.unresolvedBatchAdds.removeValue(forKey: id)
+          if !current { self.requestRefresh() }
+        }
+        continuation.resume()
       }
     }
   }
@@ -257,11 +272,20 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     }
   }
   private func requestID(_ id: String) -> String { "reha.event.\(id)" }
+  private func oneOffIDs(_ prefix: String) -> [String] {
+    Set(pendingRequests.keys).union(additions.keys).union(reservations.keys).union(notificationState.delivered)
+      .filter { $0 == prefix || $0.hasPrefix(prefix + ".") }
+  }
+  private func retireOneOff(_ prefix: String) {
+    let ids = oneOffIDs(prefix) + [prefix]
+    for id in ids { pendingRequests.removeValue(forKey: id); additions.removeValue(forKey: id); reservations.removeValue(forKey: id) }
+    notifications.removePending(ids); notifications.removeDelivered(ids)
+  }
   private func cancel(_ id: String) {
-    let ids = [requestID(id), "reha.snooze.\(id)"]
-    for id in ids { pendingRequests.removeValue(forKey: id); additions.removeValue(forKey: id) }
-    notifications.removePending( ids)
-    notifications.removeDelivered( ids)
+    let request = requestID(id)
+    pendingRequests.removeValue(forKey: request); additions.removeValue(forKey: request)
+    notifications.removePending([request]); notifications.removeDelivered([request])
+    retireOneOff("reha.snooze.\(id)")
   }
   private func alarms(_ event: EKEvent) -> [CalendarAlarmDescriptor] {
     (event.alarms ?? []).map {
@@ -542,6 +566,10 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     let fire = value.startDate.addingTimeInterval(-Double(minutes * 60))
     let fingerprint = signature(value, minutes: minutes)
     var entry = state.journal[record.id]!
+    guard unresolvedBatchAdds[id] == nil else {
+      if entry.phase == "app" { try restore(event, record: record, minutes: entry.expectedMinutes) }
+      throw AgendaError.message("Ein älterer Mitteilungsauftrag wartet noch auf eine Systemantwort. Der Kalenderalarm bleibt erhalten.")
+    }
     let isConfirmed = pending[id]?.content.userInfo["signature"] as? String == fingerprint
     if entry.phase == "app", entry.signature == fingerprint, isConfirmed { return }
     if entry.phase == "app", !isConfirmed, let oldFire = entry.fireAt,
@@ -572,8 +600,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     _ = try ReminderTransfer.handoff(
       entry: entry, signature: fingerprint,
       fireAt: fire.timeIntervalSince1970, reserveMinutes: minutes, io: io)
-    notifications.removeDelivered( [id, "reha.snooze.\(record.id)"])
-    notifications.removePending( ["reha.snooze.\(record.id)"])
+    notifications.removeDelivered([id])
+    retireOneOff("reha.snooze.\(record.id)")
   }
   private func transferIO(
     event: EKEvent, record: OwnedRecord, value: AgendaEvent,
@@ -685,7 +713,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         "authorization": permission, "enabled": state.preferences.enabled,
         "planned": state.journal.values.filter { ["scheduling", "app"].contains($0.phase) }.count,
         "confirmed_pending": pendingRequests.keys.filter { $0.hasPrefix("reha.event.") }.count,
-        "observed_delivered": notificationState.delivered.filter { $0.hasPrefix("reha.event.") || $0 == "reha.test" }.count,
+        "observed_delivered": notificationState.delivered.filter { $0.hasPrefix("reha.event.") || ($0 == "reha.test" || $0.hasPrefix("reha.test.")) }.count,
         "delivery_observation": "Nur noch im Mitteilungszentrum vorhandene Zustellungen sind beobachtbar.",
         "scheduled": try pending().filter { $0.identifier.hasPrefix("reha.event.") }.count,
         "calendar": state.journal.values.filter { $0.phase == "calendar" }.count,
@@ -736,8 +764,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       }
       cancel(record.id)
     }
-    notifications.removePending( ["reha.test"])
-    notifications.removeDelivered( ["reha.test"])
+    retireOneOff("reha.test")
     state = AgendaPrivateState()
     try persist()
     snapshot = .empty()
@@ -762,7 +789,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
             let entry = self.state.journal[id], entry.phase == "app", self.manageable(event, entry: entry) else {
         throw AgendaError.message("Dieser Termin kann nicht mehr geschlummert werden.")
       }
-      guard Set(self.pendingRequests.keys).union(self.reservations.keys).filter({ $0.hasPrefix("reha.snooze.") && $0 != "reha.snooze.\(id)" }).count < 3 else {
+      guard Set(self.pendingRequests.keys).union(self.reservations.keys).filter({ $0.hasPrefix("reha.snooze.") && !($0 == "reha.snooze.\(id)" || $0.hasPrefix("reha.snooze.\(id).")) }).count < 3 else {
         throw AgendaError.message("Die drei Schlummerplätze sind belegt.")
       }
       let value = self.model(event, id: id)
@@ -781,8 +808,13 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         guard self.generation == version else { throw AgendaError.message("Erinnerungseinstellungen wurden geändert. Auftrag verworfen.") }
         self.install(try result.get())
         guard try self.authorized() else { throw AgendaError.message("Mitteilungen sind nicht erlaubt. In den iPhone-Einstellungen freigeben.") }
-        let request = try make()
-        guard self.reservations[request.identifier] == nil else { throw AgendaError.message("Dieser Mitteilungsauftrag wird bereits bearbeitet.") }
+        let template = try make()
+        guard !self.reservations.keys.contains(where: { $0 == template.identifier || $0.hasPrefix(template.identifier + ".") }) else { throw AgendaError.message("Dieser Mitteilungsauftrag wird bereits bearbeitet.") }
+        // Unique physical IDs prevent a timed-out callback from replacing or
+        // removing a newer test/snooze request for the same logical slot.
+        self.retireOneOff(template.identifier)
+        let request = UNNotificationRequest(identifier: template.identifier + "." + reservation.uuidString,
+                                            content: template.content, trigger: template.trigger)
         try self.reserve(request)
         self.additions.removeValue(forKey: request.identifier)
         self.reservations[request.identifier] = reservation

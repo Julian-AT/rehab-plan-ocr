@@ -119,3 +119,25 @@ Tagesliste und Zeitachse teilen nun die Richtungsentscheidung. Terminflächen ha
 Hell-/Dunkel-Varianten, gefüllte Buttons explizite adaptive Kontrastfarben und Texte
 keine persönliche Anrede. Gesten und neue Darstellung benötigen noch die visuelle
 Laufzeitprüfung mit frisch gebautem Rust-Kern.
+
+## Ausgangsmessung und verspätete Mitteilungen
+
+Die eingefrorene Fassung vom 26.09.2026 wurde mit geprüften Binär-, Konfigurations-,
+Modellmanifest- und Originalhashes über alle 20 Originale erneut ausgeführt.
+Alle Durchläufe lieferten Ergebnisse; Median 4.096 ms, Bereich 2.455–8.613 ms auf
+MacOS, während weitere Builds liefen. Dies ist keine iPhone-Laufzeitmessung und
+keine Feldgenauigkeitsmessung. Referenzen bleiben unbestätigt. Der lokale Bericht
+liegt ausgeschlossen unter artifacts/private/quality-overhaul/baseline-replay.
+`scripts/replay-baseline.py` bewahrt JSON-Ergebnisse und nutzt je Original einen
+begrenzten temporären Bildspeicher; zwei Isolationstests bestanden.
+
+Test- und Schlummeraufträge verwenden pro Versuch eine eigene Systemkennung.
+Für reguläre Termine bleibt eine ungeklärte ältere Systemantwort gesperrt, auch
+nach dem Zeitlimit; bis zu ihrem Abschluss wird kein Kalenderalarm übergeben.
+Fünf native Ausfalltests einschließlich verspäteter Test-Ersetzung und bereits
+installierter Mitteilung mit ausbleibendem Abschluss bestanden.
+
+Beide nativen Rust-Archive und das neue XCFramework sind vollständig erstellt.
+`REHA_LOW_DISK=1` entfernt nach jedem fertig zusammengeführten Archiv ausschließlich
+die reproduzierbaren Rust-Zwischenprodukte dieser Zielplattform. Der Lizenzbeipack
+hat nach der Pfadumstellung eine aktualisierte Prüfsumme; Modellgewichte sind unverändert.

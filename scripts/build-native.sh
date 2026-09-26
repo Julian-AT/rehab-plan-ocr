@@ -38,12 +38,16 @@ framework() {
     xcrun libtool -static -o "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" \
       "target/$triple/release/libreha_ffi.a" "models/private/runtime/$triple/libonnxruntime.a"
     xcrun nm -g "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" 2>/dev/null | rg -q ' T _OrtGetApiBase$'
+    if [ "${REHA_LOW_DISK:-0}" = 1 ]; then rm -r "target/$triple/release"; fi
   done
-  rm -rf packages/apple/RehaCore/RehaCoreFFI.xcframework
+  assembled=$(mktemp -d)
   xcodebuild -create-xcframework \
     -library apps/ios/build/ffi/device/libRehaCoreFFI.a -headers packages/apple/RehaCore/Headers \
     -library apps/ios/build/ffi/simulator/libRehaCoreFFI.a -headers packages/apple/RehaCore/Headers \
-    -output packages/apple/RehaCore/RehaCoreFFI.xcframework
+    -output "$assembled/RehaCoreFFI.xcframework"
+  if [ -d packages/apple/RehaCore/RehaCoreFFI.xcframework ]; then rm -r packages/apple/RehaCore/RehaCoreFFI.xcframework; fi
+  mv "$assembled/RehaCoreFFI.xcframework" packages/apple/RehaCore/
+  rmdir "$assembled"
 }
 case "$mode" in
   bindings|check-bindings) bindings ;;
