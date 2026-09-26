@@ -35,10 +35,19 @@ def main():
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--onnx", type=Path)
     parser.add_argument("--report", type=Path)
+    parser.add_argument(
+        "--graph-optimization", choices=["shipping", "disabled"], default="shipping"
+    )
+    parser.add_argument(
+        "--failures-from", type=Path, help="Diagnose only failed cases in a retained parity report"
+    )
     args = parser.parse_args()
     if ort.__version__ != "1.22.0":
         raise ValueError("Parity must use the pinned shipping runtime, ONNX Runtime 1.22.0")
     run = args.run.resolve()
+    report_path = args.report or run / "parity.json"
+    if report_path.exists():
+        raise ValueError("Preserve prior parity evidence; select a new report path")
     if (run / "settings.json").exists():
         settings = json.loads((run / "settings.json").read_text())
         dataset_path = Path(settings["dataset"])
@@ -49,6 +58,8 @@ def main():
         if digest(checkpoint) != selected["sha256"]:
             raise ValueError("Selected checkpoint changed")
         config_path = run / "export.yml"
+        if digest(config_path) != selected["export_config_sha256"]:
+            raise ValueError("Selected export configuration changed")
         widths = sorted({320, 640, settings["width"]})
     else:
         config_path = run / "config.yml"
@@ -57,6 +68,21 @@ def main():
         records = [dict(row, path=run / f"{row['id']}.png") for row in records]
         widths = [320, 640]
     model_path = args.onnx or run / "recognizer.onnx"
+    selected_cases = None
+    if args.failures_from:
+        previous = json.loads(args.failures_from.read_text())
+        if previous["artifact_sha256"] != digest(model_path) or previous[
+            "checkpoint_sha256"
+        ] != digest(checkpoint):
+            raise ValueError("Diagnostic cases belong to different model weights")
+        selected_cases = {
+            (r["id"], r["width"])
+            for r in previous["cases"]
+            if not r["allclose"] or not r["same_tokens"]
+        }
+        available = {(r["id"], w) for r in records for w in widths}
+        if not selected_cases or not selected_cases.issubset(available):
+            raise ValueError("No matching failed parity cases to diagnose")
     config = yaml.safe_load(config_path.read_text())
     characters = Path(config["Global"]["character_dict_path"]).read_text().splitlines()
     config["Architecture"]["Head"]["out_channels_list"] = {
@@ -73,6 +99,8 @@ def main():
     options = ort.SessionOptions()
     options.intra_op_num_threads = 2
     options.inter_op_num_threads = 1
+    if args.graph_optimization == "disabled":
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
     session = ort.InferenceSession(
         str(model_path), sess_options=options, providers=["CPUExecutionProvider"]
     )
@@ -83,6 +111,8 @@ def main():
                 raise ValueError("Parity pixels changed since dataset preparation")
             # Both common and longer crops exercise dynamic width through export.
             for width in widths:
+                if selected_cases is not None and (record["id"], width) not in selected_cases:
+                    continue
                 image = normalized_image(record["path"], width)
                 expected = model(paddle.to_tensor(image)).numpy()
                 actual = session.run(None, {session.get_inputs()[0].name: image})[0]
@@ -109,6 +139,9 @@ def main():
         "passed": passed,
         "onnxruntime": ort.__version__,
         "provider": "CPUExecutionProvider",
+        "graph_optimization": str(options.graph_optimization_level),
+        "diagnostic": args.graph_optimization != "shipping" or selected_cases is not None,
+        "subset_source_sha256": digest(args.failures_from) if args.failures_from else None,
         "paddle": paddle.__version__,
         "artifact_sha256": digest(model_path),
         "checkpoint_sha256": digest(checkpoint),
@@ -118,7 +151,8 @@ def main():
         "quality_qualification": False,
         "physical_ios_verified": False,
     }
-    (args.report or run / "parity.json").write_text(json.dumps(report, indent=2) + "\n")
+    with report_path.open("x") as stream:
+        stream.write(json.dumps(report, indent=2) + "\n")
     print(
         f"Export parity: {sum(row['allclose'] and row['same_tokens'] for row in rows)}/{len(rows)} cases"
     )

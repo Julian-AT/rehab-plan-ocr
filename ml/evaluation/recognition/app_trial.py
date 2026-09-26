@@ -83,6 +83,9 @@ def prepare_models(output, variant, root=ROOT, model_card=DEFAULT_CARD):
                 selection["sha256"] != selected["checkpoint_sha256"]
                 or sha(training / "selected.pdparams") != selection["sha256"]
                 or parity.get("passed") is not True
+                or parity.get("diagnostic", False) is not False
+                or parity.get("graph_optimization", "GraphOptimizationLevel.ORT_ENABLE_ALL")
+                != "GraphOptimizationLevel.ORT_ENABLE_ALL"
                 or parity.get("artifact_sha256") != selected["onnx_sha256"]
                 or parity.get("checkpoint_sha256") != selection["sha256"]
                 or export.get("status") != "desktop-parity-passed"

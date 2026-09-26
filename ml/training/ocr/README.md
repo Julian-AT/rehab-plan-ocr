@@ -139,6 +139,15 @@ Raw CTC outputs must match within rtol 1e-3 / atol 1e-5, with identical argmax t
 Empty comparisons fail. File hashes and failed stages remain recorded. A failed
 export can be retried with `export.py --output NEW_LOCAL_DIRECTORY`.
 
+For diagnosis, `make diagnose-ocr-parity RUN=<run> PARITY_REPORT=<new-private-json>`
+rechecks only the failed cases with ORT graph optimization disabled. Use
+`PARITY_OPTIMIZATION=shipping` to retain the pinned runtime's normal optimization.
+The earlier result and weights must match, report paths cannot be overwritten,
+and subset/alternate-configuration results are explicitly diagnostic. Registration
+and app loading reject those reports as deployment parity. Numeric tolerances and
+token comparison remain unchanged. The runtime option is documented in the
+[official ONNX Runtime API](https://onnxruntime.ai/docs/api/python/api_summary.html#onnxruntime.SessionOptions).
+
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.

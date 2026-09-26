@@ -156,6 +156,8 @@ class ModelCardTests(unittest.TestCase):
             {"onnxruntime": "other"},
             {"checkpoint_sha256": "other"},
             {"physical_ios_verified": True},
+            {"diagnostic": True},
+            {"graph_optimization": "GraphOptimizationLevel.ORT_DISABLE_ALL"},
         ]:
             self.save("deployment/parity.json", dict(self.parity, **changes))
             with self.subTest(changes=changes), self.assertRaises(ValueError):

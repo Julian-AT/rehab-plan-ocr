@@ -106,6 +106,9 @@ def describe(run, dataset, root=ROOT):
         or parity["atol"] != 1e-5
         or parity["quality_qualification"] is not False
         or parity["physical_ios_verified"] is not False
+        or parity.get("diagnostic", False) is not False
+        or parity.get("graph_optimization", "GraphOptimizationLevel.ORT_ENABLE_ALL")
+        != "GraphOptimizationLevel.ORT_ENABLE_ALL"
     ):
         raise ValueError("Export identity, runtime or parity tolerance changed")
     expected = {(r["id"], w) for r in dataset["samples"] for w in {320, 640, config["width"]}}

@@ -109,6 +109,23 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### OCR numeric-parity diagnosis — 2026-09-26
+
+The larger frozen checkpoint finishes training after four epochs/1,024 steps and
+selects epoch one (91/91 development crops, versus 90/91 pretrained). Full export
+checks all 603 crops at widths 320 and 640: 1,188/1,206 numeric cases pass, while
+all 1,206 token sequences match. The 18 numeric failures retain the original
+rtol 1e-3 / atol 1e-5 gate; the artifact remains unqualified.
+
+`make diagnose-ocr-parity` makes the failing-case/configuration check reproducible.
+Disabling ORT optimizations still fails all 18 numeric cases, with unchanged token
+sequences, so that experiment does not resolve the export gap. Report SHA-256 is
+`86ebcd14880028b776cc9e44935b3e69add1995a3ffc9e3eda315e1163f42add`, below
+`.local/runs/ocr-frozen-parity-diagnostic-20260926-s18-001`. Diagnostic reports cannot
+qualify registration or app loading, and prior reports cannot be overwritten.
+The pinned runtime's normal optimization remains ORT_ENABLE_ALL; no app behavior,
+pause threshold or acceptance tolerance changes.
+
 ### Additional registered OCR candidates in the app probe — 2026-09-26
 
 The existing baseline/frozen app probe accepts an explicit registry filename for
