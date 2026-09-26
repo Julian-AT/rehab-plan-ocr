@@ -84,6 +84,16 @@ class CloneTests(unittest.TestCase):
         self.assertEqual(os.readlink(copied), "Versions/Current/Framework")
         self.assertEqual(copied.read_bytes(), b"fixture framework")
 
+    def test_document_tracking_flag_is_preserved_on_directories_and_files(self):
+        # Darwin copyfile's metadata operation deliberately omits UF_TRACKED.
+        for path in (self.source, self.file):
+            os.chflags(path, path.lstat().st_flags | 0x40)
+        before = copying.snapshot(self.lib, self.source, True)
+        copying.clone(self.source, self.destination)
+        self.assertEqual(copying.snapshot(self.lib, self.source, True), before)
+        for path in (self.destination, self.destination / "binary"):
+            self.assertEqual(path.lstat().st_flags & 0x40, 0x40)
+
     def test_escaping_absolute_dangling_and_disallowed_links_stop_before_destination(self):
         outside = self.root / "outside"
         outside.write_text("unrelated original")

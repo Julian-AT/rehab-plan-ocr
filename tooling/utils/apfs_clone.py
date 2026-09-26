@@ -20,6 +20,7 @@ ACL = 1
 METADATA = 7
 NOFOLLOW = (1 << 18) | (1 << 19)
 WAS_CLONED = 10
+UF_TRACKED = 0x40  # Darwin sys/stat.h; not exposed by every Python version.
 
 
 class StatFS(ctypes.Structure):
@@ -304,6 +305,13 @@ def clone(
             strict_file(lib, src, dst)
     for src, dst in reversed(directories):
         copy_metadata(lib, src, dst)
+    # copyfile omits document tracking from metadata copies. Restore only this
+    # user flag on our new inodes; restricted/system flags still fail validation.
+    for name, value in original.items():
+        dst = destination / name
+        flags = dst.lstat().st_flags
+        if value["flags"] & UF_TRACKED and not flags & UF_TRACKED:
+            os.chflags(dst, flags | UF_TRACKED, follow_symlinks=False)
     if snapshot(lib, source, allow_symlinks) != original:
         raise ValueError("Source changed during clone; destination is unqualified")
     copied = snapshot(lib, destination, allow_symlinks)
