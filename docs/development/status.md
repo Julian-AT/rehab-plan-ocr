@@ -8,9 +8,10 @@ Training both custom models has produced experimental artifacts; neither model h
 qualified for production. No physical device was updated during this work.
 
 The [Zitrus & Olive appearance](../product/visual-baseline/README.md) remains the
-visual contract. The last documented physical installation is build 2026092624;
-the device was unavailable for a fresh inventory. Simulator evidence does not
-establish current device behavior or authorize an update.
+visual contract. A fresh read-only inventory reconfirms build 2026092624 on iPhone 17
+with iOS 26.6. The device reconnected during the September 26, 2026 session; schema 8,
+15 tables and 29 scans are verified from a copied database. Simulator evidence and
+this inventory do not authorize an update or establish current candidate behavior.
 
 ## Implemented and verified
 

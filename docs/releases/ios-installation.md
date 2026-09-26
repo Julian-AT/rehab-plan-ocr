@@ -7,9 +7,11 @@ installation commands are obsolete. Current setup/build commands are in the
 [repository guide](../../README.md) and [native build guide](../../apps/ios/README.md).
 
 The last documented physical installation is build **2026092624**; see the
-[retained-data update record](history/zitrus-device-update.md). The device was unavailable
-for a fresh installed-build check during the current implementation. Development
-simulator builds do not update the phone.
+[retained-data update record](history/zitrus-device-update.md). A fresh read-only
+device check on September 26, 2026 reconfirms this build on iPhone 17/iOS 26.6. A copied
+database still uses schema 8. Only the database and diagnostics were read; this
+partial inventory does not replace the fresh complete backup required below.
+Development simulator builds do not update the phone.
 
 1. Finish relevant tests and prepare current simulator screenshots and listening
    samples. Record build/source/model identities and remaining limitations.

@@ -108,6 +108,25 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Fresh read-only physical baseline — 2026-09-26
+
+The known iPhone reconnects with DDI services available. Fresh device/app queries
+confirm iPhone 17, iOS 26.6 (23G71), Laßnitzhöhe 0.3.0/build 2026092624. The main app
+is not running at either process check. Only its 4,648,960-byte database and
+848,344-byte technical log are copied; remote metadata is unchanged before/after
+and no WAL/SHM/journal sidecar is present. The copied database passes integrity and
+foreign-key checks: schema 8, 15 tables, 29 scans and 27 stored recognition runs.
+Stored model-manifest identities and table/operation-status summaries are retained
+privately. The 4,901 existing diagnostic events include historical stage durations;
+they are uncontrolled observations, not paired cold/warm or end-to-end measurements.
+
+Evidence is in `.local/runs/device-readonly-20260926-s18-001`, summary SHA-256
+`e043f7f6146a86c1734774e940457d334e2ae9a2133e6ec697181de01edc8bae`.
+No app launch/termination, calendar operation, installation or update was performed.
+This partial baseline is not a fresh complete backup for installation. Actual voice
+capabilities, installed model bytes, device latency/energy/thermal measurements,
+current preview/listening approval and post-approval backup/update remain pending.
+
 ### Reusable retained-data comparison — 2026-09-26
 
 The former private delivery check now has a maintained local-copy implementation:
