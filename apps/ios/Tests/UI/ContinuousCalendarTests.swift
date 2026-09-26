@@ -42,7 +42,8 @@ import XCTest
     add(shot)
   }
   func testNativePagesWeeksAndCancelledDrag() {
-    launch()
+    // Fix the initial scroll anchor; calendar paging intentionally retains it.
+    launch(extra: ["--preview-now", "2026-09-20T06:00:00Z"])
     pager.swipeLeft()
     visible(event("Physiotherapie Tag 1"))
     let firstY = event("Physiotherapie Tag 1").frame.minY

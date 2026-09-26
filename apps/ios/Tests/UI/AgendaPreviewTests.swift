@@ -140,7 +140,9 @@ import XCTest
   }
 
   func testSwipingAndCompleteAppointmentLabels() {
-    launch("readable")
+    // Keep the 09:00 row visible when paging from Sunday into Monday.
+    // Calendar paging intentionally preserves the initial time scroll anchor.
+    launch("readable", extra: ["--preview-now", "2026-09-20T06:00:00Z"])
     // Left advances, including on the resting/empty state; no arrow needed.
     app.swipeLeft()
     let next = row("Physiotherapie Tag 1")

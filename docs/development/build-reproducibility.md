@@ -398,3 +398,31 @@ Die Modelle und das historische Kandidatenmanifest sind nachher bytegleich.
 Das sind zwei Lade-/Ausführungsfälle desselben erfundenen Bildes, keine zwei
 unabhängigen Pläne. Weder Qualitäts-, Leistungs-, Geräte- noch App-Freigabe wird
 daraus abgeleitet; kein Anbieter und kein Releaseinhalt wurde geändert.
+
+## Reproduzierbare UI-Eingaben am 26. September 2026
+
+Der vollständige Lauf `ui-complete-20260926-s20-001` an `a886a70` führte alle
+70 angeforderten Methoden aus: 66 Erfolge, vier Fehler, keine Skips. Zwei
+Kalenderprüfungen erwarteten eine sichtbare 09:00-Zeile, obwohl der beabsichtigt
+erhaltene Scrollanker bei späterer Host-Uhrzeit bereits darunter lag. Der native
+Kontrolllauf `swipe-clock-diagnosis-20260926-s20-001` reproduziert diesen Unterschied
+mit dem tatsächlichen Projektionscode; Bild und Accessibility-Rahmen bestätigen
+ihn im fehlgeschlagenen UI-Lauf. Die beiden Tests verwenden jetzt den vorhandenen
+Uhreingang mit Sonntag 26.09.2026, 08:00 Ortszeit. Ihre Paging-/Beschriftungs- und
+Positionsprüfungen bleiben erhalten.
+
+Bei größter Schrift lag der berechnete 97-Prozent-Tipp-Punkt in der äußeren
+Einrückung einer nativen Listenzeile. Die Zielwahl verwendet jetzt den nativen
+Aktivierungspunkt. Eigene vollflächige Steuerungen behalten ihre Randprüfungen.
+Der Aufnahmeablauf wartet nach Schließen des Fotodialogs auf dessen tatsächliches
+Verschwinden und den bedienbaren Hinzufügen-Button, bevor er das Dateimenü öffnet.
+Erhöhte Pauschalwartezeiten oder feste Sleeps wurden nicht eingeführt.
+
+`ui-determinism-20260926-s20-001` besteht den gemeinsamen App-/Testbuild und genau
+diese vier tatsächlichen UI-Fälle: vier Erfolge, null Fehler/Skips, 132,044 Sekunden
+Testlaufzeit. Quelle ist `e282330` mit erhaltenem Patch SHA-256
+`963044c9c5d93654348df2220227946083daa12e6b04a1e49ae4f278f59617e9`.
+Quellarchiv, Patch, ausführbare Produkte, vollständiges Ergebnisbundle und
+Prüfbelege sind erhalten; alle zwölf Paketkomponenten bestehen die Paketprüfung.
+Dies ist ein gezielter Regressionsnachweis, keine vollständige Suite- oder
+Geräteabnahme. Der zugehörige eigene Simulator wurde anschließend heruntergefahren.

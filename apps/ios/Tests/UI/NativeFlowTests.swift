@@ -57,8 +57,16 @@ import XCTest
     XCTAssertTrue(photoCancel.waitForExistence(timeout: 8))
     capture("Photo picker opened from agenda menu")
     photoCancel.tap()
-    app.buttons["add-plan"].tap()
-    app.buttons["plan-menu-files"].tap()
+    // The underlying agenda can exist while the picker is still dismissing.
+    expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: photoCancel)
+    waitForExpectations(timeout: 8)
+    let addPlan = app.buttons["add-plan"]
+    expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: addPlan)
+    waitForExpectations(timeout: 8)
+    addPlan.tap()
+    let files = app.buttons["plan-menu-files"]
+    XCTAssertTrue(files.waitForExistence(timeout: 5))
+    files.tap()
     XCTAssertTrue(app.buttons["Abbrechen"].waitForExistence(timeout: 8))
     capture("File picker opened from agenda menu")
     app.buttons["Abbrechen"].tap()

@@ -192,12 +192,15 @@ import XCTest
     let destination = app.buttons["calendar-destination"]
     show(destination)
     capture("simple-large-calendar-settings")
-    edgeTap(destination)
+    // Native list rows include trailing insets outside the label's hit area.
+    // Let XCTest choose the visible control's activation point.
+    destination.tap()
     let choice = app.buttons.matching(
       NSPredicate(format: "identifier BEGINSWITH %@", "destination-")
     ).firstMatch
     XCTAssertTrue(choice.waitForExistence(timeout: 8))
-    edgeTap(choice)
+    show(choice)
+    choice.tap()
     XCTAssertTrue(choice.isSelected)
     capture("simple-large-destination")
     app.navigationBars["Speicherziel"].buttons.firstMatch.tap()
