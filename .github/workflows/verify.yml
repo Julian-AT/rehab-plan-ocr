@@ -1,9 +1,7 @@
 name: Verify native app and local tools
 run-name: Verify ${{ inputs.target || 'full' }} at ${{ github.ref_name }}
 on:
-  pull_request:
-  push:
-    branches: [main]
+  # Account billing currently blocks hosted jobs; keep execution opt-in.
   workflow_dispatch:
     inputs:
       target:

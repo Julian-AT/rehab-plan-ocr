@@ -6,6 +6,12 @@ commits and six additional branch commits retain their authors, parent
 relationships and substantive changes. Migration follow-up commits appear after
 that sequence. Thirteen branches are retained.
 
+Five retained branches contain six commits that are not ancestors of `main`.
+Each has a patch-identical counterpart already on the original mainline, verified
+with stable Git patch IDs and mapped into the rewritten mainline. They retain
+their original branch relationships; no additional implementation is missing
+from `main`. The original main working tree was clean when checked.
+
 Project chronology and repository references were normalized throughout the
 historical trees, including deleted files. Date-bearing paths use stable sequence
 suffixes. Calendar fixtures, deterministic seeds and upstream dependency/license
@@ -72,3 +78,8 @@ run completed its tests but exposed a metadata-copy defect in result verificatio
 that defect was fixed, covered by the 16 APFS clone tests, and the retained result
 then verified successfully. The nine result-verifier tests also passed. These
 checks do not claim full simulator-suite or hosted Actions qualification.
+
+Hosted verification is manual-only while account billing blocks runner startup.
+The workflow retains `workflow_dispatch` with its full/portable inputs; push and
+pull-request triggers have been removed. Manual execution still requires resolving
+the account billing restriction.

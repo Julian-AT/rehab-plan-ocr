@@ -75,8 +75,10 @@ GitHub CLI; `node tooling/dev/ci_monitor.cjs --help` beschreibt die Befehle.
 
 Manuelle CI-Läufe prüfen standardmäßig `full`. Für reine Änderungen an portablen
 Werkzeugen kann `dispatch --target portable` ausdrücklich nur Linux-Prüfungen
-starten; der Beleg nennt diesen Umfang. Pushes und Pull Requests prüfen weiterhin
-beide Plattformen. Unterschiedliche Prüfumfänge brechen sich auch auf derselben
+starten; der Beleg nennt diesen Umfang. Automatische Starts bei Pushes und Pull
+Requests sind wegen der GitHub-Abrechnungssperre deaktiviert. Manuelle Starts
+bleiben verfügbar, benötigen aber ebenfalls ein freigeschaltetes Actions-Konto.
+Unterschiedliche Prüfumfänge brechen sich auch auf derselben
 Branch nicht gegenseitig ab. Ein portabler Lauf ersetzt keine native Abnahme.
 Die Konfiguration verwendet die offiziellen
 [Workflow-Eingaben](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatchinputs).
