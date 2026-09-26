@@ -22,7 +22,9 @@ VERSIONS = LOCK["versions"]
 BIN = ROOT / ".tools/bin"
 ENV = dict(os.environ)
 ENV["PATH"] = os.pathsep.join([str(BIN), str(Path.home() / ".cargo/bin"), ENV.get("PATH", "")])
-ENV.update(CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0")
+ENV.update(
+    CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0", RUSTUP_TOOLCHAIN=VERSIONS["rust"]
+)
 APPLE = sys.platform == "darwin"
 XCODEGEN_PRESETS = {
     "base.yml",
@@ -121,11 +123,13 @@ def run(*command, capture=False, env=None):
     return result.stdout.strip() if capture else None
 
 
-def installed(tool):
-    binary = shutil.which(tool, path=ENV["PATH"])
+def installed(tool, *, local=False):
+    binary = str(BIN / tool) if local and (BIN / tool).is_file() else (
+        None if local else shutil.which(tool, path=ENV["PATH"])
+    )
     if binary is None:
         return False
-    output = run(tool, "--version", capture=True)
+    output = run(binary, "--version", capture=True)
     return re.search(
         r"(?<![\d.])" + re.escape(VERSIONS[tool]) + r"(?![\d.])", output
     ) is not None and (tool != "xcodegen" or xcodegen_resources_ready(binary))
@@ -152,7 +156,7 @@ def bootstrap():
     arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64"}[platform.machine()]
     BIN.mkdir(parents=True, exist_ok=True)
     for tool in ["uv", "shellcheck", "shfmt"] + (["xcodegen"] if APPLE else []):
-        if installed(tool):
+        if installed(tool, local=True):
             continue
         artifact = LOCK["downloads"][tool][f"{system}-{arch}"]
         with tempfile.TemporaryDirectory(prefix="reha-tool-") as temporary:
@@ -198,7 +202,7 @@ def bootstrap():
             temporary_binary.write_bytes(data)
             temporary_binary.chmod(0o755)
             temporary_binary.replace(target)
-        if not installed(tool):
+        if not installed(tool, local=True):
             raise RuntimeError(f"Version von {tool} stimmt nicht.")
     run("uv", "python", "install", VERSIONS["python"])
     run("uv", "sync", "--locked")
@@ -219,6 +223,11 @@ def bootstrap():
 
 
 def doctor(portable=False):
+    import tomllib
+
+    toolchain = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())["toolchain"]
+    if toolchain["channel"] != VERSIONS["rust"]:
+        raise RuntimeError("Rust toolchain file differs from config/toolchains/versions.json.")
     if VERSIONS["rust"] not in run("rustc", "--version", capture=True):
         run("rustup", "run", VERSIONS["rust"], "rustc", "--version", capture=True)
         ENV["RUSTUP_TOOLCHAIN"] = VERSIONS["rust"]
@@ -328,6 +337,7 @@ def tests(portable):
             "diagnostics",
             "intake-erasure",
             "intake-size",
+            "pdf-text-evidence",
             "native-bindings",
         ]:
             run("sh", f"tooling/checks/test-{probe}.sh")

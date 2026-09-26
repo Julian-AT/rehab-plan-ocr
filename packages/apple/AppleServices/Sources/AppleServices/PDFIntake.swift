@@ -22,6 +22,8 @@ public enum PDFIntake {
       guard let document = PDFDocument(url: url), !document.isLocked,
         let page = document.page(at: index)
       else { throw IntakeError.unreadable }
+      // Inspect the expanded layer before rasterization or full evidence allocation.
+      let layer = try PDFTextEvidence(page: page)
       let bounds = page.bounds(for: .mediaBox)
       guard bounds.width.isFinite, bounds.height.isFinite, bounds.width > 0, bounds.height > 0
       else { throw IntakeError.unreadable }
@@ -29,21 +31,9 @@ public enum PDFIntake {
       let size = CGSize(width: bounds.width * scale, height: bounds.height * scale)
       let image = page.thumbnail(of: size, for: .mediaBox)
       guard let png = image.pngData() else { throw IntakeError.unreadable }
-      var characters: [[String: Any]] = []
-      let text = page.string ?? ""
-      // Keep UTF-16 indices: PDFKit's character geometry uses NSString
-      // indexing. Bounds are in PDF page coordinates, not image pixels.
-      for i in 0..<min(page.numberOfCharacters, 50_000) {
-        let rect = page.characterBounds(at: i)
-        if rect.isNull || rect.isInfinite { continue }
-        characters.append([
-          "index": i, "x": rect.origin.x, "y": rect.origin.y, "width": rect.width,
-          "height": rect.height,
-        ])
-      }
       let evidence: [String: Any] = [
         "schema_version": 1, "reader": "PDFKit", "verified": false, "page_index": index,
-        "text": text, "characters": characters,
+        "text": layer.text, "characters": layer.characters,
         "coordinate_space": "PDF mediaBox, lower-left origin", "rotation": page.rotation,
         "media_box": [bounds.origin.x, bounds.origin.y, bounds.width, bounds.height],
         "raster_width": image.cgImage?.width ?? 0, "raster_height": image.cgImage?.height ?? 0,
