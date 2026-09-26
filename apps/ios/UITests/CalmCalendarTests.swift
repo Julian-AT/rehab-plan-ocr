@@ -64,6 +64,14 @@ import XCTest
         ).firstMatch
         for _ in 0..<16 where !row.isHittable { app.swipeUp() }
         XCTAssertTrue(row.isHittable, title)
+        // Very tall rows can become hittable while only their lower-screen edge
+        // is visible. Bring the title into the screenshot before capturing it.
+        for _ in 0..<8 where row.frame.minY > app.frame.height * 0.55 {
+          app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            .press(
+              forDuration: 0.05,
+              thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)))
+        }
         capture("calm-large-\(dark ? "dark" : "light")-\(index)")
       }
       app.terminate()
