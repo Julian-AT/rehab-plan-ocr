@@ -1,0 +1,227 @@
+[
+  {
+    "category": "therapy",
+    "appearance": "light",
+    "source": "#A1D99B",
+    "opacity": 0.18,
+    "background": "#FFFFFF",
+    "secondary_text_white": 0.3,
+    "contrast": 7.83
+  },
+  {
+    "category": "medical",
+    "appearance": "light",
+    "source": "#74C476",
+    "opacity": 0.18,
+    "background": "#FFFFFF",
+    "secondary_text_white": 0.3,
+    "contrast": 7.5
+  },
+  {
+    "category": "meal",
+    "appearance": "light",
+    "source": "#41AB5D",
+    "opacity": 0.18,
+    "background": "#FFFFFF",
+    "secondary_text_white": 0.3,
+    "contrast": 7.15
+  },
+  {
+    "category": "organization",
+    "appearance": "light",
+    "source": "#238B45",
+    "opacity": 0.18,
+    "background": "#FFFFFF",
+    "secondary_text_white": 0.3,
+    "contrast": 6.79
+  },
+  {
+    "category": "other",
+    "appearance": "light",
+    "source": "#005A32",
+    "opacity": 0.18,
+    "background": "#FFFFFF",
+    "secondary_text_white": 0.3,
+    "contrast": 6.3
+  },
+  {
+    "category": "therapy",
+    "appearance": "light",
+    "source": "#A1D99B",
+    "opacity": 0.18,
+    "background": "#F2F2F7",
+    "secondary_text_white": 0.3,
+    "contrast": 7.14
+  },
+  {
+    "category": "medical",
+    "appearance": "light",
+    "source": "#74C476",
+    "opacity": 0.18,
+    "background": "#F2F2F7",
+    "secondary_text_white": 0.3,
+    "contrast": 6.83
+  },
+  {
+    "category": "meal",
+    "appearance": "light",
+    "source": "#41AB5D",
+    "opacity": 0.18,
+    "background": "#F2F2F7",
+    "secondary_text_white": 0.3,
+    "contrast": 6.49
+  },
+  {
+    "category": "organization",
+    "appearance": "light",
+    "source": "#238B45",
+    "opacity": 0.18,
+    "background": "#F2F2F7",
+    "secondary_text_white": 0.3,
+    "contrast": 6.16
+  },
+  {
+    "category": "other",
+    "appearance": "light",
+    "source": "#005A32",
+    "opacity": 0.18,
+    "background": "#F2F2F7",
+    "secondary_text_white": 0.3,
+    "contrast": 5.7
+  },
+  {
+    "category": "therapy",
+    "appearance": "dark",
+    "source": "#A1D99B",
+    "opacity": 0.22,
+    "background": "#000000",
+    "secondary_text_white": 0.78,
+    "contrast": 8.19
+  },
+  {
+    "category": "medical",
+    "appearance": "dark",
+    "source": "#74C476",
+    "opacity": 0.22,
+    "background": "#000000",
+    "secondary_text_white": 0.78,
+    "contrast": 8.83
+  },
+  {
+    "category": "meal",
+    "appearance": "dark",
+    "source": "#41AB5D",
+    "opacity": 0.22,
+    "background": "#000000",
+    "secondary_text_white": 0.78,
+    "contrast": 9.53
+  },
+  {
+    "category": "organization",
+    "appearance": "dark",
+    "source": "#238B45",
+    "opacity": 0.22,
+    "background": "#000000",
+    "secondary_text_white": 0.78,
+    "contrast": 10.27
+  },
+  {
+    "category": "other",
+    "appearance": "dark",
+    "source": "#005A32",
+    "opacity": 0.22,
+    "background": "#000000",
+    "secondary_text_white": 0.78,
+    "contrast": 11.25
+  },
+  {
+    "category": "therapy",
+    "appearance": "dark",
+    "source": "#A1D99B",
+    "opacity": 0.22,
+    "background": "#1C1C1E",
+    "secondary_text_white": 0.78,
+    "contrast": 5.91
+  },
+  {
+    "category": "medical",
+    "appearance": "dark",
+    "source": "#74C476",
+    "opacity": 0.22,
+    "background": "#1C1C1E",
+    "secondary_text_white": 0.78,
+    "contrast": 6.45
+  },
+  {
+    "category": "meal",
+    "appearance": "dark",
+    "source": "#41AB5D",
+    "opacity": 0.22,
+    "background": "#1C1C1E",
+    "secondary_text_white": 0.78,
+    "contrast": 7.1
+  },
+  {
+    "category": "organization",
+    "appearance": "dark",
+    "source": "#238B45",
+    "opacity": 0.22,
+    "background": "#1C1C1E",
+    "secondary_text_white": 0.78,
+    "contrast": 7.85
+  },
+  {
+    "category": "other",
+    "appearance": "dark",
+    "source": "#005A32",
+    "opacity": 0.22,
+    "background": "#1C1C1E",
+    "secondary_text_white": 0.78,
+    "contrast": 8.97
+  },
+  {
+    "category": "therapy",
+    "appearance": "dark",
+    "source": "#A1D99B",
+    "opacity": 0.22,
+    "background": "#2C2C2E",
+    "secondary_text_white": 0.78,
+    "contrast": 4.86
+  },
+  {
+    "category": "medical",
+    "appearance": "dark",
+    "source": "#74C476",
+    "opacity": 0.22,
+    "background": "#2C2C2E",
+    "secondary_text_white": 0.78,
+    "contrast": 5.32
+  },
+  {
+    "category": "meal",
+    "appearance": "dark",
+    "source": "#41AB5D",
+    "opacity": 0.22,
+    "background": "#2C2C2E",
+    "secondary_text_white": 0.78,
+    "contrast": 5.88
+  },
+  {
+    "category": "organization",
+    "appearance": "dark",
+    "source": "#238B45",
+    "opacity": 0.22,
+    "background": "#2C2C2E",
+    "secondary_text_white": 0.78,
+    "contrast": 6.53
+  },
+  {
+    "category": "other",
+    "appearance": "dark",
+    "source": "#005A32",
+    "opacity": 0.22,
+    "background": "#2C2C2E",
+    "secondary_text_white": 0.78,
+    "contrast": 7.57
+  }
+]
