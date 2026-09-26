@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -63,6 +64,31 @@ class RestorationTests(unittest.TestCase):
                 self.run_restore()
         self.assertEqual(target.read_bytes(), b"previous interrupted asset")
         self.assertEqual(self.lock.read_bytes(), self.original)
+
+    def test_verified_repeats_preserve_every_resource_and_pin_timestamp(self):
+        with patch.object(MODULE, "fetch", return_value=self.content):
+            self.run_restore()
+        paths = [self.lock, *self.assets.iterdir()]
+        for path in paths:
+            os.utime(path, ns=(1_000_000_000, 1_000_000_000))
+        before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in paths}
+        with patch.object(MODULE, "fetch", side_effect=AssertionError("network access")):
+            self.run_restore()
+            self.run_restore("--offline")
+        self.assertEqual(
+            {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in paths}, before
+        )
+
+    def test_failed_metadata_publication_preserves_existing_resource(self):
+        (self.assets / "rec-inference.yml").write_bytes(self.content)
+        dictionary = self.assets / "dictionary.json"
+        dictionary.write_bytes(b"previous incomplete dictionary")
+        with patch.object(Path, "replace", side_effect=OSError("interrupted publication")):
+            with self.assertRaisesRegex(OSError, "interrupted publication"):
+                self.run_restore("--offline")
+        self.assertEqual(dictionary.read_bytes(), b"previous incomplete dictionary")
+        self.assertEqual(self.lock.read_bytes(), self.original)
+        self.assertFalse(list(self.assets.glob(".dictionary.json-*")))
 
     def test_offline_missing_asset_never_downloads(self):
         with patch.object(MODULE, "fetch", side_effect=AssertionError("network access")):

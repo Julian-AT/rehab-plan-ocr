@@ -7,6 +7,8 @@
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -18,6 +20,22 @@ ROOT = Path(__file__).resolve().parents[2]
 def fetch(url):
     with urllib.request.urlopen(url, timeout=120) as response:
         return response.read()
+
+
+def write_if_changed(path, content):
+    """Preserve verified build inputs; publish regenerated metadata atomically."""
+    if path.is_file() and path.read_bytes() == content:
+        return
+    descriptor, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}-")
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def main():
@@ -85,11 +103,13 @@ def main():
     digest = hashlib.sha256(dictionary_bytes).hexdigest()
     if not args.update_lock and manifest.get("dictionary_sha256") != digest:
         raise SystemExit("Dictionary differs from the pinned deployment dictionary.")
-    (destination / "dictionary.json").write_bytes(dictionary_bytes)
+    write_if_changed(destination / "dictionary.json", dictionary_bytes)
     if args.update_lock:
         manifest["dictionary_sha256"] = digest
-        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-    (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        write_if_changed(manifest_path, (json.dumps(manifest, indent=2) + "\n").encode())
+    write_if_changed(
+        destination / "manifest.json", (json.dumps(manifest, indent=2) + "\n").encode()
+    )
     print(f"Ready: {destination}")
 
 
