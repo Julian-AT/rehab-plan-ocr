@@ -343,6 +343,9 @@ def files(suffix):
 
 
 def style(write, portable):
+    if not write:
+        # Clippy compiles the workspace; keep the same reserve as an app build.
+        space(4, working_reserve=True)
     doctor(portable)
     run("cargo", "fmt", "--all", *([] if write else ["--", "--check"]))
     run("uv", "run", "--locked", "ruff", "format", *([] if write else ["--check"]), *files(".py"))
@@ -365,8 +368,9 @@ def style(write, portable):
 
 
 def tests(portable):
+    # Tests compile Rust and native probes even when previous outputs are absent.
+    space(4, working_reserve=True)
     doctor(portable)
-    space(1)
     run("cargo", "test", "--locked", "--workspace")
     tool_tests()
     run("cargo", "build", "--locked", "-p", "reha-cli", "--bin", "reha")

@@ -74,6 +74,12 @@ Cargo- und Make-Aufrufe. `make doctor` verwirft voneinander abweichende Vorgaben
 Die Python-Prüfeinstiege übergeben die Rust-Version außerdem ausdrücklich an ihre
 Unterprozesse.
 
+Auch `make lint` und `make test` kompilieren Rust beziehungsweise native Probes.
+Beide prüfen vor Werkzeugstart dieselbe Arbeitsreserve wie der reine Appbuild:
+20 GiB geschützter Freiraum plus vier GiB konservativ geplanter Spitzenbedarf.
+Fehlende alte Buildprodukte umgehen diese Prüfung nicht. Der Planwert ist keine
+gemessene Obergrenze; Simulatorläufe haben ihre gesonderten höheren Budgets.
+
 `make bootstrap` stellt die Werkzeuge am lokalen Installationspfad bereit, auch
 wenn dieselbe Version bereits systemweit verfügbar ist. Damit funktionieren die
 Werkzeuge, die diese lokale Installation direkt aufrufen, ebenfalls nach einer
