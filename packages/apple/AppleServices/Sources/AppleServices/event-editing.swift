@@ -59,7 +59,7 @@ final class EventEditingService: @unchecked Sendable {
         case "mutateEvent": request.resolve(try self.mutate(args))
         case "editSystemEvent":
           guard let event = try self.find(args["event"] as? [String: Any] ?? [:]) else {
-            throw self.fail("Termin nicht verfügbar. Suche ihn im Kalender nach Name und Datum.")
+            throw self.fail("Termin nicht verfügbar. Im Kalender nach Name und Datum suchen.")
           }
           let reference = SystemEventReference(
             calendarID: event.calendar.calendarIdentifier,
@@ -102,11 +102,9 @@ final class EventEditingService: @unchecked Sendable {
     else { throw fail("Suchzeitraum fehlt.") }
 
     let calendars = ids.compactMap { store.calendar(withIdentifier: $0) }
-    guard calendars.count == ids.count else {
-      throw fail("Ein ausgewählter Kalender ist nicht verfügbar. Auswahl prüfen.")
-    }
+    var unavailable = Set(ids).subtracting(calendars.map(\.calendarIdentifier))
     var found =
-      ids.isEmpty
+      calendars.isEmpty
       ? []
       : store.events(
         matching: store.predicateForEvents(withStart: start, end: end, calendars: calendars))
@@ -122,7 +120,9 @@ final class EventEditingService: @unchecked Sendable {
       switch agenda.lookup(owned) {
       case .found(let found): event = found
       case .deleted: continue
-      case .unavailable: throw fail("Ein importierter Kalender ist nicht verfügbar.")
+      case .unavailable:
+        unavailable.insert(owned.calendar_id)
+        continue
       }
       guard event.url?.absoluteString == "reha-calendar://event/\(id)", event.startDate < end,
         event.endDate > start
@@ -138,10 +138,11 @@ final class EventEditingService: @unchecked Sendable {
       unique[id] = value
     }
     return [
+      "unavailable_calendar_ids": unavailable.sorted(),
       "events": unique.values.sorted {
         (($0["values"] as? [String: Any])?["start_utc"] as? String ?? "")
           < (($1["values"] as? [String: Any])?["start_utc"] as? String ?? "")
-      }
+      },
     ]
   }
   private func location(_ value: EKStructuredLocation?) -> Any {

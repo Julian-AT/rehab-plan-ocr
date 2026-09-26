@@ -1,5 +1,18 @@
 import Foundation
 
+struct CalendarQueryResponse: Decodable {
+  let events: [CalendarEvent]
+  let unavailableCalendarIDs: [String]?
+  enum CodingKeys: String, CodingKey {
+    case events
+    case unavailableCalendarIDs = "unavailable_calendar_ids"
+  }
+  var warning: String {
+    unavailableCalendarIDs?.isEmpty == false
+      ? "Einige Kalenderdaten sind nicht verfügbar. Die Auskunft umfasst nur lesbare Termine. " : ""
+  }
+}
+
 indirect enum JSONValue: Codable, Equatable, Sendable {
   case string(String)
   case number(Double)

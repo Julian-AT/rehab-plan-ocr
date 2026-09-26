@@ -55,7 +55,7 @@ final class DedicatedCalendar {
       ?? (eligible.count == 1 ? eligible.first : nil)
     guard let source else {
       throw Failure.message(
-        "Erstelle in Apple Kalender einen Kalender namens Laßnitzhöhe und versuche es erneut. Kein eindeutiger Account unterstützt die Kalendererstellung."
+        "In Apple Kalender einen Kalender namens Laßnitzhöhe erstellen und erneut versuchen. Kein eindeutiger Account unterstützt die Kalendererstellung."
       )
     }
 

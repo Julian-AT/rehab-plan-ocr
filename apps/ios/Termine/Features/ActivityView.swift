@@ -167,6 +167,13 @@ struct CalendarStatusView: View {
     let pending_imports: Int
     // swift-format-ignore: AlwaysUseLowerCamelCase
     let pending_events: Int
+    // swift-format-ignore: AlwaysUseLowerCamelCase
+    let unavailable_calendar_ids: [String]?
+    var unavailableCount: Int {
+      let selected = Set(
+        (display_calendar_ids ?? []) + [calendar_id].compactMap { $0 }.filter { !$0.isEmpty })
+      return selected.subtracting(calendars.map(\.id)).union(unavailable_calendar_ids ?? []).count
+    }
   }
   @State private var status: Status?
   @State private var busy = false
@@ -178,6 +185,13 @@ struct CalendarStatusView: View {
           LabeledContent(
             "Kalenderzugriff",
             value: status.access == "fullAccess"
+              ? "Vollzugriff" : status.access == "denied" ? "Verweigert" : "Nicht verfügbar"
+          )
+          .accessibilityElement(children: .ignore)
+          .accessibilityIdentifier("calendar-access")
+          .accessibilityLabel("Kalenderzugriff")
+          .accessibilityValue(
+            status.access == "fullAccess"
               ? "Vollzugriff" : status.access == "denied" ? "Verweigert" : "Nicht verfügbar")
           ForEach(
             status.calendars.filter {
@@ -188,6 +202,14 @@ struct CalendarStatusView: View {
               calendar.title, value: calendar.id == status.calendar_id ? "Zielkalender" : "Anzeige")
           }
           NavigationLink("Kalenderauswahl bearbeiten") { CalendarPreferencesView(core: core) }
+          if status.unavailableCount > 0 {
+            LabeledContent(
+              "Kalender mit nicht lesbaren Daten", value: String(status.unavailableCount))
+            Text(
+              "Verfügbare Termine bleiben sichtbar. Lokale Zuordnungen werden erhalten, bis der Kalender wieder zugänglich ist oder eine Änderung bestätigt wird."
+            )
+            .font(.footnote).foregroundStyle(.secondary)
+          }
         }
         Section {
           LabeledContent(

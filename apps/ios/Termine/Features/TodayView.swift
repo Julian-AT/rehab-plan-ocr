@@ -9,6 +9,7 @@ import SwiftUI
   private var cache: [Date: [CalendarEvent]] = [:]
   var availability: Availability = .loading
   var error: String?
+  var unavailableCalendars = Set<String>()
   private var epoch = UUID()
   private var refreshKey = ""
   func events(on date: Date) -> [CalendarEvent]? { cache[AgendaWeek(containing: date).start] }
@@ -17,6 +18,7 @@ import SwiftUI
       refreshKey = key
       epoch = UUID()
       cache = [:]
+      unavailableCalendars = []
     }
     let request = epoch
     let weeks = [week.start, visibleWeek].flatMap { center in
@@ -31,7 +33,6 @@ import SwiftUI
       availability = .noAccess
       return
     }
-    struct Response: Decodable { let events: [CalendarEvent] }
     do {
       struct Ownership: Decodable {
         struct Record: Decodable { let id: String }
@@ -53,9 +54,10 @@ import SwiftUI
         let result = try await core.eventRequest(
           "queryCalendarEvents",
           ["start_utc": iso.string(from: item.start), "end_utc": iso.string(from: item.end)],
-          as: Response.self)
+          as: CalendarQueryResponse.self)
         guard request == epoch, !Task.isCancelled else { return }
         cache[item.start] = result.events
+        unavailableCalendars.formUnion(result.unavailableCalendarIDs ?? [])
         availability = .ready
         error = nil
       }
@@ -129,6 +131,7 @@ struct TodayView: View {
   @State private var selectedDate = Calendar.current.startOfDay(for: .now)
   @State private var observedToday = Calendar.current.startOfDay(for: .now)
   @State private var setup = false
+  @State private var calendarStatus = false
   @State private var editor: CalendarEvent?
   @State private var create = false
   @State private var showPast = false
@@ -148,6 +151,13 @@ struct TodayView: View {
     VStack(spacing: 0) {
       WeekSelector(selection: $selectedDate, visibleWeek: $visibleWeek)
       Divider()
+      if !model.unavailableCalendars.isEmpty {
+        HStack {
+          Text("Kalenderdaten unvollständig").font(.footnote)
+          Spacer()
+          Button("Status prüfen") { calendarStatus = true }.frame(minHeight: 44)
+        }.padding(.horizontal).foregroundStyle(AppPalette.text)
+      }
       TimelineView(.periodic(from: .now, by: 15)) { context in
         sharedTimeline(now: AgendaPreviewClock.now(context.date))
       }.onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
@@ -210,6 +220,9 @@ struct TodayView: View {
       reload()
     }
     .navigationDestination(isPresented: $setup) { CalendarPreferencesView(core: core) }
+    .navigationDestination(isPresented: $calendarStatus) {
+      CalendarStatusView(core: core, changed: reload)
+    }
     .sheet(item: $editor, onDismiss: reload) { event in
       EventEditorView(core: core, original: event, changed: reload)
     }
@@ -217,7 +230,9 @@ struct TodayView: View {
   }
   private func usesList(_ agenda: DayAgenda) -> Bool {
     let crowded = AgendaLayout.place(agenda.timed, minimumHeight: 0).contains { $0.columns > 2 }
-    return typeSize.isAccessibilitySize || listView || crowded
+    let onlyOutside =
+      !agenda.events.isEmpty && AgendaWindow(agenda: agenda, now: agenda.date).timed.isEmpty
+    return typeSize.isAccessibilitySize || listView || crowded || onlyOutside
   }
   @ViewBuilder private func day(_ agenda: DayAgenda, now: Date) -> some View {
     Group {
@@ -226,10 +241,16 @@ struct TodayView: View {
       } else if agenda.events.isEmpty {
         ContentUnavailableView {
           Label(
-            Calendar.current.isDateInToday(agenda.date) ? "Heute keine Termine" : "Keine Termine",
+            !model.unavailableCalendars.isEmpty
+              ? "Keine lesbaren Termine"
+              : Calendar.current.isDateInToday(agenda.date)
+                ? "Heute keine Termine" : "Keine Termine",
             systemImage: "calendar")
         } description: {
-          Text("Für diesen Tag sind keine Termine eingetragen.")
+          Text(
+            model.unavailableCalendars.isEmpty
+              ? "Für diesen Tag sind keine Termine eingetragen."
+              : "Ein Teil der Kalenderdaten ist nicht verfügbar. Kalenderstatus prüfen.")
         }
       } else if agenda.isComplete && !showPast {
         ContentUnavailableView {
@@ -275,7 +296,7 @@ struct TodayView: View {
               editor = event
             } label: {
               CalendarAgendaRow(event: event, now: now)
-            }.buttonStyle(.plain)
+            }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
           }
         }.padding(.horizontal)
       }
@@ -308,7 +329,7 @@ struct TodayView: View {
                 editor = event
               } label: {
                 CalendarAgendaRow(event: event, now: now)
-              }.buttonStyle(.plain)
+              }.buttonStyle(.plain).accessibilityIdentifier("agenda-event-\(event.id)")
             }
           }.frame(maxHeight: 200)
         }.padding().accessibilityIdentifier("agenda-outside-hours")
@@ -354,7 +375,7 @@ struct TodayView: View {
       ContentUnavailableView {
         Label("Kalender nicht verfügbar", systemImage: "exclamationmark.circle")
       } description: {
-        Text(model.error ?? "Bitte versuche es erneut.")
+        Text(model.error ?? "Bitte erneut versuchen.")
       } actions: {
         Button("Erneut versuchen", action: reload)
         Button("Kalender prüfen") { setup = true }
@@ -547,7 +568,7 @@ struct CalendarAgendaRow: View {
         if event.values.end <= now { Text("Vorbei").font(.subheadline).foregroundStyle(.secondary) }
       }.frame(maxWidth: .infinity, alignment: .leading)
     }.padding(8).background(
-      EventCategory.classify(event.values.title).color.opacity(0.10), in: .rect(cornerRadius: 8)
+      EventCategory.classify(event.values.title).surface, in: .rect(cornerRadius: 8)
     )
     .overlay(alignment: .leading) {
       Capsule().fill(EventCategory.classify(event.values.title).color).frame(width: 3).padding(

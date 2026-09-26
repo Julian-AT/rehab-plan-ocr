@@ -82,7 +82,7 @@ enum LocalSpeechError: LocalizedError {
     do {
       if !ConversationAudio.shared.microphoneActive {
         guard await AVAudioApplication.requestRecordPermission() else {
-          throw LocalSpeechError.message("Erlaube den Mikrofonzugriff in den iPhone-Einstellungen.")
+          throw LocalSpeechError.message("Mikrofonzugriff in den iPhone-Einstellungen erlauben.")
         }
         guard generation == current else { throw CancellationError() }
         let authorization = await withCheckedContinuation { continuation in

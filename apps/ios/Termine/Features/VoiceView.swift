@@ -456,17 +456,17 @@ struct VoiceSnapshot {
     }
   }
   private func findEvents() async {
-    struct Response: Decodable { let events: [CalendarEvent] }
     let current = session
     do {
       let start = intent.date ?? Calendar.current.startOfDay(for: .now)
       let end = Calendar.current.date(
         byAdding: .day, value: intent.date == nil && intent.action != .list ? 90 : 1, to: start)!
       let iso = ISO8601DateFormatter()
-      var found = try await core.eventRequest(
+      let response = try await core.eventRequest(
         "queryCalendarEvents",
-        ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)], as: Response.self
-      ).events
+        ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
+        as: CalendarQueryResponse.self)
+      var found = response.events
       guard session == current else { return }
       if let name = intent.calendarName {
         found = found.filter { VoiceRules.normalized($0.calendar_title) == name }
@@ -493,12 +493,14 @@ struct VoiceSnapshot {
         candidates = found
       }
       if candidates.isEmpty {
-        say("In diesem Zeitraum habe ich keine passenden Termine gefunden.", question: .action)
+        say(
+          response.warning + "In diesem Zeitraum wurden keine passenden lesbaren Termine gefunden.",
+          question: .action)
         return
       }
       if intent.action == .next || intent.action == .list {
         say(
-          candidates.prefix(5).map(\.spoken).joined(separator: " ")
+          response.warning + candidates.prefix(5).map(\.spoken).joined(separator: " ")
             + (candidates.count > 5 ? " Weitere Termine stehen auf dem Bildschirm." : ""),
           question: .action)
       } else if candidates.count == 1 {

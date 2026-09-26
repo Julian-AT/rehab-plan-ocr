@@ -174,7 +174,7 @@ func userMessage(_ error: Error) -> String {
     return "Es gibt neuere Änderungen. Vor erneutem Speichern den aktuellen Stand laden."
   case .StaleProposal: return "Die Prüfdaten wurden geändert. Erstelle eine neue Kalendervorschau."
   case .PermissionDenied:
-    return "Kalenderzugriff fehlt. Erlaube den Zugriff oder exportiere eine ICS-Datei."
+    return "Kalenderzugriff fehlt. Zugriff erlauben oder eine ICS-Datei exportieren."
   case .UncertainWrite:
     return "Der Schreibstatus ist unklar. Gleiche den Kalender vor weiteren Änderungen ab."
   case .Busy: return "Eine Erkennung läuft bereits. Bitte warten oder abbrechen."

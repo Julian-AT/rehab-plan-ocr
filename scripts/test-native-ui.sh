@@ -31,7 +31,7 @@ xcrun simctl bootstatus "$simulator" -b
 app="$staging/Laßnitzhöhe.app"
 # File-provider metadata can reappear immediately under Documents. Sign a
 # disposable local copy, as the private packaging verifier does.
-ditto apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
+cp -cRp apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app" || ditto apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
 xattr -cr "$app"
 codesign --force --sign - --entitlements apps/ios/Extensions/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
 codesign --force --sign - --entitlements apps/ios/Extensions/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
@@ -50,6 +50,7 @@ else
 fi
 xcrun simctl privacy "$simulator" grant calendar at.rehakalender.personal
 xcrun simctl privacy "$simulator" grant microphone at.rehakalender.personal
+xcrun simctl privacy "$simulator" grant camera at.rehakalender.personal
 xcrun simctl launch "$simulator" com.apple.DocumentsApp > /dev/null
 python3 - "$simulator" << 'PY'
 import plistlib, shutil, sys

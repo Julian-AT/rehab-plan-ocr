@@ -264,14 +264,16 @@ import XCTest
   }
   func testOverlapsAllDayAndDarkAppearance() {
     launch("full", extra: ["--preview-dark"])
-    XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
-    XCTAssertTrue(row("Übernacht-Beobachtung").exists)
-    XCTAssertTrue(row("Aufenthalt Laßnitzhöhe").exists)
-    if app.scrollViews["day-timeline"].exists {
-      XCTAssertFalse(row("Physiotherapie").frame.intersects(row("Ärztliches Gespräch").frame))
-    } else {
-      for _ in 0..<5 where !row("Ärztliches Gespräch").exists { app.swipeUp() }
+    let list = app.descendants(matching: .any)["agenda-accessible-list"].firstMatch
+    if list.waitForExistence(timeout: 3) {
+      XCTAssertTrue(row("Übernacht-Beobachtung").exists)
+      XCTAssertTrue(row("Aufenthalt Laßnitzhöhe").exists)
+      for _ in 0..<6 where !row("Physiotherapie").isHittable { list.swipeUp() }
+      XCTAssertTrue(row("Physiotherapie").isHittable)
       XCTAssertTrue(row("Ärztliches Gespräch").exists)
+    } else {
+      XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
+      XCTAssertFalse(row("Physiotherapie").frame.intersects(row("Ärztliches Gespräch").frame))
     }
     capture("09-ueberlappung-dunkel")
     app.tabBars.buttons["Sprechen"].tap()
@@ -332,7 +334,10 @@ import XCTest
     app.buttons["Abbrechen"].tap()
     back("Erkennung")
     app.buttons["Kalender"].tap()
-    app.buttons["Speicherziel ändern"].tap()
+    let destination = app.buttons["Speicherziel ändern"]
+    for _ in 0..<6 where !destination.isHittable { app.swipeUp() }
+    XCTAssertTrue(destination.waitForExistence(timeout: 5))
+    destination.tap()
     XCTAssertTrue(app.navigationBars["Speicherziel"].waitForExistence(timeout: 5))
     XCTAssertFalse(app.buttons["Abbrechen"].exists)
     capture("18-speicherziel-native-navigation")
@@ -382,8 +387,9 @@ import XCTest
     let status = app.buttons["Kalenderstatus"]
     for _ in 0..<5 where !status.isHittable { app.swipeUp() }
     status.tap()
-    XCTAssertTrue(app.staticTexts["Kalenderzugriff"].waitForExistence(timeout: 10))
-    XCTAssertTrue(app.staticTexts["Vollzugriff"].exists)
+    let access = app.descendants(matching: .any)["calendar-access"].firstMatch
+    XCTAssertTrue(access.waitForExistence(timeout: 10))
+    XCTAssertEqual(access.value as? String, "Vollzugriff")
     let refresh = app.buttons["Aktualisieren"]
     for _ in 0..<5 where !refresh.isHittable { app.swipeUp() }
     refresh.tap()
@@ -495,6 +501,23 @@ import XCTest
     ).firstMatch
     if outside.waitForExistence(timeout: 3) { outside.tap() }
     XCTAssertTrue(row("Test Gespräch bestätigt").waitForExistence(timeout: 8))
+    row("Test Gespräch bestätigt").tap()
+    let remove = app.buttons["Kalendereintrag löschen"]
+    for _ in 0..<5 where !remove.isHittable { app.swipeUp() }
+    XCTAssertTrue(remove.waitForExistence(timeout: 5))
+    remove.tap()
+    let deleteConfirmation = app.buttons["confirm-event"]
+    XCTAssertTrue(deleteConfirmation.waitForExistence(timeout: 8))
+    XCTAssertEqual(deleteConfirmation.label, "Diesen Kalendereintrag löschen")
+    capture("quality-08-sprachtermin-loeschvorschlag")
+    deleteConfirmation.tap()
+    XCTAssertTrue(
+      app.staticTexts.matching(
+        NSPredicate(format: "label BEGINSWITH %@", "Kalendereintrag gelöscht")
+      )
+      .firstMatch.waitForExistence(timeout: 10))
+    app.navigationBars["Termin bearbeiten"].buttons["Fertig"].tap()
+    XCTAssertFalse(row("Test Gespräch bestätigt").exists)
   }
   func testRealAudioDrivesOrbAndStopEndsIt() {
     launch("one", extra: ["--audio-evidence"])

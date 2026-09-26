@@ -811,12 +811,21 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
           as [String: Any]
       } : []
     if allowed { lastCalendarRead = Date() }
+    let unavailable =
+      allowed
+      ? Set(
+        state.records.compactMap { record -> String? in
+          if case .unavailable = lookup(record) { return record.calendar_id }
+          return nil
+        }
+      ).sorted() : []
     return [
       "access": allowed
         ? "fullAccess"
         : access == .denied ? "denied" : access == .restricted ? "restricted" : "notDetermined",
       "last_read_at": lastCalendarRead.map { iso.string(from: $0) } as Any? ?? NSNull(),
       "calendars": calendars,
+      "unavailable_calendar_ids": unavailable,
     ]
   }
   func presentation() throws -> [String: Any] {

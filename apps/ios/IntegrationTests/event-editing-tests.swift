@@ -52,6 +52,24 @@ final class EventEditingTests: XCTestCase {
       let initial = try XCTUnwrap(initialResponse["events"] as? [[String: Any]])
       XCTAssertEqual(initial.count, 3)
       let target = initial[1]
+      let missing = UUID().uuidString
+      var partialQuery = query
+      var approved = try XCTUnwrap(target["values"] as? [String: Any])
+      approved["notes"] = ""
+      partialQuery["calendar_ids"] = [calendar.calendarIdentifier, missing]
+      partialQuery["records"] = [
+        [
+          "id": UUID().uuidString, "status": "saved", "calendar_id": missing,
+          "external_id": UUID().uuidString, "approved": approved,
+        ]
+      ]
+      let partial = try await call("queryEvents", partialQuery)
+      XCTAssertEqual((partial["events"] as? [[String: Any]])?.count, 3)
+      XCTAssertEqual(partial["unavailable_calendar_ids"] as? [String], [missing])
+      partialQuery["calendar_ids"] = [missing]
+      let unavailableOnly = try await call("queryEvents", partialQuery)
+      XCTAssertEqual((unavailableOnly["events"] as? [[String: Any]])?.count, 0)
+      XCTAssertEqual(unavailableOnly["unavailable_calendar_ids"] as? [String], [missing])
       let checked = try await call("getEvent", ["event": target])
       XCTAssertNotNil(checked["event"] as? [String: Any], "Occurrence could not be resolved")
       if let current = checked["event"] as? [String: Any] {

@@ -182,7 +182,7 @@ extension NativeApplication {
     } catch {
       if session == current {
         self.error =
-          "\(userMessage(error)) Suche nach \(event.values.title), \(eventDate(event.values.start))."
+          "\(userMessage(error)) Im Kalender suchen: \(event.values.title), \(eventDate(event.values.start))."
       }
     }
   }
