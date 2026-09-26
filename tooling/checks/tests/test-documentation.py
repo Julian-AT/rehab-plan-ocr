@@ -11,9 +11,21 @@ ROOT = Path(__file__).resolve().parents[3]
 
 class DocumentationTests(unittest.TestCase):
     def test_current_documentation_links_resolve(self):
-        documents = [ROOT / "README.md", ROOT / "apps/ios/README.md", *ROOT.glob("docs/**/*.md")]
+        # Model/evaluation guides, package READMEs and tooling instructions are
+        # active documentation too. Stay in project-owned roots, outside .local
+        # model copies, retained checkouts and third-party caches.
+        documents = sorted(
+            [
+                *ROOT.glob("*.md"),
+                *(
+                    path
+                    for name in ["apps", "config", "docs", "ml", "packages", "tooling"]
+                    for path in (ROOT / name).rglob("*.md")
+                ),
+            ]
+        )
         for document in documents:
-            if "history" in document.relative_to(ROOT).parts:
+            if document.is_relative_to(ROOT / "docs/releases/history"):
                 # Historical reports identify the exact Git revision of retired assets.
                 if document.name != "README.md":
                     self.assertIn("Historical record", document.read_text())
