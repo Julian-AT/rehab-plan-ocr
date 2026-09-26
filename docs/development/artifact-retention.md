@@ -14,6 +14,12 @@ Referenzen, Gerätesicherungen, Binärprodukte und Archive bleiben erhalten.
 Fremde Simulatoren und externe Originale werden weder durchlaufen noch gelöscht.
 Ein reiner Textsuchtreffer oder dessen Fehlen erlaubt keine Löschung.
 
+Die neuen Probe-Einstiege verwenden inzwischen kurzlebige Compiler-Modulcaches.
+Nach Erfolg oder Fehler werden diese vom Besitzer entfernt; Binärdatei,
+Quellidentitäten und Laufbeleg bleiben erhalten. Die sieben zuvor angelegten
+Modulcaches sind einzeln als wiederherstellbar in der Regel verzeichnet, damit
+die zusätzliche Prüfung nicht ihrerseits dauerhafte Cachekopien anhäuft.
+
 Vor Vorschau und Ausführung werden laufende Buildprozesse, offene Dateien,
 registrierte Worktrees, versionierte Dateien und symbolische Verbraucher geprüft.
 Ein exklusiver Dateilock serialisiert Bereinigungen. Vorhandene aktive Verbraucher
@@ -96,3 +102,19 @@ gleichzeitige Systemaktivität können aus Dateigrößen nicht unterschieden wer
 Die vorhandenen Pfade und Modellkarten bleiben gültig; kein Checkpoint wurde
 verändert. Die synthetischen Tests decken Abbruch/Wiederanlauf, geänderte Gewichte,
 unzulässige Pfade, fehlende Clone-Unterstützung und unabhängige Schreibzugriffe ab.
+Ein zusätzlicher kleiner Test mit der tatsächlichen APFS-`clonefile`-Funktion
+bestätigt getrennte Inodes und unveränderte Originalbytes nach Schreiben in den
+Klon. Der unveränderte native llama.cpp-Reader lädt anschließend das Basis-GGUF
+über seinen bisherigen Versuchspfad und erzeugt eine kurze synthetische Antwort.
+Das ist Wiederanlaufnachweis, keine neue Modellqualifizierung.
+
+Die zweite Bereinigung entfernte 584 temporäre Probe-Cachedateien mit
+426.076.735 logischen Bytes. Der Beleg
+`.local/maintenance/probe-caches-20260926-s18-001.receipt.json` verweist auf Planhash
+`9e738fa6f597e5fd8d3c04a47321717986c738a9a158c98bcc1195fd2c963ff8`.
+116.779 geschützte Dateien/Verweise hatten vor und nachher dieselbe Prüfsumme
+`d02e864ff92d1504647e7add6741ee947051a8433dd9a2c8e52a966656be4eab`.
+Die beobachtete Volume-Differenz war 466.804.736 Bytes, frei danach
+2.230.448.128 Bytes; die Differenz enthält auch Systemaktivität. Der Wiederaufruf
+gab ausschließlich den identischen Abschlussbeleg zurück. Der neue Regel-Probe-
+Einstieg wird danach mit kurzlebigem Modulcache erneut ausgeführt.

@@ -2,46 +2,122 @@
   "schema_version": 1,
   "reserve_gib": 20,
   "protected": [
-    ".local/datasets", ".local/models", ".local/runs", ".local/migrations",
-    ".local/upstream", ".local/envs", "docs/product/visual-baseline",
-    "apps/ios/build/Laßnitzhöhe.xcarchive", "external originals and simulators"
+    ".local/datasets",
+    ".local/models",
+    ".local/runs",
+    ".local/migrations",
+    ".local/upstream",
+    ".local/envs",
+    "docs/product/visual-baseline",
+    "apps/ios/build/Laßnitzhöhe.xcarchive",
+    "external originals and simulators",
+    ".local/objects"
   ],
   "rebuildable": [
     {
       "path": "apps/ios/build/DerivedData/Build/Intermediates.noindex",
-      "consumers": ["tooling/build/build-native.sh", "apps/ios/project.yml"],
+      "consumers": [
+        "tooling/build/build-native.sh",
+        "apps/ios/project.yml"
+      ],
       "reason": "Xcode object files and dependency scanning; products and test evidence remain",
       "rebuild": "make build TARGET=simulator"
     },
     {
       "path": "apps/ios/build/DerivedData/ModuleCache.noindex",
-      "consumers": ["tooling/build/build-native.sh"],
+      "consumers": [
+        "tooling/build/build-native.sh"
+      ],
       "reason": "Compiler module cache regenerated from pinned SDK and source",
       "rebuild": "make build TARGET=simulator"
     },
     {
       "path": "apps/ios/build/EventTests/Index.noindex",
-      "consumers": ["tooling/checks/test-calendar-events.sh"],
+      "consumers": [
+        "tooling/checks/test-calendar-events.sh"
+      ],
       "reason": "Editor index; EventKit test results and executable remain",
       "rebuild": "make test-calendar-events"
     },
     {
       "path": ".local/builds/assistant-app-trial/DerivedData/Build/Intermediates.noindex",
-      "consumers": ["tooling/build/build-assistant-trial.py"],
+      "consumers": [
+        "tooling/build/build-assistant-trial.py"
+      ],
       "reason": "Intermediate objects; failed-provider app binary, models and reports retained",
       "rebuild": "make build-assistant-trial"
     },
     {
       "path": ".local/builds/assistant-app-trial/DerivedData/ModuleCache.noindex",
-      "consumers": ["tooling/build/build-assistant-trial.py"],
+      "consumers": [
+        "tooling/build/build-assistant-trial.py"
+      ],
       "reason": "Compiler module cache; retained trial executable does not load it",
       "rebuild": "make build-assistant-trial"
     },
     {
       "path": "target/debug/incremental",
-      "consumers": ["tooling/dev/quality.py"],
+      "consumers": [
+        "tooling/dev/quality.py"
+      ],
       "reason": "Incremental compiler cache; normal project builds disable incrementality",
       "rebuild": "make test"
+    },
+    {
+      "path": ".local/builds/probes/document/bf01e559f0f632da61529e1586f2c93965ad00b30ac7e918aaea8d0bcbb9d794/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/document/e56e30a2bcc3a324ad0a55228ad2e97e40a233afaf32cd63209512826e1972ea/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/speech-availability/3d07c40c3a42e96e51c50d4576f52e8e8958a96e6274452734ac90854ec740a0/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/speech-availability/986f5bf97a00a7803fc0ca232f12a1dd348a9e112621d63f52f79ccdd67fdec0/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/speech-availability/f176acd335abe3012c08cdc9734de4d66a405781f6c6b216b8964e1306a43b46/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/voice-rules/0bfdbbbd33418fa919240506101a3c16e53bdd1caa2c3df954b3b7b027588353/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/probes/voice-rules/f98bbc46df7ea3fd518030eada89b08207ec88f738ce95488b7c63434c9ab087/modules",
+      "consumers": [
+        "tooling/dev/probes.py"
+      ],
+      "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
+      "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
     }
   ]
 }

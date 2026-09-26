@@ -63,6 +63,7 @@ def candidates(root):
         if not name.startswith((".local/builds/", "apps/ios/build/", "target/")) or not (
             name.endswith(("/Intermediates.noindex", "/ModuleCache.noindex", "/Index.noindex"))
             or name == "target/debug/incremental"
+            or (name.startswith(".local/builds/probes/") and name.endswith("/modules"))
         ):
             raise ValueError(f"Not an approved intermediate class: {name}")
         local_path(root, name)

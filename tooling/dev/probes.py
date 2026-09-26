@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import subprocess
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,7 @@ def run(probe, output, *, mode="text", image=None):
     build = ROOT / ".local/builds/probes" / probe / identity
     build.mkdir(parents=True, exist_ok=True)
     executable = build / "probe"
+    module_cache = tempfile.TemporaryDirectory(prefix=".modules-", dir=build)
     command = [
         "xcrun",
         "swiftc",
@@ -46,7 +48,7 @@ def run(probe, output, *, mode="text", image=None):
         f"{platform.machine()}-apple-macosx26.0",
         "-O",
         "-module-cache-path",
-        str(build / "modules"),
+        module_cache.name,
         *[str(ROOT / p) for p in PROBES[probe]],
         "-o",
         str(executable),
@@ -83,6 +85,7 @@ def run(probe, output, *, mode="text", image=None):
         receipt.update(status="failed", error_type=type(error).__name__)
         raise
     finally:
+        module_cache.cleanup()
         (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
 
 
