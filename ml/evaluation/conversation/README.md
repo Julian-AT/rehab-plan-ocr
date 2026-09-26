@@ -30,9 +30,40 @@ raw outputs, errors, arguments and hashes stay in a new private directory.
 Original parity evidence is never replaced. A successful diagnostic command means
 the comparison completed, not that answers agree or a model qualifies. It uses
 only earlier failures, adds no independent examples and cannot establish full
-parity, iOS execution or physical latency. The current
-[six-case result](../../experiments/2026-09-26-s18-assistant-backend-parity.md) reproduces
-all six failures with each configuration.
+parity, iOS execution or physical latency. The historical
+[six-case result](../../experiments/2026-09-26-s18-assistant-backend-parity.md) reproduced
+all six failures with each configuration. It used the old CLI file boundary,
+which removed a final newline; the prompt-boundary diagnosis below supersedes
+its interpretation without rewriting the retained evidence.
+
+All desktop evaluators now use `--binary-file --no-escape`, preserving the full
+rendered template, including final newlines and JSON backslashes. `-f` silently
+removes one final newline in the pinned runtime. Equal input-token counts do not
+prove identical inputs: the affected template ends in token 271 (two LF), whereas
+that old boundary passed token 198 (one LF).
+
+To verify all 40 retained development cases and diagnose the first remaining
+next-token disagreement:
+
+```sh
+make diagnose-assistant-token-parity \
+  RUN=.local/runs/assistant-development-001 \
+  DIAGNOSTIC_RUN=.local/runs/assistant-token-trace-<new> \
+  WEIGHTS_EVIDENCE=.local/runs/assistant-token-diagnosis-20260926-s18-001/weights.json
+```
+
+The tool checks source/model identities, serializes model processes, compares
+instrumented generation against unchanged MLX/CLI controls, checks actual CLI
+prompt-token IDs, and saves only one full logit vector per remaining failure.
+Teacher-forced replay must preserve the identical prompt/common prefix and the
+original next-token rankings. The original automatic desktop configuration covers
+the full corpus, including earlier passing cases; remaining differences receive
+additional CPU controls and C-API traces. Completed per-case CLI evidence is saved
+immediately. `REUSE_MLX=<prior-diagnostic-directory>` can reuse a fully completed
+MLX worker only after exact model/source/request identity checks and unchanged
+worker/helper implementations; historical files remain untouched. No tolerance,
+original report, model weight or release decision is changed. See the
+[token diagnosis](../../experiments/2026-09-26-s18-assistant-token-parity.md).
 
 The audit checks model-card/run/settings/dataset hashes, verifies the original
 decoder/contract, covers every validation case exactly once and redecodes every

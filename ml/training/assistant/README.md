@@ -89,3 +89,9 @@ fused model and desktop runtime. Raw answers, strict schema rejection, exact
 operations and unsafe mutations remain in the report. Any full-answer parity
 difference fails the export gate. A passing export remains experimental until
 human dialogue, shipping iOS runtime, resource and latency qualification pass.
+
+Desktop prompt files are passed with `--binary-file --no-escape` so llama.cpp
+receives the same rendered template as MLX and the native adapter. The previous
+`-f` boundary dropped one final LF; historical reports remain immutable. The
+[full-corpus token diagnosis](../../experiments/2026-09-26-s18-assistant-token-parity.md)
+checks actual input IDs and records remaining numerical differences separately.
