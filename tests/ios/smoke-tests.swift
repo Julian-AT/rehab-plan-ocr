@@ -19,6 +19,23 @@ final class SmokeTests: XCTestCase {
     element.tap()
   }
 
+  /// Safe on a physical phone: no scans or calendar entries are changed.
+  func testLaunchAndResume() {
+    continueAfterFailure = false
+    let app = XCUIApplication(bundleIdentifier: bundle)
+    for _ in 0..<2 {
+      app.launch()
+      XCTAssertTrue(app.buttons["Load fixture"].waitForExistence(timeout: 15))
+      tap("History", in: app)
+      tap("Run", in: app)
+      XCUIDevice.shared.press(.home)
+      app.activate()
+      XCTAssertTrue(app.buttons["Load fixture"].waitForExistence(timeout: 15))
+      XCTAssertEqual(app.state, .runningForeground)
+      app.terminate()
+    }
+  }
+
   func testNativePortableRecognitionAndPersistence() throws {
     continueAfterFailure = false
     let app = XCUIApplication(bundleIdentifier: bundle)

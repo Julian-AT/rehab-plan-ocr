@@ -22,7 +22,7 @@ Retained app OCR was inspected locally for the reported extraction bugs. The use
 
 The research dataset still needs paper-verified annotations, explicit day/page/capture identities, and a frozen development/holdout split. These 20 exploratory images have been inspected through local OCR; they must not be described as an unopened final holdout.
 
-The physical iPhone 17 connected on September 26, 2026. Device inspection confirmed iOS 26.6 (23G71) and Developer Mode enabled. Version 0.1.1 installed and launched successfully. The first launch required resolving iOS developer trust on the phone; a subsequent launch succeeded. Physical recognition/calendar acceptance, performance and supported stable-release status remain unverified. Simulator, build and installation evidence are recorded separately in `verification.md`.
+The physical iPhone 17 connected on September 26, 2026. Device inspection confirmed iOS 26.6 (23G71) and Developer Mode enabled. Version 0.1.1 installed but crashed immediately after launch; launch-command acceptance had been mistaken for successful startup. Version 0.1.2 fixes the sandbox-path mismatch, is installed on the same phone, and remains running after startup. Physical UI automation is blocked by the free-profile app limit; no existing apps were removed. Physical recognition/calendar acceptance, performance and supported stable-release status remain unverified. Simulator, build and installation evidence are recorded separately in `verification.md`.
 
 No training, final holdout, physical p95, peak-memory claim, or clinical accuracy claim has been made. Original targets remain ≥99% critical date/time accuracy, ≥99% appointment precision/recall, ≥90% schedules without correction, and physical iPhone p95 ≤30 seconds.
 

@@ -19,14 +19,20 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_reha_calendar::init())
         .setup(|app| {
+            #[cfg(not(target_os = "ios"))]
             let root = app.path().app_local_data_dir()?;
             #[cfg(target_os = "ios")]
-            tauri_plugin_reha_calendar::call(
-                app.handle(),
-                "protectStorage",
-                serde_json::json!({"path":root}),
-            )
-            .map_err(std::io::Error::other)?;
+            let root = {
+                let storage = tauri_plugin_reha_calendar::call(
+                    app.handle(),
+                    "protectStorage",
+                    serde_json::json!({}),
+                )
+                .map_err(std::io::Error::other)?;
+                PathBuf::from(storage["path"].as_str().ok_or_else(|| {
+                    std::io::Error::other("Native storage did not return a directory")
+                })?)
+            };
             let store = Store::open(&root)?;
             store.cleanup(chrono::Utc::now().timestamp())?;
             let bundled = app.path().resource_dir()?.join("models");

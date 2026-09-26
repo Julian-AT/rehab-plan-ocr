@@ -36,7 +36,6 @@ struct WriteArgs: Decodable {
   let recovery_only: Bool
 }
 struct PhotoArgs: Decodable { let base64: String }
-struct PathArgs: Decodable { let path: String }
 struct ShareArgs: Decodable {
   let filename: String
   let content: String
@@ -396,19 +395,8 @@ final class CalendarPlugin: Plugin, UIImagePickerControllerDelegate, UINavigatio
     }
   }
   @objc func protectStorage(_ invoke: Invoke) throws {
-    let args = try invoke.parseArgs(PathArgs.self)
-    var url = URL(fileURLWithPath: args.path).standardizedFileURL
-    guard url.path.hasPrefix(NSHomeDirectory() + "/") else {
-      invoke.reject("Ungültiger App-Speicherpfad.")
-      return
-    }
-    try FileManager.default.createDirectory(
-      at: url, withIntermediateDirectories: true,
-      attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-    var values = URLResourceValues()
-    values.isExcludedFromBackup = true
-    try url.setResourceValues(values)
-    invoke.resolve(["excluded_from_backup": true])
+    let root = try AppStorage.prepare()
+    invoke.resolve(["path": root.path, "excluded_from_backup": true])
   }
   @objc func share(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(ShareArgs.self)

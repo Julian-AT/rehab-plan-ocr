@@ -2,11 +2,11 @@
 
 # iPhone installation and calendar setup
 
-The development app is **Reha Calendar Lab 0.1.1**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
+The development app is **Reha Calendar Lab 0.1.2**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
 
 ## Install the private build
 
-The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`. Installation requires a device included in its signing profile. The paired iPhone 17 is included. The current profile expires **September 26, 2026, 10:57 UTC**; build and sign a fresh package when it expires.
+The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.1.2.ipa`. Installation requires a device included in its signing profile. The paired iPhone 17 is included. The current profile expires **September 26, 2026, 10:57 UTC**; build and sign a fresh package when it expires.
 
 1. Connect the iPhone to the Mac, unlock it and accept **Trust This Computer** if prompted.
 2. Open Xcode's **Window → Devices and Simulators** and select the phone.

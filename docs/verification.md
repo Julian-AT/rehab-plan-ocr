@@ -62,7 +62,7 @@ Fresh checks on September 26, 2026:
 - Next.js production export and both iOS builds passed. ESLint, eight frontend unit tests, and eight Chromium/WebKit browser tests passed.
 - Core/Tauri Clippy with warnings denied passed. Swift formatting passed; the new helper and native tests also passed strict Swift lint. The existing bridge retains snake-case wire-contract property names, which the default Swift naming lint flags.
 - **Three iPhone 17 / iOS 26.4 simulator tests passed, zero skipped.** Tests exercised native OCR/persistence; creation of a separate calendar; seven sample events saved there rather than in the system default; repeated import without duplicates; calendar reuse after relaunch and rename; unchanged system default; and failure without calendar creation when a saved destination is unavailable. Test-created events and calendars were removed afterward.
-- Signed `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`: 37,343,104 bytes; SHA256 `8534ce72bd0ef87739ba7586b65bcaa1d0f15bd453d96c437fd42df4088284da`. Bundle version 0.1.1 and identifier `at.rehakalender.personal` verified. `codesign --verify --deep --strict` passed. The profile covers the paired iPhone 17 and expires **September 26, 2026, 10:57 UTC**. The unversioned IPA alias now points to this build.
+- Signed `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`: 37,343,104 bytes; SHA256 `8534ce72bd0ef87739ba7586b65bcaa1d0f15bd453d96c437fd42df4088284da`. Bundle version 0.1.1 and identifier `at.rehakalender.personal` verified. `codesign --verify --deep --strict` passed. The profile covers the paired iPhone 17 and expires **September 26, 2026, 10:57 UTC**. The unversioned IPA alias pointed to this build at the time of packaging.
 
 Evidence is under `artifacts/private/dedicated-calendar/`: `ios-simulator-build.log`, `ios-device-build.log`, `native-tests.log`, `native-tests.xcresult`, and `signing-check.json`. See [installation and calendar visibility instructions](ios-installation.md).
 
@@ -70,6 +70,23 @@ Evidence is under `artifacts/private/dedicated-calendar/`: `ios-simulator-build.
 
 The connected device reports **iPhone 17 (iPhone18,3), iOS 26.6 (23G71)**, with Developer Mode enabled. The IPA hash, signature, profile expiry and device eligibility were checked before installation. `devicectl device install app` succeeded, and querying installed applications confirmed **Reha Calendar Lab 0.1.1**, bundle version 0.1.1.
 
-The initial launch was denied by iOS with a signing/entitlements/developer-trust security error. The package's local signature verification passed; the user was directed to trust the developer certificate under Settings → General → VPN & Device Management. **The subsequent launch succeeded at 15:57 local time.** No recognition or calendar acceptance result is inferred from installation and launch alone.
+The initial launch was denied by iOS with a signing/entitlements/developer-trust security error. The package's local signature verification passed; the user was directed to trust the developer certificate under Settings → General → VPN & Device Management. The subsequent launch command was accepted at 15:57 local time, but the app immediately aborted. This was incorrectly reported as a successful launch. Device crash reports and an attached console later confirmed SIGABRT during startup.
 
-Private evidence: `physical-install.json`, `installed-app.json`, `physical-device.json`, `physical-launch.json` (initial denial), and `physical-launch-retry.json` (successful launch) under `artifacts/private/dedicated-calendar/`.
+Private evidence: `physical-install.json`, `installed-app.json`, `physical-device.json`, `physical-launch.json` (initial denial), and `physical-launch-retry.json` (launch accepted, followed by a crash) under `artifacts/private/dedicated-calendar/`.
+
+## Version 0.1.2 — physical startup crash
+
+The physical phone reproduced an immediate SIGABRT in 0.1.1. Symbolication traced the abort to a Rust panic crossing the iOS launch callback. Live debugger inspection showed that Rust's `HOME` used `/private/var/...`, while `NSHomeDirectory()` used `/var/...`. Standardizing the not-yet-created application directory retained the first form. The native storage guard compared those strings, rejected the valid sandbox directory, and caused Tauri setup to fail.
+
+Storage initialization now asks Foundation for the app's Application Support directory, creates the bundle-specific subdirectory with file protection and backup exclusion, and returns that path to Rust before SQLite opens. It uses the same underlying directory as the previous path; updating does not erase scans, the ledger, or calendar entries. The unused path-input contract was removed. [Foundation directory lookup](<https://developer.apple.com/documentation/foundation/filemanager/url(for:in:appropriatefor:create:)>)
+
+Physical evidence from the connected **iPhone 17 / iOS 26.6 (23G71)**:
+
+- Version 0.1.2 was signature-verified and installed as an ordinary update. The installed-app query confirmed the version.
+- After launch at approximately 16:06:40, the same process was present in checks at 0, 15, and 30 seconds and again at 16:09:38. The old release aborted immediately.
+- The separately signed XCTest runner could not install because the phone had reached the free developer profile limit of three apps. No existing apps were removed. Physical automated UI and file-protection assertions remain unverified.
+- Signed package: `artifacts/private/builds/rehab-plan-ocr-lab-0.1.2.ipa`, 37,342,949 bytes, SHA256 `7c35c90e816adc4c074fc3d9a018b9f2105eae37d493d5482a87daa3e445b411`. Profile expiry remains September 26, 2026, 10:57 UTC. The unversioned package alias now points to 0.1.2.
+
+The Next.js export and device/simulator builds passed. Tauri Clippy with warnings denied and Swift formatting passed. On the updated iPhone 17 / iOS 26.4 simulator, **three regression tests passed and one was explicitly skipped**, with zero failures: storage reuse/backup exclusion/old-path compatibility, repeated launch and resume, and portable OCR/persistence. The simulator does not expose iOS file-protection attributes, so that hardware-only assertion is not counted as passed. Evidence: `simulator-regression.log` and `simulator-regression.xcresult`.
+
+Private evidence is under `artifacts/private/ios-crash/`: original `.ips` reports, startup console/syslog, signing verification, physical installation and process checks, build/test logs, and symbolication notes. This verifies the startup fix, not physical OCR accuracy, calendar acceptance, or performance targets.

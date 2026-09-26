@@ -10,7 +10,9 @@ targets:
     sources:
       - smoke-tests.swift
       - dedicated-calendar-tests.swift
+      - app-storage-tests.swift
       - ../../plugins/calendar/ios/Sources/dedicated-calendar.swift
+      - ../../plugins/calendar/ios/Sources/app-storage.swift
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
