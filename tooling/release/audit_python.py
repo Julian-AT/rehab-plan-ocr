@@ -139,6 +139,21 @@ def timestamp(value):
     return parsed
 
 
+def same_modified(batch, full):
+    if batch == full:
+        return True
+    # OSV's minimal record passes through a Datastore/Python datetime:
+    # osv/models.py update_from_vulnerability -> to_vulnerability_minimal.
+    # Protobuf ToDatetime truncates nanoseconds to microseconds. Permit only
+    # that directed precision loss, without rounding or a time tolerance.
+    utc_second = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    return bool(
+        re.fullmatch(utc_second + r"(?:\.[0-9]{1,6})?Z", batch)
+        and re.fullmatch(utc_second + r"\.[0-9]{7,9}Z", full)
+        and timestamp(batch) == timestamp(full)
+    )
+
+
 def inventory(inputs):
     packages, excluded, headers = {}, [], {}
     if set(inputs) != set(LOCKFILES):
@@ -359,7 +374,7 @@ def collect(index, exchange):
         if not isinstance(record, dict) or set(record) - ADVISORY_FIELDS or record.get("id") != key:
             raise ValueError("Wrong advisory identity or unsupported OSV record fields")
         timestamp(record.get("modified"))
-        if record["modified"] != modified[key]:
+        if not same_modified(modified[key], record["modified"]):
             raise ValueError("Advisory changed between batch query and full retrieval")
         if "withdrawn" in record:
             timestamp(record["withdrawn"])

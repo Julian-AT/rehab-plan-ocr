@@ -172,6 +172,45 @@ class AuditPython(unittest.TestCase):
         self.assertEqual(result["status"], "complete-no-active-findings")
         self.assertFalse(result["qualified"])
 
+    def test_observed_osv_microsecond_batch_and_nanosecond_record_replay(self):
+        # GHSA-29pf-2h5f-8g72: retained canonical-001 response 0001 versus 0002.
+        batch_modified = "2026-09-10T03:50:45.254378Z"
+        full_modified = "2026-09-10T03:50:45.254378086Z"
+
+        def response(method, endpoint, body):
+            value = self.response(method, endpoint, body)
+            if method == "GET":
+                value["modified"] = full_modified
+            else:
+                for result in value["results"]:
+                    for item in result.get("vulns", []):
+                        item["modified"] = batch_modified
+            return value
+
+        self.override = response
+        self.download()
+        report = self.replay()
+        self.assertTrue(report["complete"])
+        self.assertEqual(report["matches_in_query_order"][0]["GHSA-AAAA"], batch_modified)
+        self.assertEqual(report["advisories"]["GHSA-AAAA"]["modified"], full_modified)
+
+    def test_precision_rule_has_no_general_time_tolerance(self):
+        same = "2026-09-10T03:50:45.254378Z"
+        for batch, full in [
+            (same, "2026-09-10T03:50:45.254379086Z"),
+            (same, "2026-09-10T03:50:45.254377999Z"),
+            (same, "2026-09-10T03:50:46.254378086Z"),
+            ("2026-09-10T03:50:45.254378086Z", "2026-09-10T03:50:45.254378087Z"),
+            ("2026-09-10T03:50:45.254Z", "2026-09-10T03:50:45.254378086Z"),
+            ("2026-09-10T03:50:45.254378086Z", same),
+        ]:
+            with self.subTest(batch=batch, full=full):
+                self.assertFalse(audit.same_modified(batch, full))
+        self.assertTrue(audit.same_modified(same, same))
+        self.assertTrue(
+            audit.same_modified("2026-09-10T03:50:45Z", "2026-09-10T03:50:45.000000086Z")
+        )
+
     def test_withdrawn_only_records_remain_visible_without_active_findings(self):
         self.override = lambda method, endpoint, body: (
             advisory("OSV-WITHDRAWN", withdrawn=True)
