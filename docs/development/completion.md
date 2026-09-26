@@ -114,8 +114,44 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
   vollständige Gesprächsablauf sind weiterhin getrennt zu prüfen.
 - Release-Symbole: `44502ed`; echte kleine Release-Kompilierung mit Quellzeilen und
   übereinstimmender Binär-/dSYM-UUID. Das abschließende App-Archiv bleibt separat.
+- Typisierte Kalenderlesevorgänge: `b0e804e`; 104 gezielte Rusttests, Swift-
+  Verträge, AppleServices-Typprüfung, tatsächlicher nativer Rundweg und Bindings-
+  Konsistenz. Weitere Kalenderbefehle werden gesondert umgestellt.
+- Vollständige Gesprächssteuerung mit austauschbarer Zeit, Kalender- und
+  Audioausführung: `8733f19`; tatsächlicher VoiceModel/Router/EventSession-Ablauf
+  mit sichtbarer Bestätigung, Doppelklick, Abbruch und verspäteten Antworten.
+- Eigene Erkennungsversuche statt wachsender nativer Abbruchlisten: `f8a3191`;
+  14 FFI-Tests einschließlich Vorstart-Abbruch, frühem Fehler, Future-Drop und
+  erneutem Versuch sowie echter Swift–Rust–Swift-Rundweg.
+- Begrenzter Share-Anbieter und atomare Veröffentlichung: `eadde06`; sichtbarer
+  Abbruch, Frist, späte/doppelte Callbackantworten und Wiederanlauf nach Prozessende
+  geprüft. Fertige Receipts und fremde Originale bleiben erhalten.
+- Diversifizierter synthetischer OCR-Bestand: `571558a`; 512/128 Ausschnitte aus
+  136/37 Quellgruppen, alle sieben Feldarten und unbekannte Titel/Räume/Notizen
+  in der Validierung. Vollständiger Pixel-/Herkunftsreplay ohne Überschneidungen.
+- Aktuelle Datenschutzfreigabe im gesamten realen Trainings-/Exportpfad und
+  überprüfte Originalquellen alter synthetischer Läufe: `c2cdc04`; 29
+  Verbrauchertests sowie vollständiger Wiederanlauf der bisherigen Datenidentitäten.
+- SQLite 3.53.2 und aktueller [Abhängigkeitsnachweis](../releases/dependency-security-2026-09-26-s18.md):
+  `9059cd3`; 206 Kerntests, 14 Werkzeug-/Dokumentationstests und iOS-26.0-
+  Kompilierprüfung. Keine RustSec-Schwachstellentreffer; zwei Wartungswarnungen
+  bleiben sichtbar. Native Runtime- und Paketabnahme bleiben getrennt.
+- Historische Bildauswertung unabhängig vom heutigen Buildbestand: `a107b8c`;
+  sechs Regressionen bestanden. Der anschließend gemeinsame Werkzeuglauf bestand
+  mit 303 Tests in 56 Gruppen; spätere Änderungen benötigen einen neuen Endlauf.
+- Simulator-Audioprobe: `4fd8d0e` trennt Warnungen von Gerätekennungen und verwendet
+  das festgelegte Laufzeitprofil. Der neue kleine Appbuild besteht, der Start im
+  Simulator überschreitet aber vor dem ersten Probe-Beleg die Frist. Dies ist
+  keine bestandene Audioabnahme und keine erneute Bestätigung des früheren Absturzes.
+- Bytegleiche Assistenten-Prompts: `2d38d8e`; das CLI entfernte bislang beim
+  Textdateieingang ein abschließendes Zeilenende. Gemeinsamer Adapter, gezielte
+  Regressionen und gepaarter Einzelvergleich bestehen. Der vollständige neue
+  Paritätsvergleich ist noch offen; Modelle und alte Berichte bleiben unverändert.
+- Checkpoint-Aufbewahrung: `7d84ac1`; 19 synthetische Regressionen einschließlich
+  tatsächlicher Resume-Leser, Optimizer/RNG-Erhalt und Wiederanlauf nach Unlink.
+  Reale Vorschau und Ausführung stehen wegen aktiver Läufe noch aus.
 
-Der zuletzt vorhandene CI-Lauf `35316081873` an `8d81c4c` wurde erneut lesend geprüft:
+Der zuletzt vorhandene CI-Lauf `35336726552` an `7d3d3e9` wurde erneut lesend geprüft:
 beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.
 Die Freischaltung des Kontos ist noch nicht bestätigt. Menschliche Daten-/Stimmen-
 und Gerätefreigaben bleiben externe Voraussetzungen; sie werden nicht durch

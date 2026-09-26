@@ -22,6 +22,14 @@ Current verified implementation slices:
   `.local`. A resumable hash/mode/link-checked migration preserved every inventoried
   entry and compatibility symlinks. The relocated environment passes `make doctor`.
   A clean-checkout/offline build is being checked separately.
+- Typed native calendar reads preserve scope, occurrence identity and selection
+  revision through the real Swift–Rust–Swift boundary (`b0e804e`). Recognition
+  attempts now have registered, independently revocable lifetimes (`f8a3191`);
+  early errors, cancellation before start, dropped callers and worker cleanup
+  pass fourteen FFI tests and the native bindings probe.
+- Shared receipt publication has a visible cancellation action, a provider
+  deadline and an atomic publication fence (`eadde06`). Interrupted new copies
+  cannot reappear through recovery; complete receipts and originals remain intact.
 - Typed native errors distinguish read timeouts from uncertain calendar writes.
   Binary photo decoding covers all eight orientations and the primary HEIF image.
   Request completion, stale settings replies, temporary-file erasure and partial
@@ -39,9 +47,17 @@ Current verified implementation slices:
   zero unsafe proposals (trained: 33 exact; untuned/rules: 24 exact). This is neither
   fresh inference nor complete conversation acceptance; the cases form one
   connected development group. See [assistant safety](assistant-safety.md).
+- SQLite is updated to 3.53.2 with the existing unsigned-value conversions and
+  cache behavior retained. The targeted slice passes 206 core tests, inventory
+  checks and an iOS 26.0 compilation check. The current
+  [dependency audit](../releases/dependency-security-2026-09-26-s18.md) records zero
+  RustSec vulnerability matches and two maintenance warnings; native-runtime
+  qualification and final bundle checks remain separate.
 
 The complete local baseline at `9b5eef3` passed 178 Rust tests, 232 tool tests,
-native probes and bindings. Later slices have their own evidence; these counts
+native probes and bindings. A later combined working-tree tool run passes 303
+tests in 56 groups (`/tmp/reha-tools-combined-20260926-s18-002.log`); subsequent source
+changes still need final combined verification. Later slices have their own evidence; these counts
 are not a final combined-candidate pass. The first updated simulator app compiled
 and linked, but its enclosing Make invocation failed after a concurrent script
 edit. A stable complete build, UI/visual checks and package verification must pass
@@ -95,10 +111,10 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The current local tool suite passes 232 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
-| Current CI prerequisite | The latest inspected run 35316081873 at `8d81c4c` is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. Exact annotations are retained; the user was asked to check account billing. No retry, payment or limit change was made. |
+| Current CI prerequisite | The latest inspected run [35336726552](archive:github/run-35336726552) at `7d3d3e9` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
 | Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
-| Local audio/UI | Local CoreAudio aborts also occur in an independent minimal app. CI run 35295159442 instead shows actual playback while retained accessibility values are stale. Current-query/scroll corrections compile and await hosted behavioral verification. The corrected public-plan share test passes locally. Complete audio acceptance remains open. |
+| Local audio/UI | Earlier CoreAudio aborts also occurred in an independent minimal app. The new isolated probe builds successfully on the pinned iOS 26.4 runtime, but run `.local/runs/audio-runtime-20260926-s18-resume-003` times out at simulator launch before any probe-stage record; this is not a new audio-engine result. CI run 35295159442 showed actual playback while retained accessibility values were stale. Current-query/scroll corrections compile and await behavioral verification. Complete audio acceptance remains open. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
 | Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
@@ -119,7 +135,16 @@ adaptation parity. Both pretrained/frozen models also complete actual simulator
 app imports, native rereading and persisted traces on one synthetic source.
 That compatibility test does not measure real-photo accuracy or physical speed.
 
-Pixel-verified synthetic tables now feed the actual trainer. Whole source groups
+The current v3 synthetic dataset has 512 training and 128 validation crops from
+136 and 37 source groups. All seven field types have 18–19 validation crops;
+title, room and notes now include unseen vocabulary. All 200 source images and
+640 crops pass pixel/provenance replay without source-group, source-image or crop
+overlap (`571558a`). These are synthetic development observations, not independent
+real schedules. Current real-data consumers require live privacy/consent review;
+old synthetic runs retain explicitly verified original training sources and
+checkpoint identities (`c2cdc04`).
+
+The preceding v2 experiments used pixel-verified synthetic tables. Whole source groups
 are assigned before selecting crops; identical training pixels are excluded from
 validation. The larger experiment has 512 training crops from 129 groups and 91
 validation crops from 42 groups. Validation contains dates/times/therapist lines,
@@ -155,7 +180,12 @@ reproduces all six prior export divergences with automatic backend selection and
 both CPU batch configurations. Changing these settings supplies no parity or
 quality fix; all original model gates remain open.
 
-Ten local voices have 100 anonymous host listening previews and zero human scores.
+Nine installed German system voices now have 90 anonymous host previews rendered
+by the actual product provider, with 1,782 checked word-progress markers and no
+failed render. The retained evidence is
+`.local/runs/listening-system-renderer-20260926-s18-001`; human scores and current
+iPhone recordings are still absent. The earlier ten-voice, 100-preview experiment
+also included the retired experimental voice and remains separate evidence.
 A separate host SpeechTranscriber setup and [100-file ASR experiment](../../ml/experiments/2026-09-26-s18-file-speech-recognition.md)
 finish successfully, exposing name/title/abbreviation discrepancies. Number
 formatting differences are not factual error scores. No voice or speech provider
