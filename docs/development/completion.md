@@ -348,3 +348,10 @@ den bestandenen 68-Test-Lauf qualifiziert.
   `.local/runs/combined-verification-20260926-s19-003/` erhalten. Dieser Nachweis
   umfasst das typisierte Anhängen weiterer Planseiten und die wiederherstellbaren
   VLM-Werkzeuge; UI-, Modell-, Geräte- und Veröffentlichungsabnahme bleiben separat.
+
+- Begrenzte OCR-Fusionsdiagnose: Kontrollen **verifiziert**, Exportkorrektur
+  weiterhin **offen**. Vorab festgelegte vier FP32-Varianten reproduzieren mit den
+  gespeicherten Koeffizienten den Paddle-Zwischenstand nicht exakt; alle 184.320
+  Zwischenwerte liegen innerhalb der unveränderten Toleranz. Quellen unverändert,
+  kein Gesamtmodelllauf und keine Freigabe. Protokoll, Ergebnis und Hashes:
+  [Diagnosebericht](../../ml/experiments/2026-09-26-s19-ocr-batchnorm-fma.md).

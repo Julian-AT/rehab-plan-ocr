@@ -182,7 +182,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | Full `make lint` / `make test` pass at `e590917`: 240 Rust tests, 388 Python cases (nine environment skips) and all scheduled native probes; checkout clean before/after. Linux and physical-device behavior remain separate. |
+| Portable/native logic | Full `make lint` / `make test` pass at `160c99a`: 242 Rust tests, 393 Python cases (nine environment skips) and all scheduled native probes; checkout clean before/after. Linux and physical-device behavior remain separate. |
 | EventKit | Run `.local/runs/typed-calendar-links-20260926-s19-002/` passes 20 tests, with one simulator-only file-protection skip and zero failures. It includes typed ownership inspection, system-editor occurrence identity, import recovery and notification races. Complete results and executable products are retained. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | The latest inspected run [35428090593](archive:github/run-35428090593) at `20348ae`, created September 26, 2026, is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. The job metadata and both annotations are retained in `.local/runs/ci-status-20260926-s19-001/`. No retry, payment or limit change was made by this read-only check. |
@@ -305,3 +305,9 @@ natural endpoints and the complete iPhone route remain required.
 The intended remote is `https://github.com/Julian-AT/rehab-plan-ocr.git`. CI branches
 are separate from remote main. Detailed completed slices, failures and private
 report identities remain in the implementation ledger and linked experiment records.
+
+The [bounded contraction diagnostic](../../ml/experiments/2026-09-26-s19-ocr-batchnorm-fma.md)
+passes its byte-exact controls, but neither explicit output fusion, offset fusion
+nor their combination reproduces the saved Paddle tensor with the retained
+coefficients. No full-model correction or promotion follows. Primitive coefficient
+arithmetic and the existing numeric export failures remain unresolved.

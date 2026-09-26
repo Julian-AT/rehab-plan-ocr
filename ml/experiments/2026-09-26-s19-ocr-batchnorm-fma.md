@@ -50,3 +50,31 @@ plus two GiB temporary capacity and a serial model window. It retains the native
 reference source/library, compiler command, all coefficients/outputs and the report.
 Original sources and previous reports are hash-checked before and after execution.
 There is no automatic full-corpus run, model rewrite or promotion.
+
+## Actual result
+
+Tool/protocol commit before inference: `6910457`. Run
+`.local/runs/ocr-batchnorm-fma-20260926-s19-001` completes with both byte-exact
+controls: exposing coefficients leaves the primitive graph unchanged, and the
+separate C++ arithmetic reproduces it. All source hashes remain unchanged.
+Four independent arithmetic/rejection tests pass before execution; commands,
+logs and the clean source archive are retained in
+`.local/runs/ocr-batchnorm-fma-development-20260926-s19-001`.
+
+None of the four modes reproduces the saved Paddle output exactly. The maximum
+difference remains 0.00000095367431640625 in every mode. All 184,320 intermediate
+values remain within the original tolerance. Fusing the final expression also
+increases its maximum difference from native ONNX to that same value; the separate
+and offset-only variants differ from ONNX by 0.0000000298023223876953125.
+
+Thus explicit contraction at these two sites with the retained coefficients is
+not a demonstrated correction. Primitive coefficient arithmetic remains unresolved;
+this result does not rule out contraction with different native coefficients.
+The full-model failure remains open. No export, full-corpus evaluation, threshold
+change or model promotion followed.
+
+Protocol SHA-256:
+`9376fcb07ce7102cc539684368b01eb712e07ca66a216a31a4ef965f169ff22a`.
+
+Report SHA-256:
+`4623f4482967b6b24109d5c825b6252b287df979fbdb195e1b497b212679ece2`.
