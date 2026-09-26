@@ -109,6 +109,35 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Model export diagnosis and preserved visual evidence — 2026-09-26
+
+The [assistant backend comparison](../../ml/experiments/2026-09-26-s18-assistant-backend-parity.md)
+repeats the six failed export cases with automatic backend selection and two
+explicit CPU batch configurations. All eighteen answers reproduce the original
+GGUF answers, including four incorrect mutation proposals and two schema
+rejections per configuration. Backend/batch selection does not repair parity.
+The tested command and two portable regressions are committed at `2dd0851`.
+
+The [visual comparator](../../ml/experiments/2026-09-26-s18-visual-baseline.md) and native
+triage collector share a verified disposable-copy reader at `49a1f5c`. A real
+re-evaluation preserves all 130 original result files and reproduces the previous
+13/22 pixel matches. Historical results identify the current revision only as the
+evaluator, not the tested app. All 219 local tool tests pass; visual acceptance
+remains open.
+
+Alternative OCR exports retain the selected checkpoints' original Conv/BN
+branches. Saved Paddle outputs are bit-identical on all 18 frozen/39 full failed
+cases; alternative ONNX numeric checks pass only 4/18 and 7/39 with normal
+optimization (4/18 and 22/39 with optimization disabled). Every token sequence
+agrees, but no alternative satisfies parity or qualifies for the app. Original
+artifacts and thresholds are unchanged; see the
+[experiment record](../../ml/experiments/2026-09-26-s18-synthetic-ocr-development.md).
+
+GitHub run 35306312405 at `404f68e` remains blocked before runner startup by the
+account payment/spending-limit check. It executes zero tests. The user has been
+asked to restore Actions availability; no account setting or spending limit has
+been changed. See the [current status](status.md) for all remaining gates.
+
 ### Third completed portable CI candidate — 2026-09-26
 
 [Run 35302894860](archive:github/run-35302894860)

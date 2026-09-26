@@ -238,7 +238,7 @@ diagnose-ocr-baseline-parity:
 
 diagnose-ocr-stage-parity:
 	@test -n "$(RUN)" -a -n "$(PARITY_REPORT)" || { echo 'Set RUN and a new private PARITY_REPORT path'; exit 2; }
-	OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 .local/envs/ocr/bin/python ml/evaluation/recognition/stage_parity.py --run "$(RUN)" --report "$(PARITY_REPORT)"
+	OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 .local/envs/ocr/bin/python ml/evaluation/recognition/stage_parity.py --run "$(RUN)" --report "$(PARITY_REPORT)" $(if $(UNFUSED_EXPORT),--unfused-export "$(UNFUSED_EXPORT)")
 
 ASSISTANT_PER_FAMILY ?= 16
 .PHONY: diagnose-assistant-parity

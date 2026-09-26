@@ -87,6 +87,41 @@ export evidence and unchanged input hashes are verified. Reports under
 - `frozen.json`: `142a8b94d8358ed71a4b77a6b85d46958211c13d36a7c6c14071963221181ffd`.
 - `full.json`: `50c0a87b0f13cd6b21458919fefaf2c0bc2232e218ad8bd5bda4a9301bcfeeaa`.
 
+A second diagnostic exports a copy of each same selected checkpoint **without**
+calling `rep()`. The alternative saved Paddle graph exactly reproduces the
+original dynamic outputs for all 57 previously failed cases. This removes the
+observed dynamic/static discrepancy, but ONNX conversion/runtime still does not
+meet the unchanged numeric gate:
+
+| Failed-case subset | Dynamic → alternative saved Paddle | Dynamic → alternative ONNX, normal optimization | Dynamic → alternative ONNX, optimization disabled |
+| --- | --- | --- | --- |
+| Frozen, 18 cases | 18/18, zero difference | 4/18 | 4/18 |
+| Full, 39 cases | 39/39, zero difference | 7/39 | 22/39 |
+
+All alternative outputs retain the same argmax sequences. Maximum differences
+for normal/disabled ONNX optimization are 0.0005781651/0.0004623532 (frozen) and
+0.0009191632/0.0004197061 (full). These selected failures cannot estimate complete
+parity: an alternative may also introduce differences in previously passing cases.
+The unchanged source hashes and original four stage comparisons are retained in
+each report. No threshold is relaxed or failed model card replaced.
+
+The alternative frozen ONNX graph contains 68 Conv and 58 BatchNormalization
+nodes versus the original graph's 57 and three, respectively; it retains the
+separate branches. This is a diagnostic architecture, not a production speed or
+resource improvement. Artifact SHA-256 values are
+`4c6b321ba6306b2262c5f9176b54b326e056d8d5fa7011dbf1152d629e5f9e05`
+(frozen) and `f12ee30bb2872bcb9d2303589d0a263531311795bcceb57e5258a9ecf41f2af8`
+(full). Reports remain private:
+
+- `.local/runs/ocr-unfused-frozen-diagnostic-20260926-s18-001/report.json`:
+  `fa5c0939559c8e561b9a4843490b3a5be4ec860bd59e053bd152022dde9149fd`.
+- `.local/runs/ocr-unfused-full-diagnostic-20260926-s18-001/report.json`:
+  `26e5df1318b813cf905020f195e6172c63f714738f80b2a6cf29fe4acc751b9e`.
+
+The [maintained diagnostic command](../training/ocr/README.md) requires a new
+private export directory, retains conversion logs and verifies original and
+alternative artifact hashes after inference. Existing directories are rejected.
+
 Training and file-ASR diagnosis overlap on the host, so no runtime-latency,
 energy or thermal comparison is inferred. No human reference/crop approval,
 final holdout, physical-device update or production model change occurs.

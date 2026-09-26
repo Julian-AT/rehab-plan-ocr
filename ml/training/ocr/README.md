@@ -162,6 +162,24 @@ then records stage differences and all source identities. This is a failed-case
 diagnostic only: no stage substitutes for complete deployment parity, and the
 original tolerances, model files and reports remain unchanged.
 
+Add `UNFUSED_EXPORT=<new-private-directory>` to compare a separate export without
+the upstream `rep()` transformation, keeping the selected weights and original
+Conv/BN branches:
+
+```sh
+make diagnose-ocr-stage-parity RUN=.local/runs/ocr-synthetic-frozen-001 \
+  UNFUSED_EXPORT=.local/runs/ocr-unfused-<new> \
+  PARITY_REPORT=.local/runs/ocr-unfused-<new>/report.json
+```
+
+The alternative uses `paddle.jit.to_static`/`save` with the same dynamic-width
+float32 input shape, then the pinned converter at opset 17. Its saved Paddle graph
+and ONNX outputs are compared with the original dynamic model. Both normal and
+disabled ORT graph optimization are recorded separately. Artifacts, conversion
+command/log and hashes stay in a new directory; the standard export, runtime and
+earlier model card are untouched. Even a passing subset cannot qualify this
+alternative architecture. See the [stage results](../../experiments/2026-09-26-s18-synthetic-ocr-development.md).
+
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.

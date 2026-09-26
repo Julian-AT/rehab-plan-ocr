@@ -84,7 +84,11 @@ sequences. The original pretrained route also fails 19 numeric comparisons.
 Both completed experiments are registered with failed parity. These results cannot
 qualify real-photo recognition. Stage diagnosis reproduces the saved Paddle graph
 bit-for-bit after the official reparameterization on all 18/39 failed cases;
-static-Paddle-to-ONNX differences remain separate and unresolved. Critical-field metric
+static-Paddle-to-ONNX differences remain separate and unresolved. An alternative
+export without reparameterization eliminates dynamic/static differences on those
+57 cases but still fails ONNX numeric parity; disabling optimization also leaves
+failures. These alternatives remain diagnostic and excluded from the app.
+Critical-field metric
 version 2 covers appointment identity, room and therapist as well as dates/times,
 and row-level regression checks catch relocated missing/invented appointments.
 
