@@ -119,3 +119,29 @@ Die beobachtete Volume-Differenz war 466.804.736 Bytes, frei danach
 2.230.448.128 Bytes; die Differenz enthält auch Systemaktivität. Der Wiederaufruf
 gab ausschließlich den identischen Abschlussbeleg zurück. Der neue Regel-Probe-
 Einstieg wird danach mit kurzlebigem Modulcache erneut ausgeführt.
+
+## Checkpoint-Ausführung nach Aufhebung der Speicherblockade
+
+Am 26.09.2026 wurden alle drei bestehenden Trainingsläufe in einem ruhigen
+Arbeitsfenster geprüft. Die Pläne und Wiederanlaufbelege liegen unter
+`.local/maintenance/checkpoints/{assistant,frozen,full}-20260926-s18-001.*`.
+
+Beim Assistenten wurden 15 unreferenzierte Tensor-Dateien aus den Epochen
+1, 2, 3, 5 und 6 entfernt (86.689.970 logische Bytes). Die ausgewählte beste Epoche
+4 und die jüngste vollständig fortsetzbare Epoche 7 bleiben erhalten, jeweils
+mit Adapter, Optimizer, Zufallszustand, Konfiguration und Belegen. Alle sechs
+Tensor-Hashes sind unverändert. Die tatsächlichen Trainings-/Exportleser finden
+weiterhin beide Zustände; MLX öffnet je Zustand 112 Adapter-, 226 Optimizer- und
+einen Zufallszustandstensor. Es wurde kein Training gestartet. Ein Wiederaufruf
+der Bereinigung liefert denselben Abschlussbeleg und löscht nichts zusätzlich.
+
+Die neun OCR-Checkpointdateien bleiben vollständig geschützt: Herkunfts- und
+Fehlernachweise referenzieren auch die Zwischenepochen. Für beide OCR-Läufe
+enthalten Vorschau und Abschluss daher null Löschungen. Historische Berichte,
+Originale, Exporte und Modellkarten wurden nicht umgeschrieben.
+
+Der Assistenten-Abschluss misst eine Volume-Differenz von −86.016 Bytes.
+Trotz entfernter logischer Daten ist **kein Speichergewinn nachgewiesen**;
+APFS-Snapshots/geteilte Extents und Systemaktivität bleiben mögliche Einflüsse.
+Das Volume hat nach diesen Prüfungen rund 101 GiB frei. Die 20-GiB-Reserve ist
+erfüllt; diese Kapazität stammt vor allem aus der externen Bereinigung des Nutzers.
