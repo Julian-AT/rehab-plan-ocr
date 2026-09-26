@@ -39,6 +39,48 @@ import Foundation
         let dst = event("dst", "2026-10-24T21:00:00Z", "2026-10-25T03:00:00Z")
         let dstNow = iso.date(from: "2026-10-25T01:30:00Z")!
         precondition(AgendaProjection(events: [dst], now: dstNow, calendar: calendar).remaining.map(\.id) == ["dst"])
-        print("Agenda: empty, one, ongoing, past, overnight, all-day, overlap, duplicate identities, five future days and DST passed")
+        let monday = AgendaWeek(containing: now, calendar: calendar)
+        precondition(calendar.component(.weekday, from: monday.start) == 2 && monday.days.count == 7)
+        precondition(monday == AgendaWeek(containing: monday.days[6], calendar: calendar))
+        precondition(AgendaWeek(containing: monday.end, calendar: calendar).start == monday.end)
+        let selected = calendar.date(byAdding: .day, value: 1, to: now)!
+        let otherDay = DayAgenda(events: all, date: selected, now: now, calendar: calendar)
+        precondition(otherDay.events.map(\.id) == ["future-13"] && !otherDay.isComplete)
+        let complete = DayAgenda(events: [past], date: now, now: now, calendar: calendar)
+        precondition(complete.isComplete)
+        precondition(!DayAgenda(events: [], date: now, now: now, calendar: calendar).isComplete)
+        precondition(!DayAgenda(events: [past, allDay], date: now, now: now, calendar: calendar).isComplete)
+        precondition(!DayAgenda(events: [past], date: now, now: past.values.end.addingTimeInterval(-1), calendar: calendar).isComplete)
+        precondition(DayAgenda(events: [past], date: now, now: past.values.end, calendar: calendar).isComplete)
+        let day = DayAgenda(events: all, date: now, now: now, calendar: calendar)
+        precondition(day.allDay.map(\.id) == ["all-day"])
+        precondition(day.timed.first?.start == 0 && day.timed.first?.event.id == "midnight")
+        precondition(day.timed.first?.duration == 13 * 60)
+        let short = event("short", "2026-09-12T13:00:00Z", "2026-09-12T13:01:00Z")
+        let adjacent = event("adjacent", "2026-09-12T13:02:00Z", "2026-09-12T13:04:00Z")
+        let after = event("after", "2026-09-12T14:00:00Z", "2026-09-12T14:30:00Z")
+        let layout = AgendaLayout.place(DayAgenda(events: [short, adjacent, after], date: now, now: now, calendar: calendar).timed)
+        precondition(layout[0].height == 44 && layout[1].height == 44)
+        precondition(layout[0].column != layout[1].column && layout[0].columns == 2)
+        precondition(layout[2].columns == 1 && layout[2].height == 48)
+        let overlaps = AgendaLayout.place(day.timed)
+        for a in overlaps {
+            for b in overlaps where a.id != b.id && a.column == b.column {
+                precondition(a.segment.start + a.height / 96 * 60 <= b.segment.start || b.segment.start + b.height / 96 * 60 <= a.segment.start)
+            }
+        }
+        let autumn = DayAgenda(events: [dst], date: dstNow, now: dstNow, calendar: calendar)
+        precondition(autumn.minutes == 1500 && autumn.timed.first?.duration == 300)
+        let springDate = iso.date(from: "2026-03-29T10:00:00Z")!
+        let spring = event("spring", "2026-03-29T00:30:00Z", "2026-03-29T01:30:00Z")
+        let springDay = DayAgenda(events: [spring], date: springDate, now: springDate, calendar: calendar)
+        precondition(springDay.minutes == 1380 && springDay.timed.first?.duration == 60)
+        let boundary = event("boundary", "2026-09-11T21:00:00Z", "2026-09-11T22:00:00Z")
+        precondition(DayAgenda(events: [boundary], date: now, now: now, calendar: calendar).events.isEmpty)
+        let multiday = event("multi", "2026-09-11T21:00:00Z", "2026-09-14T01:00:00Z")
+        precondition(DayAgenda(events: [multiday], date: now, now: now, calendar: calendar).timed.first?.duration == 1440)
+        let lastDay = iso.date(from: "2026-09-14T10:00:00Z")!
+        precondition(DayAgenda(events: [multiday], date: lastDay, now: now, calendar: calendar).timed.first?.duration == 180)
+        print("Agenda: weekly navigation, selected day, completion boundary, empty, overlapping hit areas, short events, all-day, midnight, multiday and 23/25-hour DST days passed")
     }
 }

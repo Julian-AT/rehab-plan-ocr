@@ -1,136 +1,187 @@
 import SwiftUI
 import RehaCore
 
-struct SettingsView: View {
-    let core: NativeApplication
-    let changed: (String) -> Void
-    var recognitionOnly = false
-    @State private var preferences: Preferences?
-    @State private var error: String?
-    var body: some View {
-        Group {
-            if let preferences { SettingsForm(core: core, initial: preferences, changed: changed, recognitionOnly: recognitionOnly) }
-            else if let error { ContentUnavailableView(error, systemImage: "exclamationmark.triangle") }
-            else { ProgressView("Einstellungen laden …") }
-        }.task { do { preferences = try await core.preferences() } catch { self.error = userMessage(error) } }
+typealias PreferencesStore = OrderedSettings<Preferences>
+
+extension OrderedSettings where Value == Preferences {
+    convenience init(core: NativeApplication) {
+        #if DEBUG && targetEnvironment(simulator)
+        var failNext = ProcessInfo.processInfo.arguments.contains("--preview-settings-failure")
+        self.init(read: { try await core.preferences() }, write: {
+            if failNext { failNext = false; print("Preview: rejecting first changed preferences write"); throw LocalSpeechError.message("Test: Einstellungen konnten nicht gespeichert werden.") }
+            return try await core.savePreferences(value: $0)
+        }, describe: userMessage)
+        #else
+        self.init(read: { try await core.preferences() }, write: { try await core.savePreferences(value: $0) }, describe: userMessage)
+        #endif
+    }
+    func binding<T>(_ key: WritableKeyPath<Preferences, T>, fallback: T) -> Binding<T> {
+        Binding(get: { self.value?[keyPath: key] ?? fallback }, set: { new in self.change { $0[keyPath: key] = new } })
     }
 }
-private struct SettingsForm: View {
-    let core: NativeApplication
-    let initial: Preferences
-    let changed: (String) -> Void
-    let recognitionOnly: Bool
-    @Environment(\.dismiss) private var dismiss
-    @State private var preferences: Preferences
-    @State private var error: String?
-    @State private var busy = false
-    @State private var erase = false
-    @State private var discard = false
-    @State private var reminders = ""
-    init(core: NativeApplication, initial: Preferences, changed: @escaping (String) -> Void, recognitionOnly: Bool) {
-        self.core = core; self.initial = initial; self.changed = changed; self.recognitionOnly = recognitionOnly
-        _preferences = State(initialValue: initial)
-    }
+
+struct SettingsSaveStatus: View {
+    @Environment(PreferencesStore.self) private var store
     var body: some View {
-        NavigationStack {
-            List {
-                if !recognitionOnly {
-                Section("Darstellung") {
-                    AppearanceControls()
-                    Picker("Erscheinungsbild", selection: $preferences.appearance) {
-                        Text("System").tag("system"); Text("Hell").tag("light"); Text("Dunkel").tag("dark")
-                    }
-                }
-                Section("Kalender") {
-                    Picker("Zeitzone für neue Pläne", selection: $preferences.timezone) {
-                        ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
-                    }
-                    Picker("Kalendererinnerung", selection: $preferences.reminder) {
-                        Text("Aus").tag(nil as UInt32?)
-                        ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0) Minuten vorher").tag(UInt32($0) as UInt32?) }
-                    }
-                }
-                Section("App-Erinnerungen") {
-                    Toggle("App-Erinnerungen verwenden", isOn: Binding(get: { preferences.appRemindersEnabled }, set: { enabled in if enabled { Task { await enable() } } else { preferences.appRemindersEnabled = false } }))
-                    Picker("Vorlauf", selection: $preferences.appReminderMinutes) {
-                        Text("Aus").tag(nil as UInt32?)
-                        ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0) Minuten").tag(UInt32($0) as UInt32?) }
-                    }
-                    Toggle("Ton", isOn: $preferences.reminderSound)
-                    Toggle("Termindetails in Vorschau", isOn: $preferences.reminderPreview)
-                    if !reminders.isEmpty { Text(reminders).font(.subheadline).foregroundStyle(.secondary) }
-                    Button("Testerinnerung senden") { Task { do { _ = try await NativeBridge.request("testReminder") } catch { self.error = userMessage(error) } } }
-                }
-                }
-                if recognitionOnly {
-                Section { Text("Die Erkennung läuft auf diesem iPhone. Ergänzungsvorgaben werden bei passenden Behandlungen vorgeschlagen.") }
-                Section {
-                    ForEach($preferences.completionDefaults, id: \.id) { $item in
-                        VStack(alignment: .leading) {
-                            TextField("Einrichtung", text: $item.clinic)
-                            TextField("Behandlung", text: $item.treatment)
-                            Picker("Angabe", selection: $item.field) {
-                                Text("Dauer").tag("duration_minutes"); Text("Raum").tag("location")
-                                Text("Therapeut:in").tag("therapist"); Text("Vorbereitung").tag("preparation")
-                            }
-                            TextField("Vorgabe", text: Binding(get: { fieldDescription(item.value) }, set: { item.value = item.field == "duration_minutes" ? .integer(value: Int64($0) ?? 0) : .text(value: $0) }))
-                            Button("Vorgabe entfernen", role: .destructive) { preferences.completionDefaults.removeAll { $0.id == item.id } }
-                        }
-                    }
-                    Button("Vorgabe hinzufügen", systemImage: "plus") {
-                        preferences.completionDefaults.append(CompletionDefault(id: UUID().uuidString, clinic: "", treatment: "", field: "location", value: .text(value: "")))
-                    }
-                } header: { Text("Ergänzungsvorgaben") } footer: { Text("Vorgaben werden nur vorgeschlagen und müssen bei der Terminprüfung angenommen werden.") }
-                }
-                if !recognitionOnly {
-                Section("Aufbewahrung") {
-                    Picker("Aufbewahren", selection: $preferences.retentionDays) {
-                        Text("Bis zum Löschen").tag(nil as UInt32?)
-                        Text("30 Tage nach Aufnahme").tag(UInt32(30) as UInt32?)
-                        Text("90 Tage nach Aufnahme").tag(UInt32(90) as UInt32?)
-                    }
-                    Text("Fotos und Prüfdaten bleiben erhalten, bis du sie löschst. Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.")
-                    Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }.disabled(busy)
-                }
-                }
-                if let error { Text(error).foregroundStyle(.red) }
-                if busy { ProgressView("Wird gespeichert …") }
+        if let error = store.error {
+            Section {
+                Text(error).foregroundStyle(.red)
+                Text("Angezeigt wird der zuletzt gespeicherte Stand.").foregroundStyle(.secondary)
+                Button("Erneut versuchen") { if store.canRetry { store.retry() } else { Task { await store.load() } } }
+                    .accessibilityIdentifier("retry-settings")
             }
-            .pageTitle(recognitionOnly ? "Erkennung" : "Einstellungen")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { if preferences != initial { discard = true } else { dismiss() } } }
-                ToolbarItem(placement: .confirmationAction) { Button("Speichern") { Task { await save() } }.disabled(busy) }
-            }
-            .interactiveDismissDisabled(preferences != initial || busy)
-            .confirmationDialog("Änderungen verwerfen?", isPresented: $discard, titleVisibility: .visible) { Button("Verwerfen", role: .destructive) { dismiss() } }
-            .confirmationDialog("Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen.", isPresented: $erase, titleVisibility: .visible) {
-                Button("Alle lokalen Daten löschen", role: .destructive) {
-                    Task {
-                        busy = true; defer { busy = false }
-                        do { try await core.eraseAll(); changed("system"); dismiss() } catch { self.error = userMessage(error) }
-                    }
-                }
-            }
-            .task { await reminderStatus() }
         }
     }
-    private func save() async {
-        busy = true; defer { busy = false }
-        do { preferences = try await core.savePreferences(value: preferences); changed(preferences.appearance); dismiss() }
-        catch { self.error = userMessage(error) }
+}
+
+struct SettingsView: View {
+    enum Page { case appearance, reminders, recognition, storage }
+    let core: NativeApplication
+    var page: Page = .appearance
+    @Environment(PreferencesStore.self) private var store
+    @State private var reminderStatus = ""
+    @State private var error: String?
+    @State private var erase = false
+    @State private var erasing = false
+    @State private var requestingPermission = false
+    @State private var editingDefault: CompletionDefault?
+    @State private var addingDefault = false
+    @State private var removingDefault: CompletionDefault?
+    private var title: String {
+        switch page { case .appearance: "Darstellung"; case .reminders: "Erinnerungen"; case .recognition: "Erkennung"; case .storage: "Aufbewahrung" }
     }
-    private func reminderStatus() async {
+    var body: some View {
+        Form {
+            if let preferences = store.value {
+                switch page {
+                case .appearance:
+                    Section {
+                        Picker("Erscheinungsbild", selection: store.binding(\.appearance, fallback: "system")) {
+                            Text("System").tag("system"); Text("Hell").tag("light"); Text("Dunkel").tag("dark")
+                        }.accessibilityIdentifier("appearance-picker")
+                    } footer: { Text("Schriftgröße und Bedienungshilfen folgen den Einstellungen deines iPhones.") }
+                case .reminders:
+                    Section {
+                        Picker("Kalendererinnerung", selection: store.binding(\.reminder, fallback: nil)) { minuteOptions }
+                    } footer: { Text("Gilt für neue Termine. Bestehende Kalendererinnerungen bleiben erhalten.") }
+                    Section {
+                        Toggle("App-Erinnerungen", isOn: Binding(get: { store.value?.appRemindersEnabled ?? false }, set: { enabled in
+                            if enabled { Task { await enableReminders() } }
+                            else { store.change { $0.appRemindersEnabled = false } }
+                        })).disabled(requestingPermission).accessibilityIdentifier("app-reminders")
+                        Picker("Vorlauf", selection: store.binding(\.appReminderMinutes, fallback: nil)) { minuteOptions }
+                        Toggle("Ton", isOn: store.binding(\.reminderSound, fallback: false)).accessibilityIdentifier("reminder-sound")
+                        Toggle("Termindetails in Vorschau", isOn: store.binding(\.reminderPreview, fallback: false)).accessibilityIdentifier("reminder-preview")
+                        Button("Testerinnerung senden") { Task { do { _ = try await NativeBridge.request("testReminder") } catch { self.error = userMessage(error) } } }
+                    } footer: { Text(reminderStatus.isEmpty ? "Die App erinnert dich zusätzlich an angezeigte Termine." : reminderStatus) }
+                case .recognition:
+                    Section {
+                        Picker("Zeitzone", selection: store.binding(\.timezone, fallback: TimeZone.current.identifier)) {
+                            ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
+                        }
+                    } footer: { Text("Fotos werden auf diesem iPhone erkannt. Die Zeitzone gilt für neue Pläne.") }
+                    Section {
+                        ForEach(preferences.completionDefaults, id: \.id) { item in
+                            Button { editingDefault = item } label: {
+                                LabeledContent(item.treatment, value: fieldDescription(item.value))
+                            }.swipeActions { Button("Löschen", role: .destructive) { removingDefault = item } }
+                        }
+                        Button("Vorgabe hinzufügen", systemImage: "plus") { addingDefault = true }.disabled(preferences.completionDefaults.count >= 100)
+                    } header: { Text("Ergänzungsvorgaben") } footer: { Text("Vorgaben werden vorgeschlagen und erst bei der Terminprüfung angenommen.") }
+                case .storage:
+                    Section {
+                        Picker("Aufbewahren", selection: store.binding(\.retentionDays, fallback: nil)) {
+                            Text("Bis zum Löschen").tag(nil as UInt32?)
+                            Text("30 Tage").tag(UInt32(30) as UInt32?)
+                            Text("90 Tage").tag(UInt32(90) as UInt32?)
+                        }
+                    } footer: { Text("Unfertige und fehlgeschlagene Aufnahmen werden nie automatisch entfernt.") }
+                    Section { Button("Alle lokalen Daten löschen", role: .destructive) { erase = true }.disabled(erasing) }
+                }
+            } else if store.error == nil { ProgressView("Einstellungen laden …") }
+            SettingsSaveStatus()
+        }
+        .pageTitle(title)
+        .task { await store.load(); if page == .reminders { await loadReminderStatus() } }
+        .sheet(isPresented: $addingDefault) { NavigationStack { CompletionDefaultForm() } }
+        .sheet(item: $editingDefault) { item in NavigationStack { CompletionDefaultForm(original: item) } }
+        .confirmationDialog("Vorgabe löschen?", isPresented: Binding(get: { removingDefault != nil }, set: { if !$0 { removingDefault = nil } }), titleVisibility: .visible) {
+            Button("Vorgabe löschen", role: .destructive) { if let id = removingDefault?.id { store.change { $0.completionDefaults.removeAll { $0.id == id } } }; removingDefault = nil }
+        }
+        .confirmationDialog("Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen.", isPresented: $erase, titleVisibility: .visible) {
+            Button("Alle lokalen Daten löschen", role: .destructive) {
+                Task {
+                    erasing = true; defer { erasing = false }
+                    guard await store.flush() else { return }
+                    do { try await core.eraseAll(); await store.reset() } catch { self.error = userMessage(error) }
+                }
+            }
+        }
+        .alert("Einstellungen", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK", role: .cancel) { error = nil }
+        } message: { Text(error ?? "") }
+    }
+    @ViewBuilder private var minuteOptions: some View {
+        Text("Aus").tag(nil as UInt32?)
+        ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0) Minuten vorher").tag(UInt32($0) as UInt32?) }
+    }
+    private func loadReminderStatus() async {
         do {
-            let value = try JSONDecoder().decode(AgendaResponse.self, from: await NativeBridge.request("reminderStatus"))
-            reminders = value.reminders.authorization == "denied" ? "Mitteilungen sind in den iPhone-Einstellungen ausgeschaltet." : value.reminders.error ?? ""
+            let response = try JSONDecoder().decode(AgendaResponse.self, from: await NativeBridge.request("reminderStatus"))
+            reminderStatus = response.reminders.authorization == "denied" ? "Mitteilungen sind in den iPhone-Einstellungen ausgeschaltet." : response.reminders.error ?? ""
         } catch { self.error = userMessage(error) }
     }
-    private func enable() async {
-        busy = true; defer { busy = false }
+    private func enableReminders() async {
+        requestingPermission = true; defer { requestingPermission = false }
         do {
-            let result = try JSONDecoder().decode(AgendaResponse.self, from: await NativeBridge.request("requestReminderPermission"))
-            preferences.appRemindersEnabled = ["authorized", "provisional"].contains(result.reminders.authorization)
-            await reminderStatus()
+            let response = try JSONDecoder().decode(AgendaResponse.self, from: await NativeBridge.request("requestReminderPermission"))
+            let allowed = ["authorized", "provisional"].contains(response.reminders.authorization)
+            store.change { $0.appRemindersEnabled = allowed }; await loadReminderStatus()
         } catch { self.error = userMessage(error) }
+    }
+}
+
+extension CompletionDefault: @retroactive Identifiable {}
+
+private struct CompletionDefaultForm: View {
+    var original: CompletionDefault?
+    @Environment(PreferencesStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var clinic = ""
+    @State private var treatment = ""
+    @State private var field = "location"
+    @State private var value = ""
+    private var valid: Bool {
+        !clinic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !treatment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (field == "duration_minutes" ? (Int64(value).map { (1...1440).contains($0) } ?? false) : !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && value.utf8.count <= 2000)
+    }
+    var body: some View {
+        Form {
+            Section {
+                TextField("Einrichtung", text: $clinic)
+                TextField("Behandlung", text: $treatment)
+                Picker("Angabe", selection: $field) {
+                    Text("Dauer").tag("duration_minutes"); Text("Raum").tag("location")
+                    Text("Therapeut:in").tag("therapist"); Text("Vorbereitung").tag("preparation")
+                }
+                TextField(field == "duration_minutes" ? "Minuten" : "Vorgabe", text: $value)
+                    .keyboardType(field == "duration_minutes" ? .numberPad : .default)
+            } footer: { Text("Alle Angaben sind erforderlich. Eine Dauer muss zwischen 1 und 1440 Minuten liegen.") }
+        }.pageTitle(original == nil ? "Neue Vorgabe" : "Vorgabe")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Übernehmen") {
+                        let item = CompletionDefault(id: original?.id ?? UUID().uuidString, clinic: clinic.trimmingCharacters(in: .whitespacesAndNewlines), treatment: treatment.trimmingCharacters(in: .whitespacesAndNewlines), field: field,
+                            value: field == "duration_minutes" ? .integer(value: Int64(value)!) : .text(value: value.trimmingCharacters(in: .whitespacesAndNewlines)))
+                        store.change { preferences in
+                            if let index = preferences.completionDefaults.firstIndex(where: { $0.id == item.id }) { preferences.completionDefaults[index] = item }
+                            else { preferences.completionDefaults.append(item) }
+                        }
+                        dismiss()
+                    }.disabled(!valid)
+                }
+            }
+            .onAppear { if let original { clinic = original.clinic; treatment = original.treatment; field = original.field; value = fieldDescription(original.value) } }
     }
 }

@@ -22,6 +22,13 @@ final class TestHost: AppleHost, @unchecked Sendable {
         try FileManager.default.copyItem(atPath: root, toPath: draftRoot)
         let host = TestHost()
         let core = try await openApplication(root: root, models: "/unavailable-test-model", host: host)
+        var preferences = try await core.preferences()
+        preferences.appearance = "dark"; preferences.reminderSound = false; preferences.reminderPreview = true
+        let savedPreferences = try await core.savePreferences(value: preferences)
+        precondition(savedPreferences == preferences)
+        let preferencesReopened = try await openApplication(root: root, models: "/unavailable-test-model", host: host)
+        let restoredPreferences = try await preferencesReopened.preferences()
+        precondition(restoredPreferences == preferences)
         let history = try await core.history()
         precondition(history.scans.count == 1)
         let id = history.scans[0].id

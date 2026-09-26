@@ -33,3 +33,91 @@ struct AgendaProjection {
         return event.id == nextID ? "Als Nächstes" : nil
     }
 }
+
+/// Calendar arithmetic, independent of wall-clock progress and view state.
+struct AgendaWeek: Equatable, Hashable {
+    let start: Date
+    let end: Date
+    let days: [Date]
+    init(containing date: Date, calendar: Calendar = .current) {
+        let day = calendar.startOfDay(for: date)
+        let offset = (calendar.component(.weekday, from: day) + 5) % 7
+        let start = calendar.date(byAdding: .day, value: -offset, to: day)!
+        self.start = start
+        end = calendar.date(byAdding: .day, value: 7, to: start)!
+        days = (0..<7).map { calendar.date(byAdding: .day, value: $0, to: start)! }
+    }
+}
+
+/// End-exclusive clipping means midnight events never appear on the wrong day.
+/// Elapsed minutes keep durations and repeated/missing DST hours accurate.
+struct DayAgenda {
+    struct Segment: Identifiable {
+        let event: CalendarEvent
+        let start: Double
+        let duration: Double
+        var id: String { event.id }
+    }
+    let date: Date
+    let end: Date
+    let events: [CalendarEvent]
+    let allDay: [CalendarEvent]
+    let timed: [Segment]
+    let isComplete: Bool
+    let scrollMinute: Double
+    var minutes: Double { end.timeIntervalSince(date) / 60 }
+
+    init(events: [CalendarEvent], date: Date, now: Date, calendar: Calendar = .current) {
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)!
+        self.date = start; self.end = end
+        var seen = Set<String>()
+        self.events = events.filter {
+            $0.values.start < end && $0.values.end > start && $0.values.end > $0.values.start && seen.insert($0.id).inserted
+        }.sorted { ($0.values.start, $0.values.end, $0.id) < ($1.values.start, $1.values.end, $1.id) }
+        allDay = self.events.filter(\.isAllDay)
+        timed = self.events.filter { !$0.isAllDay }.map {
+            let clippedStart = max(start, $0.values.start)
+            return Segment(event: $0, start: clippedStart.timeIntervalSince(start) / 60,
+                           duration: min(end, $0.values.end).timeIntervalSince(clippedStart) / 60)
+        }
+        let isToday = calendar.isDate(start, inSameDayAs: now)
+        isComplete = isToday && !self.events.isEmpty && self.events.allSatisfy { $0.values.end <= now }
+        let target = isToday ? timed.first { $0.event.values.end > now } : timed.first
+        let minute = target.map { isToday && $0.event.values.start <= now ? now.timeIntervalSince(start) / 60 : $0.start }
+        scrollMinute = max(0, (minute ?? timed.first?.start ?? 8 * 60) - 30)
+    }
+}
+
+struct TimelinePlacement: Identifiable {
+    let segment: DayAgenda.Segment
+    let column: Int
+    var columns: Int
+    let height: Double
+    var id: String { segment.id }
+}
+
+enum AgendaLayout {
+    /// Use visual hit areas for collision detection as well as real durations.
+    /// Short adjacent events therefore remain separately tappable.
+    static func place(_ segments: [DayAgenda.Segment], pointsPerHour: Double = 96, minimumHeight: Double = 44) -> [TimelinePlacement] {
+        var result: [TimelinePlacement] = []
+        var columnEnds: [Double] = []
+        var groupStart = 0
+        func finishGroup() {
+            for index in groupStart..<result.count { result[index].columns = columnEnds.count }
+        }
+        for segment in segments.sorted(by: { ($0.start, $0.id) < ($1.start, $1.id) }) {
+            if columnEnds.allSatisfy({ $0 <= segment.start }) {
+                finishGroup(); groupStart = result.count; columnEnds = []
+            }
+            let height = max(minimumHeight, segment.duration * pointsPerHour / 60)
+            let column = columnEnds.firstIndex { $0 <= segment.start } ?? columnEnds.count
+            let visualEnd = segment.start + height / pointsPerHour * 60
+            if column == columnEnds.count { columnEnds.append(visualEnd) } else { columnEnds[column] = visualEnd }
+            result.append(TimelinePlacement(segment: segment, column: column, columns: 1, height: height))
+        }
+        finishGroup()
+        return result
+    }
+}

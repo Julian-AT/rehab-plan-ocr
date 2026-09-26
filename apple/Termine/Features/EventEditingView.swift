@@ -113,7 +113,7 @@ struct ProposalCard: View {
             }
             if proposal.kind == "remove" { Text("Das löscht den Kalendereintrag. Es ist keine Absage bei der Klinik.").foregroundStyle(.secondary) }
             if proposal.undo_of != nil && proposal.kind == "create" { Text("Wiederherstellung als neuer Eintrag. Versendete Einladungen oder Benachrichtigungen werden nicht zurückgenommen.") }
-            Button(action: confirm) { Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true) }.buttonStyle(PrimaryActionStyle()).disabled(busy).accessibilityIdentifier("confirm-event")
+            Button(action: confirm) { Text(proposal.button).frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true) }.buttonStyle(.borderedProminent).disabled(busy).accessibilityIdentifier("confirm-event")
             Button("Angaben korrigieren", action: cancel).controlHeight().disabled(busy)
         }
     }
@@ -145,7 +145,7 @@ struct EventEditorView: View {
     }
     var body: some View {
         NavigationStack {
-            List {
+            Form {
                 if let proposal = model.proposal { ProposalCard(proposal: proposal, busy: model.busy, confirm: { Task { await model.confirm(); changed() } }, cancel: { model.interrupt() }) }
                 else if let result = model.result {
                     Text(result)

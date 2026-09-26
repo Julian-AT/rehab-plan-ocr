@@ -249,7 +249,7 @@ struct ReviewView: View {
                 .navigationDestination(for: String.self) { page in PlanDestination(core: core, scanner: scanner, id: page, changed: changed) }
         } }
         .sheet(isPresented: $history, onDismiss: { Task { model.outcome = nil; await model.load(); changed() } }) { ImportHistoryView(core: core, documentID: id, initialBatchID: model.outcome?.batchId) }
-        .sheet(isPresented: $diagnostics) { DiagnosticsView(core: core, id: model.pages.first?.id ?? id) }
+        .sheet(isPresented: $diagnostics) { NavigationStack { DiagnosticsView(core: core, id: model.pages.first?.id ?? id).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { diagnostics = false } } } } }
         .sheet(isPresented: $correction) { if let page = model.pages.first?.review { CorrectionView(core: core, scanner: scanner, id: page.document.id, width: page.document.width, height: page.document.height) } }
         .sheet(isPresented: $export, onDismiss: { Task { await model.load(); changed() } }) { if let first = model.pages.first?.review { CalendarView(core: core, original: first, pages: model.pages.compactMap(\.review)) } }
         .confirmationDialog("Originale und Prüfdaten löschen? Kalendertermine bleiben erhalten.", isPresented: $delete, titleVisibility: .visible) {
@@ -265,14 +265,14 @@ struct ReviewView: View {
                         if !model.targetLocked { Button("Ändern") { setup = true }.controlHeight().disabled(model.saving || model.loading) }
                     }
                     if model.saving { ProcessingRow(text: "Im Kalender speichern …") }
-                    else if model.needsCalendar { Button("Kalender einrichten") { setup = true }.buttonStyle(PrimaryActionStyle()).controlSize(.large) }
+                    else if model.needsCalendar { Button("Kalender einrichten") { setup = true }.buttonStyle(.borderedProminent).controlSize(.large) }
                     else {
                         Button {
                             Task { await model.save(); changed() }
                         } label: {
                             Text(model.saveLabel)
                                 .frame(maxWidth: .infinity).controlHeight().fixedSize(horizontal: false, vertical: true)
-                        }.buttonStyle(PrimaryActionStyle()).controlSize(.large).accessibilityIdentifier("save-plan")
+                        }.buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("save-plan")
                             .disabled(model.loading || model.selected.isEmpty || !model.hasWrites)
                     }
                 }.frame(maxWidth: .infinity).padding().background(.bar)

@@ -136,14 +136,12 @@ func operationTitle(_ kind: OperationKind) -> String {
 struct RecoveryView: View {
     let core: NativeApplication
     let changed: () -> Void
-    @Environment(\.dismiss) private var dismiss
     @State private var pending: [PendingWrite] = []
     @State private var error: String?
     @State private var busy = false
     @State private var resolution: PendingWrite?
     var body: some View {
-        NavigationStack {
-            List {
+            Form {
                 Section {
                     Text("Zuerst abgleichen. Ein unklarer Schreibvorgang wird dabei nicht erneut ausgeführt.")
                     Button("Kalender abgleichen") { Task { await reconcile() } }.disabled(busy)
@@ -159,14 +157,12 @@ struct RecoveryView: View {
                 if pending.isEmpty { Text("Keine unklaren Schreibvorgänge.") }
             }
             .pageTitle("Kalenderabgleich")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
             .task { await load() }
             .confirmationDialog("Ergebnis im Kalender geprüft?", isPresented: Binding(get: { resolution != nil }, set: { if !$0 { resolution = nil } }), titleVisibility: .visible) {
                 Button("Änderung wurde nicht ausgeführt") { resolve(false) }
                 if resolution?.operation.kind == .remove { Button("Löschung wurde ausgeführt", role: .destructive) { resolve(true) } }
                 Button("Abbrechen", role: .cancel) { }
             }
-        }
     }
     private func load() async { do { pending = try await core.history().pending } catch { self.error = userMessage(error) } }
     private func reconcile() async {

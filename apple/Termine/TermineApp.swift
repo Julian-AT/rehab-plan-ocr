@@ -44,56 +44,50 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+enum AppTab: Hashable { case appointments, voice, archive, more }
+
 @MainActor struct NativeShell: View {
     let core: NativeApplication
     @Environment(\.scenePhase) private var scenePhase
-    @State private var tab = 0
+    @State private var tab: AppTab = .appointments
     @State private var plansPath: [String] = []
     @State private var todayPath: [String] = []
-    @State private var showSettings = false
-    @State private var appearance = "system"
+    @State private var preferences: PreferencesStore
     @State private var refreshID = 0
     @State private var scanner: ScanModel
     @State private var voice: VoiceModel
     @State private var openError: String?
     init(core: NativeApplication) {
         self.core = core
+        _preferences = State(initialValue: PreferencesStore(core: core))
         _scanner = State(initialValue: ScanModel(core: core))
         _voice = State(initialValue: VoiceModel(core: core))
     }
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Termine", systemImage: "calendar", value: 0) {
-                todayTab
-            }
-            Tab("Archiv", systemImage: "doc.on.doc", value: 1) {
-                archiveTab
-            }
-            Tab("Sprechen", systemImage: "waveform", value: 2) {
+            Tab("Termine", systemImage: "calendar", value: AppTab.appointments) { todayTab }
+            Tab("Sprechen", systemImage: "waveform", value: AppTab.voice) {
                 NavigationStack { VoiceView(core: core, model: voice) }
             }
-            Tab("Mehr", systemImage: "ellipsis", value: 3) {
-                NavigationStack {
-                    MoreView(core: core, showSettings: $showSettings, changed: refresh)
-                }
+            Tab("Archiv", systemImage: "archivebox", value: AppTab.archive) { archiveTab }
+            Tab("Mehr", systemImage: "ellipsis", value: AppTab.more) {
+                NavigationStack { MoreView(core: core, changed: refresh) }
             }
         }
-        .onChange(of: tab) { old, _ in if old == 2 { voice.cancelSession() }; refreshID += 1 }
+        .environment(preferences)
+        .onChange(of: tab) { old, _ in if old == .voice { voice.cancelSession() }; refreshID += 1 }
         .modifier(CapturePresentation(scanner: scanner))
-        .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
-        .sheet(isPresented: $showSettings) {
-            SettingsView(core: core) { appearance = $0; refreshID += 1 }
-        }
+        .preferredColorScheme(preferences.value?.appearance == "dark" ? .dark : preferences.value?.appearance == "light" ? .light : nil)
         .onOpenURL { url in Task { await openEvent(url) } }
         .onChange(of: scanner.presentedID) { _, id in
             if let id {
                 let normalized = id.replacingOccurrences(of: "plan:", with: "")
-                if tab == 0 {
+                if tab == .appointments {
                     if todayPath.last?.replacingOccurrences(of: "plan:", with: "") != normalized {
                         if todayPath.last == scanner.currentID { todayPath[todayPath.count - 1] = id } else { todayPath.append(id) }
                     }
                 } else {
-                    tab = 1
+                    tab = .archive
                     if plansPath.last?.replacingOccurrences(of: "plan:", with: "") != normalized {
                         if plansPath.last == scanner.currentID { plansPath[plansPath.count - 1] = id } else { plansPath.append(id) }
                     }
@@ -118,7 +112,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { voice.cancelSession() }
         }
         .task {
-            appearance = (try? await core.preferences().appearance) ?? "system"
+            await preferences.load()
             await scanner.recoverInbox()
             refreshID += 1
             await pendingOpen()
@@ -144,12 +138,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
     private func refresh() { refreshID += 1 }
-    private var settingsButton: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("Einstellungen", systemImage: "gearshape") { showSettings = true }
-                .accessibilityIdentifier("settings")
-        }
-    }
     private func pendingOpen() async {
         do {
             let data = try await NativeBridge.request("pendingEventOpen")
@@ -158,7 +146,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         } catch { openError = userMessage(error) }
     }
     private func openEvent(_ url: URL) async {
-        if url.scheme == "reha-calendar", url.host == "today" { tab = 0; return }
+        if url.scheme == "reha-calendar", url.host == "today" { tab = .appointments; return }
         guard url.scheme == "reha-calendar", url.host == "event",
               let id = url.pathComponents.last, UUID(uuidString: id) != nil else { return }
         do {
@@ -166,12 +154,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             for scan in history.scans where scan.retained {
                 let review = try await core.loadScan(id: scan.id)
                 if review.appointments.contains(where: { ($0.calendarEventId ?? $0.id) == id }) {
-                    tab = 1; plansPath = [scan.id]
+                    tab = .archive; plansPath = [scan.id]
                     _ = try await NativeBridge.request("pendingEventOpen", ["acknowledge": id])
                     return
                 }
             }
-            tab = 0
+            tab = .appointments
             openError = "Der gespeicherte Termin ist unter Termine sichtbar. Das zugehörige Foto wurde bereits bereinigt."
             _ = try await NativeBridge.request("pendingEventOpen", ["acknowledge": id])
         } catch { openError = userMessage(error) }
@@ -180,40 +168,39 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 private struct MoreView: View {
     let core: NativeApplication
-    @Binding var showSettings: Bool
     let changed: () -> Void
-    @State private var recognition = false
-    @State private var diagnostics = false
     var body: some View {
-        List {
+        Form {
             Section {
-                NavigationLink { CalendarPreferencesView(core: core) } label: { MoreRow(title: "Kalender", icon: "calendar") }
-                NavigationLink { EventHistoryView(core: core) } label: { MoreRow(title: "Kalenderänderungen", icon: "clock.arrow.circlepath") }
+                NavigationLink { CalendarPreferencesView(core: core) } label: { Label("Kalender", systemImage: "calendar") }
+                NavigationLink { SettingsView(core: core, page: .appearance) } label: { Label("Darstellung", systemImage: "textformat.size") }
+                NavigationLink { SettingsView(core: core, page: .reminders) } label: { Label("Erinnerungen", systemImage: "bell") }
             }
             Section {
-                Button { showSettings = true } label: { MoreRow(title: "Einstellungen", icon: "gearshape", chevron: true) }.accessibilityIdentifier("settings")
-                Button { recognition = true } label: { MoreRow(title: "Erkennung", icon: "text.viewfinder", chevron: true) }
-                NavigationLink { HelpView() } label: { MoreRow(title: "Hilfe", icon: "questionmark.circle") }
+                NavigationLink { VoiceSettingsView() } label: { Label("Sprache", systemImage: "waveform") }
+                NavigationLink { SettingsView(core: core, page: .recognition) } label: { Label("Erkennung", systemImage: "text.viewfinder") }
+                NavigationLink { SettingsView(core: core, page: .storage) } label: { Label("Aufbewahrung", systemImage: "internaldrive") }
             }
             Section {
-                NavigationLink { RecoveryView(core: core, changed: changed) } label: { MoreRow(title: "Kalenderabgleich", icon: "arrow.triangle.2.circlepath") }
-                Button { diagnostics = true } label: { MoreRow(title: "Diagnose", icon: "info.circle", chevron: true) }
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Laßnitzhöhe").font(.footnote.weight(.medium))
-                    Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · Deine Daten bleiben auf dem Gerät.")
-                }.padding(.top, 8)
+                NavigationLink { HelpView() } label: { Label("Hilfe", systemImage: "questionmark.circle") }
+                NavigationLink { EventHistoryView(core: core) } label: { Label("Verlauf", systemImage: "clock.arrow.circlepath") }
+                NavigationLink { RecoveryView(core: core, changed: changed) } label: { Label("Kalenderabgleich", systemImage: "arrow.triangle.2.circlepath") }
+                NavigationLink { DiagnosticsView(core: core) } label: { Label("Diagnose", systemImage: "info.circle") }
             }
-        }.buttonStyle(.plain).pageTitle("Mehr")
-            .sheet(isPresented: $recognition) { SettingsView(core: core, changed: { _ in changed() }, recognitionOnly: true) }
-            .sheet(isPresented: $diagnostics) { DiagnosticsView(core: core) }
+            Section {} footer: {
+                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                    .font(.footnote).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .center)
+            }
+        }.pageTitle("Mehr")
     }
 }
 private struct HelpView: View {
     var body: some View {
-        List {
+        Form {
             Section("Plan speichern") { Text("Fotografiere deinen Plan. Prüfe offene Angaben und tippe auf Termine speichern. Du kannst den Import danach rückgängig machen.") }
             Section("Fotos und Kalender") { Text("Originale bleiben im Archiv. Das Löschen eines Originals entfernt keine Kalendertermine. Rückgängig findest du beim Plan im Importverlauf.") }
+            Section("Sprechen") { Text("Tippe auf das Mikrofon und sprich in Ruhe. Mit Fertig beendest du die Aufnahme. Kalenderänderungen werden erst nach deiner Bestätigung gespeichert. Abbrechen beendet das Gespräch.") }
+            Section("Termine") { Text("Die Wochenleiste wählt den Tag. Tippe auf einen Termin, um alle Angaben zu sehen. Vorbei beschreibt nur die Uhrzeit und bestätigt keine Teilnahme.") }
         }.pageTitle("Hilfe")
     }
 }

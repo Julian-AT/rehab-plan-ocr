@@ -5,6 +5,8 @@ import EventKit
 struct CalendarSetupView: View {
     let core: NativeApplication
     var planID: String? = nil
+    var embedded = false
+    @Environment(PreferencesStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: [CalendarDestinations.Destination] = []
     @State private var calendarID = ""
@@ -13,8 +15,10 @@ struct CalendarSetupView: View {
     @State private var error: String?
     @State private var recent: [String] = []
     var body: some View {
-        NavigationStack {
-            List {
+        if embedded { content } else { NavigationStack { content } }
+    }
+    private var content: some View {
+            Form {
                 Section {
                     Text(planID == nil ? "Neue Termine speichern in" : "Dieser Plan erhält genau einen Zielkalender.").font(.headline)
                     Button("Kalenderzugriff erlauben") { Task { await load(requestAccess: true) } }.disabled(busy)
@@ -38,11 +42,10 @@ struct CalendarSetupView: View {
                 }
                 if busy { ProcessingRow(text: "Kalender laden …") }
                 Button { Task { await save() } } label: { Text("Diesen Kalender verwenden").frame(maxWidth: .infinity).controlHeight() }
-                    .buttonStyle(PrimaryActionStyle()).disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
+                    .buttonStyle(.borderedProminent).disabled(busy || !destinations.contains { $0.id == calendarID && $0.writable })
             }.pageTitle("Speicherziel")
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() }.disabled(busy) } }
-                .task { await load(requestAccess: false) }
-        }
+                .toolbar { if !embedded { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() }.disabled(busy) } } }
+                .task { await store.load(); await load(requestAccess: false) }
     }
     private func load(requestAccess: Bool) async {
         busy = true; defer { busy = false }
@@ -67,10 +70,12 @@ struct CalendarSetupView: View {
         busy = true; defer { busy = false }
         do {
             if let planID { try await core.selectPlanCalendar(id: planID, calendarId: calendarID) }
-            var p = try await core.preferences()
-            if planID == nil || remember { p.calendarId = calendarID }
-            p.recentCalendarIds = [calendarID] + p.recentCalendarIds.filter { $0 != calendarID }.prefix(9)
-            _ = try await core.savePreferences(value: p); dismiss()
+            let selected = calendarID, makeDefault = planID == nil || remember
+            store.change { p in
+                if makeDefault { p.calendarId = selected }
+                p.recentCalendarIds = [selected] + p.recentCalendarIds.filter { $0 != selected }.prefix(9)
+            }
+            if await store.flush() { dismiss() } else { error = store.error }
         } catch { self.error = userMessage(error) }
     }
 }
@@ -94,58 +99,54 @@ struct CalendarChoiceRow: View {
 }
 struct CalendarPreferencesView: View {
     let core: NativeApplication
+    @Environment(PreferencesStore.self) private var store
     @State private var destinations: [CalendarDestinations.Destination] = []
-    @State private var preferences: Preferences?
-    @State private var setup = false
-    @State private var busy = false
     @State private var error: String?
     var body: some View {
-        List {
-            Section("Kalender anzeigen und vorlesen") {
-                Text("Importierte Termine bleiben sichtbar. Weitere Kalender wählst du hier aus. Beschreibbare Termine können nach deiner Bestätigung auch geändert und gelöscht werden.")
+        Form {
+            Section {
                 ForEach(destinations) { calendar in
-                    Toggle(isOn: Binding(get: { preferences?.displayCalendarIds.contains(calendar.id) == true }, set: { value in Task { await select(calendar.id, value) } })) {
+                    Toggle(isOn: Binding(get: { store.value?.displayCalendarIds.contains(calendar.id) == true }, set: { visible in select(calendar.id, visible) })) {
                         CalendarChoiceRow(calendar: calendar, selected: false)
-                    }.disabled(busy)
+                    }
                 }
+                if destinations.isEmpty { Button("Kalenderzugriff erlauben") { Task { await load() } } }
+            } header: { Text("Anzeigen und vorlesen") } footer: {
+                Text("Importierte Termine bleiben sichtbar. Weitere Kalender wählst du hier aus.")
             }
-            if let preferences {
+            if let preferences = store.value {
                 let missing = preferences.displayCalendarIds.filter { id in !destinations.contains { $0.id == id } }
                 if !missing.isEmpty {
                     Section("Nicht verfügbare Kalender") {
                         ForEach(missing, id: \.self) { id in
-                            Button("Kalender …\(id.suffix(6)) aus Anzeigeauswahl entfernen") { Task { await select(id, false) } }.controlHeight()
+                            Button("Kalender …\(id.suffix(6)) aus Auswahl entfernen") { select(id, false) }
                         }
                     }
                 }
             }
-            Section("Neue Termine speichern in") {
-                Text(destinations.first { $0.id == preferences?.calendarId } .map { "\($0.title) · \($0.source)" } ?? "Noch kein Kalender ausgewählt")
-                Button("Speicherziel ändern") { setup = true }.controlHeight()
-                if let id = preferences?.calendarId, !id.isEmpty, preferences?.displayCalendarIds.contains(id) == false {
-                    Button("Auch anzeigen") { Task { await select(id, true) } }.controlHeight()
+            Section {
+                LabeledContent("Speicherziel", value: destinations.first { $0.id == store.value?.calendarId }.map { "\($0.title) · \($0.source)" } ?? "Noch nicht ausgewählt")
+                NavigationLink("Speicherziel ändern") { CalendarSetupView(core: core, embedded: true) }
+                if let id = store.value?.calendarId, !id.isEmpty, store.value?.displayCalendarIds.contains(id) == false {
+                    Button("Auch anzeigen") { select(id, true) }
                 }
-            }
-            if let error { Text(error).foregroundStyle(.red) }
-            Button("Kalender neu laden") { Task { await load() } }.controlHeight()
-        }.pageTitle("Kalender")
-            .task { await load() }
-            .sheet(isPresented: $setup, onDismiss: { Task { await load() } }) { CalendarSetupView(core: core) }
+            } header: { Text("Neue Termine") } footer: { Text("Ein neues Speicherziel verschiebt keine bestehenden Termine.") }
+            SettingsSaveStatus()
+            if let error { Section { Text(error).foregroundStyle(.red) } }
+            Section { Button("Kalender neu laden") { Task { await load() } } }
+        }.pageTitle("Kalender").task { await store.load(); await load() }
     }
     private func load() async {
         do {
-            preferences = try await core.preferences()
             _ = try await NativeBridge.request("calendars", ["dedicated": false])
             destinations = try JSONDecoder().decode(CalendarDestinations.self, from: await NativeBridge.request("eventCalendars")).calendars
             error = nil
         } catch { self.error = userMessage(error) }
     }
-    private func select(_ id: String, _ visible: Bool) async {
-        busy = true; defer { busy = false }
-        do {
-            var p = try await core.preferences(); p.displayCalendarIds.removeAll { $0 == id }
+    private func select(_ id: String, _ visible: Bool) {
+        store.change { p in
+            p.displayCalendarIds.removeAll { $0 == id }
             if visible { p.displayCalendarIds.append(id) }
-            preferences = try await core.savePreferences(value: p); error = nil
-        } catch { self.error = userMessage(error) }
+        }
     }
 }

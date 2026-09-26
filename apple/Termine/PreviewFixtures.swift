@@ -1,5 +1,6 @@
 #if DEBUG && targetEnvironment(simulator)
 import EventKit
+import UIKit
 import RehaCore
 
 /// Only explicit UI-test launches on a simulator can create these synthetic
@@ -31,9 +32,10 @@ import RehaCore
         }
         guard let source = store.sources.first(where: { $0.sourceType == .local }) ?? store.defaultCalendarForNewEvents?.source else { return }
         var calendars: [EKCalendar] = []
-        for _ in 0..<2 {
+        for index in 0..<2 {
             let calendar = EKCalendar(for: .event, eventStore: store)
             calendar.title = "Therapie"; calendar.source = source
+            calendar.cgColor = (index == 0 ? UIColor.systemGreen : UIColor.systemOrange).cgColor
             try store.saveCalendar(calendar, commit: true); calendars.append(calendar)
         }
         UserDefaults.standard.set(calendars.map(\.calendarIdentifier), forKey: "preview.calendar.ids")
@@ -49,6 +51,18 @@ import RehaCore
             event.startDate = start; event.endDate = end; event.isAllDay = allDay
             event.notes = "Öffentliche synthetische Simulatorvorschau."
             try store.save(event, span: .thisEvent, commit: true)
+        }
+        if mode == "complete" || mode == "finishing" {
+            try add("Erholung nach Physiotherapie", start: now.addingTimeInterval(-3600), end: now.addingTimeInterval(mode == "finishing" ? 5 : -1800))
+        }
+        if mode == "timeline" {
+            try add("Physiotherapie", start: now.addingTimeInterval(-900), end: now.addingTimeInterval(1800))
+            try add("Ergotherapie", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(6300), calendar: 1, room: "Raum 105")
+            try add("Entspannung", start: now.addingTimeInterval(9000), end: now.addingTimeInterval(11700), room: "Turnsaal")
+        }
+        if mode == "short" {
+            try add("Kurztermin", start: now.addingTimeInterval(600), end: now.addingTimeInterval(660))
+            try add("Kontrolle", start: now.addingTimeInterval(720), end: now.addingTimeInterval(780), calendar: 1)
         }
         if mode == "full" {
             try add("Frühgymnastik", start: day.addingTimeInterval(8 * 3600), end: day.addingTimeInterval(8.5 * 3600), room: "Turnsaal")

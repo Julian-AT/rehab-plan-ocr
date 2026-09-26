@@ -194,31 +194,32 @@ private final class InputLevelMeter: @unchecked Sendable {
 struct VoiceSettingsView: View {
     @State private var assets = LocalSpeechAssets()
     @State private var rate = SpeechOutput.shared.rate
-    @Environment(\.dismiss) private var dismiss
+    @State private var output = SpeechOutput.shared
     var body: some View {
-        List {
+        Form {
             Section {
                 LabeledContent("Stimme", value: "Martin · Deutsch")
-                VStack(alignment: .leading, spacing: AppSpacing.small) {
-                    HStack { Text("Geschwindigkeit"); Spacer(); Text(rate.formatted(.number.precision(.fractionLength(2))) + "×").foregroundStyle(.secondary) }
-                    Slider(value: $rate, in: 0.75...1.25, step: 0.05) { Text("Vorlesegeschwindigkeit") }
+                VStack(alignment: .leading) {
+                    LabeledContent("Sprechtempo", value: rate.formatted(.number.precision(.fractionLength(2))) + "×")
+                    Slider(value: $rate, in: 0.75...1.25, step: 0.05) { Text("Sprechtempo") }
                 }
-                Text("Am 14.09.2026 um 09:15 Uhr: Physiotherapie, Raum 2.14 in Laßnitzhöhe.").font(.subheadline).foregroundStyle(.secondary)
-                SpeechControls(text: "Am 14.09.2026 um 09:15 Uhr: Physiotherapie, Raum 2.14 in Laßnitzhöhe.")
-            } header: { Text("Stimme ausprobieren") } footer: { Text("Kokoro · Deutsch · vollständig auf diesem Gerät. Die Stimme ist bereits enthalten.") }
+                Button(output.speaking ? "Wiedergabe beenden" : "Stimme anhören", systemImage: output.speaking ? "stop" : "play") {
+                    if output.speaking { output.stop() }
+                    else { output.speak("Am 14. September um 9 Uhr 15: Physiotherapie, Raum 2.14 in Laßnitzhöhe.") }
+                }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
+                if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
+                if output.phase == .failed { Text(output.status).foregroundStyle(.red) }
+            } footer: { Text("Die Stimme ist bereits enthalten und funktioniert auf diesem iPhone ohne Internet.") }
             Section {
-                Label(assets.ready ? "Bereit zum Sprechen" : "Spracherkennung", systemImage: assets.ready ? "checkmark.circle" : "mic").font(.headline)
-                Text(assets.status).font(.subheadline).foregroundStyle(.secondary)
-                if assets.busy { ProgressView(value: assets.progress); Button("Abbrechen") { assets.cancel() }.controlHeight() }
-                else { Button(assets.ready ? "Erneut prüfen" : "Spracherkennung einrichten") { if assets.ready { Task { await assets.check() } } else { assets.prepareAssets() } }.controlHeight() }
-            } header: { Text("Sprechen") } footer: { Text("Die Erkennung braucht eventuell einmalig einen Download. Aufnahme und Gespräch werden nicht gespeichert.") }
-            Section {
-                Text(SystemLanguageModel.default.isAvailable ? "Apple Intelligence unterstützt unterschiedliche Formulierungen auf diesem Gerät." : "Sprachbefehle und sichtbare Auswahl funktionieren auch ohne Apple Intelligence.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-            }
-        }.pageTitle("Spracheinstellungen")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }.task { await assets.check() }
-            .onChange(of: rate) { SpeechOutput.shared.stop(); SpeechOutput.shared.rate = rate }
-            .onDisappear { assets.cancel(); SpeechOutput.shared.stop() }
+                LabeledContent("Spracherkennung", value: assets.ready ? "Bereit" : "Einrichtung")
+                Text(assets.status).foregroundStyle(.secondary)
+                if assets.busy { ProgressView(value: assets.progress); Button("Abbrechen") { assets.cancel() } }
+                else if !assets.ready { Button("Spracherkennung einrichten") { assets.prepareAssets() } }
+            } footer: { Text("Für die Einrichtung ist eventuell einmalig Internet nötig. Aufnahme und Gespräch werden nicht gespeichert.") }
+        }.pageTitle("Sprache")
+            .onAppear { rate = output.rate }
+            .task { await assets.check() }
+            .onChange(of: rate) { output.stop(); output.rate = rate }
+            .onDisappear { assets.cancel(); output.stop() }
     }
 }

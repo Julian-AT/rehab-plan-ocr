@@ -10,6 +10,17 @@ import RehaCore
     var lastText = ""
     private(set) var level = 0.0
     private var meterTask: Task<Void, Never>?
+    #if DEBUG && targetEnvironment(simulator)
+    private var measuredFrames = 0
+    private var peakLevel = 0.0
+    private func saveAudioEvidence() {
+        guard ProcessInfo.processInfo.arguments.contains("--audio-evidence") else { return }
+        let data: [String: Any] = ["playing_frames": measuredFrames, "peak_level": peakLevel, "time": Date().timeIntervalSince1970]
+        if let encoded = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys) {
+            try? encoded.write(to: URL.documentsDirectory.appendingPathComponent("preview-audio-meter.json"), options: .atomic)
+        }
+    }
+    #endif
     var speaking: Bool { phase == .playing || phase == .preparing }
     var voiceID: String {
         get { "martin" }
@@ -97,11 +108,19 @@ import RehaCore
                 player.updateMeters()
                 let measured = player.isPlaying ? pow(10, Double(player.averagePower(forChannel: 0)) / 30) : 0
                 self.level += (min(1, measured) - self.level) * 0.4
+                #if DEBUG && targetEnvironment(simulator)
+                if player.isPlaying {
+                    self.measuredFrames += 1; self.peakLevel = max(self.peakLevel, self.level)
+                }
+                #endif
                 try? await Task.sleep(for: .milliseconds(40))
             }
         }
     }
     func stop() {
+        #if DEBUG && targetEnvironment(simulator)
+        saveAudioEvidence()
+        #endif
         meterTask?.cancel(); meterTask = nil; level = 0
         generation &+= 1; renderer.setRequest(request: generation)
         task?.cancel(); task = nil; player?.stop(); player = nil

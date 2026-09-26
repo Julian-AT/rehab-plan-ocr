@@ -52,39 +52,28 @@ import XCTest
     }
     func testNeuralPlaybackStopAndRepeat() {
         app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-settings"].tap()
-        let read = app.buttons["read-aloud"], stop = app.buttons["stop-speech"], repeatButton = app.buttons["repeat-speech"]
-        XCTAssertTrue(read.waitForExistence(timeout: 8)); read.tap()
-        let status = app.staticTexts["speech-status"]
-        expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: status)
+        let preview = app.buttons["preview-voice"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 8)); preview.tap()
+        expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: preview)
         waitForExpectations(timeout: 45)
-        capture("Neural voice playing")
-        XCTAssertTrue(stop.isEnabled); stop.tap()
-        expectation(for: NSPredicate(format: "value == %@", "idle"), evaluatedWith: status)
-        waitForExpectations(timeout: 3)
-        XCTAssertFalse(stop.isEnabled)
-        repeatButton.tap()
-        expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: status)
+        capture("Martin playing")
+        preview.tap(); XCTAssertEqual(preview.value as? String, "idle")
+        preview.tap()
+        expectation(for: NSPredicate(format: "value == %@", "playing"), evaluatedWith: preview)
         waitForExpectations(timeout: 30)
-        XCUIDevice.shared.press(.home)
-        app.activate()
-        expectation(for: NSPredicate(format: "value == %@", "idle"), evaluatedWith: status)
-        waitForExpectations(timeout: 5)
-        XCTAssertFalse(stop.isEnabled)
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Vorlesen fehlgeschlagen")).firstMatch.exists)
-        capture("Neural voice stopped independently")
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertEqual(preview.value as? String, "idle")
     }
-    func testAdjustableControlsAndMoreAppearance() {
+    func testSystemControlsAndMoreAppearance() {
         app.tabBars.buttons["Sprechen"].tap()
-        let initial = app.buttons["speak"].frame.height
-        app.tabBars.buttons["Mehr"].tap(); capture("More consistent rows")
-        app.buttons["settings"].tap()
-        app.buttons["control-size"].tap(); app.buttons["Groß"].tap()
-        app.buttons["Speichern"].tap(); app.tabBars.buttons["Sprechen"].tap()
-        XCTAssertGreaterThan(app.buttons["speak"].frame.height, initial)
-        capture("Larger controls")
-        app.tabBars.buttons["Mehr"].tap(); app.buttons["settings"].tap()
-        app.buttons["control-size"].tap(); app.buttons["Standard"].tap()
-        app.buttons["Speichern"].tap()
+        XCTAssertGreaterThanOrEqual(app.buttons["speak"].frame.height, 44)
+        app.tabBars.buttons["Mehr"].tap(); capture("Native settings groups")
+        app.buttons["Darstellung"].tap()
+        XCTAssertTrue(app.navigationBars["Darstellung"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Speichern"].exists)
+        XCTAssertTrue(app.buttons["appearance-picker"].exists)
+        app.navigationBars["Darstellung"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Mehr"].exists)
     }
     func testUpcomingDaysExpandAndPastIsSeparate() {
         openPlan("plan-33333333-3333-4333-8333-333333333333")
@@ -99,19 +88,12 @@ import XCTest
         expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: save); waitForExpectations(timeout: 10); save.tap()
         XCTAssertTrue(app.buttons["undo-save"].waitForExistence(timeout: 15))
         app.tabBars.buttons["Termine"].tap()
-        let more = app.buttons["load-more-days"]
-        for _ in 0..<6 where !more.isHittable { app.swipeUp() }
-        XCTAssertTrue(more.waitForExistence(timeout: 8)); more.tap()
-        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: more); waitForExpectations(timeout: 5)
-        let day = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "agenda-day-")).firstMatch
-        XCTAssertTrue(day.waitForExistence(timeout: 5))
-        capture("Agenda expanded into additional days")
-        if app.buttons["past-events"].isHittable {
-            app.buttons["past-events"].tap()
-            expectation(for: NSPredicate(format: "count >= 1"), evaluatedWith: app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", "Testtherapie 1"))); waitForExpectations(timeout: 5)
-            capture("Agenda completed appointments separate")
-        }
+        XCTAssertTrue(app.buttons["next-week"].waitForExistence(timeout: 8))
+        app.buttons["next-week"].tap(); app.buttons["previous-week"].tap()
+        app.buttons["agenda-today"].tap()
+        capture("Weekly agenda after plan save")
     }
+
     func testCalendarAndVoiceSettingsAreVisible() {
         app.tabBars.buttons["Mehr"].tap()
         app.buttons["Kalender"].tap()
@@ -121,9 +103,8 @@ import XCTest
         capture("Separate calendar display and destination")
         app.navigationBars["Kalender"].buttons.firstMatch.tap()
         app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-settings"].tap()
-        XCTAssertTrue(app.navigationBars["Spracheinstellungen"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Stopp"].exists)
-        XCTAssertTrue(app.buttons["Wiederholen"].exists)
+        XCTAssertTrue(app.navigationBars["Sprache"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["preview-voice"].exists)
         capture("Local voice setup and playback controls")
     }
     func testNativeTabsArchiveSettingsAndColdLaunch() {
@@ -139,16 +120,16 @@ import XCTest
         XCTAssertFalse(app.staticTexts["Gesicherte Aufnahmen"].exists)
         XCTAssertFalse(app.staticTexts["Gespeicherte Termine"].exists)
         capture("Archive chronological plans")
-        app.tabBars.buttons["Mehr"].tap(); app.buttons["settings"].tap()
-        XCTAssertTrue(app.navigationBars["Einstellungen"].waitForExistence(timeout: 5))
-        app.buttons["Abbrechen"].tap()
+        app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
+        XCTAssertTrue(app.navigationBars["Darstellung"].waitForExistence(timeout: 5))
+        app.navigationBars["Darstellung"].buttons.firstMatch.tap()
         app.buttons["Erkennung"].tap()
         XCTAssertTrue(app.navigationBars["Erkennung"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Vorgabe hinzufügen"].exists)
-        app.buttons["Abbrechen"].tap()
-        app.buttons["Diagnose"].tap()
+        app.navigationBars["Erkennung"].buttons.firstMatch.tap()
+        app.swipeUp(); app.buttons["Diagnose"].tap()
         XCTAssertTrue(app.navigationBars["Diagnose"].waitForExistence(timeout: 5))
-        app.buttons["Fertig"].tap()
+        app.navigationBars["Diagnose"].buttons.firstMatch.tap()
         app.terminate(); app.launch()
         XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 15))
         capture("Today before setup")
@@ -252,27 +233,20 @@ import XCTest
         XCTAssertTrue(app.buttons["Erneut versuchen"].waitForExistence(timeout: 20))
         capture("Retryable capture failure")
     }
-    func testVoiceTabIsExplicitAndPlaybackStopsOnTabChange() {
+    func testVoiceTabIsExplicitAndCancelEndsConversation() {
         app.tabBars.buttons["Sprechen"].tap()
-        let state = app.staticTexts["voice-state"]
-        XCTAssertTrue(state.waitForExistence(timeout: 5))
+        let state = app.descendants(matching: .any).matching(identifier: "voice-state").firstMatch
         XCTAssertEqual(state.value as? String, "idle")
         XCTAssertFalse(app.buttons["finish-speaking"].exists)
-        capture("Voice idle pearl orb")
-        app.buttons["repeat-speech"].tap()
-        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
-        waitForExpectations(timeout: 45)
-        capture("Voice orb with real Kokoro playback")
+        XCTAssertFalse(app.staticTexts["voice-response"].exists)
+        app.buttons["stop-speech"].tap()
         app.tabBars.buttons["Archiv"].tap(); app.tabBars.buttons["Sprechen"].tap()
         XCTAssertEqual(state.value as? String, "idle")
-        XCTAssertFalse(app.buttons["stop-speech"].isEnabled)
-        app.buttons["repeat-speech"].tap(); app.buttons["stop-speech"].tap()
-        XCTAssertEqual(state.value as? String, "idle")
-        XCTAssertFalse(app.buttons["stop-speech"].isEnabled)
+        capture("Voice explicit microphone and cancel")
     }
-    func testVoiceCreationPreviewIsRevokedOnTabChange() {
+    func testVoiceCreationPreviewIsRevokedOnBackground() {
         app.tabBars.buttons["Sprechen"].tap()
-        app.buttons["voice-create"].tap()
+        app.buttons["voice-details"].tap(); app.buttons["voice-create"].tap()
         let title = app.textFields["Bezeichnung"]
         XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Test Sprachbereich")
         app.buttons["Bezeichnung übernehmen"].tap()
@@ -291,9 +265,10 @@ import XCTest
         for _ in 0..<6 where !confirm.isHittable { app.swipeUp() }
         XCTAssertTrue(confirm.waitForExistence(timeout: 15))
         capture("Voice concrete preview before confirmation")
-        app.tabBars.buttons["Termine"].tap(); app.tabBars.buttons["Sprechen"].tap()
+        XCUIDevice.shared.press(.home); app.activate()
         XCTAssertFalse(confirm.exists)
-        XCTAssertEqual(app.staticTexts["voice-state"].value as? String, "idle")
+        app.navigationBars["Gesprächsdetails"].buttons.firstMatch.tap()
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "voice-state").firstMatch.value as? String, "idle")
         capture("Voice proposal revoked after tab change")
     }
     func testZPhotoPickerImportsARealImage() {
@@ -312,9 +287,9 @@ import XCTest
         capture("Real photo imported and recognized")
     }
     func testTextSizeAndDarkAppearance() throws {
-        app.tabBars.buttons["Mehr"].tap(); app.buttons["settings"].tap()
+        app.tabBars.buttons["Mehr"].tap(); app.buttons["Darstellung"].tap()
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Erscheinungsbild,")).firstMatch.tap(); app.buttons["Dunkel"].tap()
-        app.buttons["Speichern"].tap()
+        app.navigationBars["Darstellung"].buttons.firstMatch.tap()
         app.terminate()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch(); openPlan(clearID)

@@ -192,15 +192,18 @@ struct CorrectionView: View {
 struct DiagnosticsView: View {
     let core: NativeApplication
     var id: String? = nil
-    @Environment(\.dismiss) private var dismiss
     @State private var diagnostics: Diagnostics?
     @State private var capabilities: Capabilities?
     @State private var error: String?
     @State private var history: History?
     var body: some View {
-        NavigationStack {
-            List {
+            Form {
                 if let error { Text(error) }
+                Section("Sprache") {
+                    LabeledContent("Stimme", value: "Kokoro · Martin · Deutsch")
+                    LabeledContent("Audio", value: "24 kHz · lokal")
+                    Text("Apple Intelligence kann die Einordnung unterstützen. Befehle und manuelle Auswahl funktionieren auch ohne sie.")
+                }
                 if let capabilities {
                     Section("Verfügbarkeit") {
                         Text(capabilities.recognitionAvailable ? "Lokale Erkennung verfügbar" : "Modelldateien oder Laufzeit fehlen")
@@ -223,9 +226,7 @@ struct DiagnosticsView: View {
                     Section("Modellidentität") { Text(diagnostics.manifestJson).font(.caption.monospaced()).textSelection(.enabled) }
                 }
             }.pageTitle("Diagnose")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } } }
                 .task { do { capabilities = try await core.capabilities(); if let id { diagnostics = try await core.diagnostics(id: id) } else { history = try await core.history() } } catch { self.error = userMessage(error) } }
-        }
     }
 }
 

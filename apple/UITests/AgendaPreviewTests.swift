@@ -25,124 +25,228 @@ import UIKit
     private func row(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "agenda-event-", title)).firstMatch
     }
-    func testEmptyCenteredAndNoSelectionAreDistinct() {
+    private var voiceState: XCUIElement { app.descendants(matching: .any).matching(identifier: "voice-state").firstMatch }
+    // SwiftUI exposes a switch row and its actual trailing switch. Target the
+    // visible switch, since tapping the center of the row can hit only its label.
+    private func toggle(_ element: XCUIElement) {
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+    }
+    private func back(_ title: String) { app.navigationBars[title].buttons.firstMatch.tap() }
+
+    func testEmptyAndNoSelectionAreDistinct() {
         launch("empty")
         XCTAssertTrue(app.staticTexts["Heute keine Termine"].waitForExistence(timeout: 8))
-        let text = app.staticTexts["Heute keine Termine"]
-        XCTAssertGreaterThan(text.frame.midY, app.frame.height * 0.3)
-        XCTAssertLessThan(text.frame.midY, app.frame.height * 0.7)
-        XCTAssertGreaterThan(app.buttons.matching(identifier: "Plan hinzufügen").count, 0)
-        capture("01-empty-centered")
+        capture("01-keine-termine")
         app.terminate(); launch("no-selection")
         XCTAssertTrue(app.staticTexts["Kalender auswählen"].waitForExistence(timeout: 8))
         XCTAssertFalse(app.staticTexts["Heute keine Termine"].exists)
-        capture("02-calendar-selection-needed")
+        capture("02-kalenderauswahl-fehlt")
     }
-    func testSingleAndFutureEventsAppearOnce() {
-        launch("one")
-        XCTAssertTrue(row("Ergotherapie").waitForExistence(timeout: 8))
-        XCTAssertTrue(row("Ergotherapie").label.contains("Als Nächstes"))
-        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "agenda-event-")).count, 1)
-        capture("03-one-appointment")
-        app.terminate(); launch("future")
-        XCTAssertTrue(app.staticTexts["Heute keine Termine"].waitForExistence(timeout: 8))
-        capture("04-no-today-with-future-days")
-        app.buttons["load-more-days"].tap()
-        XCTAssertTrue(row("Training Tag 1").waitForExistence(timeout: 5))
-        XCTAssertFalse(row("Training Tag 4").exists)
-        for _ in 0..<6 where !app.buttons["load-more-days"].isHittable { app.swipeUp() }
-        app.buttons["load-more-days"].tap()
-        for _ in 0..<6 where !row("Training Tag 5").isHittable { app.swipeUp() }
-        XCTAssertTrue(row("Training Tag 5").exists)
-        XCTAssertFalse(app.buttons["load-more-days"].exists)
-        capture("05-five-future-days")
+    func testWeekNavigationAndTimeline() {
+        launch("timeline")
+        XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
+        XCTAssertTrue(row("Physiotherapie").isHittable)
+        capture("03-termine-hell")
+        let selected = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")).firstMatch
+        let selectedID = selected.identifier
+        app.buttons["next-week"].tap()
+        XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
+        app.buttons["previous-week"].tap()
+        XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
+        XCTAssertEqual(selected.identifier, selectedID)
+        // Rapid week changes must not let the previous query replace the final week.
+        app.buttons["next-week"].tap(); app.buttons["next-week"].tap(); app.buttons["previous-week"].tap()
+        XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
+        app.buttons["agenda-today"].tap()
+        XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
+        row("Physiotherapie").tap()
+        XCTAssertTrue(app.navigationBars["Termin bearbeiten"].waitForExistence(timeout: 5))
+        capture("04-terminformular")
     }
-    func testOverlapsMidnightAndPastInLight() {
-        launch("full")
-        XCTAssertTrue(row("Übernacht-Beobachtung").waitForExistence(timeout: 8))
-        XCTAssertTrue(row("Übernacht-Beobachtung").label.contains("Jetzt"))
-        XCTAssertTrue(row("Aufenthalt Laßnitzhöhe").label.contains("Ganztägig"))
-        XCTAssertTrue(row("Physiotherapie").label.contains("Jetzt"))
-        XCTAssertTrue(row("Ärztliches Gespräch").exists)
-        capture("06-agenda-light-overlaps")
-        let past = app.buttons["past-events"]
-        for _ in 0..<6 where !past.isHittable { app.swipeUp() }
-        XCTAssertTrue(past.waitForExistence(timeout: 5)); past.tap()
-        for _ in 0..<6 where !row("Frühgymnastik").isHittable { app.swipeUp() }
-        capture("07-past-expanded-before-check")
-        XCTAssertTrue(row("Frühgymnastik").waitForExistence(timeout: 5))
-        XCTAssertTrue(row("Frühgymnastik").label.contains("Vorbei"))
-        capture("07-past-expanded")
-        app.tabBars.buttons["Mehr"].tap(); capture("08-more-light")
-        app.buttons["Kalender"].tap()
-        // EventKit also contains the simulator's default calendars. SwiftUI
-        // exposes both the toggle row and its switch, so scope by fixture name.
-        XCTAssertGreaterThanOrEqual(app.switches.matching(NSPredicate(format: "label CONTAINS %@", "Therapie")).count, 2)
-        capture("09-same-name-calendars")
-        app.tabBars.buttons["Sprechen"].tap(); capture("10-speaking-idle")
-        XCTAssertEqual(app.staticTexts["voice-state"].value as? String, "idle")
+    func testFinishedDayAndAutomaticCompletion() {
+        launch("complete")
+        XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["Für heute stehen keine weiteren Termine an."].exists)
+        capture("05-zeit-zum-erholen")
+        app.buttons["past-events"].tap()
+        XCTAssertTrue(row("Erholung nach Physiotherapie").waitForExistence(timeout: 5))
+        XCTAssertTrue(row("Erholung nach Physiotherapie").label.contains("Vorbei"))
+        capture("06-tagesverlauf")
+        app.terminate(); launch("finishing")
+        XCTAssertTrue(app.staticTexts["Zeit zum Erholen"].waitForExistence(timeout: 25))
+        capture("07-automatischer-tagesabschluss")
     }
-    func testLargestTypeAndDarkModeRemainUsable() throws {
+    func testShortEventsHaveSeparateHitAreas() {
+        launch("short")
+        let first = row("Kurztermin"), second = row("Kontrolle")
+        XCTAssertTrue(first.waitForExistence(timeout: 8)); XCTAssertTrue(second.exists)
+        XCTAssertGreaterThanOrEqual(first.frame.height, 43.99); XCTAssertGreaterThanOrEqual(second.frame.height, 43.99)
+        XCTAssertFalse(first.frame.intersects(second.frame))
+        first.tap(); XCTAssertTrue(app.navigationBars["Termin bearbeiten"].waitForExistence(timeout: 5))
+        app.buttons["Fertig"].tap(); second.tap()
+        XCTAssertTrue(app.textFields["Bezeichnung"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["Bezeichnung"].value as? String, "Kontrolle")
+        app.buttons["Fertig"].tap(); capture("08-kurze-termine")
+    }
+    func testOverlapsAllDayAndDarkAppearance() {
+        launch("full", extra: ["--preview-dark"])
+        XCTAssertTrue(row("Physiotherapie").waitForExistence(timeout: 8))
+        XCTAssertTrue(row("Übernacht-Beobachtung").exists)
+        XCTAssertTrue(row("Aufenthalt Laßnitzhöhe").exists)
+        XCTAssertFalse(row("Physiotherapie").frame.intersects(row("Ärztliches Gespräch").frame))
+        capture("09-ueberlappung-dunkel")
+        app.tabBars.buttons["Sprechen"].tap(); capture("10-sprechen-dunkel")
+        XCTAssertEqual(voiceState.value as? String, "idle")
+    }
+    func testLargestTypeUsesDayListAndNativeSettings() throws {
         launch("full", extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL", "--preview-dark"])
-        XCTAssertTrue(row("Übernacht-Beobachtung").waitForExistence(timeout: 8))
-        capture("11-agenda-dark-accessibility")
+        XCTAssertTrue(app.collectionViews["agenda-accessible-list"].waitForExistence(timeout: 8) || app.descendants(matching: .any)["agenda-accessible-list"].exists)
+        capture("11-tagesliste-groesste-schrift")
         app.tabBars.buttons["Sprechen"].tap()
-        let speak = app.buttons["speak"]
-        for _ in 0..<8 where !speak.isHittable { app.swipeUp() }
-        XCTAssertTrue(speak.isHittable)
-        XCTAssertGreaterThanOrEqual(speak.frame.height, 44)
-        capture("12-speaking-largest-type")
+        XCTAssertTrue(app.buttons["speak"].isHittable)
+        XCTAssertTrue(app.buttons["stop-speech"].isHittable)
+        capture("12-sprechen-groesste-schrift")
         try app.performAccessibilityAudit(for: [.elementDetection, .sufficientElementDescription, .trait])
-        app.tabBars.buttons["Archiv"].tap(); capture("13-archive-dark-accessibility")
+        app.tabBars.buttons["Mehr"].tap(); capture("13-mehr-groesste-schrift")
+        app.tabBars.buttons["Archiv"].tap(); capture("14-archiv-groesste-schrift")
     }
-    func testRealAudioDrivesOrbAndStopEndsIt() {
+    func testMoreNavigationImmediateSettingsAndRestart() {
+        launch("empty")
+        app.tabBars.buttons["Mehr"].tap(); capture("15-mehr-hell")
+        app.buttons["Erinnerungen"].tap()
+        XCTAssertTrue(app.navigationBars["Erinnerungen"].waitForExistence(timeout: 5))
+        let sound = app.switches["reminder-sound"], preview = app.switches["reminder-preview"]
+        let soundBefore = sound.value as? String, previewBefore = preview.value as? String
+        toggle(sound); toggle(preview); toggle(sound)
+        let expectedPreview = preview.value as? String
+        XCTAssertNotEqual(expectedPreview, previewBefore)
+        XCTAssertEqual(sound.value as? String, soundBefore)
+        capture("16-erinnerungen-sofort-gespeichert")
+        back("Erinnerungen")
+        app.buttons["Erkennung"].tap(); app.buttons["Vorgabe hinzufügen"].tap()
+        XCTAssertFalse(app.buttons["Übernehmen"].isEnabled)
+        capture("17-neue-vorgabe-validierung")
+        app.buttons["Abbrechen"].tap(); back("Erkennung")
+        app.buttons["Kalender"].tap(); app.buttons["Speicherziel ändern"].tap()
+        XCTAssertTrue(app.navigationBars["Speicherziel"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Abbrechen"].exists)
+        capture("18-speicherziel-native-navigation")
+        back("Speicherziel"); back("Kalender")
+        app.swipeUp(); app.buttons["Diagnose"].tap()
+        XCTAssertTrue(app.navigationBars["Diagnose"].waitForExistence(timeout: 5)); back("Diagnose")
+        app.terminate()
+        app.launchArguments = ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Mehr"].waitForExistence(timeout: 15)); app.tabBars.buttons["Mehr"].tap()
+        app.buttons["Erinnerungen"].tap()
+        XCTAssertEqual(sound.value as? String, soundBefore); XCTAssertEqual(preview.value as? String, expectedPreview)
+        if expectedPreview != previewBefore { toggle(preview) }
+        capture("19-einstellungen-nach-neustart")
+    }
+    func testSettingsFailureShowsSavedValueAndRetry() {
+        launch("empty", extra: ["--preview-settings-failure"])
+        app.tabBars.buttons["Mehr"].tap(); app.buttons["Erinnerungen"].tap()
+        let sound = app.switches["reminder-sound"]
+        let before = sound.value as? String
+        toggle(sound)
+        let retry = app.buttons["retry-settings"]
+        for _ in 0..<4 where !retry.isHittable { app.swipeUp() }
+        XCTAssertTrue(retry.waitForExistence(timeout: 8))
+        XCTAssertEqual(sound.value as? String, before)
+        capture("27-einstellungen-speicherfehler")
+        retry.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: retry)
+        waitForExpectations(timeout: 8)
+        for _ in 0..<4 where !sound.isHittable { app.swipeDown() }
+        XCTAssertNotEqual(sound.value as? String, before)
+        toggle(sound)
+    }
+    func testVoiceIdleDetailsCancelAndUnavailableRecognition() {
         launch("one")
         app.tabBars.buttons["Sprechen"].tap()
-        app.buttons["voice-next"].tap()
-        let state = app.staticTexts["voice-state"]
-        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
-        waitForExpectations(timeout: 45)
-        capture("14-speaking-real-audio")
-        app.buttons["stop-speech"].tap()
-        XCTAssertEqual(state.value as? String, "idle")
-        XCTAssertFalse(app.buttons["stop-speech"].isEnabled)
-        let response = app.staticTexts["voice-response"].label
-        app.buttons["repeat-speech"].tap()
-        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
-        waitForExpectations(timeout: 30)
-        XCTAssertEqual(app.staticTexts["voice-response"].label, response)
-        app.tabBars.buttons["Mehr"].tap(); app.tabBars.buttons["Sprechen"].tap()
-        XCTAssertEqual(state.value as? String, "idle")
-        capture("15-speaking-after-stop")
-    }
-    func testUnavailableRecognitionCanStartFreshAfterTabChange() {
-        launch("empty")
-        app.tabBars.buttons["Sprechen"].tap(); app.buttons["speak"].tap()
-        if app.alerts.firstMatch.waitForExistence(timeout: 2) {
+        XCTAssertEqual(voiceState.value as? String, "idle")
+        XCTAssertFalse(app.staticTexts["voice-response"].exists)
+        XCTAssertFalse(app.buttons["voice-next"].exists)
+        XCTAssertTrue(app.buttons["speak"].isHittable)
+        capture("20-sprechen-ruhe")
+        app.buttons["voice-details"].tap()
+        XCTAssertTrue(app.buttons["voice-next"].waitForExistence(timeout: 5))
+        capture("21-gespraechsdetails")
+        back("Gesprächsdetails")
+        app.buttons["speak"].tap()
+        if app.alerts.firstMatch.waitForExistence(timeout: 3) {
             let allow = app.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Erlauben", "Allow", "OK"])).firstMatch
             if allow.exists { allow.tap() }
         }
-        // SpeechTranscriber is unavailable on this iPhone simulator runtime.
-        let state = app.staticTexts["voice-state"]
-        expectation(for: NSPredicate(format: "value == %@", "error"), evaluatedWith: state)
+        // This simulator does not support Apple's on-device SpeechTranscriber.
+        expectation(for: NSPredicate(format: "value == %@", "error"), evaluatedWith: voiceState)
         waitForExpectations(timeout: 15)
-        capture("16-recognition-unavailable")
-        app.tabBars.buttons["Mehr"].tap(); app.tabBars.buttons["Sprechen"].tap()
-        XCTAssertEqual(state.value as? String, "idle")
+        capture("22-spracherkennung-nativer-hinweis")
+        if app.alerts.buttons["OK"].exists { app.alerts.buttons["OK"].tap() }
+        app.buttons["stop-speech"].tap()
+        XCTAssertEqual(voiceState.value as? String, "idle")
         XCTAssertTrue(app.buttons["speak"].isEnabled)
+        app.buttons["voice-settings"].tap(); capture("23-spracheinstellungen")
+    }
+    func testVoiceCreationRequiresExplicitConfirmation() {
+        launch("one")
+        app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-details"].tap(); app.buttons["voice-create"].tap()
+        let title = app.textFields["Bezeichnung"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !title.isHittable { app.swipeUp() }
+        title.tap(); title.typeText("Test Gespräch bestätigt")
+        for label in ["Bezeichnung übernehmen", "Datum übernehmen", "Uhrzeit übernehmen"] {
+            let button = app.buttons[label]
+            for _ in 0..<5 where !button.isHittable { app.swipeUp() }
+            XCTAssertTrue(button.waitForExistence(timeout: 8)); button.tap()
+        }
+        let duration = app.textFields["Dauer in Minuten"]
+        for _ in 0..<5 where !duration.isHittable { app.swipeUp() }
+        duration.tap(); duration.typeText("30")
+        let accept = app.buttons["Dauer übernehmen"]
+        for _ in 0..<5 where !accept.isHittable { app.swipeUp() }
+        accept.tap()
+        XCTAssertTrue(app.navigationBars["Termin prüfen"].waitForExistence(timeout: 10))
+        let confirm = app.buttons["confirm-event"]
+        XCTAssertTrue(confirm.exists)
+        capture("28-sprachvorschlag-vor-bestaetigung")
+        confirm.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: confirm)
+        waitForExpectations(timeout: 10)
+        let saved = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Gespeichert in")).firstMatch
+        for _ in 0..<5 where !saved.isHittable { app.swipeDown() }
+        XCTAssertTrue(saved.waitForExistence(timeout: 10))
+        capture("29-sprachvorschlag-gespeichert")
+        app.tabBars.buttons["Termine"].tap()
+        XCTAssertTrue(row("Test Gespräch bestätigt").waitForExistence(timeout: 8))
+    }
+    func testRealAudioDrivesOrbAndStopEndsIt() {
+        launch("one", extra: ["--audio-evidence"])
+        app.tabBars.buttons["Sprechen"].tap(); app.buttons["voice-details"].tap(); app.buttons["voice-next"].tap()
+        back("Gesprächsdetails")
+        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: voiceState)
+        waitForExpectations(timeout: 45)
+        // Keep genuine playback visible long enough to review the recorded motion.
+        Thread.sleep(forTimeInterval: 3)
+        capture("24-sprechen-echte-wiedergabe")
+        app.buttons["stop-speech"].tap()
+        XCTAssertEqual(voiceState.value as? String, "idle")
+        XCTAssertFalse(app.staticTexts["voice-response"].exists)
+        app.buttons["voice-details"].tap(); app.buttons["voice-next"].tap()
+        XCTAssertTrue(app.buttons["repeat-speech"].waitForExistence(timeout: 10))
+        app.buttons["repeat-speech"].tap(); back("Gesprächsdetails")
+        expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: voiceState)
+        waitForExpectations(timeout: 30)
+        app.tabBars.buttons["Mehr"].tap(); app.tabBars.buttons["Sprechen"].tap()
+        XCTAssertEqual(voiceState.value as? String, "idle")
+        capture("25-abgebrochene-wiedergabe")
     }
     func testReducedMotionSystemSettingKeepsVoiceUsable() throws {
-        guard UIAccessibility.isReduceMotionEnabled else {
-            throw XCTSkip("Enable ReduceMotionEnabled on the test simulator for this acceptance check")
-        }
-        XCTAssertTrue(UIAccessibility.isReduceMotionEnabled)
+        guard UIAccessibility.isReduceMotionEnabled else { throw XCTSkip("Enable ReduceMotionEnabled on the preview simulator") }
         launch("one")
         app.tabBars.buttons["Sprechen"].tap()
         XCTAssertTrue(app.buttons["speak"].isHittable)
-        XCTAssertEqual(app.staticTexts["voice-state"].value as? String, "idle")
-        let automaticRecording = expectation(for: NSPredicate(format: "value == %@", "recording"), evaluatedWith: app.staticTexts["voice-state"])
-        automaticRecording.isInverted = true
-        waitForExpectations(timeout: 6)
-        capture("17-speaking-reduced-motion")
+        XCTAssertEqual(voiceState.value as? String, "idle")
+        capture("26-bewegung-reduziert")
     }
 }

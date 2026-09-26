@@ -21,7 +21,7 @@ struct VoiceSnapshot {
     private(set) var turn: UInt64 = 0
     private(set) var sequence: UInt64 = 0
     private(set) var revision: UInt64 = 0
-    var response = "Was möchtest du tun?"
+    var response = ""
     var failure: String?
     var question: Question = .action
     var failures = 0
@@ -217,6 +217,6 @@ struct VoiceSnapshot {
         let previousResponse = response
         recorder.cancelTurn(); edits.interrupt(); busy = false; session = UUID().uuidString; revision += 1; sequence += 1
         question = .action; candidates = []; selected = nil; intent = VoiceIntent(); title = ""; failures = 0; suggested = nil; failure = nil
-        response = preserveResponse ? previousResponse : "Was möchtest du tun?"; SpeechOutput.shared.stop()
+        response = preserveResponse ? previousResponse : ""; SpeechOutput.shared.stop()
     }
 }

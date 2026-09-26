@@ -5,6 +5,11 @@ cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 if [ "${1:-}" = --built ]; then shift; else sh scripts/build-native.sh simulator; fi
+# Build tests before signing the simulator copy. A subsequent `test` build would
+# reinstall the unsigned product and lose its App Group entitlements.
+xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Debug \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath apple/build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
 simulator=$(xcrun simctl create "Termine-Native-Test-$(date +%s)" com.apple.CoreSimulator.SimDeviceType.iPhone-17)
 printf 'Simulator: %s\n' "$simulator"
 staging=$(mktemp -d)
@@ -57,6 +62,32 @@ if [ "${REHA_UI_NEW_PHOTO:-0}" = 1 ]; then
 else
   xcrun simctl addmedia "$simulator" public/synthetic-day.png
 fi
-xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Debug \
-  -destination "platform=iOS Simulator,id=$simulator" -derivedDataPath apple/build/DerivedData \
-  -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO "$@" test
+python3 - "$staging" <<'PYRUN'
+import plistlib, sys
+from pathlib import Path
+staging = Path(sys.argv[1])
+products = Path("apple/build/DerivedData/Build/Products").resolve()
+source = next(products.glob("Termine_iphonesimulator*.xctestrun"))
+run = plistlib.loads(source.read_bytes())
+def absolute(value):
+    if isinstance(value, str):
+        return value.replace("__TESTROOT__", str(products))
+    if isinstance(value, list):
+        return [absolute(v) for v in value]
+    if isinstance(value, dict):
+        return {k: absolute(v) for k, v in value.items()}
+    return value
+run = absolute(run)
+for name, target in run.items():
+    if name.startswith("__") or not isinstance(target, dict):
+        continue
+    target["UITargetAppPath"] = str(staging / "Laßnitzhöhe.app")
+    target["DependentProductPaths"] = [
+        str(staging / "Laßnitzhöhe.app") if Path(p).name == "Laßnitzhöhe.app" else p
+        for p in target.get("DependentProductPaths", [])
+    ]
+(staging / "Termine.xctestrun").write_bytes(plistlib.dumps(run))
+PYRUN
+xcodebuild test-without-building -xctestrun "$staging/Termine.xctestrun" \
+  -destination "platform=iOS Simulator,id=$simulator" \
+  -parallel-testing-enabled NO "$@"
