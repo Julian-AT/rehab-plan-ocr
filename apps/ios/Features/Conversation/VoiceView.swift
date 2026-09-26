@@ -1,6 +1,5 @@
 import AVFoundation
 import AppleServices
-import FoundationModels
 import RehaCore
 import SwiftUI
 
@@ -30,7 +29,8 @@ struct VoiceSnapshot {
   private var running = false
   private var turnTask: Task<Void, Never>?
   private let calendarConversation: CalendarConversation
-  private let understanding = CalendarUnderstandingSession()
+  private let understanding: CalendarUnderstandingSession
+  private let interpretation: InterpretationRouter
   private var modelToken = UUID()
   typealias Question = ConversationState.Question
   let core: NativeApplication
@@ -71,8 +71,11 @@ struct VoiceSnapshot {
   var date = Calendar.current.startOfDay(for: .now)
   var time = Date()
   var duration = 0
-  private var responseTask: Task<CalendarUnderstanding, Error>?
+  private var responseTask: Task<InterpretationResult, Error>?
   init(core: NativeApplication) {
+    let understanding = CalendarUnderstandingSession()
+    self.understanding = understanding
+    interpretation = InterpretationRouter(generation: understanding)
     self.core = core
     edits = EventSession(core: core, origin: "voice")
     calendarConversation = CalendarConversation(fetch: { start, end in
@@ -279,7 +282,7 @@ struct VoiceSnapshot {
       repeatResponse()
       return
     }
-    if let request = CalendarQuestion.direct(text) {
+    if let request = interpretation.rules.match(text) {
       question = .action
       await answerCalendar(request)
       return
@@ -390,9 +393,9 @@ struct VoiceSnapshot {
   }
   private func converse(_ text: String) async {
     failures = 0
-    guard SystemLanguageModel.default.isAvailable else {
+    if case .unavailable(let reason) = interpretation.availability {
       say(
-        "Für freie Gespräche muss Apple Intelligence in den iPhone-Einstellungen aktiviert sein. Einfache Fragen wie „Termine morgen“ sind auch ohne Sprachmodell möglich.",
+        reason + " Einfache Fragen wie „Termine morgen“ sind auch ohne Sprachmodell möglich.",
         question: .action)
       return
     }
@@ -410,17 +413,20 @@ struct VoiceSnapshot {
           $0.textual ? "displayed_answer" : "spoken_answer": $0.textual ? $0.answer : $0.spoken,
         ]
       }
-      let task = Task { @MainActor [understanding] in
-        try await understanding.respond(text: text, context: context, history: history)
+      let request = InterpretationRequest(
+        text: text, context: context, history: history, now: .now,
+        deadline: ContinuousClock.now.advanced(by: .seconds(30)))
+      let task = Task { @MainActor [interpretation] in
+        try await interpretation.interpret(request)
       }
       responseTask = task
-      let result = try await task.value
+      let result = try await task.value.value
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       responseTask = nil
       switch result.action {
       case .calendar:
         guard let query = result.query else { throw CalendarUnderstandingError.invalidRequest }
-        await answerCalendar(try query.validated(), token: token)
+        await answerCalendar(query, token: token)
       case .clarify:
         say(
           VoiceAddress.saved().choose(
@@ -443,8 +449,7 @@ struct VoiceSnapshot {
       case .create, .update, .remove:
         let action: VoiceIntent.Action =
           result.action == .create ? .create : result.action == .update ? .update : .remove
-        let change = try result.change?.validated(action: action)
-        intent = change ?? VoiceIntent()
+        intent = result.change ?? VoiceIntent()
         intent.action = action
         selected = nil
         if action == .create {
@@ -452,7 +457,7 @@ struct VoiceSnapshot {
           await advanceCreation()
         } else {
           guard let query = result.query else { throw CalendarUnderstandingError.invalidRequest }
-          var request = try query.validated()
+          var request = query
           request.detail = .list
           let matches = try await calendarConversation.resolve(
             request, token: token, address: VoiceAddress.saved())

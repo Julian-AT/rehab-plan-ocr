@@ -23,11 +23,11 @@ private final class VoiceRegexCache: @unchecked Sendable {
 
 /// Only the current turn is held in memory. Reference time and requested new time
 /// are deliberately separate; a model suggestion never becomes a calendar ID.
-struct VoiceIntent: Equatable {
+struct VoiceIntent: Equatable, Sendable {
   var negatedChange = false
-  enum Origin: String { case spoken, corrected, context, choice }
+  enum Origin: String, Sendable { case spoken, corrected, context, choice }
   var origins: [String: Origin] = [:]
-  enum Action: String { case next, list, create, update, remove, cancel, unsupported }
+  enum Action: String, Sendable { case next, list, create, update, remove, cancel, unsupported }
   var action: Action = .unsupported
   var referenceText = ""
   var calendarName: String?

@@ -74,6 +74,12 @@ import FoundationModels
     func validated(action: VoiceIntent.Action) throws -> VoiceIntent {
       var intent = VoiceIntent()
       intent.action = action
+      if let title {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, title.count <= 200
+        else {
+          throw CalendarUnderstandingError.invalidRequest
+        }
+      }
       intent.title = title
       if let date {
         guard let parsed = CalendarConversation.civilDate(date) else {
@@ -96,9 +102,83 @@ import FoundationModels
   }
 }
 
+extension CalendarUnderstanding {
+  func validated() throws -> ConversationInterpretation {
+    let value = self
+    let action: ConversationInterpretation.Action
+    switch value.action {
+    case .calendar: action = .calendar
+    case .create: action = .create
+    case .update: action = .update
+    case .remove: action = .remove
+    case .conversation: action = .conversation
+    case .clarify: action = .clarify
+    }
+    let mutation: VoiceIntent.Action =
+      value.action == .create ? .create : value.action == .update ? .update : .remove
+    let query = try value.query?.validated()
+    let change = try value.change?.validated(action: mutation)
+    switch value.action {
+    case .calendar:
+      guard query != nil, change == nil, value.reply == nil else {
+        throw CalendarUnderstandingError.invalidRequest
+      }
+    case .create:
+      guard query == nil, value.reply == nil else {
+        throw CalendarUnderstandingError.invalidRequest
+      }
+    case .update, .remove:
+      guard query != nil, value.reply == nil,
+        value.action != .remove || change == nil
+      else { throw CalendarUnderstandingError.invalidRequest }
+    case .conversation:
+      guard query == nil, change == nil, let reply = value.reply,
+        !reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, reply.count <= 4_096
+      else { throw CalendarUnderstandingError.invalidRequest }
+    case .clarify: break
+    }
+    let result = ConversationInterpretation(
+      action: action, query: query, change: change, reply: value.reply)
+    try result.validate()
+    return result
+  }
+}
+
 /// A single model generation replaces the tool/generation loop. Tokenization is
 /// local; trimming drops whole older turns before generation, never the current request.
-@MainActor final class CalendarUnderstandingSession {
+@MainActor final class CalendarUnderstandingSession: InterpretationProvider {
+  var identity: InterpretationIdentity {
+    InterpretationIdentity(
+      provider: "apple-intelligence",
+      model: "system-default/\(ProcessInfo.processInfo.operatingSystemVersionString)",
+      schemaVersion: 1)
+  }
+  let capabilities: Set<InterpretationCapability> = [.calendar, .mutation, .conversation]
+  var availability: InterpretationAvailability {
+    switch SystemLanguageModel.default.availability {
+    case .available:
+      return SystemLanguageModel.default.supportsLocale(Locale(identifier: "de_DE"))
+        ? .available
+        : .unavailable("Apple Intelligence unterstützt Deutsch auf diesem Gerät gerade nicht.")
+    case .unavailable(let reason):
+      switch reason {
+      case .deviceNotEligible:
+        return .unavailable("Dieses iPhone unterstützt Apple Intelligence nicht.")
+      case .appleIntelligenceNotEnabled:
+        return .unavailable("Apple Intelligence ist in den iPhone-Einstellungen nicht aktiviert.")
+      case .modelNotReady:
+        return .unavailable("Das lokale Sprachmodell von Apple Intelligence ist noch nicht bereit.")
+      @unknown default:
+        return .unavailable(
+          "Das lokale Sprachmodell von Apple Intelligence ist gerade nicht verfügbar.")
+      }
+    }
+  }
+  func interpret(_ request: InterpretationRequest) async throws -> ConversationInterpretation {
+    let value = try await respond(
+      text: request.text, context: request.context, history: request.history)
+    return try value.validated()
+  }
   private var prepared: LanguageModelSession?
   private var preparedAddress: VoiceAddress?
   private var fixedTokenCount: [VoiceAddress: Int] = [:]
@@ -113,7 +193,7 @@ import FoundationModels
   func prepare() {
     // Physical-device latency and memory measurements must precede enabling prewarm.
     guard ProcessInfo.processInfo.arguments.contains("--model-prewarm-trial") else { return }
-    guard SystemLanguageModel.default.isAvailable else { return }
+    guard availability == .available else { return }
     let address = VoiceAddress.saved()
     guard prepared == nil || preparedAddress != address else { return }
     prepared = LanguageModelSession(instructions: instructions(address))

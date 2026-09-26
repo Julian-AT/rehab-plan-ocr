@@ -10,7 +10,7 @@ summarizes remaining work without replacing the evidence.
 |---|---|
 | Product and appearance | [Unchanged visual baseline](product/visual-baseline/README.md) |
 | Collection and consent | [Research collection guide](product/research/collection-guide.md) |
-| Architecture | [Native architecture](architecture/overview.md), [iOS ownership](architecture/ios-layout.md) |
+| Architecture | [Native architecture](architecture/overview.md), [iOS ownership](architecture/ios-layout.md), [AI providers](architecture/ai-providers.md) |
 | Development | [Reference review](development/reference-cli.md), [dataset](development/dataset.md), [private storage](development/private-storage.md) |
 | Releases | [Device update procedure](releases/ios-installation.md) |
 | Dependencies | [Third-party inventory](third-party/README.md) |

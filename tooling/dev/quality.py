@@ -218,6 +218,7 @@ def tests(portable):
             "conversation-state",
             "conversation-replies",
             "calendar-answers",
+            "interpretation-provider",
             "input-audio",
             "output-audio",
             "capture-preparation",

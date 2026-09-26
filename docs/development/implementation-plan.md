@@ -328,3 +328,15 @@ versions 5–9 while retaining manual values, identities and capture-edge warnin
 The regression failed before the fix; the full Rust workspace now passes 173 tests
 and Clippy passes with warnings denied. No reference approval or model promotion
 was inferred from this business-logic correction.
+
+Calendar rules and Apple Intelligence now implement one typed interpretation
+contract with identity, capabilities, local availability, structured validation,
+monotonic deadline and cancellation. Complete rules still work without model
+assets. The Apple adapter distinguishes hardware/setup/readiness/German-language
+limitations and keeps iOS 26.0 context recovery. A 30-second post-finalization
+deadline cannot publish late native results into a later answer; it does not alter
+speech endpoint pauses. The provider probe covers unavailable assets, complete
+matching, one selected generator, invalid shapes/capabilities and uncooperative
+cancellation/deadline completion. The simulator build in isolated DerivedData
+passes. Full/targeted UI qualification and custom GGUF integration remain separate
+gates; experimental Qwen checkpoints are not activated. See the [contract](../architecture/ai-providers.md).
