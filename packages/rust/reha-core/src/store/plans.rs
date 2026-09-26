@@ -13,16 +13,9 @@ pub struct Plan {
 impl Store {
     pub fn plan_calendar(&self, id: &str) -> Result<(String, bool)> {
         let pages = self.page_ids(id)?;
-        let scans = self.list_scans()?;
-        let schedules: Vec<_> = scans
-            .iter()
-            .filter(|s| pages.contains(&s.id))
-            .filter_map(|s| s.schedule_id.as_ref())
-            .collect();
         let calendars: std::collections::BTreeSet<_> = self
-            .resolved_import_records(None)?
+            .resolved_page_imports(&pages)?
             .into_iter()
-            .filter(|r| schedules.contains(&&r.schedule_id))
             .map(|r| r.calendar_id)
             .collect();
         if calendars.len() > 1 {

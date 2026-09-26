@@ -47,23 +47,62 @@ type EventMutationRow = (
     Option<String>,
 );
 
+const RESOLVED_PAGE_IMPORTS: &str = "SELECT i.record,o.record FROM imports i
+    LEFT JOIN owned_events o ON o.id=i.id
+    WHERE i.schedule_id IN (SELECT schedule_id FROM scans WHERE id IN (SELECT value FROM json_each(?1)))";
+
+fn resolved_records(
+    connection: &Connection,
+    sql: &str,
+    parameters: impl rusqlite::Params,
+) -> Result<Vec<ImportRecord>> {
+    let mut query = connection.prepare(sql)?;
+    let rows = query.query_map(parameters, |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+    })?;
+    rows.map(|row| {
+        let (raw, owned) = row?;
+        let mut record: ImportRecord = serde_json::from_str(&raw)?;
+        if let Some(raw) = owned {
+            let current: OwnedEventRecord = serde_json::from_str(&raw)?;
+            record.calendar_id = current.calendar_id;
+            record.external_id = if current.status == "saved" {
+                current.external_id
+            } else {
+                None
+            };
+            record.status = current.status;
+        }
+        Ok(record)
+    })
+    .collect()
+}
+
 impl Store {
     /// Import baselines are historical evidence. Only current identity and
     /// ownership status are overlaid for live reconciliation and undo.
     pub fn resolved_import_records(&self, schedule: Option<&str>) -> Result<Vec<ImportRecord>> {
-        let mut records = self.records(schedule)?;
-        for record in &mut records {
-            if let Some(current) = self.owned_record(&record.id)? {
-                record.calendar_id = current.calendar_id;
-                record.external_id = if current.status == "saved" {
-                    current.external_id
-                } else {
-                    None
-                };
-                record.status = current.status;
-            }
+        if let Some(schedule) = schedule {
+            resolved_records(
+                &self.connection,
+                "SELECT i.record,o.record FROM imports i LEFT JOIN owned_events o ON o.id=i.id WHERE i.schedule_id=?1",
+                [schedule],
+            )
+        } else {
+            resolved_records(
+                &self.connection,
+                "SELECT i.record,o.record FROM imports i LEFT JOIN owned_events o ON o.id=i.id",
+                [],
+            )
         }
-        Ok(records)
+    }
+
+    pub(super) fn resolved_page_imports(&self, pages: &[String]) -> Result<Vec<ImportRecord>> {
+        resolved_records(
+            &self.connection,
+            RESOLVED_PAGE_IMPORTS,
+            [serde_json::to_string(pages)?],
+        )
     }
 
     /// Change local ownership only; preserve the original import evidence and
@@ -200,4 +239,44 @@ pub(super) fn finish_owned_mutation(
         operation_id: proposal.token.clone(),
     };
     upsert(connection, &record)
+}
+#[cfg(test)]
+mod query_tests {
+    use super::*;
+    use rusqlite::StatementStatus;
+
+    #[test]
+    fn plan_import_lookup_work_does_not_grow_with_unrelated_history() {
+        let root = tempfile::tempdir().unwrap();
+        let store = Store::open(root.path()).unwrap();
+        store
+            .connection
+            .execute_batch(
+                "INSERT INTO scans VALUES('page','hash',100,NULL,'selected',NULL);
+            INSERT INTO imports VALUES('selected-event','selected','selected evidence');",
+            )
+            .unwrap();
+        for size in [1_000, 10_000] {
+            store
+                .connection
+                .execute("DELETE FROM imports WHERE schedule_id='unrelated'", [])
+                .unwrap();
+            store.connection.execute("WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<?1)
+                INSERT INTO imports SELECT printf('other-%06d',i),'unrelated','unavailable evidence' FROM n",[size]).unwrap();
+            let mut query = store.connection.prepare(RESOLVED_PAGE_IMPORTS).unwrap();
+            let records = query
+                .query_map([r#"["page"]"#], |r| r.get::<_, String>(0))
+                .unwrap()
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .unwrap();
+            assert_eq!(records, vec!["selected evidence"]);
+            let steps = query.get_status(StatementStatus::VmStep);
+            eprintln!("plan calendar imports: unrelated_rows={size}, vm_steps={steps}");
+            assert!(
+                steps < 1_000,
+                "plan import query scanned unrelated history: {steps}"
+            );
+            assert_eq!(query.get_status(StatementStatus::FullscanStep), 0);
+        }
+    }
 }
