@@ -319,3 +319,12 @@ Private data, backups, history and runtime-required notices remain intact. Curre
 local links, baseline hashes and exact notice manifests have four portable policy
 checks, included in normal tool tests. All tool tests, asset verification and the
 simulator build pass; the built app contains exactly the 14 retained notices.
+
+A new parser regression reproduced loss of contradictory column evidence when the
+recognized string was empty. Empty readings now change only a legible assessment
+to an unreviewed blank; existing conflict/crop states and all reasons survive.
+Extraction version 10 invalidates stale caches, and safe mapping refresh covers
+versions 5–9 while retaining manual values, identities and capture-edge warnings.
+The regression failed before the fix; the full Rust workspace now passes 173 tests
+and Clippy passes with warnings denied. No reference approval or model promotion
+was inferred from this business-logic correction.

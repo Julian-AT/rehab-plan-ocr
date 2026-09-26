@@ -45,10 +45,12 @@ fn contained_field_text(
     (!text.trim().is_empty()).then_some(text)
 }
 
-/// Refresh the version-5/6 column checks from retained OCR when row identities
+/// Refresh older column/field checks from retained OCR when row identities
 /// stay unambiguous. Structural changes still require a full explicit reprocess.
 pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
-    if ![5, 6, 7, 8].contains(&run.extraction_version) || run.observations.is_empty() {
+    if !(5..crate::parser::EXTRACTION_VERSION).contains(&run.extraction_version)
+        || run.observations.is_empty()
+    {
         return Ok(false);
     }
     let observations: Vec<_> = run

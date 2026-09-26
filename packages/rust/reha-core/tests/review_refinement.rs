@@ -342,6 +342,18 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
     assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
     r.extraction_version = 7;
     assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+    for version in [8, 9] {
+        r.extraction_version = version;
+        assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+        assert_eq!(
+            r.appointments[0].calendar_event_id.as_deref(),
+            Some("retained-calendar-id")
+        );
+        assert_eq!(
+            r.appointments[0].fields["therapist"].state,
+            PrintedState::Cropped
+        );
+    }
     assert_eq!(r.appointments[0].title, "Meine geprüfte Bezeichnung");
     assert!(!refinement::refresh_cached_mapping(&mut r).unwrap());
 }

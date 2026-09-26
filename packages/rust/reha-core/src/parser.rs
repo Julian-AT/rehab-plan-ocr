@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 9;
+pub const EXTRACTION_VERSION: u32 = 10;
 
 /// Robust text baselines supply table skew even when no page edge is visible.
 /// Header anchors are a fallback for old axis-aligned observations.
@@ -1070,7 +1070,9 @@ fn assess_fields(a: &mut Appointment, columns: &Columns, obs: &[Observation], re
         if ["location", "therapist"].contains(&field)
             && crate::review::empty(&crate::review::value(a, field))
         {
-            if assessment.state != PrintedState::Cropped {
+            // An empty OCR string does not negate the stronger geometric evidence.
+            // Only a previously legible assessment becomes an unreviewed blank.
+            if assessment.state == PrintedState::Legible {
                 assessment.state = PrintedState::Unreviewed;
             }
             assessment
@@ -1810,6 +1812,46 @@ mod tests {
         assert_eq!(a[1].fields["therapist"].polygon[0].x, 346.);
         assert_eq!(a[0].fields["location"].state, PrintedState::Unreviewed);
         assert_eq!(a[0].fields["therapist"].state, PrintedState::Unreviewed);
+    }
+    #[test]
+    fn empty_reading_does_not_erase_conflicting_column_evidence() {
+        let mut appointment = Appointment::empty("blank-conflict".into());
+        appointment
+            .provenance
+            .insert("location".into(), vec!["empty-reading".into()]);
+        let observations = vec![Observation {
+            id: "empty-reading".into(),
+            text: "".into(),
+            region_ids: vec!["crossing".into()],
+            score: Some(0.4),
+            engine: "fixture".into(),
+            alternatives: vec![],
+        }];
+        let regions = vec![Region {
+            id: "crossing".into(),
+            polygon: crate::geometry::rect(100., 80., 120., 10.),
+            frame: "page".into(),
+            kind: "text".into(),
+            parent: None,
+            children: vec![],
+        }];
+        let boundaries = vec![("location", 100.), ("therapist", 160.)];
+        let columns = Columns(boundaries.clone(), false, boundaries);
+        assess_fields(&mut appointment, &columns, &observations, &regions);
+        let field = &appointment.fields["location"];
+        assert_eq!(field.state, PrintedState::Contradictory);
+        assert!(field
+            .reasons
+            .iter()
+            .any(|reason| reason.contains("Spaltengrenze")));
+        assert!(field
+            .reasons
+            .iter()
+            .any(|reason| reason.contains("Leer erkannt")));
+        assert!(!crate::review::field_confirmed(&appointment, "location"));
+        assert!(crate::review::field_problems(&appointment)
+            .iter()
+            .any(|issue| issue.field.as_deref() == Some("location") && issue.blocking));
     }
     #[test]
     fn a_single_time_range_may_span_start_and_end_columns() {
