@@ -402,3 +402,13 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Simulatorfälle und die Paketprüfung bestehen ohne Fehler/Skip unter
   `agenda-link-ordering-ui-20260926-s19-001`/`002`; native Belege unter
   `agenda-link-ordering-20260926-s19-001`. [Vertrag und Grenzen](typed-boundaries.md).
+
+- Gemeinsame lokale Befehle an `e7c8427`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 247 Rusttests, 406 Pythonfälle in
+  70 Gruppen (neun ausdrückliche Umgebungs-Skips), sämtliche vorgesehenen nativen
+  Probes einschließlich der zehn Linkabläufe und echter Swift–Rust–Swift-Rundweg.
+  Checkout vorher/nachher sauber. Quellen, Befehle und vollständige Logs bleiben
+  unter `.local/runs/combined-verification-20260926-s19-005/` erhalten. Dieser Nachweis
+  umfasst den typisierten Verlauf, die Lebensdauer von Terminlinks und die
+  Entfernung der unbenutzten nativen JSON-Hilfe. Die vollständige UI-Suite umfasst
+  inzwischen 70 Methoden; ihr erneuter gemeinsamer Lauf bleibt separat.
