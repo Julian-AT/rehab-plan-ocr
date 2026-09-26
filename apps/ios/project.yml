@@ -33,6 +33,7 @@ targets:
         excludes: [Conversation/Resources/assistant-system-v1.txt]
       - path: Shared
       - path: Tests/Support
+        excludes: [StableSpeechPhrases.swift]
       - path: ../../.local/models/runtime/small
         name: models
         type: folder

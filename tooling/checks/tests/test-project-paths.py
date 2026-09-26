@@ -64,6 +64,10 @@ class ProjectPathsTests(unittest.TestCase):
             (ios / "Features/Public.txt").write_text("Ordinary app resource")
             prompt = "assistant-system-v1.txt"
             (ios / "Features/Conversation/Resources" / prompt).write_text("Trial prompt")
+            (ios / "Tests/Support/PreviewSupport.swift").write_text("struct PreviewSupport {}")
+            (ios / "Tests/Support/StableSpeechPhrases.swift").write_text(
+                "struct StableSpeechPhrases {}"
+            )
 
             for spec, trial in [("project.yml", False), ("assistant-trial.yml", True)]:
                 with self.subTest(spec=spec):
@@ -99,6 +103,14 @@ class ProjectPathsTests(unittest.TestCase):
                     self.assertIn("Public.txt", resources)
                     self.assertEqual(resources.count(prompt), int(trial))
                     self.assertEqual(resources.count("assistant-trial"), int(trial))
+                    sources = [
+                        Path(project[project[file]["fileRef"]]["path"]).name
+                        for phase in target["buildPhases"]
+                        if project[phase]["isa"] == "PBXSourcesBuildPhase"
+                        for file in project[phase]["files"]
+                    ]
+                    self.assertIn("PreviewSupport.swift", sources)
+                    self.assertNotIn("StableSpeechPhrases.swift", sources)
                     info = (
                         root / ".local/builds/assistant-app-trial/Info.plist"
                         if trial

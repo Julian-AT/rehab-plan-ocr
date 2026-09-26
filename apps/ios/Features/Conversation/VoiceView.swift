@@ -2,15 +2,6 @@ import Foundation
 import Observation
 import RehaCore
 
-struct VoiceSnapshot {
-  let session: String
-  let turn: UInt64
-  let sequence: UInt64
-  let revision: UInt64
-  let response: String
-  let question: VoiceModel.Question
-  let recording: Bool
-}
 @MainActor @Observable final class VoiceModel {
   enum SessionState { case stopped, listening, thinking, speaking, paused }
   struct Round: Identifiable {
@@ -37,9 +28,6 @@ struct VoiceSnapshot {
   let recorder: any VoiceRecording
   let edits: EventSession
   private(set) var session = UUID().uuidString
-  private(set) var turn: UInt64 = 0
-  private(set) var sequence: UInt64 = 0
-  private(set) var revision: UInt64 = 0
   var response = ""
   private var preparedResponse = ConversationReply()
   var failure: String?
@@ -160,12 +148,6 @@ struct VoiceSnapshot {
       await self.beginTurn(preRoll: true)
     }
   }
-  func snapshot() -> VoiceSnapshot {
-    VoiceSnapshot(
-      session: session, turn: turn, sequence: sequence, revision: revision, response: response,
-      question: question, recording: recorder.state == .recording)
-  }
-  func attach() -> VoiceSnapshot { snapshot() }
   private func say(_ text: String, question: Question? = nil) {
     installOutputCallbacks()
     output.stop()
@@ -174,8 +156,6 @@ struct VoiceSnapshot {
     response = reply.text
     preparedResponse = reply
     if let question { self.question = question }
-    sequence += 1
-    revision += 1
     if !rounds.isEmpty {
       rounds[rounds.count - 1].answer = reply.text
       rounds[rounds.count - 1].prepared = reply
@@ -214,8 +194,6 @@ struct VoiceSnapshot {
     dependencies.trace(.recognitionStarted(session))
     running = true
     sessionState = .listening
-    turn += 1
-    sequence += 1
     let current = session
     if question == .action { understanding.prepare() }
     recorder.contextualTitles = candidates.map { $0.values.title }
@@ -818,8 +796,6 @@ struct VoiceSnapshot {
     edits.interrupt()
     busy = false
     session = UUID().uuidString
-    revision += 1
-    sequence += 1
     responseTask?.cancel()
     understanding.discard()
     responseTask = nil
