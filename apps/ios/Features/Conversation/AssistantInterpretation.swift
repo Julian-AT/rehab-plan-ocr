@@ -18,12 +18,23 @@ enum AssistantInterpretation {
       return clarify(.invalidDate)
     }
     let words = VoiceRules.normalized(request.text)
+    let renameTitle = VoiceRules.titleOnlyRename(request.text)
     let mutation = [.create, .update, .remove].contains(value.action)
     if mutation {
       let expected: VoiceIntent.Action =
         value.action == .create ? .create : value.action == .update ? .update : .remove
       guard intent.action == expected, !intent.negatedChange else { return clarify() }
       guard VoiceRules.explicitMutation(words) == expected else { return clarify() }
+      if let renameTitle {
+        guard value.action == .update,
+          value.change?.title == renameTitle,
+          let query = value.query,
+          query.reference != nil || query.usesLastPage,
+          query.detail == .list, query.ordinal == 0, query.days == 1, query.offset == 0,
+          query.title.isEmpty, query.excluding.isEmpty, query.calendarName == nil,
+          query.afterEventID == nil, query.afterEventDate == nil
+        else { return clarify() }
+      }
       if let change = value.change {
         guard change.newDate == intent.newDate, change.newTime == intent.newTime,
           change.duration == intent.duration
@@ -36,7 +47,7 @@ enum AssistantInterpretation {
                 + "(?![\\p{L}\\p{N}])", words
             ).isEmpty
           else { return clarify() }
-          if value.action == .update,
+          if value.action == .update, renameTitle == nil,
             VoiceRules.matches(#"\b(?:titel|namen|name|bezeichnung)\b"#, words).isEmpty
           {
             return clarify()
@@ -112,7 +123,11 @@ enum AssistantInterpretation {
       ).isEmpty
     }
     let expected: String?
-    if spoken.count == 1, let ordinal = spoken.first?.offset, page.indices.contains(ordinal) {
+    if VoiceRules.titleOnlyRename(words) != nil {
+      guard page.count == 1 else { return false }
+      expected = page[0].reference
+    } else if spoken.count == 1, let ordinal = spoken.first?.offset, page.indices.contains(ordinal)
+    {
       expected = page[ordinal].reference
     } else if !spoken.isEmpty {
       return false

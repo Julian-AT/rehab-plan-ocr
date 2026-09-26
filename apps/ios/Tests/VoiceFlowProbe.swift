@@ -201,6 +201,93 @@ import RehaCore
     precondition(!rules.model.response.contains("3.12") && rules.calendar.reads > reads)
     precondition(rules.provider.requests.isEmpty && rules.calendar.previews.isEmpty)
 
+    for (input, title) in [
+      ("Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik.", "Gymnastik"),
+      ("Bitte nicht entfernen, benenne diesen Termin nur in Ergotherapie um.", "Ergotherapie"),
+      (
+        "Löschen Sie diesen Termin nicht; geben Sie diesem Termin nur den Namen Atemübung.",
+        "Atemübung"
+      ),
+      (
+        "Den Termin nicht löschen, sondern ändere nur den Titel dieses Termins auf „Sanfte Bewegung“.",
+        "Sanfte Bewegung"
+      ),
+    ] {
+      let rename = Flow()
+      rename.provider.availability = .unavailable("No model assets")
+      await rename.model.submitText("Nächster Termin")
+      await rename.model.submitText(input)
+      let proposal = rename.model.edits.proposal!
+      precondition(proposal.kind == "update" && proposal.before?.id == "physio", input)
+      precondition(
+        proposal.patch.keys.sorted() == ["title"] && proposal.after?.title == title, input)
+      precondition(proposal.after?.start_utc == proposal.before?.values.start_utc)
+      precondition(proposal.after?.end_utc == proposal.before?.values.end_utc)
+      precondition(proposal.after?.location == proposal.before?.values.location)
+      precondition(proposal.after?.reminder_minutes == proposal.before?.values.reminder_minutes)
+      precondition(rename.model.question == .confirmation && rename.calendar.confirmed.isEmpty)
+      precondition(rename.provider.requests.isEmpty, "Complete rename rule started a model")
+      rename.input.transcript = "Ja, speichern"
+      await rename.model.endTurn()
+      precondition(
+        rename.calendar.confirmed.isEmpty && rename.model.response.contains("Schaltfläche"))
+      await rename.model.confirmProposal()
+      precondition(
+        rename.calendar.confirmed.count == 1 && rename.model.response.contains("gespeichert"))
+    }
+    let renameText = "Nicht löschen. Ändere nur den Namen dieses Termins in Spaziergang."
+    for previous in ["", "Termine heute"] {
+      let ambiguous = Flow()
+      ambiguous.provider.availability = .unavailable("No model assets")
+      if !previous.isEmpty { await ambiguous.model.submitText(previous) }
+      let reads = ambiguous.calendar.reads
+      await ambiguous.model.submitText(renameText)
+      precondition(ambiguous.calendar.previews.isEmpty && ambiguous.calendar.confirmed.isEmpty)
+      precondition(ambiguous.calendar.reads == reads && ambiguous.provider.requests.isEmpty)
+    }
+    let staleRename = Flow()
+    await staleRename.model.submitText("Nächster Termin")
+    staleRename.calendar.events.removeFirst()
+    await staleRename.model.submitText(renameText)
+    precondition(staleRename.calendar.previews.isEmpty && staleRename.calendar.confirmed.isEmpty)
+    let canceledRename = Flow()
+    await canceledRename.model.submitText("Nächster Termin")
+    await canceledRename.model.submitText(renameText)
+    precondition(canceledRename.model.edits.proposal != nil)
+    canceledRename.model.cancelSession()
+    await canceledRename.model.confirmProposal()
+    precondition(canceledRename.calendar.confirmed.isEmpty)
+    let pendingTitle = Flow()
+    await pendingTitle.model.submitAction(.create)
+    precondition(pendingTitle.model.question == .title)
+    await pendingTitle.model.submitText(renameText)
+    precondition(
+      pendingTitle.model.question == .action && pendingTitle.model.intent.action == .unsupported)
+    precondition(pendingTitle.calendar.previews.isEmpty && pendingTitle.calendar.confirmed.isEmpty)
+    let pendingTime = Flow()
+    await pendingTime.model.submitAction(.update)
+    await pendingTime.model.submitText("den ersten")
+    precondition(pendingTime.model.question == .time)
+    await pendingTime.model.submitText(
+      "Nicht löschen. Ändere nur den Namen dieses Termins in „Halb zehn“.")
+    precondition(
+      pendingTime.model.question == .action && pendingTime.model.intent.action == .unsupported)
+    precondition(pendingTime.calendar.previews.isEmpty && pendingTime.calendar.confirmed.isEmpty)
+    for input in [
+      "Nicht löschen. Ändere nur den Namen des anderen Termins in Gymnastik.",
+      "Nicht löschen. Ändere nur die Namen dieser Termine in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins nicht in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik und ändere die Dauer.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik, nein Spaziergang.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in irgendwas.",
+      "Stopp, nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik.",
+    ] {
+      let rejected = Flow()
+      await rejected.model.submitText("Nächster Termin")
+      await rejected.model.submitText(input)
+      precondition(rejected.calendar.previews.isEmpty && rejected.calendar.confirmed.isEmpty, input)
+    }
+
     let creation = Flow()
     await creation.model.submitText("Erstelle einen neuen Termin")
     precondition(creation.model.question == .title)

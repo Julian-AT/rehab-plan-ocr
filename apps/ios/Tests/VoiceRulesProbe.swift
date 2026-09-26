@@ -24,6 +24,54 @@ import Foundation
       correction.corrected && calendar.component(.weekday, from: correction.newDate!) == 4)
     precondition(correction.newTime == 570 && correction.duration == nil)
     precondition(parse("Lösche den Termin nicht").negatedChange)
+    for (input, title) in [
+      ("Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik.", "Gymnastik"),
+      (
+        "Bitte nicht entfernen, ändere ausschließlich den Titel dieses Termins auf „Sanfte Gymnastik“.",
+        "Sanfte Gymnastik"
+      ),
+      (
+        "Lösche diesen Termin bitte nicht; gib diesem Termin nur den Namen Atemübung.",
+        "Atemübung"
+      ),
+      (
+        "Den Termin nicht löschen, sondern benenne diesen Termin nur in Ergotherapie um.",
+        "Ergotherapie"
+      ),
+      (
+        "Bitte löschen Sie diesen Termin nicht. Ändern Sie nur den Namen dieses Termins in Spaziergang.",
+        "Spaziergang"
+      ),
+    ] {
+      let rename = parse(input)
+      precondition(rename.action == .update && !rename.negatedChange, input)
+      precondition(rename.title == title && rename.origins["title"] == .spoken, input)
+      precondition(rename.date == nil && rename.referenceTime == nil, input)
+      precondition(rename.newDate == nil && rename.newTime == nil && rename.duration == nil, input)
+      precondition(VoiceRules.explicitMutation(input) == .update, input)
+    }
+    for input in [
+      "Nicht löschen. Ändere den Namen dieses Termins in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen des anderen Termins in Gymnastik.",
+      "Nicht löschen. Ändere nur die Namen dieser Termine in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins nicht in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik und die Uhrzeit auf zehn.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik morgen.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik, nein Atemübung.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik oder Atemübung.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in irgendwas.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in anders.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in neu.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in „Gymnastik morgen“.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in „Gymnastik“. Lösche den zweiten.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik. Abbrechen.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik?",
+      "Wenn ich nicht löschen will, ändere nur den Namen dieses Termins in Gymnastik.",
+      "Stopp. Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik.",
+    ] {
+      let rejected = parse(input)
+      precondition(rejected.action != .update && rejected.title == nil, input)
+    }
     precondition(parse("Nein").action != .cancel)
     precondition(parse("ja").action == .unsupported)
     precondition(parse("Morgen Termine vorlesen").action == .list)

@@ -178,6 +178,65 @@ import Foundation
       "Die Dauer von diesem Termin bitte auf 15 Minuten ändern.",
       #"{"action":"update","query":{"reference":"r1"},"change":{"duration":15}}"#)
     precondition(durationOnly.action == .update && durationOnly.change?.duration == 15)
+    // Known replay failures are regression cases, not an independent evaluation.
+    for title in ["Gymnastik", "Ergotherapie", "Spaziergang", "Atemübung"] {
+      let input = "Nicht löschen. Ändere nur den Namen dieses Termins in \(title)."
+      let output = #"{"action":"update","query":{"reference":"r1"},"change":{"title":"\#(title)"}}"#
+      let checkedModel = try checked(input, output)
+      precondition(checkedModel.action == .update && checkedModel.change?.title == title)
+      let sample = InterpretationEvaluation.Sample(
+        id: "rename-\(title)", text: input, today: "2031-05-15", timezone: "Europe/Vienna",
+        references: ["r1"], selected: "r1")
+      let direct = try await router.interpret(sample.request())
+      precondition(
+        direct.identity.provider == "complete-rules" && direct.identity.model == "calendar-4")
+      let operation = try InterpretationEvaluation.operation(direct.value, sample: sample)
+      precondition(operation["action"] as? String == "update")
+      precondition(operation["query"] as? [String: String] == ["reference": "r1"])
+      precondition(operation["change"] as? [String: String] == ["title": title])
+    }
+    let renameInput = "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik."
+    for output in [
+      #"{"action":"remove","query":{"reference":"r1"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Namen"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Ergotherapie"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"gymnastik"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik!"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik","date":"2031-05-16"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik","time":"10:00"}}"#,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik","duration":15}}"#,
+    ] {
+      let rejected = try checked(renameInput, output)
+      precondition(rejected.action == .clarify, output)
+    }
+    for input in [
+      "Nicht löschen. Ändere nur den Namen des anderen Termins in Gymnastik.",
+      "Nicht löschen. Ändere nur die Namen dieser Termine in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins nicht in Gymnastik.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik und verschiebe ihn.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik, nein Atemübung.",
+      "Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik. Abbrechen.",
+    ] {
+      let output = #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik"}}"#
+      let rejected = try checked(input, output)
+      precondition(rejected.action == .clarify, input)
+    }
+    for references in [[], ["r1", "r2"]] {
+      let sample = InterpretationEvaluation.Sample(
+        id: "ambiguous-rename", text: renameInput, today: "2031-05-15", timezone: "Europe/Vienna",
+        references: references, selected: nil)
+      let result = try await router.interpret(sample.request())
+      precondition(result.value.action == .clarify)
+    }
+    let ambiguousRename = try checked(
+      renameInput,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Gymnastik"}}"#,
+      references: ["r1", "r2"])
+    precondition(ambiguousRename.action == .clarify)
+    let explicitTitle = try checked(
+      "Bitte nicht entfernen, benenne diesen Termin nur in „Atmung und Bewegung“ um.",
+      #"{"action":"update","query":{"reference":"r1"},"change":{"title":"Atmung und Bewegung"}}"#)
+    precondition(explicitTitle.action == .update)
     if CommandLine.arguments.count == 4 {
       try await replay(
         input: URL(fileURLWithPath: CommandLine.arguments[1]),

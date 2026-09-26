@@ -330,7 +330,46 @@ enum VoiceRules {
       return named.count == 1 ? named[0] : nil
     }
   }
+  /// A complete, deliberately narrow exception to the general negation guard:
+  /// keep one discussed event, changing only its explicitly named title.
+  /// Multiword titles need quotes so a trailing instruction cannot become a title.
+  static func titleOnlyRename(_ input: String) -> String? {
+    let text = replacing("\\s+", in: input, with: " ").trimmingCharacters(
+      in: .whitespacesAndNewlines)
+    let keep =
+      #"(?:bitte )?(?:nicht (?:löschen|entfernen)|(?:diesen|den) termin (?:bitte )?nicht (?:löschen|entfernen)|(?:lösche|entferne|löschen sie|entfernen sie) (?:diesen|den) termin (?:bitte )?nicht)"#
+    let separator = #"(?:[.,;] ?(?:sondern )?| (?:sondern )?)"#
+    let only = #"(?:nur|ausschlie(?:ss|ß)lich)"#
+    let title = #"(?:"([^"]+)"|„([^“]+)“|([\p{L}][\p{L}\p{M}-]*))"#
+    let commands = [
+      #"(?:ändere|ändern sie) (?:bitte )?"# + only
+        + #" (?:den namen|den titel|die bezeichnung) (?:dieses|des) termins (?:in|auf) "# + title,
+      #"(?:gib|geben sie) (?:diesem|dem) termin (?:bitte )?"# + only
+        + #" (?:den namen|den titel|die bezeichnung) "# + title,
+      #"(?:benenne|benennen sie) (?:diesen|den) termin (?:bitte )?"# + only
+        + #" in "# + title + #" um"#,
+    ]
+    for command in commands {
+      guard
+        let match = matches("(?i)^" + keep + separator + "(?:bitte )?" + command + "[.!]?$", text)
+          .first,
+        let value = match.dropFirst().first(where: { !$0.isEmpty })
+      else { continue }
+      let words = normalized(value)
+      guard value.count <= 160, value.split(separator: " ").count <= 8,
+        !matches(#"^[\p{L}\p{M}]+(?:[ -][\p{L}\p{M}]+)*$"#, value).isEmpty,
+        matches(
+          #"\b(?:nicht|nein|kein\w*|doch|oder|sondern|statt\w*|auch|zusätzlich|danach|dann|stopp?|abbrechen|beenden|verwerfen|vergiss|irgend\w*|ander\w*|etwas|beliebig\w*|so|neu|titel|name|namen|bezeichnung|termin\w*|behandlung\w*|heute|morgen|übermorgen|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|um|am|auf|uhr|minut\w*|lösch\w*|entfern\w*|änder\w*|verschieb\w*|erstell\w*|eintrag\w*|hinzufüg\w*|absag\w*|streich\w*|kürz\w*|verlänger\w*)\b"#,
+          words
+        ).isEmpty
+      else { return nil }
+      return value
+    }
+    return nil
+  }
+
   static func explicitMutation(_ input: String) -> VoiceIntent.Action? {
+    if titleOnlyRename(input) != nil { return .update }
     let text = normalized(input)
     let patterns: [(VoiceIntent.Action, String)] = [
       (.remove, #"\b(?:lösch(?:e|en)?|entfern(?:e|en)?)\b"#),
@@ -360,6 +399,13 @@ enum VoiceRules {
         .contains(text.trimmingCharacters(in: .punctuationCharacters))
     {
       result.action = .cancel
+      return result
+    }
+    if let title = titleOnlyRename(input) {
+      result.action = .update
+      result.referenceText = "diesen termin"
+      result.title = title
+      result.origins["title"] = .spoken
       return result
     }
     if matches("\\b(nicht|keine|keinen|kein)\\b", text).count > 0

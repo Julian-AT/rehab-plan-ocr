@@ -124,21 +124,27 @@ extension InterpretationProvider {
 
 @MainActor final class CalendarRulesProvider: InterpretationProvider {
   let identity = InterpretationIdentity(
-    provider: "complete-rules", model: "calendar-3", schemaVersion: 1)
-  let capabilities: Set<InterpretationCapability> = [.calendar]
+    provider: "complete-rules", model: "calendar-4", schemaVersion: 1)
+  let capabilities: Set<InterpretationCapability> = [.calendar, .mutation]
   let availability = InterpretationAvailability.available
 
   func match(_ text: String, now: Date = .now, calendar: Calendar = .current) -> CalendarQuestion? {
     CalendarQuestion.direct(text, now: now, calendar: calendar)
   }
   func immediate(_ request: InterpretationRequest) -> ConversationInterpretation? {
-    if VoiceRules.parse(request.text, now: request.now, calendar: request.calendar).action
-      == .cancel
-    {
+    let intent = VoiceRules.parse(request.text, now: request.now, calendar: request.calendar)
+    if intent.action == .cancel {
       return ConversationInterpretation(action: .cancel)
     }
     if VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar) {
       return ConversationInterpretation(action: .clarify, problem: .invalidDate)
+    }
+    if let title = VoiceRules.titleOnlyRename(request.text) {
+      return ConversationInterpretation(
+        action: .update,
+        query: CalendarQuestion(usesLastPage: true, timezone: request.calendar.timeZone.identifier),
+        change: VoiceIntent(
+          action: .update, title: title, timezone: request.calendar.timeZone.identifier))
     }
     return nil
   }

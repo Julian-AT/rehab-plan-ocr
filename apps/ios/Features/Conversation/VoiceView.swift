@@ -269,6 +269,17 @@ import RehaCore
       await answerCalendar(request)
       return
     }
+    if VoiceRules.titleOnlyRename(text) != nil {
+      guard question == .action else {
+        say(
+          "Die bisherige Änderung wurde verworfen. Bitte den gewünschten Termin erneut auswählen.",
+          question: .action)
+        return
+      }
+      // This command needs the unique discussed reference, not a fresh search.
+      await converse(text, now: now, calendar: calendar)
+      return
+    }
     switch question {
     case .title:
       title = text
@@ -370,7 +381,9 @@ import RehaCore
   }
   private func converse(_ text: String, now: Date, calendar: Calendar) async {
     failures = 0
-    if case .unavailable(let reason) = interpretation.availability {
+    if VoiceRules.titleOnlyRename(text) == nil,
+      case .unavailable(let reason) = interpretation.availability
+    {
       say(
         reason + " Einfache Fragen wie „Termine morgen“ sind auch ohne Sprachmodell möglich.",
         question: .action)
