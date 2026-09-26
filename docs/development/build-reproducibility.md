@@ -2,6 +2,49 @@
 
 # Reproduzierbare Entwicklungswerkzeuge
 
+## Aktueller frischer Appnachweis vom 26. September 2026
+
+Der vollständig separate Checkout in
+`.local/runs/fresh-offline-app-20260926-s19-002/checkout` prüft `ebdf4b8`, einschließlich
+der korrigierten Mitteilungslebensdauer. Alle **16 Einrichtung-, Build- und
+Paketprüfschritte** bestehen beim ersten Durchlauf. Versionierte Dateien bleiben
+vorher/nachher unverändert; das Quellarchiv entspricht exakt diesem Git-Commit.
+Die Netzsperre gilt schon während Bootstrap/Wiederherstellung und für sämtliche
+Buildschritte. Eine tatsächlich ausgeführte Socket-Gegenprobe bestätigt auch
+die Vererbung in einen Kindprozess.
+
+Es wurden ausschließlich geprüfte gesperrte Downloads, Werkzeug-/Python-Dateien
+und Registrymetadaten übernommen, keine Rust-, Xcode-, entpackten Cargo-Quell-
+oder Modell-Buildprodukte. 19 vorbereitete Symlinks sind intern aufgelöst;
+neun absolute UV-Cacheverweise wurden mit getrenntem Beleg auf relative interne
+Ziele umgesetzt. Kopien haben unabhängige Inodes. Xcode und die ausdrücklich
+vorausgesetzte Rustup-Toolchain bleiben Hostwerkzeuge.
+
+Erstbuild und netzgesperrte Wiederholung erzeugen zwei tatsächlich geprüfte
+Simulatorpakete mit jeweils **105.849.217 Bytes in 52 Einträgen**; Dateien, Modi
+und Symlinks sind identisch. Beide Pakete bestehen Inhalts-, Datenschutz- und
+Laufzeitinventarprüfung. Bindings und echte Release-Symbolerzeugung bestehen.
+Die kleinste beobachtete freie Kapazität beträgt 51,28 GiB bei 20 GiB Reserve
+und zwölf GiB geplantem Spitzenbedarf. Das ist keine Geräteleistungs- oder
+Signaturfreigabe; es wurde kein physisches Gerät installiert.
+
+Die bereits geprüfte lokale Xcode-Kompatibilitätszuordnung bleibt erforderlich:
+äußere Netzsperre, unverändertes `/bin/ps` für Prozessprüfung sowie nur lokale
+SwiftPM-/Makro-Optionen gegen verschachtelte Sandbox-Initialisierung. Reine
+`-create-xcframework`-Aufrufe erhalten ausdrücklich keine Swift-Buildeinstellungen.
+Der vorherige Lauf `fresh-offline-app-20260926-s19-001` an `13b724d` deckte diese
+Weiterleitungsgrenze auf und bestand nach Korrektur; sein ursprünglicher Fehler,
+Zwischenprodukte und Wiederanlaufnachweise bleiben unverändert erhalten. Lauf
+002 übernimmt die überprüfte Korrektur vor dem allerersten Build.
+
+Vollständige Befehle, lokale Orchestrierung, Eingangsprüfsummen, Kompatibilitäts-
+belege, Quellarchiv und beide Apps bleiben im jeweiligen privaten Lauf erhalten.
+Der unabhängige Abschlussbeleg von Lauf 002 hat SHA-256
+`ddc2364d29bedab690cd049bc96851a9a7953186127cbb33dffe7d7c9a7134d7`.
+Spätere Produktänderungen benötigen ihre eigene passende Verifikation.
+
+## Werkzeugvertrag
+
 `config/toolchains/versions.json` legt die Werkzeugversionen fest. Der zusätzlich
 versionierte `rust-toolchain.toml` wählt dieselbe Rust-Version auch für direkte
 Cargo- und Make-Aufrufe. `make doctor` verwirft voneinander abweichende Vorgaben.
