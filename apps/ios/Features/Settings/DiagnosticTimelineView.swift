@@ -4,7 +4,7 @@ import SwiftUI
 struct DiagnosticTimelineView: View {
   @State private var events: [DiagnosticEvent] = []
   @State private var error: String?
-  @State private var export: URL?
+  @State private var export = TemporaryDiagnosticExport()
   @State private var busy = false
   @State private var limit = 100
   var body: some View {
@@ -18,16 +18,13 @@ struct DiagnosticTimelineView: View {
           Task {
             defer { busy = false }
             do {
-              let data = try await LocalDiagnostics.shared.redactedExport()
-              let url = FileManager.default.temporaryDirectory.appendingPathComponent(
-                "Diagnose-\(UUID().uuidString).json")
-              try data.write(to: url, options: .atomic)
-              if let export { try? FileManager.default.removeItem(at: export) }
-              export = url
+              try await export.write { try await LocalDiagnostics.shared.redactedExport() }
+              error = nil
+            } catch is CancellationError {
             } catch { self.error = userMessage(error) }
           }
         }.disabled(busy)
-        if let export { ShareLink("Export teilen", item: export) }
+        if let url = export.url { ShareLink("Export teilen", item: url) }
         if let error { Text(error).foregroundStyle(AppPalette.destructive) }
       } header: {
         AppSectionHeader(
@@ -48,7 +45,7 @@ struct DiagnosticTimelineView: View {
     }.pageTitle("Technischer Verlauf")
       .task { await load() }
       .refreshable { await load() }
-      .onDisappear { if let export { try? FileManager.default.removeItem(at: export) } }
+      .onDisappear { Task { await export.close() } }
   }
   private func load() async {
     do {

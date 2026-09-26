@@ -5,7 +5,7 @@ import Foundation
 actor AppTemporaryStore {
   static let shared = AppTemporaryStore(temporary: FileManager.default.temporaryDirectory)
 
-  enum Kind: String, Sendable { case calendar, recognition }
+  enum Kind: String, Sendable { case calendar, recognition, diagnostic }
   struct Lease: Equatable, Sendable {
     fileprivate let id: UUID
     fileprivate let generation: UUID
