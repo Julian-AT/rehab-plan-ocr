@@ -120,6 +120,34 @@ pub struct Plan {
     pub imported_at: i64,
     pub page_ids: Vec<String>,
 }
+#[derive(Clone, uniffi::Record)]
+pub struct ArchiveCursor {
+    pub imported_at: i64,
+    pub id: String,
+}
+#[derive(Clone, uniffi::Enum)]
+pub enum ArchiveStatus {
+    ReconciliationNeeded,
+    Undone,
+    Saved,
+    PartiallySaved,
+    RecognitionPending,
+    ReadyForReview,
+}
+#[derive(Clone, uniffi::Record)]
+pub struct PlanSummary {
+    pub id: String,
+    pub imported_at: i64,
+    pub page_ids: Vec<String>,
+    pub item_count: u64,
+    pub dates: Vec<String>,
+    pub status: ArchiveStatus,
+}
+#[derive(Clone, uniffi::Record)]
+pub struct ArchivePage {
+    pub plans: Vec<PlanSummary>,
+    pub next: Option<ArchiveCursor>,
+}
 #[derive(Clone, serde::Deserialize, uniffi::Record)]
 pub struct ImportBatch {
     pub id: String,
@@ -407,6 +435,58 @@ impl NativeApplication {
                     .collect::<Result<_>>()?,
                 failures_json: serde_json::to_string(&store.failures().map_err(storage)?)
                     .map_err(storage)?,
+            })
+        })
+        .await
+    }
+    pub async fn archive_page(
+        &self,
+        after: Option<ArchiveCursor>,
+        limit: u32,
+    ) -> Result<ArchivePage> {
+        self.blocking(move |s| {
+            let after = after.map(|c| reha_core::store::ArchiveCursor {
+                imported_at: c.imported_at,
+                id: c.id,
+            });
+            let page = s
+                .store
+                .lock()
+                .map_err(storage)?
+                .archive_page(after.as_ref(), limit)
+                .map_err(storage)?;
+            Ok(ArchivePage {
+                next: page.next.map(|c| ArchiveCursor {
+                    imported_at: c.imported_at,
+                    id: c.id,
+                }),
+                plans: page
+                    .plans
+                    .into_iter()
+                    .map(|p| PlanSummary {
+                        id: p.id,
+                        imported_at: p.imported_at,
+                        page_ids: p.page_ids,
+                        item_count: p.item_count,
+                        dates: p.dates,
+                        status: match p.status {
+                            reha_core::store::ArchiveStatus::ReconciliationNeeded => {
+                                ArchiveStatus::ReconciliationNeeded
+                            }
+                            reha_core::store::ArchiveStatus::Undone => ArchiveStatus::Undone,
+                            reha_core::store::ArchiveStatus::Saved => ArchiveStatus::Saved,
+                            reha_core::store::ArchiveStatus::PartiallySaved => {
+                                ArchiveStatus::PartiallySaved
+                            }
+                            reha_core::store::ArchiveStatus::RecognitionPending => {
+                                ArchiveStatus::RecognitionPending
+                            }
+                            reha_core::store::ArchiveStatus::ReadyForReview => {
+                                ArchiveStatus::ReadyForReview
+                            }
+                        },
+                    })
+                    .collect(),
             })
         })
         .await

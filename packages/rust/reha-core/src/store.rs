@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 mod activity;
+mod archive;
 mod batches;
 pub use activity::{ActivityItem, ActivityPage};
 mod event_mutations;
@@ -13,6 +14,7 @@ mod owned_events;
 mod plans;
 mod retention;
 mod summaries;
+pub use archive::{ArchiveCursor, ArchivePage, ArchiveStatus, PlanSummary};
 pub use batches::{BatchOperation, ImportBatch};
 pub use intake::Intake;
 pub use migrations::STORE_VERSION;
@@ -117,30 +119,9 @@ impl Store {
         })?;
         let rows = rows.collect::<std::result::Result<Vec<_>, _>>()?;
         let mut result = vec![];
-        for (id, imported_at, retained, schedule_id, cached, mut raw) in rows {
-            let summary = if let Some(summary) = cached
-                .as_ref()
-                .and_then(|value| serde_json::from_str::<summaries::ContentSummary>(value).ok())
-                .filter(|summary| summary.current())
-            {
-                summary
-            } else {
-                // Legacy/raw transaction writes invalidate this disposable cache.
-                // Recover a corrupt cache from the authoritative original as well.
-                if cached.is_some() {
-                    raw = self.connection.query_row(
-                        "SELECT run FROM scans WHERE id=?1",
-                        [&id],
-                        |r| r.get(0),
-                    )?;
-                }
-                let summary = summaries::ContentSummary::from_json(raw.as_deref());
-                self.connection.execute(
-                    "UPDATE scans SET run_summary=?2 WHERE id=?1 AND run IS ?3",
-                    params![id, serde_json::to_string(&summary)?, raw],
-                )?;
-                summary
-            };
+        for (id, imported_at, retained, schedule_id, cached, raw) in rows {
+            let summary =
+                summaries::ContentSummary::load(&self.connection, &id, cached.as_deref(), raw)?;
             result.push(ScanSummary {
                 id,
                 imported_at,

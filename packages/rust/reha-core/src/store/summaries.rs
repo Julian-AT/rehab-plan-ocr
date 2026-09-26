@@ -27,6 +27,29 @@ impl Default for ContentSummary {
 }
 
 impl ContentSummary {
+    pub fn load(
+        connection: &Connection,
+        id: &str,
+        cached: Option<&str>,
+        mut raw: Option<String>,
+    ) -> Result<Self> {
+        if let Some(summary) = cached
+            .and_then(|value| serde_json::from_str::<Self>(value).ok())
+            .filter(Self::current)
+        {
+            return Ok(summary);
+        }
+        if cached.is_some() {
+            raw = connection.query_row("SELECT run FROM scans WHERE id=?1", [id], |r| r.get(0))?;
+        }
+        let summary = Self::from_json(raw.as_deref());
+        connection.execute(
+            "UPDATE scans SET run_summary=?2 WHERE id=?1 AND run IS ?3",
+            params![id, serde_json::to_string(&summary)?, raw],
+        )?;
+        Ok(summary)
+    }
+
     pub fn current(&self) -> bool {
         self.version == SUMMARY_VERSION
     }

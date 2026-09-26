@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use rusqlite::{Connection, TransactionBehavior};
 
-pub const STORE_VERSION: u32 = 10;
+pub const STORE_VERSION: u32 = 11;
 
 pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
     // Reject a newer store before changing any pragma or schema. A preserved old
@@ -108,6 +108,21 @@ pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
         )?;
         super::summaries::backfill(&tx)?;
         tx.pragma_update(None, "user_version", 10)?;
+    }
+    if version < 11 {
+        tx.execute_batch(
+            "CREATE INDEX imports_schedule ON imports(schedule_id);
+            CREATE TABLE batch_documents(batch_id TEXT NOT NULL REFERENCES import_batches(id) ON DELETE CASCADE,
+                document_id TEXT NOT NULL, PRIMARY KEY(batch_id,document_id));
+            CREATE INDEX batch_documents_page ON batch_documents(document_id,batch_id);
+            INSERT OR IGNORE INTO batch_documents SELECT b.id,d.value FROM import_batches b,json_each(b.document_ids) d;
+            CREATE TRIGGER batch_documents_insert AFTER INSERT ON import_batches BEGIN
+                INSERT OR IGNORE INTO batch_documents SELECT NEW.id,value FROM json_each(NEW.document_ids); END;
+            CREATE TRIGGER batch_documents_update AFTER UPDATE OF document_ids ON import_batches BEGIN
+                DELETE FROM batch_documents WHERE batch_id=NEW.id;
+                INSERT OR IGNORE INTO batch_documents SELECT NEW.id,value FROM json_each(NEW.document_ids); END;
+            PRAGMA user_version=11;",
+        )?;
     }
     tx.commit()?;
     Ok(())

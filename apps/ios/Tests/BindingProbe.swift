@@ -42,6 +42,10 @@ final class TestHost: AppleHost, @unchecked Sendable {
     let history = try await core.history()
     precondition(history.scans.count == 1)
     let id = history.scans[0].id
+    let archive = try await core.archivePage(after: nil, limit: 1)
+    precondition(archive.plans.count == 1 && archive.plans[0].id == id && archive.next == nil)
+    precondition(archive.plans[0].status == .readyForReview)
+    precondition(archive.plans[0].itemCount == history.scans[0].itemCount)
     let initial = try await core.loadScan(id: id)
     precondition(!initial.appointments[0].id.isEmpty)
     var edited = initial.appointments
@@ -74,6 +78,8 @@ final class TestHost: AppleHost, @unchecked Sendable {
     precondition(proposal.operations.first?.kind == .create)
     let results = try await core.approveCalendar(token: proposal.token, approveRemovals: false)
     precondition(results.first?.status == .uncertain)
+    let uncertainArchive = try await core.archivePage(after: nil, limit: 20)
+    precondition(uncertainArchive.plans[0].status == .reconciliationNeeded)
     do {
       _ = try await core.prepareCalendar(
         id: id, calendarId: "synthetic", timezone: saved.timezone, reminder: 10,

@@ -104,7 +104,7 @@ fn version_nine_backfill_preserves_original_bytes_preferences_and_approval_value
     store
         .connection
         .execute_batch(
-            "DROP TRIGGER invalidate_scan_summary;
+            "DROP TRIGGER batch_documents_insert; DROP TRIGGER batch_documents_update; DROP TABLE batch_documents; DROP INDEX imports_schedule; DROP TRIGGER invalidate_scan_summary;
         DROP INDEX scans_chronology; DROP INDEX plans_chronology;
         ALTER TABLE scans DROP COLUMN run_summary; PRAGMA user_version=9;",
         )

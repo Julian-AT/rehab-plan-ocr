@@ -669,6 +669,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
      */
     func approveCalendar(token: String, approveRemovals: Bool) async throws  -> [CalendarResult]
     
+    func archivePage(after: ArchiveCursor?, limit: UInt32) async throws  -> ArchivePage
+    
     func artifactPath(id: String, artifact: String) async throws  -> String
     
     func assessDraft(id: String, timezone: String) async throws  -> DraftAssessment
@@ -860,6 +862,22 @@ open func approveCalendar(token: String, approveRemovals: Bool)async throws  -> 
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeCalendarResult.lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func archivePage(after: ArchiveCursor?, limit: UInt32)async throws  -> ArchivePage  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_archive_page(
+                        self.uniffiCloneHandle(),FfiConverterOptionTypeArchiveCursor.lower(after),FfiConverterUInt32.lower(limit)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeArchivePage_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -1918,6 +1936,114 @@ public func FfiConverterTypeApprovalSnapshot_lift(_ buf: RustBuffer) throws -> A
 #endif
 public func FfiConverterTypeApprovalSnapshot_lower(_ value: ApprovalSnapshot) -> RustBuffer {
     return FfiConverterTypeApprovalSnapshot.lower(value)
+}
+
+
+public struct ArchiveCursor: Equatable, Hashable {
+    public var importedAt: Int64
+    public var id: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(importedAt: Int64, id: String) {
+        self.importedAt = importedAt
+        self.id = id
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ArchiveCursor: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeArchiveCursor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ArchiveCursor {
+        return
+            try ArchiveCursor(
+                importedAt: FfiConverterInt64.read(from: &buf), 
+                id: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ArchiveCursor, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.importedAt, into: &buf)
+        FfiConverterString.write(value.id, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchiveCursor_lift(_ buf: RustBuffer) throws -> ArchiveCursor {
+    return try FfiConverterTypeArchiveCursor.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchiveCursor_lower(_ value: ArchiveCursor) -> RustBuffer {
+    return FfiConverterTypeArchiveCursor.lower(value)
+}
+
+
+public struct ArchivePage: Equatable, Hashable {
+    public var plans: [PlanSummary]
+    public var next: ArchiveCursor?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(plans: [PlanSummary], next: ArchiveCursor?) {
+        self.plans = plans
+        self.next = next
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ArchivePage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeArchivePage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ArchivePage {
+        return
+            try ArchivePage(
+                plans: FfiConverterSequenceTypePlanSummary.read(from: &buf), 
+                next: FfiConverterOptionTypeArchiveCursor.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ArchivePage, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePlanSummary.write(value.plans, into: &buf)
+        FfiConverterOptionTypeArchiveCursor.write(value.next, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchivePage_lift(_ buf: RustBuffer) throws -> ArchivePage {
+    return try FfiConverterTypeArchivePage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchivePage_lower(_ value: ArchivePage) -> RustBuffer {
+    return FfiConverterTypeArchivePage.lower(value)
 }
 
 
@@ -3719,6 +3845,76 @@ public func FfiConverterTypePlanCalendar_lower(_ value: PlanCalendar) -> RustBuf
 }
 
 
+public struct PlanSummary: Equatable, Hashable {
+    public var id: String
+    public var importedAt: Int64
+    public var pageIds: [String]
+    public var itemCount: UInt64
+    public var dates: [String]
+    public var status: ArchiveStatus
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, importedAt: Int64, pageIds: [String], itemCount: UInt64, dates: [String], status: ArchiveStatus) {
+        self.id = id
+        self.importedAt = importedAt
+        self.pageIds = pageIds
+        self.itemCount = itemCount
+        self.dates = dates
+        self.status = status
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlanSummary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanSummary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanSummary {
+        return
+            try PlanSummary(
+                id: FfiConverterString.read(from: &buf), 
+                importedAt: FfiConverterInt64.read(from: &buf), 
+                pageIds: FfiConverterSequenceString.read(from: &buf), 
+                itemCount: FfiConverterUInt64.read(from: &buf), 
+                dates: FfiConverterSequenceString.read(from: &buf), 
+                status: FfiConverterTypeArchiveStatus.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlanSummary, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterInt64.write(value.importedAt, into: &buf)
+        FfiConverterSequenceString.write(value.pageIds, into: &buf)
+        FfiConverterUInt64.write(value.itemCount, into: &buf)
+        FfiConverterSequenceString.write(value.dates, into: &buf)
+        FfiConverterTypeArchiveStatus.write(value.status, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanSummary_lift(_ buf: RustBuffer) throws -> PlanSummary {
+    return try FfiConverterTypePlanSummary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanSummary_lower(_ value: PlanSummary) -> RustBuffer {
+    return FfiConverterTypePlanSummary.lower(value)
+}
+
+
 public struct Point: Equatable, Hashable {
     public var x: Double
     public var y: Double
@@ -4652,6 +4848,100 @@ public func FfiConverterTypeAppError_lift(_ buf: RustBuffer) throws -> AppError 
 public func FfiConverterTypeAppError_lower(_ value: AppError) -> RustBuffer {
     return FfiConverterTypeAppError.lower(value)
 }
+
+
+
+public enum ArchiveStatus: Equatable, Hashable {
+    
+    case reconciliationNeeded
+    case undone
+    case saved
+    case partiallySaved
+    case recognitionPending
+    case readyForReview
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ArchiveStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeArchiveStatus: FfiConverterRustBuffer {
+    typealias SwiftType = ArchiveStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ArchiveStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .reconciliationNeeded
+        
+        case 2: return .undone
+        
+        case 3: return .saved
+        
+        case 4: return .partiallySaved
+        
+        case 5: return .recognitionPending
+        
+        case 6: return .readyForReview
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ArchiveStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .reconciliationNeeded:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .undone:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .saved:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .partiallySaved:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .recognitionPending:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .readyForReview:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchiveStatus_lift(_ buf: RustBuffer) throws -> ArchiveStatus {
+    return try FfiConverterTypeArchiveStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArchiveStatus_lower(_ value: ArchiveStatus) -> RustBuffer {
+    return FfiConverterTypeArchiveStatus.lower(value)
+}
+
 
 
 
@@ -5624,6 +5914,30 @@ fileprivate struct FfiConverterOptionTypeApprovalSnapshot: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeArchiveCursor: FfiConverterRustBuffer {
+    typealias SwiftType = ArchiveCursor?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeArchiveCursor.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeArchiveCursor.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeCalendarResult: FfiConverterRustBuffer {
     typealias SwiftType = CalendarResult?
 
@@ -6143,6 +6457,31 @@ fileprivate struct FfiConverterSequenceTypePlan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePlanSummary: FfiConverterRustBuffer {
+    typealias SwiftType = [PlanSummary]
+
+    public static func write(_ value: [PlanSummary], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePlanSummary.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PlanSummary] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PlanSummary]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePlanSummary.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePoint: FfiConverterRustBuffer {
     typealias SwiftType = [Point]
 
@@ -6543,6 +6882,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_approve_calendar() != 12107) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_archive_page() != 29435) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_artifact_path() != 60095) {
