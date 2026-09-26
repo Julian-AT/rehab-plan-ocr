@@ -33,7 +33,7 @@ fn evidence(
     {
         return Err("Die Rücknahme enthält keine weiteren ausführbaren Änderungen.".into());
     }
-    let records = store.records(None).map_err(failure)?;
+    let records = store.resolved_import_records(None).map_err(failure)?;
     let revision = crate::hash(&serde_json::to_vec(&(&batch, &records, &resume)).map_err(failure)?);
     Ok((batch, records, revision, resume))
 }
@@ -107,7 +107,9 @@ pub async fn prepare(
             }
             .into(),
             id: original.id.clone(),
-            calendar_id: original.calendar_id.clone(),
+            calendar_id: record
+                .map(|r| r.calendar_id.clone())
+                .unwrap_or_else(|| original.calendar_id.clone()),
             external_id: record.and_then(|r| r.external_id.clone()),
             before: live.cloned(),
             after: original.before.clone(),

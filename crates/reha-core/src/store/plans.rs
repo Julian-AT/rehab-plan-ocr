@@ -19,7 +19,7 @@ impl Store {
             .filter_map(|s| s.schedule_id.as_ref())
             .collect();
         let calendars: std::collections::BTreeSet<_> = self
-            .records(None)?
+            .resolved_import_records(None)?
             .into_iter()
             .filter(|r| schedules.contains(&&r.schedule_id))
             .map(|r| r.calendar_id)

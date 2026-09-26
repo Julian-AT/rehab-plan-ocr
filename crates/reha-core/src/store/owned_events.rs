@@ -48,6 +48,24 @@ type EventMutationRow = (
 );
 
 impl Store {
+    /// Import baselines are historical evidence. Only current identity and
+    /// ownership status are overlaid for live reconciliation and undo.
+    pub fn resolved_import_records(&self, schedule: Option<&str>) -> Result<Vec<ImportRecord>> {
+        let mut records = self.records(schedule)?;
+        for record in &mut records {
+            if let Some(current) = self.owned_record(&record.id)? {
+                record.calendar_id = current.calendar_id;
+                record.external_id = if current.status == "saved" {
+                    current.external_id
+                } else {
+                    None
+                };
+                record.status = current.status;
+            }
+        }
+        Ok(records)
+    }
+
     /// Change local ownership only; preserve the original import evidence and
     /// reject a stale inspection atomically before applying any selected change.
     pub(crate) fn repair_owned_links(

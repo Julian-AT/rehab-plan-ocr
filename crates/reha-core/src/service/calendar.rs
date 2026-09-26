@@ -259,7 +259,9 @@ pub(super) async fn prepare_impl(
             .or(bound)
             .or(equivalent)
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-        let records = store.records(Some(&schedule_id)).map_err(failure)?;
+        let records = store
+            .resolved_import_records(Some(&schedule_id))
+            .map_err(failure)?;
         if records
             .iter()
             .any(|record| record.calendar_id != calendar_id)
@@ -454,6 +456,40 @@ pub async fn approve_calendar(
     }
     if proposal.operations.iter().any(|o| o.kind == "remove") && !approve_removals {
         return Err("Löschungen separat bestätigen.".into());
+    }
+    // Recheck the complete preview before journaling any write. This includes
+    // unchanged entries and repaired identities, not only individual mutations.
+    let records = state
+        .store
+        .lock()
+        .map_err(failure)?
+        .resolved_import_records(Some(&proposal.schedule_id))
+        .map_err(failure)?;
+    for op in &proposal.operations {
+        if let Some(record) = records.iter().find(|r| r.id == op.id) {
+            if op.calendar_id != record.calendar_id || op.external_id != record.external_id {
+                return Err("Terminzuordnung wurde geändert. Vorschau erneut erstellen.".into());
+            }
+        }
+    }
+    let platform = app.clone();
+    let snapshot =
+        tokio::task::spawn_blocking(move || platform.call("snapshot", json!({"records":records})))
+            .await
+            .map_err(failure)??;
+    let current: BTreeMap<String, EventValues> =
+        serde_json::from_value(snapshot["current"].clone()).map_err(failure)?;
+    let protected: Vec<String> =
+        serde_json::from_value(snapshot["protected_ids"].clone()).unwrap_or_default();
+    if protected != proposal.protected_event_ids
+        || proposal
+            .operations
+            .iter()
+            .any(|op| current.get(&op.id) != op.before.as_ref())
+    {
+        return Err(
+            "Kalender wurde seit der Vorschau verändert. Vorschau erneut erstellen.".into(),
+        );
     }
     if proposal.overlaps.is_some() {
         let platform = app.clone();

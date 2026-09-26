@@ -27,6 +27,11 @@ fn record(id: &str) -> Value {
             "end_utc":"2026-09-15T07:30:00Z","timezone":"Europe/Vienna",
             "location":"Raum 1","notes":"Originale Notiz","reminder_minutes":10}})
 }
+fn import_record(id: &str) -> Value {
+    let mut value = record(id);
+    value["schedule_id"] = json!("original-schedule");
+    value
+}
 fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Host>) {
     let root = tempfile::tempdir().unwrap();
     let store = Store::open(root.path()).unwrap();
@@ -49,7 +54,7 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Host>) {
             .connection
             .execute(
                 "INSERT INTO imports VALUES(?1,'original-schedule',?2)",
-                rusqlite::params![id, r.to_string()],
+                rusqlite::params![id, import_record(id).to_string()],
             )
             .unwrap();
     }
@@ -139,7 +144,7 @@ async fn confirmed_cleanup_changes_only_selected_local_status_and_survives_resta
             .unwrap();
         assert_eq!(
             serde_json::from_str::<Value>(&original).unwrap(),
-            record(id)
+            import_record(id)
         );
     }
     assert_eq!(
@@ -157,6 +162,23 @@ async fn recovered_link_is_rebound_without_overwriting_approved_values() {
     expected["calendar_id"] = json!("readable");
     expected["external_id"] = json!("new");
     assert_eq!(read(&state, "one"), expected);
+    let store = state.store.lock().unwrap();
+    let historical = store
+        .records(Some("original-schedule"))
+        .unwrap()
+        .into_iter()
+        .find(|r| r.id == "one")
+        .unwrap();
+    let current = store
+        .resolved_import_records(Some("original-schedule"))
+        .unwrap()
+        .into_iter()
+        .find(|r| r.id == "one")
+        .unwrap();
+    assert_eq!(historical.calendar_id, "gone");
+    assert_eq!(current.calendar_id, "readable");
+    assert_eq!(current.external_id.as_deref(), Some("new"));
+    assert_eq!(current.approved, historical.approved);
 }
 #[tokio::test]
 async fn recovery_between_preview_and_confirmation_preserves_the_link() {

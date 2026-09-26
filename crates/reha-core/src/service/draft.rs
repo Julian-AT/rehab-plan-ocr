@@ -268,7 +268,17 @@ pub async fn accept_and_save(
     }
     // Check even unchanged entries: they do not pass through the platform write callback.
     let platform = app.clone();
-    let records = intent.records.clone();
+    let records = state
+        .store
+        .lock()
+        .map_err(failure)?
+        .resolved_import_records(Some(&proposal.schedule_id))
+        .map_err(failure)?;
+    if serde_json::to_value(&records).map_err(failure)?
+        != serde_json::to_value(&intent.records).map_err(failure)?
+    {
+        return Err("Terminzuordnung wurde geändert. Vergleich erneut laden.".into());
+    }
     let live = tokio::task::spawn_blocking(move || {
         platform.call("snapshot", serde_json::json!({"records": records}))
     })
