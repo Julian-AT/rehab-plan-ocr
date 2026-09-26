@@ -1,4 +1,4 @@
-"""Private dataset inventory, hash-preserving relocation and frozen day grouping.
+"""Private dataset inventory, verified copies and frozen day grouping.
 
 All outputs are local and ignored by Git. No image content is uploaded.
 """
@@ -6,7 +6,9 @@ All outputs are local and ignored by Git. No image content is uploaded.
 import argparse
 import hashlib
 import json
+import os
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -65,44 +67,59 @@ def inventory(source):
 
 
 def relocate():
+    """Keep the historical command name, but never remove an original source."""
     path = PRIVATE / "inventory.json"
+    inventory_hash = digest(path)
     manifest = json.loads(path.read_text())
+    receipt_path = PRIVATE / "copy-receipt.json"
+    result = {
+        "schema_version": 1,
+        "inventory_sha256": inventory_hash,
+        "status": "copied_hashes_verified",
+        "source_deletions": 0,
+        "copies": [
+            {key: entry[key] for key in ["filename", "sha256"]} for entry in manifest["entries"]
+        ],
+    }
+    if receipt_path.exists() and json.loads(receipt_path.read_text()) != result:
+        raise ValueError("Existing copy receipt differs; preserve it and use a new intake batch.")
     raw = PRIVATE / "raw"
     raw.mkdir(parents=True, exist_ok=True)
-    # Validate the whole proposed relocation before changing any file.
+    # Validate the complete inventory before publishing any new copy.
     for entry in manifest["entries"]:
         source = Path(entry["source"])
         destination = raw / entry["filename"]
-        if destination.name != entry["filename"] or source.is_symlink():
+        if destination.name != entry["filename"] or source.is_symlink() or destination.is_symlink():
             raise ValueError("Unsafe dataset path.")
         candidate = source if source.exists() else destination
         if digest(candidate) != entry["sha256"]:
-            raise ValueError("Source hash changed; nothing further will be moved.")
+            raise ValueError("Source hash changed; no originals removed.")
         if destination.exists() and digest(destination) != entry["sha256"]:
             raise ValueError("Destination filename collision.")
     for entry in manifest["entries"]:
         source = Path(entry["source"])
         destination = raw / entry["filename"]
-        if source.resolve() == destination.resolve():
-            continue
         if not destination.exists():
-            temporary = destination.with_suffix(destination.suffix + ".part")
-            shutil.copy2(source, temporary)
-            if digest(temporary) != entry["sha256"]:
-                temporary.unlink()
-                raise ValueError("Post-copy checksum failed; original preserved.")
-            temporary.replace(destination)
-        if digest(destination) != entry["sha256"]:
-            raise ValueError("Post-relocation checksum failed; original preserved.")
-        if source.exists():
-            source.unlink()
-        entry["relocated_verified"] = True
-        write(path, manifest)  # resumable after each verified image
-    manifest["status"] = "relocated_hashes_verified"
-    write(path, manifest)
-    print(
-        f"Relocated and hash-verified {len(manifest['entries'])} images. Original names and bytes preserved."
-    )
+            with tempfile.TemporaryDirectory(prefix=".dataset-copy-", dir=raw) as temporary:
+                candidate = Path(temporary) / "image"
+                shutil.copy2(source, candidate)
+                if digest(candidate) != entry["sha256"]:
+                    raise ValueError("Post-copy checksum failed; original preserved.")
+                os.link(candidate, destination)  # Publish exclusively; never replace another copy.
+        if destination.is_symlink() or digest(destination) != entry["sha256"]:
+            raise ValueError("Post-copy checksum failed; original preserved.")
+        if source.exists() and (source.is_symlink() or digest(source) != entry["sha256"]):
+            raise ValueError("Source changed during copying; changed original preserved.")
+    if digest(path) != inventory_hash:
+        raise ValueError("Inventory changed during copying; no originals removed.")
+    if not receipt_path.exists():
+        with tempfile.TemporaryDirectory(prefix=".dataset-receipt-", dir=PRIVATE) as temporary:
+            receipt = Path(temporary) / "receipt.json"
+            receipt.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+            os.link(receipt, receipt_path)  # Historical inventories and receipts remain untouched.
+    elif json.loads(receipt_path.read_text()) != result:
+        raise ValueError("Copy receipt changed during copying; existing receipt preserved.")
+    print(f"Copied and hash-verified {len(manifest['entries'])} images. No source files removed.")
 
 
 def normalize_groups(groups, hashes):
@@ -164,7 +181,9 @@ def main():
     sub.add_parser("inventory").add_argument(
         "source", help="Exact user-provided dataset directory; no movement"
     )
-    sub.add_parser("relocate", help="Move only inventoried image files after checking all hashes")
+    sub.add_parser(
+        "relocate", help="Copy inventoried images without removing originals (legacy name)"
+    )
     sub.add_parser("freeze").add_argument(
         "grouping",
         help="JSON mapping of 20 day IDs to captures: [{id, pages: {page_id: source_sha256}}]",

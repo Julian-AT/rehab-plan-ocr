@@ -14,6 +14,12 @@ and its consent draft. `make intake` copies a checked incoming batch without
 changing existing originals, references or group assignments. Intake never grants
 annotation approval, train/validation assignment or privacy-mask approval.
 
+The historical `dataset.py relocate` command now makes verified copies and never
+removes source files. Its legacy name remains for compatibility. Existing target
+copies and `inventory.json` stay unchanged; a separate immutable
+`copy-receipt.json` records the copied hashes and zero source deletions. A changed
+source or conflicting destination stops verification without deleting either file.
+
 ## Review and approval
 
 Use the [local reference CLI](reference-cli.md). The former desktop lab is removed.

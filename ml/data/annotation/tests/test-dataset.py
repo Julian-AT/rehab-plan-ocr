@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "dataset", Path(__file__).resolve().parents[4] / "ml/data/annotation/dataset.py"
@@ -27,7 +28,7 @@ class DatasetTests(unittest.TestCase):
                 dataset.inventory(source)
             self.assertEqual((dataset.PRIVATE / "inventory.json").read_bytes(), before)
 
-    def test_relocation_preserves_names_bytes_and_unrelated_files(self):
+    def test_legacy_relocate_copies_and_preserves_originals_inventory_and_receipt(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source"
@@ -38,11 +39,22 @@ class DatasetTests(unittest.TestCase):
             other.write_text("keep")
             dataset.PRIVATE = root / "private"
             dataset.inventory(source)
+            inventory = dataset.PRIVATE / "inventory.json"
+            before = inventory.read_bytes()
             dataset.relocate()
+            receipt_path = dataset.PRIVATE / "copy-receipt.json"
+            receipt_before = (receipt_path.read_bytes(), receipt_path.stat().st_mtime_ns)
             dataset.relocate()
             self.assertEqual((dataset.PRIVATE / "raw/original.JPG").read_bytes(), b"invented bytes")
-            self.assertFalse(photo.exists())
+            self.assertEqual(photo.read_bytes(), b"invented bytes")
             self.assertTrue(other.exists())
+            self.assertEqual(inventory.read_bytes(), before)
+            self.assertEqual(
+                (receipt_path.read_bytes(), receipt_path.stat().st_mtime_ns), receipt_before
+            )
+            receipt = json.loads(receipt_before[0])
+            self.assertEqual(receipt["status"], "copied_hashes_verified")
+            self.assertEqual(receipt["source_deletions"], 0)
 
     def test_changed_source_stops_before_movement(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -57,6 +69,83 @@ class DatasetTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 dataset.relocate()
             self.assertTrue(photo.exists())
+
+    def test_source_changed_after_preflight_is_preserved_and_not_certified(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            photo = source / "original.png"
+            photo.write_bytes(b"initial")
+            dataset.PRIVATE = root / "private"
+            dataset.inventory(source)
+            inventory = dataset.PRIVATE / "inventory.json"
+            before = inventory.read_bytes()
+            target = dataset.PRIVATE / "raw/original.png"
+            target.parent.mkdir()
+            target.write_bytes(b"initial")
+            original_digest, checks = dataset.digest, 0
+
+            def changing_digest(path):
+                nonlocal checks
+                result = original_digest(path)
+                if path == target:
+                    checks += 1
+                    if checks == 2:
+                        photo.write_bytes(b"concurrently changed original")
+                return result
+
+            with patch.object(dataset, "digest", side_effect=changing_digest):
+                with self.assertRaisesRegex(ValueError, "changed original preserved"):
+                    dataset.relocate()
+            self.assertEqual(photo.read_bytes(), b"concurrently changed original")
+            self.assertEqual(target.read_bytes(), b"initial")
+            self.assertEqual(inventory.read_bytes(), before)
+            self.assertFalse((dataset.PRIVATE / "copy-receipt.json").exists())
+
+    def test_concurrent_destination_and_existing_partial_file_are_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            photo = source / "original.png"
+            photo.write_bytes(b"initial")
+            dataset.PRIVATE = root / "private"
+            dataset.inventory(source)
+            target = dataset.PRIVATE / "raw/original.png"
+            target.parent.mkdir()
+            partial = target.with_suffix(".png.part")
+            partial.write_bytes(b"existing interrupted copy")
+            copy = dataset.shutil.copy2
+
+            def competing_copy(source, destination):
+                copy(source, destination)
+                target.write_bytes(b"another writer's destination")
+
+            with patch.object(dataset.shutil, "copy2", side_effect=competing_copy):
+                with self.assertRaises(FileExistsError):
+                    dataset.relocate()
+            self.assertEqual(photo.read_bytes(), b"initial")
+            self.assertEqual(target.read_bytes(), b"another writer's destination")
+            self.assertEqual(partial.read_bytes(), b"existing interrupted copy")
+            self.assertFalse((dataset.PRIVATE / "copy-receipt.json").exists())
+
+    def test_differing_existing_receipt_is_preserved_before_copying(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            photo = source / "original.png"
+            photo.write_bytes(b"initial")
+            dataset.PRIVATE = root / "private"
+            dataset.inventory(source)
+            receipt = dataset.PRIVATE / "copy-receipt.json"
+            receipt.write_text('{"historical": true}\n')
+            with self.assertRaisesRegex(ValueError, "Existing copy receipt differs"):
+                dataset.relocate()
+            self.assertEqual(receipt.read_text(), '{"historical": true}\n')
+            self.assertEqual(photo.read_bytes(), b"initial")
+            self.assertFalse((dataset.PRIVATE / "raw").exists())
 
     def test_alternates_share_day_and_page_without_doubling_schedule(self):
         groups = {
