@@ -106,7 +106,13 @@ def refresh(output):
         raise ValueError("Use an existing listening run below .local/runs")
     raw = (output / "manifest.json").read_bytes()
     manifest = json.loads(raw)
-    prompts = json.loads((output / "prompts.json").read_text())["samples"]
+    prompt_bytes = (output / "prompts.json").read_bytes()
+    if (
+        manifest.get("source_identities", {}).get("ml/evaluation/speech/prompts.json")
+        != hashlib.sha256(prompt_bytes).hexdigest()
+    ):
+        raise ValueError("Listening prompts changed or have no retained identity")
+    prompts = json.loads(prompt_bytes)["samples"]
     expected = {p["id"] for p in prompts}
     for code, voice in manifest["key"].items():
         if not re.fullmatch(r"Stimme-\d{2}", code):
