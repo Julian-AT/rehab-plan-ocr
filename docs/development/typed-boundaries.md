@@ -514,10 +514,20 @@ der aktive Agenda-Abgleich ebenfalls typisierte Aufträge und Ergebnisse.
 Weitere interne Serialisierungen und Fehlerprojektionen sind noch zu prüfen. Bestehende Bereichs-, Revisions-, Bestätigungs- und
 Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
-`ServiceError::Legacy` hält die bisherige Verarbeitung von Domain-Fehlertexten
-kompatibel. Native Callback-Fehler dürfen diesen Adapter nicht benutzen. Die
-noch vorhandene textbasierte Zuordnung von Domain-Fehlern ist gesondert zu
-migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
+Seit `56a223c` klassifiziert die FFI-Grenze keine Fehler mehr anhand deutscher
+Texte. `ServiceError::Domain` trennt die fünf fachlichen Identitäten abgelaufener
+Scan, veraltete Revision/Vorschau, belegte Verarbeitung und unklarer
+Schreibabschluss vom unveränderten Diagnosetext. Die erzeugenden Schutzprüfungen
+liefern diese Identitäten ausdrücklich. Der Store unterscheidet fehlende Scans
+und ungeklärte Kalenderschreibvorgänge ebenfalls typisiert.
+
+`ServiceError::Legacy` erhält gewöhnliche Validierungsdiagnosen; ihr Wortlaut
+ändert die Fehlerklasse nicht. Native Callback-Fehler behalten ihre vorhandenen
+eigenen Varianten. Display-/JSON-Diagnosen, Journale und native AppError-Varianten
+bleiben erhalten; ausdrücklich als Speicherfehler behandelte Schnittstellen
+behalten diese Zuordnung. 66 gezielte Core-/FFI-Fälle, Clippy, iOS-ONNX-Kompilierung
+und unveränderte generierte Bindings bestehen. Die gemeinsame Appprüfung bleibt
+ein gesonderter Nachweis; Architekturpaket D ist damit nicht pauschal abgeschlossen.
 
 ## Begrenztes Einlesen von Originalen
 
