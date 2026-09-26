@@ -80,6 +80,30 @@ import XCTest
     launch(fixture: "tool-probe")
     XCTAssertTrue(app.buttons["speak"].exists)
   }
+  func testRejectedCreationDoesNotBecomeLaterCalendarChange() {
+    launch(fixture: "voice-answers")
+    app.buttons["voice-details"].tap()
+    let response = app.staticTexts["voice-response-details"]
+    func ask(_ text: String, containing expected: String) {
+      let input =
+        app.textViews["voice-message"].exists
+        ? app.textViews["voice-message"] : app.textFields["voice-message"]
+      XCTAssertTrue(input.waitForExistence(timeout: 5))
+      input.tap()
+      input.typeText(text)
+      app.buttons["voice-send"].tap()
+      expectation(for: NSPredicate(format: "label CONTAINS %@", expected), evaluatedWith: response)
+      waitForExpectations(timeout: 15)
+    }
+    app.buttons["voice-create"].tap()
+    XCTAssertTrue(app.textFields["Bezeichnung"].waitForExistence(timeout: 5))
+    ask("Nein danke", containing: "Es wird nichts geändert")
+    XCTAssertFalse(app.textFields["Bezeichnung"].exists)
+    ask("Termine am 31. Februar", containing: "Datum ist ungültig")
+    ask("Wie viele Termine habe ich morgen?", containing: "3 passende Termine")
+    XCTAssertFalse(app.buttons["confirm-event"].exists)
+    capture("voice-rejected-creation-and-invalid-spoken-date")
+  }
   func testTimeConstraintsAndAfterThatUseLiveCalendarFacts() {
     launch(fixture: "voice-answers")
     app.buttons["voice-details"].tap()

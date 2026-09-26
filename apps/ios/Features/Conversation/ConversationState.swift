@@ -9,6 +9,12 @@ enum ConversationState {
   case collecting(VoiceIntent, Question)
   case confirming(VoiceIntent)
 
+  func rejectsPendingChange(_ text: String) -> Bool {
+    guard [.create, .update, .remove].contains(intent.action) else { return false }
+    return ["nein", "nein danke", "doch nicht", "bitte nicht", "lieber nicht"]
+      .contains(VoiceRules.normalized(text).trimmingCharacters(in: .punctuationCharacters))
+  }
+
   var question: Question {
     switch self {
     case .idle, .resolving: .action

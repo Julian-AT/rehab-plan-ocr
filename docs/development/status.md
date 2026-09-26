@@ -32,6 +32,9 @@ establish current device behavior or authorize an update.
   Dates, minimal voice changes and explicit conversation state have native probes.
   Time constraints survive pagination; “Und danach?” rereads the visible anchor.
   Explicit dates are retained when resolving references. Both typed-query UI tests pass.
+- German month names/ordinals, invalid dates, mixed-format self-corrections and
+  negated field values have executable regressions. Short rejections drop pending
+  mutations. The corresponding new UI scenario is still blocked by audio aborts.
 - Timestamp projections avoid repeated parsing. Microphone delivery is ordered and
   bounded, with waveform publication limited to 20 Hz. Existing natural-pause
   thresholds are unchanged. Output PCM validation/decoding and camera reading/JPEG
@@ -56,6 +59,12 @@ The five affected cases now pass in separate current-build runs; the later two
 passed during serial simulator use. This does not resolve the intermittent abort
 or establish a complete UI pass. The [run record](../releases/history/2026-09-26-s17-ui-audio.md)
 distinguishes the crashes from a separately canceled creation flow.
+
+A subsequent complete serial run of the current runtime again ends with 58 passed,
+five CoreAudio failures and one setting skip. Immediately afterwards, a minimal
+independent AVAudioEngine app reproduces the same abort at mixer creation. This
+establishes reproduction outside the app, but does not close the audio gate or
+prove the behavior on physical hardware.
 
 The common interpretation contract now validates capabilities, availability,
 bounded requests/output, cancellation and deadlines. Rules and Apple Intelligence

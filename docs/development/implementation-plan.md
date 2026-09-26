@@ -172,6 +172,16 @@ has been claimed. Milestones 1–4 remain open until their complete exit gates p
 
 ## Verified implementation slices — 2026-09-26
 
+German date rules now accept month names and day ordinals, validate leap dates and
+year lengths, and retain the latest explicit self-correction across time formats.
+The reproduced “09:30, ich meine um zehn” error now yields 10:00. Negated field
+values stay unset; “Habe ich keine Termine morgen?” retains tomorrow. Month/day
+words are excluded from event-title matching. Short rejections such as “Nein danke”
+discard a pending change through the existing conversation state. Voice, state,
+endpoint and live-calendar answer probes pass; endpoint thresholds remain unchanged.
+The added UI rejection regression is not yet qualified because simulator audio
+aborts before the interaction can be verified. Full dialogue/device gates remain open.
+
 Augmentation v3 expands the 24 recipes to 40, composes transformations and shares
 privacy/crop/obstruction visibility with the labels. Cropped blank fields no longer
 retain a complete blank target; unavailable text is removed. Nine geometry and

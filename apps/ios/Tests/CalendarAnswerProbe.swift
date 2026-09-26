@@ -77,6 +77,20 @@ actor CalendarFixture {
     precondition(excluded.total == 0)
     var vienna = Calendar(identifier: .gregorian)
     vienna.timeZone = TimeZone(identifier: "Europe/Vienna")!
+    for phrase in ["Termine am 21. September", "Termine am einundzwanzigsten September"] {
+      let request = CalendarQuestion.direct(phrase, now: now, calendar: vienna)
+      precondition(request?.date != nil, phrase)
+      precondition(vienna.component(.day, from: request!.date!) == 21, phrase)
+    }
+    for phrase in [
+      "Termine am 31. Februar", "Termine am 12. September 202", "Termine nicht morgen",
+      "Termine am einunddreissigsten April",
+    ] {
+      precondition(CalendarQuestion.direct(phrase, now: now, calendar: vienna) == nil, phrase)
+    }
+    let negatedCount = CalendarQuestion.direct(
+      "Habe ich keine Termine morgen?", now: now, calendar: vienna)
+    precondition(vienna.component(.day, from: negatedCount!.date!) == 16)
     let morning = CalendarQuestion.direct("Termine heute vormittags", now: now, calendar: vienna)!
     precondition(morning.beforeMinutes == 720 && morning.afterMinutes == nil)
     let afternoon = CalendarQuestion.direct(

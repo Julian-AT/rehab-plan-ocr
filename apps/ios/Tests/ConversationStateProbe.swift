@@ -17,7 +17,13 @@ import Foundation
     state.ask(.title)
     state.intent.title = "Kontrolle"
     precondition(state.intent.action == .create && state.intent.title == "Kontrolle")
+    for response in ["Nein", "Nein danke.", "Doch nicht", "Bitte nicht", "Lieber nicht"] {
+      precondition(state.rejectsPendingChange(response), response)
+    }
+    precondition(!state.rejectsPendingChange("Nein, ich meine Kontrolle"))
+    precondition(!state.rejectsPendingChange("Nicht morgen, sondern Mittwoch"))
     state.ask(.action)
+    precondition(!state.rejectsPendingChange("Nein"))
     state.intent.action = .update
     precondition(state.intent.title == nil && state.intent.referenceText.isEmpty)
     print("Conversation states: cancellation, negation, subject change and fresh mutation passed")

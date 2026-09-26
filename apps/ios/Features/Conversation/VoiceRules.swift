@@ -97,45 +97,97 @@ enum VoiceRules {
       }
     }
   }
+  private static let months = [
+    "januar": 1, "jänner": 1, "februar": 2, "märz": 3, "april": 4, "mai": 5, "juni": 6,
+    "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11, "dezember": 12,
+  ]
+  private static let ordinalStems = [
+    "erst", "zweit", "dritt", "viert", "fünft", "sechst", "siebt", "acht", "neunt", "zehnt",
+    "elft", "zwölft", "dreizehnt", "vierzehnt", "fünfzehnt", "sechzehnt", "siebzehnt",
+    "achtzehnt", "neunzehnt", "zwanzigst", "einundzwanzigst", "zweiundzwanzigst",
+    "dreiundzwanzigst", "vierundzwanzigst", "fünfundzwanzigst", "sechsundzwanzigst",
+    "siebenundzwanzigst", "achtundzwanzigst", "neunundzwanzigst", "dreissigst", "einunddreissigst",
+  ]
+  private static let monthPattern = "(?:\(months.keys.sorted().joined(separator: "|")))"
+  private static let ordinalPattern = "(?:\(ordinalStems.joined(separator: "|")))e[nrms]?"
+  /// Shared with complete-match calendar questions, including malformed years so
+  /// they can be rejected rather than silently treated as an undated question.
+  static let civilDatePattern =
+    "(?:\\d{1,2}[./]\\d{1,2}[./]\\d*|(?:\\d{1,2}\\.?|\(ordinalPattern))\\s+\(monthPattern)(?:\\s+\\d+)?)"
   private static let datePattern =
-    #"\b(?:übermorgen|morgen|heute|sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag|\d{1,2}[./]\d{1,2}[./]\d*)\b|\b\d{1,2}[./]\d{1,2}[./](?!\d)"#
+    "\\b(?:übermorgen|morgen|heute|sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag|\(civilDatePattern))(?![\\p{L}\\d])"
+  private static let correctionPattern = #"\b(?:nein|sondern|ich meine)\b"#
 
-  private static func dateContext(_ input: String) -> String {
-    let text = normalized(input)
-    if let correction = matches(#"\b(?:nein|sondern|ich meine)\s+(.+)$"#, text).last,
-      !matches(datePattern, correction[1]).isEmpty
+  private static func correctedContext(_ text: String, containing pattern: String) -> String {
+    guard let regex = expressions.expression(correctionPattern) else { return text }
+    let ns = text as NSString
+    // Inspect the latest correction first, including when several repairs occur.
+    for marker in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed()
     {
-      return correction[1]
+      let tail = ns.substring(from: NSMaxRange(marker.range)).trimmingCharacters(in: .whitespaces)
+      if !matches(pattern, tail).isEmpty { return tail }
     }
     return text
+  }
+
+  private static func rejectedField(_ text: String, pattern: String) -> Bool {
+    // Negation must apply to this field. “Habe ich keine Termine morgen?” still
+    // asks about tomorrow; “nicht morgen” does not supply a replacement date.
+    !matches(
+      "\\b(?:nicht|kein|keine|keinen|keinem)\\s+(?:(?:am|um|auf|für|den|dem)\\s+)?(?:\(pattern))",
+      text
+    ).isEmpty
+      || !matches("(?:\(pattern))\\s+(?:(?:doch|lieber)\\s+)?nicht\\b", text).isEmpty
+      || !matches(#"\bnein\s*$"#, text).isEmpty
+  }
+
+  private static func dateContext(_ input: String) -> String {
+    correctedContext(normalized(input), containing: datePattern)
   }
 
   static func hasInvalidDate(_ text: String, now: Date = .now, calendar: Calendar = .current)
     -> Bool
   {
-    matches(#"\b\d{1,2}[./]\d{1,2}[./]\d*"#, dateContext(text)).contains {
+    matches("\\b\(civilDatePattern)(?![\\p{L}\\d])", dateContext(text)).contains {
       date($0[0], now: now, calendar: calendar) == nil
     }
   }
 
   static func date(_ text: String, now: Date, calendar: Calendar) -> Date? {
     let context = dateContext(text)
-    guard let token = matches(datePattern, context).last?.first else { return nil }
+    guard !rejectedField(context, pattern: datePattern),
+      let token = matches(datePattern, context).last?.first
+    else { return nil }
     let today = calendar.startOfDay(for: now)
     if let offset = ["heute": 0, "morgen": 1, "übermorgen": 2][token] {
       return calendar.date(byAdding: .day, value: offset, to: today)
     }
-    if let value = matches(#"^(\d{1,2})[./](\d{1,2})[./](\d{4})?$"#, token).first,
-      let day = Int(value[1]), let month = Int(value[2])
-    {
-      let year = Int(value[3]) ?? calendar.component(.year, from: now)
-      guard (1...9999).contains(year),
+    func civilDate(day: Int, month: Int, yearText: String) -> Date? {
+      guard yearText.isEmpty || yearText.count == 4 else { return nil }
+      let year = Int(yearText) ?? calendar.component(.year, from: now)
+      guard (1...9999).contains(year), (1...12).contains(month), (1...31).contains(day),
         let date = calendar.date(from: DateComponents(year: year, month: month, day: day)),
         calendar.component(.day, from: date) == day,
         calendar.component(.month, from: date) == month,
         calendar.component(.year, from: date) == year
       else { return nil }
       return date
+    }
+    if let value = matches(#"^(\d{1,2})[./](\d{1,2})[./](\d*)$"#, token).first,
+      let day = Int(value[1]), let month = Int(value[2])
+    {
+      return civilDate(day: day, month: month, yearText: value[3])
+    }
+    if let value = matches(
+      "^(\\d{1,2})\\.?\\s+(\(monthPattern))(?:\\s+(\\d+))?$", token
+    ).first, let day = Int(value[1]), let month = months[value[2]] {
+      return civilDate(day: day, month: month, yearText: value[3])
+    }
+    if let value = matches(
+      "^(\(ordinalStems.joined(separator: "|")))e[nrms]?\\s+(\(monthPattern))(?:\\s+(\\d+))?$",
+      token
+    ).first, let index = ordinalStems.firstIndex(of: value[1]), let month = months[value[2]] {
+      return civilDate(day: index + 1, month: month, yearText: value[3])
     }
     let days = [
       "sonntag": 1, "montag": 2, "dienstag": 3, "mittwoch": 4, "donnerstag": 5, "freitag": 6,
@@ -148,45 +200,45 @@ enum VoiceRules {
     }
     return nil
   }
-  static func time(_ text: String) -> Int? {
-    var text = normalized(text)
-    if let correction = text.range(of: " nein ", options: .backwards) {
-      text = String(text[correction.upperBound...])
-    }
-    text = replacingNumbers(text, words: timeWords, pattern: timePattern)
-    var minutes: Int?
-    if let m = matches("\\b(dreiviertel|halb|viertel) (\\d{1,2})\\b", text).last,
-      let hour = Int(m[2]), (1...24).contains(hour)
-    {
+  static func time(_ input: String) -> Int? {
+    let clockPattern =
+      #"\b(dreiviertel|halb|viertel) (\d{1,2})\b|\b(\d{1,2}):(\d+)\b|(?:\bum |\bauf |^)(\d{1,2})(?: uhr(?: (\d{1,2}))?\b|$)"#
+    let numeric = replacingNumbers(normalized(input), words: timeWords, pattern: timePattern)
+    let text = correctedContext(numeric, containing: clockPattern)
+    guard !rejectedField(text, pattern: clockPattern),
+      let m = matches(clockPattern, text).last
+    else { return nil }
+    var minutes: Int
+    if let hour = Int(m[2]), (1...24).contains(hour) {
       minutes = (hour - 1) * 60 + (m[1] == "halb" ? 30 : m[1] == "dreiviertel" ? 45 : 15)
-    } else if let m = matches("\\b(\\d{1,2}):(\\d{2})\\b", text).last, let h = Int(m[1]),
-      let min = Int(m[2]), h < 24, min < 60
+    } else if let hour = Int(m[3]), let minute = Int(m[4]),
+      m[4].count == 2, hour < 24, minute < 60
     {
-      minutes = h * 60 + min
-    } else if let m = matches("(?:\\bum |\\bauf |^)(\\d{1,2})(?: uhr(?: (\\d{1,2}))?\\b|$)", text)
-      .last, let h = Int(m[1]), h < 24, (Int(m[2]) ?? 0) < 60
-    {
-      minutes = h * 60 + (Int(m[2]) ?? 0)
+      minutes = hour * 60 + minute
+    } else if let hour = Int(m[5]), hour < 24, (Int(m[6]) ?? 0) < 60 {
+      minutes = hour * 60 + (Int(m[6]) ?? 0)
+    } else {
+      return nil
     }
-    if let value = minutes, value < 12 * 60, text.contains("nachmittag") || text.contains("abends")
-    {
-      minutes = value + 12 * 60
+    if minutes < 12 * 60, text.contains("nachmittag") || text.contains("abends") {
+      minutes += 12 * 60
     }
     return minutes
   }
   static func duration(_ text: String) -> Int? {
-    let input = replacingNumbers(normalized(text), words: durationWords, pattern: durationPattern)
-    if let match = matches("\\b(\\d{1,3}) minuten\\b", input).last, let value = Int(match[1]),
-      value > 0
-    {
-      return value
-    }
-    return nil
+    let pattern = #"\b(\d{1,3}) minuten\b"#
+    let numeric = replacingNumbers(normalized(text), words: durationWords, pattern: durationPattern)
+    let input = correctedContext(numeric, containing: pattern)
+    guard !rejectedField(input, pattern: pattern),
+      let match = matches(pattern, input).last, let value = Int(match[1]), value > 0
+    else { return nil }
+    return value
   }
   static func referenceWords(_ input: String) -> [String] {
-    let clean = replacing(
+    let calendarFree = replacing(
       "(?:im|in|aus|vom) kalender .+?(?= am | um | heute| morgen|$)", in: normalized(input),
       with: "")
+    let clean = replacing(datePattern, in: calendarFree, with: "")
     let ignored = Set(
       "verschiebe verschieben ändere ändern lösche löschen entferne entfernen den der die das dem meinen mein meine meiner mir bitte termin termine behandlung um am auf von nach vor bis uhr heute morgen übermorgen nächste nächsten nächster ist wann zeige finde habe ich mich dienstag montag mittwoch donnerstag freitag samstag sonntag halb viertel dreiviertel nein keine keinen kein nicht neun zehn eins ein zwei drei vier fünf sechs sieben acht elf zwölf"
         .split(separator: " ").map(String.init))
@@ -196,7 +248,7 @@ enum VoiceRules {
   {
     let text = normalized(input)
     var result = VoiceIntent()
-    result.corrected = text.contains("nein")
+    result.corrected = !matches(correctionPattern, text).isEmpty
     if let named = matches(
       "(?:im|in|aus|vom) kalender (.+?)(?: am | um | auf | heute| morgen|$)", text
     ).last {

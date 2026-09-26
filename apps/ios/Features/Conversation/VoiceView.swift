@@ -267,7 +267,7 @@ struct VoiceSnapshot {
       cancelSession()
       return
     }
-    if parsed.negatedChange {
+    if parsed.negatedChange || interaction.rejectsPendingChange(text) {
       say(
         VoiceAddress.saved().choose(
           "Es wird nichts geändert. Was möchtest du wissen?",

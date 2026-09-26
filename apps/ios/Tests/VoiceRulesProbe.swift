@@ -11,6 +11,8 @@ import Foundation
     let times = [
       "halb zehn": 570, "dreiviertel zehn": 585, "viertel zehn": 555, "um neun Uhr": 540,
       "um 09:30": 570, "neun": 540, "um neun nein um zehn": 600, "um drei Uhr nachmittags": 900,
+      "um 09:30, ich meine um zehn": 600, "nicht um neun, sondern zehn": 600,
+      "um neun nein um zehn nein halb elf": 630,
     ]
     for (text, expected) in times {
       precondition(VoiceRules.time(text) == expected, "Time: \(text)")
@@ -31,6 +33,36 @@ import Foundation
     for invalid in ["31.02.2026", "29.02.2025", "12.09.202", "12.09.20261"] {
       precondition(VoiceRules.hasInvalidDate(invalid, now: now, calendar: calendar), invalid)
     }
+    for invalid in [
+      "31. Februar", "am einunddreissigsten April", "29. Februar 2025", "0. Mai",
+      "12. September 202", "12. September 20261", "32. Januar",
+    ] {
+      precondition(VoiceRules.hasInvalidDate(invalid, now: now, calendar: calendar), invalid)
+      precondition(VoiceRules.date(invalid, now: now, calendar: calendar) == nil, invalid)
+    }
+    for (input, day, month) in [
+      ("am ersten Oktober", 1, 10), ("am 14. September 2026", 14, 9),
+      ("am einundzwanzigsten September", 21, 9), ("am fünften März", 5, 3),
+      ("am 29. Februar 2028", 29, 2), ("31. Februar, ich meine 14. September", 14, 9),
+      ("31. Februar nein morgen nein am 14. September", 14, 9),
+      ("nicht morgen, sondern am 14. September", 14, 9),
+    ] {
+      guard let date = VoiceRules.date(input, now: now, calendar: calendar) else {
+        preconditionFailure(input)
+      }
+      precondition(calendar.component(.day, from: date) == day, input)
+      precondition(calendar.component(.month, from: date) == month, input)
+      precondition(!VoiceRules.hasInvalidDate(input, now: now, calendar: calendar), input)
+    }
+    precondition(VoiceRules.date("nicht morgen", now: now, calendar: calendar) == nil)
+    precondition(
+      VoiceRules.date("am 14. September doch nicht", now: now, calendar: calendar) == nil)
+    precondition(VoiceRules.time("nicht um neun") == nil)
+    precondition(VoiceRules.time("um neun doch nicht") == nil)
+    precondition(VoiceRules.time("um neun nein um 25:00") == nil)
+    precondition(VoiceRules.duration("keine dreissig Minuten") == nil)
+    precondition(VoiceRules.duration("dreissig Minuten nein zwanzig Minuten") == 20)
+    precondition(parse("Erstelle einen Termin morgen um 09:30 ich meine um zehn").corrected)
     for (input, day) in [
       ("morgen nein heute", 12), ("übermorgen nein morgen", 13), ("morgen nein am 14.09.2026", 14),
       ("31.02.2026 nein morgen", 13),
@@ -47,6 +79,9 @@ import Foundation
     precondition(VoiceRules.duration("dreißig Minuten") == 30)
     precondition(
       VoiceRules.referenceWords("Lösche meine Physiotherapie morgen") == ["physiotherapie"])
+    precondition(
+      VoiceRules.referenceWords("Lösche meine Physiotherapie am einundzwanzigsten September")
+        == ["physiotherapie"])
     precondition(parse("Termine im Kalender Privat morgen").calendarName == "privat")
     precondition(calendar.component(.day, from: parse("Termine übermorgen").date!) == 14)
     precondition(parse("Habe ich keine Termine?").action == .list)

@@ -80,7 +80,7 @@ struct CalendarQuestion: Equatable, Sendable {
     let next = #"^(?:was|wann) ist (?:mein|der) nächste(?:r)? termin$|^(?:mein )?nächster termin$"#
     if !VoiceRules.matches(next, text).isEmpty { return Self(detail: .next, days: 90) }
     let dates =
-      #"heute|morgen|übermorgen|(?:am )?(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|\d{1,2}[./]\d{1,2}[./](?:\d{4})?)"#
+      "heute|morgen|übermorgen|(?:am )?(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|\(VoiceRules.civilDatePattern))"
     let day = "(?: (?:\(dates)))?"
     let list =
       "^(?:(?:welche termine habe ich|habe ich (?:keine )?termine|was steht an|(?:meine )?termine|(?:bitte )?termine vorlesen|zeige (?:mir )?(?:meine )?termine)\(day)|(?:\(dates)) termine(?: vorlesen)?)$"
@@ -88,7 +88,12 @@ struct CalendarQuestion: Equatable, Sendable {
     if !VoiceRules.matches(list, text).isEmpty || !VoiceRules.matches(count, text).isEmpty {
       let date = VoiceRules.date(text, now: now, calendar: calendar)
       // An explicit invalid date must never silently turn into today's query.
-      if text.contains(where: \.isNumber) && date == nil { return nil }
+      if date == nil,
+        text.contains(where: \.isNumber)
+          || !VoiceRules.matches(VoiceRules.civilDatePattern, text).isEmpty
+      {
+        return nil
+      }
       return Self(
         detail: VoiceRules.matches(count, text).isEmpty ? .list : .count,
         date: date ?? calendar.startOfDay(for: now))
