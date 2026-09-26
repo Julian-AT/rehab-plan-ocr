@@ -2,7 +2,6 @@ import EventKit
 import PhotosUI
 import UIKit
 import UserNotifications
-import Vision
 
 struct SnapshotArgs: Decodable { let records: [OwnedRecord] }
 struct OverlapArgs: Decodable {
@@ -37,6 +36,16 @@ struct ShareArgs: Decodable {
 /// isolated separately so UIKit cannot infer main-actor isolation for the bridge.
 public final class NativeServices: @unchecked Sendable {
   public static let shared = NativeServices()
+  public func recognizeText(
+    _ request: NativeTextRecognitionRequest,
+    completion: @escaping @Sendable (Result<NativeTextRecognitionResult, Error>) -> Void
+  ) {
+    measured(.ocr) { done in
+      NativeTextRecognition.recognize(request, completion: done)
+    } completion: {
+      completion($0)
+    }
+  }
   public func calendarStatus(
     completion: @escaping @Sendable (Result<NativeCalendarPlatformStatus, Error>) -> Void
   ) {
@@ -166,7 +175,6 @@ public final class NativeServices: @unchecked Sendable {
     let step: DiagnosticStep? =
       switch command {
       case "camera", "photos", "decodePhoto": .intake
-      case "recognize": .ocr
       case "mutateEvent": .calendarWrite
       case "queryEvents", "getEvent", "calendarStatus", "inspectCalendarLinks":
         .calendarRead
@@ -215,10 +223,7 @@ public final class NativeServices: @unchecked Sendable {
         DispatchQueue.global(qos: .userInitiated).async {
           do { try self.decodePhoto(request) } catch { request.reject(error) }
         }
-      case "recognize":
-        DispatchQueue.global(qos: .userInitiated).async {
-          do { try self.recognize(request) } catch { request.reject(error) }
-        }
+      case "recognize": try recognize(request)
       case "protectStorage": try protectStorage(request)
       case "share":
         DispatchQueue.main.async {
@@ -670,6 +675,7 @@ public final class NativeServices: @unchecked Sendable {
     else { throw NativeServiceError.invalidInput("Foto nicht lesbar oder zu groß.") }
     invoke.resolve(["base64": try NativePhoto.decode(data).base64EncodedString()])
   }
+  // Compatibility adapter: preserve the previous recognition wire format.
   func recognize(_ invoke: ServiceRequest) throws {
     struct Args: Decodable {
       let base64: String
@@ -677,56 +683,17 @@ public final class NativeServices: @unchecked Sendable {
       let budget_ms: Double?
     }
     let args = try invoke.parseArgs(Args.self)
-    guard let data = Data(base64Encoded: args.base64), let image = UIImage(data: data)?.cgImage
-    else {
-      invoke.reject("Bild für Vision fehlt.")
-      return
-    }
-    DispatchQueue.global(qos: .userInitiated).async {
-      let started = Date()
-      let request = VNRecognizeTextRequest()
-      request.recognitionLevel = .accurate
-      request.recognitionLanguages = ["de-DE", "en-US"]
-      request.usesLanguageCorrection = false
-      let timeout = DispatchWorkItem { request.cancel() }
-      DispatchQueue.global(qos: .userInitiated).asyncAfter(
-        deadline: .now() + min(60, max(0.001, (args.budget_ms ?? 60000) / 1000)), execute: timeout)
-      defer { timeout.cancel() }
-      do {
-        try VNImageRequestHandler(cgImage: image).perform([request])
-        var regions: [[String: Any]] = []
-        var observations: [[String: Any]] = []
-        for (index, observation) in (request.results ?? []).enumerated() {
-          let candidates = observation.topCandidates(3)
-          let bounds = observation.boundingBox
-          let x = bounds.minX * Double(image.width)
-          let y = (1 - bounds.maxY) * Double(image.height)
-          let w = bounds.width * Double(image.width)
-          let h = bounds.height * Double(image.height)
-          let id = String(format: "region-%04d", index)
-          regions.append([
-            "id": id,
-            "polygon": [
-              ["x": x, "y": y], ["x": x + w, "y": y], ["x": x + w, "y": y + h],
-              ["x": x, "y": y + h],
-            ], "frame": "page", "kind": "text", "parent": "page", "children": [],
-          ])
-          observations.append([
-            "id": "obs-\(id)", "text": candidates.first?.string ?? "", "region_ids": [id],
-            "engine": "Apple Vision", "score": candidates.first?.confidence ?? 0,
-            "alternatives": candidates.dropFirst().map(\.string),
-          ])
-        }
-        invoke.resolve([
-          "regions": regions, "observations": observations,
-          "duration_ms": Int(Date().timeIntervalSince(started) * 1000),
-          "manifest": [
-            "engine": "Apple Vision", "revision": request.revision,
-            "system_version": ProcessInfo.processInfo.operatingSystemVersionString,
-            "language_correction": false,
-          ],
-        ])
-      } catch { invoke.reject("Lokale Vision-Erkennung fehlgeschlagen.") }
+    guard args.base64.utf8.count <= ((NativeTextRecognitionRequest.maximumBytes + 2) / 3) * 4,
+      let data = Data(base64Encoded: args.base64)
+    else { throw NativeServiceError.invalidInput("Bild für Vision fehlt oder ist zu groß.") }
+    let budget = args.budget_ms ?? Double(NativeTextRecognitionRequest.maximumBudgetMs)
+    guard budget.isFinite, budget >= 0,
+      budget <= Double(NativeTextRecognitionRequest.maximumBudgetMs)
+    else { throw NativeServiceError.invalidInput("Zeitbudget ungültig.") }
+    recognizeText(NativeTextRecognitionRequest(image: data, budgetMs: UInt64(budget.rounded(.up))))
+    {
+      result in
+      do { invoke.resolve(try result.get().legacyValue) } catch { invoke.reject(error) }
     }
   }
   func protectStorage(_ invoke: ServiceRequest) throws {

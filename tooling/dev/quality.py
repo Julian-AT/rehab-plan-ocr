@@ -340,6 +340,7 @@ def tests(portable):
             "system-speech",
             "capture-preparation",
             "native-photo",
+            "native-text-recognition",
             "speech-input",
             "ordered-settings",
             "service-request",
