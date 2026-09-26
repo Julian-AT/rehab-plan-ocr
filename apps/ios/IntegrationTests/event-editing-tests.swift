@@ -159,12 +159,12 @@ final class EventEditingTests: XCTestCase {
       let record = OwnedRecord(
         status: "saved", id: id, calendar_id: calendar.calendarIdentifier,
         external_id: try XCTUnwrap(after["external_id"] as? String), approved: values)
-      let _: [String: Any] = try await withCheckedThrowingContinuation { continuation in
+      let _: Void = try await withCheckedThrowingContinuation { continuation in
         agenda.queue.async {
           do {
             try agenda.sync(
               AgendaSyncArgs(records: [record], preferences: ReminderPreferences(enabled: true))
-            ) { continuation.resume(with: $0) }
+            ) { continuation.resume(with: $0.map { _ in () }) }
           } catch { continuation.resume(throwing: error) }
         }
       }

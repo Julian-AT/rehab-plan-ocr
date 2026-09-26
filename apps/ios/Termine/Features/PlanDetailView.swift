@@ -155,6 +155,8 @@ struct ReviewView: View {
   @State private var setup = false
   @State private var history = false
   @State private var delete = false
+  @State private var deleting = false
+  @State private var deletionError: String?
   @State private var diagnostics = false
   @State private var correction = false
   @State private var export = false
@@ -173,6 +175,13 @@ struct ReviewView: View {
   }
   var body: some View {
     List {
+      if deleting { ProcessingRow(text: "Originale werden gelöscht …") }
+      if let deletionError {
+        Section("Originale konnten nicht gelöscht werden") {
+          Text(deletionError).foregroundStyle(AppPalette.destructive)
+          Button("Erneut versuchen") { delete = true }
+        }
+      }
       if processing {
         Section {
           ProcessingRow(
@@ -333,6 +342,7 @@ struct ReviewView: View {
       }
       if typeSize.isAccessibilitySize { Section { saveControls } }
     }
+    .disabled(deleting)
     .pageTitle("Plan")
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -356,13 +366,15 @@ struct ReviewView: View {
             } icon: {
               Image(systemName: "trash").foregroundStyle(AppPalette.destructive)
             }
-          }.disabled(scanner.running)
+          }.disabled(scanner.running || deleting || model.saving)
         } label: {
           Label("Planaktionen", systemImage: "ellipsis")
-        }.accessibilityIdentifier("plan-actions")
+        }.disabled(deleting).accessibilityIdentifier("plan-actions")
       }
     }
-    .safeAreaInset(edge: .bottom) { if !typeSize.isAccessibilitySize { saveControls } }
+    .safeAreaInset(edge: .bottom) {
+      if !typeSize.isAccessibilitySize { saveControls.disabled(deleting) }
+    }
     .task(id: id) { await model.load(compare: !processing) }
     .onChange(of: scanner.running) { _, running in
       if !running {
@@ -466,12 +478,16 @@ struct ReviewView: View {
       titleVisibility: .visible
     ) {
       Button("Originale löschen", role: .destructive) {
+        guard !deleting else { return }
+        deleting = true
+        deletionError = nil
         Task {
+          defer { deleting = false }
           do {
             try await core.deleteScan(id: id)
             changed()
             dismiss()
-          } catch { model.error = userMessage(error) }
+          } catch { deletionError = userMessage(error) }
         }
       }
     }

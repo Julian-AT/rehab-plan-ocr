@@ -31,7 +31,7 @@ targets:
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Simulator integration tests use invented appointments and remove them afterward.
         CODE_SIGNING_ALLOWED: NO
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: AGENDA_TESTING
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "6.0"
 schemes:
   RehaSmoke:
     build:

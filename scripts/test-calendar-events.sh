@@ -11,4 +11,4 @@ runner=apps/ios/build/EventTests/Build/Products/Debug-iphonesimulator/RehaSmoke-
 xcrun simctl install "$event_simulator" "$runner"
 event_runner_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$runner/Info.plist")
 xcrun simctl privacy "$event_simulator" grant calendar "$event_runner_id"
-xcodebuild -project apps/ios/IntegrationTests/RehaSmoke.xcodeproj -scheme RehaSmoke -configuration Debug -destination "platform=iOS Simulator,id=$event_simulator" -derivedDataPath apps/ios/build/EventTests -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -only-testing:RehaSmoke/NotificationRaceTests -only-testing:RehaSmoke/EventEditingTests -only-testing:RehaSmoke/AgendaNativeTests test-without-building
+xcodebuild -project apps/ios/IntegrationTests/RehaSmoke.xcodeproj -scheme RehaSmoke -configuration Debug -destination "platform=iOS Simulator,id=$event_simulator" -derivedDataPath apps/ios/build/EventTests -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test-without-building

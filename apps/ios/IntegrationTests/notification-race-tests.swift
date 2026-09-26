@@ -63,6 +63,13 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
   func removeDelivered(_ ids: [String]) {}
 }
 
+private struct NotificationTestResult: Sendable {
+  let data: Data
+  subscript(key: String) -> Any? {
+    (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?[key]
+  }
+}
+
 final class NotificationRaceTests: XCTestCase {
   private func fixture(_ adapter: ControlledNotifications, timeout: TimeInterval = 3) throws -> (
     AgendaService, URL
@@ -74,35 +81,52 @@ final class NotificationRaceTests: XCTestCase {
     service.start(registerBackground: false)
     return (service, root)
   }
-  private func testNotification(_ service: AgendaService) async throws -> [String: Any] {
-    try await withCheckedThrowingContinuation { continuation in
-      service.queue.async { service.testNotification { continuation.resume(with: $0) } }
-    }
-  }
-  private func sync(_ service: AgendaService, records: [OwnedRecord], enabled: Bool) async throws
-    -> [String: Any]
+  private static func testNotification(_ service: AgendaService) async throws
+    -> NotificationTestResult
   {
-    try await withCheckedThrowingContinuation { continuation in
+    let data: Data = try await withCheckedThrowingContinuation { continuation in
+      service.queue.async {
+        service.testNotification {
+          continuation.resume(
+            with: $0.flatMap { result in
+              Result { try JSONSerialization.data(withJSONObject: result) }
+            })
+        }
+      }
+    }
+    return NotificationTestResult(data: data)
+  }
+  private static func sync(_ service: AgendaService, records: [OwnedRecord], enabled: Bool)
+    async throws
+    -> NotificationTestResult
+  {
+    let data: Data = try await withCheckedThrowingContinuation { continuation in
       service.queue.async {
         do {
           try service.sync(
             AgendaSyncArgs(records: records, preferences: ReminderPreferences(enabled: enabled))
-          ) { continuation.resume(with: $0) }
+          ) {
+            continuation.resume(
+              with: $0.flatMap { result in
+                Result { try JSONSerialization.data(withJSONObject: result) }
+              })
+          }
         } catch { continuation.resume(throwing: error) }
       }
     }
+    return NotificationTestResult(data: data)
   }
   func testFiveSecondAcceptanceAndImmediateFailure() async throws {
     let adapter = ControlledNotifications()
     let (service, root) = try fixture(adapter)
     defer { try? FileManager.default.removeItem(at: root) }
-    let result = try await testNotification(service)
+    let result = try await NotificationRaceTests.testNotification(service)
     XCTAssertEqual(result["delay_seconds"] as? Double, 5)
     XCTAssertEqual(result["confirmed_pending"] as? Bool, true)
     XCTAssertEqual(result["observed_delivered"] as? Bool, false)
     adapter.failAdds()
     do {
-      _ = try await testNotification(service)
+      _ = try await NotificationRaceTests.testNotification(service)
       XCTFail("Failed add was accepted")
     } catch {}
   }
@@ -112,7 +136,7 @@ final class NotificationRaceTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: root) }
     let held = expectation(description: "Add suspended")
     adapter.suspendAdds { held.fulfill() }
-    let pending = Task { try await self.testNotification(service) }
+    let pending = Task { _ = try await NotificationRaceTests.testNotification(service) }
     await fulfillment(of: [held], timeout: 2)
     do {
       _ = try await pending.value
@@ -126,7 +150,7 @@ final class NotificationRaceTests: XCTestCase {
     try await Task.sleep(for: .milliseconds(100))
     let snapshot = await adapter.snapshot()
     XCTAssertFalse(snapshot.pending.contains { $0.identifier.hasPrefix("reha.test") })
-    let retry = try await testNotification(service)
+    let retry = try await NotificationRaceTests.testNotification(service)
     XCTAssertEqual(retry["accepted"] as? Bool, true)
   }
   func testLateTimedOutTestCannotRemoveItsSuccessfulReplacement() async throws {
@@ -135,14 +159,14 @@ final class NotificationRaceTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: root) }
     let held = expectation(description: "First test suspended")
     adapter.suspendAdds { held.fulfill() }
-    let first = Task { try await self.testNotification(service) }
+    let first = Task { _ = try await NotificationRaceTests.testNotification(service) }
     await fulfillment(of: [held], timeout: 2)
     do {
       _ = try await first.value
       XCTFail("Expected timeout")
     } catch {}
     adapter.allowNewAdds()
-    let replacement = try await testNotification(service)
+    let replacement = try await NotificationRaceTests.testNotification(service)
     XCTAssertEqual(replacement["confirmed_pending"] as? Bool, true)
     let before = await adapter.snapshot().pending.map(\.identifier)
     adapter.resumeAdds()
@@ -187,16 +211,18 @@ final class NotificationRaceTests: XCTestCase {
           notes: "", reminder_minutes: 10))
       let held = expectation(description: "OS installed request before stalled callback")
       adapter.suspendAdds(installed: true) { held.fulfill() }
-      let first = Task { try await self.sync(service, records: [record], enabled: true) }
+      let first = Task {
+        _ = try await NotificationRaceTests.sync(service, records: [record], enabled: true)
+      }
       await fulfillment(of: [held], timeout: 2)
       _ = try await first.value
       adapter.allowNewAdds()
-      _ = try await sync(service, records: [record], enabled: true)
+      _ = try await NotificationRaceTests.sync(service, records: [record], enabled: true)
       XCTAssertEqual(
         store.event(withIdentifier: event.eventIdentifier)?.alarms?.first?.relativeOffset, -600)
       adapter.resumeAdds()
       try await Task.sleep(for: .milliseconds(200))
-      _ = try await sync(service, records: [record], enabled: true)
+      _ = try await NotificationRaceTests.sync(service, records: [record], enabled: true)
       let snapshot = await adapter.snapshot()
       XCTAssertEqual(snapshot.pending.filter { $0.identifier.hasPrefix("reha.event.") }.count, 1)
       XCTAssertTrue(store.event(withIdentifier: event.eventIdentifier)?.alarms?.isEmpty ?? true)
@@ -240,22 +266,30 @@ final class NotificationRaceTests: XCTestCase {
               end_utc: iso.string(from: event.endDate), timezone: "Europe/Vienna", location: "",
               notes: "", reminder_minutes: 10)))
       }
-      _ = try await sync(service, records: records, enabled: true)
+      _ = try await NotificationRaceTests.sync(service, records: records, enabled: true)
       let held = expectation(description: "Three snoozes reserved")
       held.expectedFulfillmentCount = 3
       adapter.suspendAdds { held.fulfill() }
-      func snooze(_ id: String) async throws -> [String: Any] {
-        try await withCheckedThrowingContinuation { continuation in
-          service.queue.async { service.snooze(id: id) { continuation.resume(with: $0) } }
+      func snooze(_ id: String) async throws -> NotificationTestResult {
+        let data: Data = try await withCheckedThrowingContinuation { continuation in
+          service.queue.async {
+            service.snooze(id: id) {
+              continuation.resume(
+                with: $0.flatMap { result in
+                  Result { try JSONSerialization.data(withJSONObject: result) }
+                })
+            }
+          }
         }
+        return NotificationTestResult(data: data)
       }
-      let first = records.prefix(3).map { record in Task { try await snooze(record.id) } }
+      let first = records.prefix(3).map { record in Task { _ = try await snooze(record.id) } }
       await fulfillment(of: [held], timeout: 2)
       do {
         _ = try await snooze(records[3].id)
         XCTFail("Fourth snooze exceeded reserved capacity")
       } catch {}
-      _ = try await sync(service, records: records, enabled: false)
+      _ = try await NotificationRaceTests.sync(service, records: records, enabled: false)
       adapter.resumeAdds()
       for task in first {
         do {

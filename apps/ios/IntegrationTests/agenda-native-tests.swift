@@ -101,15 +101,21 @@ final class AgendaNativeTests: XCTestCase {
         status: "uncertain", id: UUID().uuidString, calendar_id: calendar.calendarIdentifier,
         external_id: event.eventIdentifier, approved: approved)
       func sync(_ preferences: ReminderPreferences) async throws -> [String: Any] {
-        try await withCheckedThrowingContinuation { continuation in
+        let data: Data = try await withCheckedThrowingContinuation { continuation in
           service.queue.async {
             do {
               try service.sync(
                 AgendaSyncArgs(records: [record, rejected], preferences: preferences)
-              ) { continuation.resume(with: $0) }
+              ) {
+                continuation.resume(
+                  with: $0.flatMap { result in
+                    Result { try JSONSerialization.data(withJSONObject: result) }
+                  })
+              }
             } catch { continuation.resume(throwing: error) }
           }
         }
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
       }
       _ = try await sync(ReminderPreferences())
       var snapshot = AgendaSnapshot.read(from: root)
@@ -120,13 +126,16 @@ final class AgendaNativeTests: XCTestCase {
         contentsOf: root.appendingPathComponent(AgendaSnapshot.filename), encoding: .utf8)
       XCTAssertFalse(json.contains("Private Testnotiz"))
       XCTAssertFalse(json.contains(calendar.calendarIdentifier))
-      let permission = expectation(description: "Notification authorization")
-      UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
-        permission.fulfill()
+      let permission = Task {
+        try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
       }
-      let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons["Allow"]
-      if allow.waitForExistence(timeout: 3) { allow.tap() }
-      await fulfillment(of: [permission], timeout: 10)
+      await MainActor.run {
+        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons[
+          "Allow"]
+        if allow.waitForExistence(timeout: 3) { allow.tap() }
+      }
+      let allowed = try await permission.value
+      XCTAssertTrue(allowed)
       let settings = await UNUserNotificationCenter.current().notificationSettings()
       XCTAssertEqual(settings.authorizationStatus, .authorized)
       let activated = try await sync(ReminderPreferences(enabled: true))
@@ -137,13 +146,11 @@ final class AgendaNativeTests: XCTestCase {
       try await withCheckedThrowingContinuation {
         (continuation: CheckedContinuation<Void, Error>) in
         service.queue.async {
-          do {
-            service.snooze(id: id) { result in continuation.resume(with: result.map { _ in () }) }
-          } catch { continuation.resume(throwing: error) }
+          service.snooze(id: id) { result in continuation.resume(with: result.map { _ in () }) }
         }
       }
       let snoozed = await UNUserNotificationCenter.current().pendingNotificationRequests()
-      XCTAssertTrue(snoozed.contains { $0.identifier == "reha.snooze.\(id)" })
+      XCTAssertTrue(snoozed.contains { $0.identifier.hasPrefix("reha.snooze.\(id).") })
       _ = try await sync(ReminderPreferences())
       let disabled = await UNUserNotificationCenter.current().pendingNotificationRequests()
       XCTAssertFalse(disabled.contains { $0.identifier.contains(id) })
