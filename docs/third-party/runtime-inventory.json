@@ -3682,7 +3682,7 @@
     "packages/rust/reha-ffi/Cargo.toml": "56bc3fa650fa7dff6dfa47a0662a172ba8618595784c135de15bf49b9d81f53e",
     "rust-toolchain.toml": "09d61e489c122ee1374fc258ed39367f8a34a60be0f38db55fe081d3e1c69f24",
     "tooling/build/assemble-native.py": "aea3d47197f94acb1448aa0d1dc6b68fe8f4a3e35be336bd7be0501a036d1608",
-    "tooling/build/build-native.sh": "6e38dc1098ab5d720615ebf222a712b1736f7555d70a7408cee8582939fd5631",
+    "tooling/build/build-native.sh": "69153731768694c66c7b4747c081c6f8428e00e03f9b1b9490c4fd1a2f6a75da",
     "tooling/build/product_generation.py": "71a6c9947c135749db4612a3ecc5ca71d642a3f92f88a2b988fccc5d85757bb9",
     "tooling/build/verify-native-assets.py": "8e1ff5a15286f69a35cb97ad53dfc6a2e85fb8df6282e5f1d7cede9326fc006d",
     "tooling/dev/workspace.py": "e10e418ac6b4a36e8a84c9f21313a8d409cd3bad133558de8395acc775dc6034",

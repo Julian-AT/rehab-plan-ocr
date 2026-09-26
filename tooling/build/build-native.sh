@@ -47,15 +47,6 @@ framework() {
   # Split only our fixed variant names; never interpolate paths or user commands.
   # shellcheck disable=SC2086
   python3 tooling/build/assemble-native.py $variants
-  for variant in $variants; do
-    if [ "${REHA_LOW_DISK:-0}" = 1 ]; then
-      case "$variant" in
-        device) triple=aarch64-apple-ios ;;
-        simulator) triple=aarch64-apple-ios-sim ;;
-      esac
-      rm -r "$CARGO_TARGET_DIR/$triple/release"
-    fi
-  done
 }
 case "$mode" in
   bindings | check-bindings) bindings ;;
