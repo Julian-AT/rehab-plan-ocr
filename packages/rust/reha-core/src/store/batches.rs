@@ -64,7 +64,7 @@ impl Store {
             ));
         }
         let id = uuid::Uuid::new_v4().to_string();
-        let tx = self.connection.transaction()?;
+        let tx = self.connection.unchecked_transaction()?;
         tx.execute(
             "INSERT INTO import_batches VALUES(?1,?2,?3,?4,?5)",
             params![
@@ -112,9 +112,12 @@ impl Store {
                 params![id, attempt, index],
             )?;
         }
+        let batch = self
+            .batch(&id)?
+            .ok_or_else(|| Error::Invalid("Import fehlt.".into()))?;
+        super::bookkeeping::prepare(self, &batch, operations, undo_of.is_some())?;
         tx.commit()?;
-        self.batch(&id)?
-            .ok_or_else(|| Error::Invalid("Import fehlt.".into()))
+        Ok(batch)
     }
     pub fn batch(&self, id: &str) -> Result<Option<ImportBatch>> {
         Ok(self.load_batches(Some(id))?.into_iter().next())
@@ -202,7 +205,7 @@ impl Store {
             .into_iter()
             .find(|b| b.id == id)
             .ok_or_else(|| Error::Invalid("Import fehlt.".into()))?;
-        let tx = self.connection.transaction()?;
+        let tx = self.connection.unchecked_transaction()?;
         for entry in &batch.operations {
             if !["failed", "conflict"].contains(&entry.status.as_str()) {
                 continue;
@@ -217,12 +220,13 @@ impl Store {
                 params![entry.attempt_id, if retry { "queued" } else { "skipped" }],
             )?;
         }
-        tx.commit()?;
         let mut batch = self
             .batches()?
             .into_iter()
             .find(|b| b.id == id)
             .ok_or_else(|| Error::Invalid("Import fehlt.".into()))?;
+        super::bookkeeping::prepare(self, &batch, operations, batch.undo_of.is_some())?;
+        tx.commit()?;
         batch.operations.retain(|e| e.status == "queued");
         Ok(batch)
     }

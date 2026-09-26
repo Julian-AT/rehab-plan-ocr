@@ -168,6 +168,8 @@ struct CalendarStatusView: View {
     // swift-format-ignore: AlwaysUseLowerCamelCase
     let pending_events: Int
     // swift-format-ignore: AlwaysUseLowerCamelCase
+    let pending_bookkeeping: Int?
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let unavailable_calendar_ids: [String]?
     var unavailableCount: Int {
       let selected = Set(
@@ -229,6 +231,18 @@ struct CalendarStatusView: View {
             NavigationLink("Terminänderungen prüfen") { EventHistoryView(core: core) }
           }
         }
+        if (status.pending_bookkeeping ?? 0) > 0 {
+          Section("Lokaler Planstand") {
+            Text(
+              "Bestätigte Kalenderänderungen bleiben erhalten. Der lokale Planstand braucht noch einen Abgleich."
+            )
+            .foregroundStyle(AppPalette.secondaryText)
+            AppFormAction(
+              title: "Lokalen Stand abgleichen", systemImage: "arrow.clockwise", busy: busy
+            ) { Task { await repairLocalState() } }
+            .accessibilityIdentifier("repair-calendar-bookkeeping")
+          }
+        }
       }
       Section {
         AppFormAction(title: "Aktualisieren", systemImage: "arrow.clockwise", busy: busy) {
@@ -245,6 +259,17 @@ struct CalendarStatusView: View {
     do {
       status = try await core.eventRequest("calendarStatus")
       error = nil
+    } catch { self.error = userMessage(error) }
+  }
+  private func repairLocalState() async {
+    guard !busy else { return }
+    busy = true
+    defer { busy = false }
+    do {
+      let _: [String: Int] = try await core.eventRequest("reconcileCalendarBookkeeping")
+      status = try await core.eventRequest("calendarStatus")
+      error = nil
+      changed()
     } catch { self.error = userMessage(error) }
   }
 }

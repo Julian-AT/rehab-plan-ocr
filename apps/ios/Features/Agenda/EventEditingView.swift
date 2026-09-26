@@ -341,6 +341,7 @@ struct EventEditorView: View {
 struct EventHistoryView: View {
   @State private var reconciling = false
   @State private var reconciled = false
+  @State private var maintenanceWarnings: [String] = []
   let core: NativeApplication
   let initialID: String?
   @Environment(\.scenePhase) private var scenePhase
@@ -371,11 +372,13 @@ struct EventHistoryView: View {
         guard !reconciling else { return }
         reconciling = true
         reconciled = false
+        maintenanceWarnings = []
         model.error = nil
         Task {
           defer { reconciling = false }
           do {
-            let _: [String: JSONValue] = try await core.eventRequest("reconcileEventMutations")
+            let response: EventResponse = try await core.eventRequest("reconcileEventMutations")
+            maintenanceWarnings = response.maintenance_warnings ?? []
             await load()
             reconciled = model.error == nil
           } catch { model.error = userMessage(error) }
@@ -384,6 +387,11 @@ struct EventHistoryView: View {
       if reconciled {
         Text("Schreibstatus aktualisiert.").font(.caption).foregroundStyle(AppPalette.secondaryText)
           .accessibilityIdentifier("reconcile-complete")
+      }
+      if !maintenanceWarnings.isEmpty {
+        Text(maintenanceWarnings.joined(separator: "\n\n"))
+          .foregroundStyle(AppPalette.secondaryText)
+          .accessibilityIdentifier("reconcile-maintenance-warning")
       }
       ForEach(history) { item in
         VStack(alignment: .leading, spacing: AppSpacing.medium) {

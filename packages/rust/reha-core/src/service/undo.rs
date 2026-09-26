@@ -239,28 +239,13 @@ pub(super) async fn approve_locked(
             .map_err(failure)?;
         results.push(outcome);
     }
-    {
-        let store = state.store.lock().map_err(failure)?;
-        for document in &proposal.document_ids {
-            if let Ok(mut run) = store.load_run(document) {
-                for a in &mut run.appointments {
-                    if results.iter().any(|r| {
-                        r.status == "saved"
-                            && &r.id == a.calendar_event_id.as_ref().unwrap_or(&a.id)
-                    }) {
-                        a.calendar_saved_hash = None;
-                    }
-                }
-                store.save_run(&run).map_err(failure)?;
-            }
-        }
-    }
+    super::calendar::finish_bookkeeping(state, &mut results)?;
     state
         .proposals
         .lock()
         .map_err(failure)?
         .remove(&proposal.token);
-    if let Err(warning) = super::agenda::sync(&app, state).await {
+    for warning in super::agenda::sync_warnings(&app, state).await {
         for result in &mut results {
             result.maintenance_warnings.push(warning.to_string());
         }

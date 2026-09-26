@@ -147,6 +147,23 @@ async fn committed_mutation_survives_maintenance_failure_without_repeating_write
         "saved"
     );
     assert_eq!(*calendar.calls.lock().unwrap(), 1);
+    let reconciliation = events::dispatch(
+        calendar.clone(),
+        &state,
+        "reconcileEventMutations",
+        json!({}),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        reconciliation["maintenance_warnings"],
+        json!(["Reminder service unavailable"])
+    );
+    assert_eq!(
+        state.store.lock().unwrap().event_history().unwrap()[0]["status"],
+        "saved"
+    );
+    assert_eq!(*calendar.calls.lock().unwrap(), 1);
 }
 
 #[tokio::test]

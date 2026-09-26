@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 mod activity;
 mod archive;
 mod batches;
+pub mod bookkeeping;
 pub use activity::{ActivityItem, ActivityPage};
 mod event_mutations;
 mod intake;

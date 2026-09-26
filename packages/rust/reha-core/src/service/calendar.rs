@@ -538,18 +538,6 @@ pub(super) async fn execute_batch(
     proposal: Proposal,
     batch: crate::store::ImportBatch,
 ) -> Response<Vec<CalendarResult>> {
-    // Capture the accepted values before effects. A user edit racing the final
-    // bookkeeping must never be labeled saved by an older operation.
-    let saved_values: BTreeMap<String, String> = {
-        let store = state.store.lock().map_err(failure)?;
-        proposal
-            .document_ids
-            .iter()
-            .filter_map(|id| store.load_run(id).ok())
-            .flat_map(|r| r.appointments)
-            .map(|a| (a.id.clone(), reha_core::review::values_hash(&a)))
-            .collect()
-    };
     let mut results = vec![];
     for entry in &batch.operations {
         let op = &entry.operation;
@@ -602,36 +590,14 @@ pub(super) async fn execute_batch(
             .map_err(failure)?;
         results.push(outcome);
     }
-    {
-        let store = state.store.lock().map_err(failure)?;
-        for page in &proposal.document_ids {
-            let Ok(mut run) = store.load_run(page) else {
-                continue;
-            };
-            for a in &mut run.appointments {
-                let event_id = a.calendar_event_id.as_ref().unwrap_or(&a.id);
-                if saved_values.get(&a.id) == Some(&reha_core::review::values_hash(a))
-                    && (results
-                        .iter()
-                        .any(|r| &r.id == event_id && r.status == "saved")
-                        || proposal
-                            .operations
-                            .iter()
-                            .any(|o| &o.id == event_id && o.kind == "unchanged"))
-                {
-                    a.calendar_saved_hash = Some(reha_core::review::values_hash(a));
-                }
-            }
-            store.save_run(&run).map_err(failure)?;
-        }
-    }
+    finish_bookkeeping(state, &mut results)?;
     state
         .proposals
         .lock()
         .map_err(failure)?
         .remove(&proposal.token);
     // Calendar writes are already committed; report maintenance independently.
-    if let Err(warning) = crate::service::agenda::sync(&app, state).await {
+    for warning in crate::service::agenda::sync_warnings(&app, state).await {
         for result in &mut results {
             result.maintenance_warnings.push(warning.to_string());
         }
@@ -671,12 +637,37 @@ pub async fn reconcile_calendar(
             .map_err(failure)?;
         results.push(result);
     }
-    if let Err(warning) = crate::service::agenda::sync(&app, state).await {
+    finish_bookkeeping(state, &mut results)?;
+    for warning in crate::service::agenda::sync_warnings(&app, state).await {
         for result in &mut results {
             result.maintenance_warnings.push(warning.to_string());
         }
     }
     Ok(results)
+}
+
+pub(super) fn finish_bookkeeping(
+    state: &Arc<AppState>,
+    results: &mut [CalendarResult],
+) -> Response<()> {
+    let repair = state
+        .store
+        .lock()
+        .map_err(failure)
+        .and_then(|store| crate::store::bookkeeping::recover(&store).map_err(failure));
+    if repair.is_err() {
+        if results.is_empty() {
+            return Err(super::ServiceError::Storage(
+                crate::store::bookkeeping::WARNING.into(),
+            ));
+        }
+        for result in results {
+            result
+                .maintenance_warnings
+                .push(crate::store::bookkeeping::WARNING.into());
+        }
+    }
+    Ok(())
 }
 pub async fn resolve_pending_write(
     state: &Arc<AppState>,

@@ -423,6 +423,9 @@ pub async fn open_application(
     runtime()
         .spawn_blocking(move || {
             let store = Store::open(&PathBuf::from(root)).map_err(storage)?;
+            // A failed retry leaves the local journal intact and is surfaced by
+            // calendarStatus. Opening the app must still allow viewing/export.
+            let _ = reha_core::store::bookkeeping::recover(&store);
             store
                 .cleanup(chrono::Utc::now().timestamp())
                 .map_err(storage)?;

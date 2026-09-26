@@ -394,7 +394,7 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         .finish_event_mutation(token, &result)
         .map_err(failure)?;
     // Ownership and the durable journal are committed before reminder reconciliation.
-    if let Err(warning) = super::agenda::sync(&platform, state).await {
+    for warning in super::agenda::sync_warnings(&platform, state).await {
         let mut warnings = result["maintenance_warnings"]
             .as_array()
             .cloned()
@@ -559,7 +559,19 @@ pub async fn dispatch(
                 )
                 .map_err(failure)?;
             status["pending_events"] = json!(pending);
+            status["pending_bookkeeping"] =
+                json!(crate::store::bookkeeping::pending_count(&store).map_err(failure)?);
             Ok(status)
+        }
+        "reconcileCalendarBookkeeping" => {
+            let _guard = state.calendar_lock.lock().await;
+            let store = state.store.lock().map_err(failure)?;
+            crate::store::bookkeeping::recover(&store).map_err(|_| {
+                super::ServiceError::Storage(crate::store::bookkeeping::WARNING.into())
+            })?;
+            Ok(
+                json!({"pending_bookkeeping":crate::store::bookkeeping::pending_count(&store).map_err(failure)?}),
+            )
         }
         "refreshAgenda" => {
             let _guard = state.calendar_lock.lock().await;
@@ -637,8 +649,8 @@ pub async fn dispatch(
                     .finish_event_mutation(required(item, "id")?, &result)
                     .map_err(failure)?;
             }
-            super::agenda::sync(&platform, state).await?;
-            Ok(json!({}))
+            let warnings = super::agenda::sync_warnings(&platform, state).await;
+            Ok(json!({"maintenance_warnings":warnings}))
         }
         _ => Err("Unbekannte Kalenderfunktion.".into()),
     }
