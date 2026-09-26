@@ -1,12 +1,14 @@
 """Read XCTest bundles through verified disposable copies, retaining original evidence."""
 
 import hashlib
-import shutil
 import subprocess
-import sys
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+
+from tooling.utils.apfs_clone import clone
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def command(arguments):
@@ -41,12 +43,11 @@ def preserved_result(bundle):
     if not original:
         raise ValueError("Source result bundle is empty")
     try:
-        with tempfile.TemporaryDirectory(prefix="reha-xcresult-") as temporary:
+        temporary_root = ROOT / ".local/tmp"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="reha-xcresult-", dir=temporary_root) as temporary:
             working = Path(temporary) / "result.xcresult"
-            if sys.platform == "darwin":
-                subprocess.run(["cp", "-cRp", str(bundle), str(working)], check=True, timeout=120)
-            else:
-                shutil.copytree(bundle, working)
+            clone(bundle, working, allow_symlinks=False)
             if inventory(working) != original:
                 raise ValueError("Result working copy does not match the source")
             yield working, original

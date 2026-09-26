@@ -127,13 +127,22 @@ def main():
                     "ml/evaluation/conversation/intent.py",
                     "ml/evaluation/conversation/paired.py",
                     "ml/evaluation/device/simulator.py",
+                    "tooling/utils/apfs_clone.py",
                     "ml/training/assistant/contract.py",
                 ]
             },
         )
     write(destination / "report.json", report)
     try:
-        container = install(app, args.simulator, run)
+        container = install(
+            app,
+            args.simulator,
+            run,
+            expected_files={
+                "Termine.debug.dylib": receipt["app_binary_sha256"],
+                "assistant-trial/assistant.gguf": manifest["model_sha256"],
+            },
+        )
         output = container / "Documents/assistant-provider-result.json"
         if fixture:
             write(container / "Documents/assistant-evaluation-input.json", fixture)

@@ -140,6 +140,7 @@ class AppTrialSourceBindingTests(unittest.TestCase):
             self.evaluator,
             self.binary,
             self.root / "ml/evaluation/device/simulator.py",
+            self.root / "tooling/utils/apfs_clone.py",
             self.root / "ml/evaluation/conversation/native.py",
         ]:
             path.parent.mkdir(parents=True, exist_ok=True)

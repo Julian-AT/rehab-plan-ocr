@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 from ml.evaluation.conversation.native import run, sha, write  # noqa: E402
 from ml.evaluation.device.simulator import BUNDLE, disposable, signed_copy  # noqa: E402
 from tooling.build import product_generation  # noqa: E402
+from tooling.utils.apfs_clone import clone  # noqa: E402
 
 QUERY = "Zeige mir die Termine für übermorgen."
 ROOM = "In welchem Raum ist dieser Termin?"
@@ -519,6 +520,7 @@ def main():
                 "tooling/dev",
                 "tooling/checks/ui-test-result.py",
                 "tooling/utils/xcresult.py",
+                "tooling/utils/apfs_clone.py",
                 "config/storage",
                 "pyproject.toml",
                 "uv.lock",
@@ -548,11 +550,21 @@ def main():
         write(destination / "report.json", report)
         try:
             staged = destination / app.name
-            signed_copy(app, staged, run)
+            signed_copy(
+                app,
+                staged,
+                run,
+                expected_files={
+                    "Termine.debug.dylib": receipt["app_binary_sha256"],
+                    "assistant-trial/assistant.gguf": receipt["trial_manifest"]["model_sha256"],
+                },
+            )
             tests = receipt["voice_ui_tests"]
             runner_source = ROOT / tests["runner"]
             runner = destination / runner_source.name
-            run(["cp", "-cRp", str(runner_source), str(runner)])
+            clone(runner_source, runner)
+            if product_generation.inventory(runner) != tests["runner_inventory"]:
+                raise ValueError("Cloned runner differs from the verified build receipt")
             run(["xattr", "-cr", str(runner)])
             run(
                 [

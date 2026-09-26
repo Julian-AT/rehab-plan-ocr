@@ -231,6 +231,7 @@ def main():
     helpers = [
         Path(__file__),
         ROOT / "ml/evaluation/device/simulator.py",
+        ROOT / "tooling/utils/apfs_clone.py",
         ROOT / "ml/evaluation/conversation/native.py",
         card,
         source,

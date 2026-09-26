@@ -228,6 +228,9 @@ class VisualSuiteTests(unittest.TestCase):
         helper = self.root / "tooling/utils/xcresult.py"
         helper.parent.mkdir(parents=True)
         helper.write_bytes((suite.ROOT / "tooling/utils/xcresult.py").read_bytes())
+        (helper.parent / "apfs_clone.py").write_bytes(
+            (suite.ROOT / "tooling/utils/apfs_clone.py").read_bytes()
+        )
 
         def export(_, destination):
             attachments = destination / "attachments"

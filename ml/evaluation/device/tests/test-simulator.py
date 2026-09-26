@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from ml.evaluation.device.simulator import disposable, install, signed_copy  # noqa: E402
@@ -13,6 +14,9 @@ from ml.evaluation.device.simulator import disposable, install, signed_copy  # n
 class SimulatorTests(unittest.TestCase):
     def setUp(self):
         self.calls = []
+        patcher = patch("ml.evaluation.device.simulator.clone")
+        self.clone = patcher.start()
+        self.addCleanup(patcher.stop)
         self.device = dict(udid="disposable", name="Termine-Native-Test-fixture")
 
     def fake_run(self, command, **kwargs):
@@ -48,7 +52,8 @@ class SimulatorTests(unittest.TestCase):
         source = Path("/synthetic/built/Example.app")
         destination = Path("/synthetic/retained/Example.app")
         signed_copy(source, destination, self.fake_run)
-        self.assertEqual(self.calls[0], ["cp", "-cRp", str(source), str(destination)])
+        self.clone.assert_called_once_with(source, destination, expected_files=None)
+        self.assertEqual(self.calls[0], ["xattr", "-cr", str(destination)])
         self.assertEqual(len([c for c in self.calls if c[0] == "codesign"]), 4)
         self.assertFalse(any(c[0] == "xcrun" for c in self.calls))
 
@@ -64,11 +69,14 @@ class SimulatorTests(unittest.TestCase):
     def test_install_cleans_only_its_temporary_copy_after_sign_failure(self):
         staged = None
 
-        def failing(command, **kwargs):
+        def copy(source, destination, **kwargs):
             nonlocal staged
-            if command[0] == "cp":
-                staged = Path(command[-1])
-                staged.mkdir()
+            staged = destination
+            staged.mkdir()
+
+        self.clone.side_effect = copy
+
+        def failing(command, **kwargs):
             if command[0] == "codesign":
                 raise RuntimeError("synthetic signing failure")
             return self.fake_run(command, **kwargs)

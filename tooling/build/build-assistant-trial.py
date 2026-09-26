@@ -17,6 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import product_generation  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tooling.utils.apfs_clone import clone  # noqa: E402
+
 BASE = ROOT / ".local/builds/assistant-app-trial"
 PACKAGE = ROOT / "packages/apple/LocalAssistant"
 spec = importlib.util.spec_from_file_location(
@@ -44,6 +47,7 @@ def source_snapshot():
                 "apps/ios",
                 "packages/apple",
                 "tooling/build/build-assistant-trial.py",
+                "tooling/utils/apfs_clone.py",
             ],
             cwd=ROOT,
         )
@@ -126,6 +130,7 @@ def prepare(variant):
         "model_id": registry["id"],
         "model_sha256": artifact["sha256"],
         "model_bytes": artifact["bytes"],
+        "clone_helper_sha256": assembly.sha(ROOT / "tooling/utils/apfs_clone.py"),
         "prompt_sha256": assembly.sha(prompt),
         "native_identity": assembly.key(native),
         "registry_sha256": assembly.sha(registry_path),
@@ -138,7 +143,12 @@ def prepare(variant):
     def produce(destination):
         folder = destination / "assistant-trial"
         folder.mkdir()
-        run("cp", "-c", str(model), str(folder / "assistant.gguf"))
+        clone(
+            model,
+            folder / "assistant.gguf",
+            expected_sha256=artifact["sha256"],
+            expected_bytes=artifact["bytes"],
+        )
         shutil.copyfile(license_source, folder / "llama-license.txt")
         shutil.copyfile(model_license, folder / "qwen-license.txt")
         (folder / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

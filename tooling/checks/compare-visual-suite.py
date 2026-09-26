@@ -303,6 +303,7 @@ def main():
     report["xcresult"] = str(result_bundle.resolve())
     report["source_result_receipt_sha256"] = sha(output / "source-result.json")
     report["result_reader_sha256"] = sha(ROOT / "tooling/utils/xcresult.py")
+    report["clone_helper_sha256"] = sha(ROOT / "tooling/utils/apfs_clone.py")
     if args.capture:
         app = (
             workspace.location("ios", ROOT)
