@@ -6,6 +6,8 @@ cases and actual recorded prompts; scoring reuses the app evaluation contract.
 
 import argparse
 import json
+import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -17,18 +19,24 @@ from ml.training.assistant.export import clean_answer  # noqa: E402
 
 VARIANTS = ("historical-app", "historical-cli", "corrected-cli")
 SOURCES = (
-    "apps/ios/Tests/CustomAssistantProviderProbe.swift",
-    "apps/ios/Tests/Support/InterpretationEvaluation.swift",
-    "apps/ios/Features/Conversation/InterpretationProvider.swift",
-    "apps/ios/Features/Conversation/AssistantInterpretation.swift",
-    "apps/ios/Features/Conversation/CustomAssistantProvider.swift",
-    "apps/ios/Features/Conversation/AssistantPrompt.swift",
-    "apps/ios/Features/Conversation/VoiceRules.swift",
-    "apps/ios/Features/Conversation/CalendarQuestion.swift",
-    "packages/rust/reha-core/src/conversation.rs",
+    "Makefile",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "config/storage/workspace.json",
+    "config/toolchains/versions.json",
+    "tooling/dev/workspace.py",
+    "apps/ios/Features/Conversation/Resources/assistant-system-v1.txt",
+    "ml/evaluation/conversation/fixtures/prompt-v1.json",
     "ml/evaluation/conversation/router_replay.py",
     "ml/evaluation/conversation/app_evaluation.py",
     "ml/evaluation/conversation/intent.py",
+    "ml/evaluation/conversation/paired.py",
+    "ml/training/assistant/contract.py",
+    "ml/training/assistant/export.py",
+    "ml/training/assistant/train.py",
+    "ml/training/assistant/restore.py",
+    "ml/training/storage.py",
 )
 
 
@@ -39,6 +47,43 @@ def load(path):
 def write(path, value):
     with path.open("x") as stream:
         stream.write(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+
+
+def source_paths():
+    """Pin the compiler's shared Swift response file and its native dependencies."""
+    paths = {ROOT / name for name in SOURCES}
+    for name in ["test-custom-assistant-provider.sh", "test-calendar-answers.sh"]:
+        script = ROOT / "tooling/checks" / name
+        paths.add(script)
+        text = script.read_text()
+        # Include both the generated FFI wrapper and the selected/default probe.
+        paths.update(
+            ROOT / name for name in re.findall(r"(?:apps|packages)/[\w./-]+\.swift\b", text)
+        )
+        for name in re.findall(r"@([\w./-]+\.rsp)\b", text):
+            response = ROOT / name
+            paths.add(response)
+            entries = shlex.split(response.read_text(), comments=True)
+            if not entries:
+                raise ValueError("Empty Swift compiler source response file")
+            for entry in entries:
+                source = (ROOT / entry).resolve()
+                if (
+                    not source.is_relative_to(ROOT)
+                    or source.suffix != ".swift"
+                    or not source.is_file()
+                ):
+                    raise ValueError("Invalid Swift compiler source response entry")
+                paths.add(source)
+    headers = ROOT / "packages/apple/RehaCore/Headers"
+    paths.update(path for path in headers.rglob("*") if path.is_file())
+    for name in ["reha-core", "reha-ffi"]:
+        crate = ROOT / "packages/rust" / name
+        paths.add(crate / "Cargo.toml")
+        paths.update(path for path in (crate / "src").rglob("*") if path.is_file())
+        if (crate / "build.rs").is_file():
+            paths.add(crate / "build.rs")
+    return sorted(paths)
 
 
 def prepare_replay(app, deployment, native, output):
@@ -106,7 +151,7 @@ def prepare_replay(app, deployment, native, output):
             full_voice_workflow=False,
             fresh_inference=False,
             dataset=str((app / "dataset.json").resolve()),
-            sources={str(p.resolve()): sha(p) for p in [*sources, *(ROOT / n for n in SOURCES)]},
+            sources={str(p.resolve()): sha(p) for p in [*sources, *source_paths()]},
             inputs={name: sha(output / name) for name in ["input.json", "recorded.json"]},
             response_adaptation="Only outer whitespace and llama-completion's final display marker removed; JSON not parsed or rewritten",
         ),
