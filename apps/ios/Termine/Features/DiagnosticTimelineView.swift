@@ -60,6 +60,16 @@ struct DiagnosticTimelineView: View {
 extension DiagnosticStep {
   fileprivate var title: String {
     switch self {
+    case .microphonePermission: "Mikrofonfreigabe"
+    case .speechPermission: "Spracherkennungsfreigabe"
+    case .inputRoute: "Audioeingang"
+    case .audioEngine: "Audioengine"
+    case .audioBuffer: "Mikrofonpuffer"
+    case .audioSampleRate: "Abtastrate"
+    case .audioChannels: "Audiokanäle"
+    case .audioLevel: "Mikrofonpegel"
+    case .audioConversion: "Audioverarbeitung"
+    case .audioRestart: "Mikrofon neu vorbereiten"
     case .intake: "Eingang"
     case .preparation: "Bildaufbereitung"
     case .ocr: "Texterkennung"

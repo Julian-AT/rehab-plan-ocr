@@ -1,68 +1,6 @@
 import AVFoundation
-import CFvad
+import AppleServices
 import Foundation
-
-/// Access is serialized by the input tap. The pinned C VAD owns no audio device.
-final class VoiceActivityDetector: @unchecked Sendable {
-  private let detector: OpaquePointer
-  private let converter: AVAudioConverter
-  private let format = AVAudioFormat(
-    commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: false)!
-  private var samples: [Int16] = []
-  init(input: AVAudioFormat) throws {
-    guard let detector = fvad_new() else {
-      throw LocalSpeechError.message("Die Spracherkennung konnte nicht vorbereitet werden.")
-    }
-    guard let converter = AVAudioConverter(from: input, to: format) else {
-      fvad_free(detector)
-      throw LocalSpeechError.message("Das Mikrofonformat kann nicht verarbeitet werden.")
-    }
-    self.detector = detector
-    self.converter = converter
-    fvad_set_sample_rate(detector, 16_000)
-    fvad_set_mode(detector, 2)
-  }
-  deinit { fvad_free(detector) }
-  func append(_ buffer: AVAudioPCMBuffer, frame: (Bool, Double) -> Void) {
-    let capacity = AVAudioFrameCount(
-      ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 320)
-    guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return }
-    let input = ConverterInput(buffer)
-    var error: NSError?
-    converter.convert(to: output, error: &error) { _, status in input.take(status) }
-    guard error == nil, let channel = output.int16ChannelData?[0] else { return }
-    samples.append(contentsOf: UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
-    var offset = 0
-    while samples.count - offset >= 320 {
-      let part = Array(samples[offset..<(offset + 320)])
-      let rms = sqrt(part.reduce(0.0) { $0 + pow(Double($1) / 32768, 2) } / 320)
-      let speech = part.withUnsafeBufferPointer {
-        fvad_process(detector, $0.baseAddress!, 320) == 1
-      }
-      frame(speech && rms > 0.003, min(1, pow(rms * 8, 0.65)))
-      offset += 320
-    }
-    samples.removeFirst(offset)
-  }
-}
-
-/// The converter receives the tap buffer once; access to consumption state is locked.
-private final class ConverterInput: @unchecked Sendable {
-  private let lock = NSLock()
-  private var buffer: AVAudioPCMBuffer?
-  init(_ buffer: AVAudioPCMBuffer) { self.buffer = buffer }
-  func take(_ status: UnsafeMutablePointer<AVAudioConverterInputStatus>) -> AVAudioBuffer? {
-    lock.lock()
-    defer { lock.unlock() }
-    guard let buffer else {
-      status.pointee = .noDataNow
-      return nil
-    }
-    self.buffer = nil
-    status.pointee = .haveData
-    return buffer
-  }
-}
 
 /// A single graph provides the echo reference for microphone AND Victoria.
 @MainActor final class ConversationAudio {
@@ -73,6 +11,9 @@ private final class ConverterInput: @unchecked Sendable {
   private var playbackID = UUID()
   private(set) var microphoneActive = false
   private var tapped = false
+  private var graphGeneration = UUID()
+  private var configurationObserver: NSObjectProtocol?
+  var onConfigurationChange: (() -> Void)?
   private(set) var playbackDuration = 0.0
   private var pcm: AVAudioPCMBuffer?
   var playbackTime: Double {
@@ -97,6 +38,12 @@ private final class ConverterInput: @unchecked Sendable {
       try audio.setCategory(
         .playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
       try audio.setActive(true)
+      guard !audio.currentRoute.inputs.isEmpty else {
+        throw LocalSpeechError.message("Es ist kein Mikrofon als Audioeingang verfügbar.")
+      }
+      LocalDiagnostics.shared.record(
+        .inputRoute, .completed,
+        count: audio.currentRoute.inputs.first?.portType == .builtInMic ? 1 : 2)
       let graph = AVAudioEngine()
       engine = graph
       try graph.inputNode.setVoiceProcessingEnabled(true)
@@ -108,11 +55,22 @@ private final class ConverterInput: @unchecked Sendable {
         receive(buffer)
       }
       tapped = true
-      microphoneActive = true
       attachPlayer(graph)
       graph.prepare()
       try graph.start()
+      microphoneActive = true
+      LocalDiagnostics.shared.record(.audioEngine, .completed)
+      let graphID = graphGeneration
+      configurationObserver = NotificationCenter.default.addObserver(
+        forName: .AVAudioEngineConfigurationChange, object: graph, queue: .main
+      ) { [weak self] _ in
+        Task { @MainActor in
+          guard let self, self.graphGeneration == graphID else { return }
+          self.onConfigurationChange?()
+        }
+      }
     } catch {
+      LocalDiagnostics.shared.record(.audioEngine, .failed)
       shutdown()
       throw error
     }
@@ -180,6 +138,12 @@ private final class ConverterInput: @unchecked Sendable {
   }
   func releasePlayback() { if !microphoneActive { shutdown() } }
   func shutdown() {
+    graphGeneration = UUID()
+    if let configurationObserver {
+      NotificationCenter.default.removeObserver(configurationObserver)
+    }
+    configurationObserver = nil
+    onConfigurationChange = nil
     stopPlayback()
     engine?.stop()
     if tapped { engine?.inputNode.removeTap(onBus: 0) }

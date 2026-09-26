@@ -1,15 +1,28 @@
 import AVFoundation
+import AppleServices
 @preconcurrency import Speech
 import SwiftUI
 
-/// The tap owns the VAD. A lock protects request swaps and the 400 ms pre-roll.
-/// Audio exists only in memory and is discarded when the session ends.
+/// Request swaps, detector state and pre-roll share a lock. Callbacks are
+/// immutable and enqueue values only; no tap buffer crosses to the main actor.
 private final class SpeechInput: @unchecked Sendable {
   private let lock = NSLock()
   private var request: SFSpeechAudioBufferRecognitionRequest?
   private var ring: [AVAudioPCMBuffer] = []
   private var detector: VoiceActivityDetector?
-  var frame: (@Sendable (Bool, Double) -> Void)?
+  private var failed = false
+  private let meter: @Sendable (Double, Double, Int) -> Void
+  private let frame: @Sendable (Bool) -> Void
+  private let failure: @Sendable (InputAudioError) -> Void
+  init(
+    meter: @escaping @Sendable (Double, Double, Int) -> Void,
+    frame: @escaping @Sendable (Bool) -> Void,
+    failure: @escaping @Sendable (InputAudioError) -> Void
+  ) {
+    self.meter = meter
+    self.frame = frame
+    self.failure = failure
+  }
   func replace(_ next: SFSpeechAudioBufferRecognitionRequest?, preRoll: Bool = false) {
     lock.lock()
     defer { lock.unlock() }
@@ -20,28 +33,37 @@ private final class SpeechInput: @unchecked Sendable {
   func append(_ buffer: AVAudioPCMBuffer) {
     lock.lock()
     defer { lock.unlock() }
-    if detector == nil { detector = try? VoiceActivityDetector(input: buffer.format) }
-    detector?.append(buffer) { voice, level in frame?(voice, level) }
-    request?.append(buffer)
-    guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
-    else { return }
-    copy.frameLength = buffer.frameLength
-    let from = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
-    let to = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
-    for (src, dst) in zip(from, to) {
-      if let source = src.mData, let destination = dst.mData {
-        memcpy(destination, source, Int(src.mDataByteSize))
+    guard !failed else { return }
+    do {
+      guard let level = try InputAudioLevel.measure(buffer) else { return }
+      meter(level, buffer.format.sampleRate, Int(buffer.format.channelCount))
+      if let detector, detector.inputFormat != buffer.format {
+        // A recognition request cannot mix PCM formats. Reprepare the graph
+        // and request together instead of appending an incompatible buffer.
+        throw InputAudioError.invalidFormat
       }
-    }
-    ring.append(copy)
-    while ring.reduce(0.0, { $0 + Double($1.frameLength) / $1.format.sampleRate }) > 0.4 {
-      ring.removeFirst()
+      if detector == nil { detector = try VoiceActivityDetector(input: buffer.format) }
+      request?.append(buffer)
+      try detector?.append(buffer, frame: frame)
+      guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
+      else { throw InputAudioError.conversion }
+      copy.frameLength = buffer.frameLength
+      let from = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
+      let to = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
+      for (src, dst) in zip(from, to) {
+        if let source = src.mData, let destination = dst.mData {
+          memcpy(destination, source, Int(src.mDataByteSize))
+        }
+      }
+      ring.append(copy)
+      while ring.reduce(0.0, { $0 + Double($1.frameLength) / $1.format.sampleRate }) > 0.4 {
+        ring.removeFirst()
+      }
+    } catch {
+      failed = true
+      failure(error as? InputAudioError ?? .conversion)
     }
   }
-}
-enum LocalSpeechError: LocalizedError {
-  case message(String)
-  var errorDescription: String? { if case .message(let text) = self { text } else { nil } }
 }
 
 @MainActor @Observable final class LocalSpeechRecorder {
@@ -66,13 +88,19 @@ enum LocalSpeechError: LocalizedError {
   private var endpointSent = false
   private var monitor = false
   private var startedAt = 0.0
+  private var microphoneID = UUID()
+  private var watchdog = InputBufferWatchdog()
+  private var watchdogTask: Task<Void, Never>?
+  private var receivedBuffer = false
+  private var lastLevelLog = 0.0
+  private var configurationRetryUsed = false
   #if DEBUG && targetEnvironment(simulator)
     private var previewInputTask: Task<Void, Never>?
   #endif
 
   static func makeRecognizer() -> SFSpeechRecognizer? {
     ["de-AT", "de-DE"].compactMap { SFSpeechRecognizer(locale: Locale(identifier: $0)) }.first {
-      $0.supportsOnDeviceRecognition
+      $0.supportsOnDeviceRecognition && $0.isAvailable
     }
   }
   func beginTurn(preRoll: Bool = false) async throws {
@@ -90,7 +118,11 @@ enum LocalSpeechError: LocalizedError {
         }
       #endif
       if !ConversationAudio.shared.microphoneActive {
-        guard await AVAudioApplication.requestRecordPermission() else {
+        let microphoneAllowed = await AVAudioApplication.requestRecordPermission()
+        guard generation == current, !Task.isCancelled else { throw CancellationError() }
+        LocalDiagnostics.shared.record(
+          .microphonePermission, microphoneAllowed ? .completed : .failed)
+        guard microphoneAllowed else {
           throw LocalSpeechError.message("Mikrofonzugriff in den iPhone-Einstellungen erlauben.")
         }
         guard generation == current else { throw CancellationError() }
@@ -100,6 +132,8 @@ enum LocalSpeechError: LocalizedError {
           }
         }
         guard generation == current else { throw CancellationError() }
+        LocalDiagnostics.shared.record(
+          .speechPermission, authorization == .authorized ? .completed : .failed)
         guard authorization == .authorized else {
           throw LocalSpeechError.message(
             "Spracherkennung in den iPhone-Einstellungen erlauben. Texteingabe ist in den Gesprächsdetails möglich."
@@ -111,15 +145,6 @@ enum LocalSpeechError: LocalizedError {
           )
         }
         self.recognizer = recognizer
-        let input = SpeechInput()
-        input.frame = { @Sendable [weak self] voice, level in
-          Task { @MainActor in
-            guard let self, self.generation == current else { return }
-            self.receive(voice: voice, level: level)
-          }
-        }
-        self.input = input
-        try ConversationAudio.shared.startMicrophone { @Sendable buffer in input.append(buffer) }
       }
       guard generation == current else { throw CancellationError() }
       monitor = false
@@ -127,15 +152,130 @@ enum LocalSpeechError: LocalizedError {
       endpoint = SpeechEndpoint(confirmedPreRoll: preRoll)
       endpointSent = false
       startedAt = ProcessInfo.processInfo.systemUptime
-      state = .recording
-      startSegment(preRoll: preRoll)
+      if input == nil {
+        watchdog = InputBufferWatchdog()
+        configurationRetryUsed = false
+        try prepareMicrophone()
+      } else {
+        state = receivedBuffer ? .recording : .preparing
+        startSegment(preRoll: preRoll)
+      }
     } catch {
       if generation == current { cancelTurn() }
       throw error
     }
   }
-  private func receive(voice: Bool, level: Double) {
+  private func prepareMicrophone() throws {
+    microphoneID = UUID()
+    let id = microphoneID
+    let current = generation
+    receivedBuffer = false
+    state = .preparing
+    input?.replace(nil)
+    recognition?.cancel()
+    recognition = nil
+    segment = UUID()
+    let input = SpeechInput(
+      meter: { @Sendable [weak self] level, rate, channels in
+        Task { @MainActor in
+          guard let self, self.generation == current, self.microphoneID == id else { return }
+          self.receiveBuffer(level: level, rate: rate, channels: channels)
+        }
+      },
+      frame: { @Sendable [weak self] voice in
+        Task { @MainActor in
+          guard let self, self.generation == current, self.microphoneID == id else { return }
+          self.receive(voice: voice)
+        }
+      },
+      failure: { @Sendable [weak self] error in
+        Task { @MainActor in
+          guard let self, self.generation == current, self.microphoneID == id else { return }
+          LocalDiagnostics.shared.record(.audioConversion, .failed, correlation: current.uuidString)
+          if error == .invalidFormat {
+            self.configurationChanged()
+          } else {
+            self.failInput(
+              "Die Mikrofondaten konnten nicht verarbeitet werden. Bitte das Gespräch erneut starten."
+            )
+          }
+        }
+      })
+    self.input = input
+    // The recognition task and receiver exist before any microphone audio flows.
+    startSegment()
+    try ConversationAudio.shared.startMicrophone { @Sendable buffer in input.append(buffer) }
+    ConversationAudio.shared.onConfigurationChange = { [weak self] in self?.configurationChanged() }
+    watchdog.start(at: ProcessInfo.processInfo.systemUptime)
+    watchdogTask?.cancel()
+    watchdogTask = Task { [weak self] in
+      while !Task.isCancelled {
+        do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+        guard let self, self.generation == current, self.microphoneID == id else { return }
+        switch self.watchdog.check(at: ProcessInfo.processInfo.systemUptime) {
+        case .wait: continue
+        case .restart:
+          LocalDiagnostics.shared.record(.audioRestart, .started, correlation: current.uuidString)
+          self.restartMicrophone()
+          return
+        case .fail:
+          LocalDiagnostics.shared.record(.audioBuffer, .failed, correlation: current.uuidString)
+          self.failInput(
+            "Vom Mikrofon kommen keine Audiodaten an. Bitte das Gespräch erneut starten.")
+          return
+        }
+      }
+    }
+  }
+  private func receiveBuffer(level: Double, rate: Double, channels: Int) {
+    let now = ProcessInfo.processInfo.systemUptime
+    watchdog.received(at: now)
     self.level += (level - self.level) * 0.4
+    if !receivedBuffer {
+      receivedBuffer = true
+      if state == .preparing { state = .recording }
+      LocalDiagnostics.shared.record(.audioBuffer, .completed, correlation: generation.uuidString)
+      LocalDiagnostics.shared.record(
+        .audioSampleRate, .completed, correlation: generation.uuidString, count: Int(rate))
+      LocalDiagnostics.shared.record(
+        .audioChannels, .completed, correlation: generation.uuidString, count: channels)
+    }
+    if now - lastLevelLog >= 1 {
+      lastLevelLog = now
+      LocalDiagnostics.shared.record(
+        .audioLevel, .completed, correlation: generation.uuidString, count: Int(level * 1000))
+    }
+  }
+  private func configurationChanged() {
+    guard input != nil else { return }
+    guard !configurationRetryUsed, !monitor, state == .recording || state == .preparing else {
+      failInput("Die Audioverbindung wurde geändert. Bitte das Gespräch erneut starten.")
+      return
+    }
+    configurationRetryUsed = true
+    LocalDiagnostics.shared.record(.audioRestart, .started, correlation: generation.uuidString)
+    restartMicrophone()
+  }
+  private func restartMicrophone() {
+    guard input != nil, !monitor, state == .recording || state == .preparing else {
+      failInput("Die Audioverbindung wurde unterbrochen. Bitte das Gespräch erneut starten.")
+      return
+    }
+    committed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !committed.isEmpty { committed += " " }
+    endpoint = SpeechEndpoint()
+    endpointSent = false
+    startedAt = ProcessInfo.processInfo.systemUptime
+    do { try prepareMicrophone() } catch {
+      failInput("Das Mikrofon konnte nicht neu gestartet werden. Bitte erneut versuchen.")
+    }
+  }
+  private func failInput(_ message: String) {
+    cancelTurn()
+    failure = message
+    onFailure?(message)
+  }
+  private func receive(voice: Bool) {
     if monitor {
       onset.append(voice)
       if onset.count > 12 { onset.removeFirst() }
@@ -166,7 +306,7 @@ enum LocalSpeechError: LocalizedError {
     level = 0
   }
   private func startSegment(preRoll: Bool = false) {
-    guard let recognizer, state == .recording else { return }
+    guard let recognizer, state == .recording || state == .preparing else { return }
     segment = UUID()
     let segment = segment
     let current = generation
@@ -237,6 +377,11 @@ enum LocalSpeechError: LocalizedError {
       previewInputTask = nil
     #endif
     generation = UUID()
+    microphoneID = UUID()
+    watchdog.cancel()
+    watchdogTask?.cancel()
+    watchdogTask = nil
+    receivedBuffer = false
     segment = UUID()
     monitor = false
     input?.replace(nil)
@@ -265,7 +410,7 @@ enum LocalSpeechError: LocalizedError {
       let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 320)!
       buffer.frameLength = 320
       let silent = ProcessInfo.processInfo.arguments.contains("--preview-microphone-silent")
-      state = .recording
+      state = .preparing
       previewInputTask = Task { [weak self] in
         var frame = 0
         while !Task.isCancelled {
@@ -276,59 +421,19 @@ enum LocalSpeechError: LocalizedError {
             buffer.floatChannelData![0][index] = Float(
               gain * sin(2 * .pi * 220 * Double(frame + index) / 16_000))
           }
-          detector.append(buffer) { _, level in self.receive(voice: false, level: level) }
+          do {
+            if let level = try InputAudioLevel.measure(buffer) {
+              self.receiveBuffer(level: level, rate: 16_000, channels: 1)
+            }
+            try detector.append(buffer) { _ in self.receive(voice: false) }
+          } catch {
+            self.failInput("Die Testquelle konnte nicht verarbeitet werden.")
+            return
+          }
           frame += 320
           do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
         }
       }
     }
   #endif
-}
-struct VoiceSettingsView: View {
-
-  @State private var rate = SpeechOutput.shared.rate
-  @State private var output = SpeechOutput.shared
-  var body: some View {
-    Form {
-      Section {
-        LabeledContent("Stimme", value: "Victoria · Deutsch")
-        VStack(alignment: .leading) {
-          LabeledContent(
-            "Sprechtempo", value: rate.formatted(.number.precision(.fractionLength(2))) + "×")
-          AppSlider(value: $rate, range: 0.75...1.25, step: 0.05, label: "Sprechtempo")
-        }
-        AppFormAction(
-          title: output.speaking ? "Wiedergabe beenden" : "Stimme anhören",
-          systemImage: output.speaking ? "stop" : "play"
-        ) {
-          if output.speaking {
-            output.stop()
-          } else {
-            output.speak("Am 14. September um 9 Uhr 15: Physiotherapie, Raum 2.14 in Laßnitzhöhe.")
-          }
-        }.accessibilityIdentifier("preview-voice").accessibilityValue(output.phase.rawValue)
-        if output.phase == .preparing { ProgressView("Stimme vorbereiten …") }
-        if output.phase == .failed { Text(output.status).foregroundStyle(AppPalette.destructive) }
-      }
-      Section {
-        LabeledContent(
-          "Spracherkennung",
-          value: LocalSpeechRecorder.makeRecognizer() == nil
-            ? "Nicht verfügbar" : "Auf diesem iPhone")
-      } header: {
-        AppSectionHeader(
-          title: "Spracherkennung",
-          help:
-            "Nach einer Sprechpause antwortet die App. Hineinsprechen unterbricht die Wiedergabe."
-        )
-      }
-
-    }.pageTitle("Sprache")
-      .onAppear { rate = output.rate }
-      .onChange(of: rate) {
-        output.stop()
-        output.rate = rate
-      }
-      .onDisappear { output.stop() }
-  }
 }
