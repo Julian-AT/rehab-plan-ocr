@@ -219,6 +219,13 @@ gehören Kalenderlink-Reparatur, gemischte Archivseiten und deren Aufnahme-/
 Importdetails. Status, Terminverlauf, Wiederanlauf und
 manuelle Klärung ungewisser Terminänderungen sind bereits typisiert.
 Systemeditor, ausstehende Terminlinks und weitere Plattformeffekte bleiben offen.
+Auch die Core-Import-/Undo-Abläufe übergeben Snapshot und Importwrite noch als
+JSON-Werte an `Platform.call`; erst der FFI-Adapter verwendet dort die typisierten
+Callbacks. Der aktive Core-Agenda-Abgleich verwendet weiterhin den Stringcallback
+`calendar_event_call("agenda", ...)`. Die neue typisierte Swift-Agenda-Methode
+ersetzt damit noch nicht sämtliche aktiven Core-Eingänge. Diese internen Grenzen
+müssen einschließlich Wartungswarnungen und bestehender Legacy-Ergebnisformen
+separat umgestellt werden.
 Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
