@@ -169,18 +169,7 @@ pub async fn calendars(app: Arc<dyn super::Platform>, dedicated: Option<bool>) -
     .await
     .map_err(failure)?
 }
-pub async fn share_export(
-    app: Arc<dyn super::Platform>,
-    filename: String,
-    content: String,
-) -> Response<Value> {
-    tokio::task::spawn_blocking(move || {
-        app.call("share", json!({"filename":filename,"content":content}))
-    })
-    .await
-    .map_err(failure)?
-}
-#[allow(clippy::too_many_arguments)] // Preserve existing Tauri wire arguments during migration.
+#[allow(clippy::too_many_arguments)] // Shared preparation inputs for native imports and regression tests.
 pub async fn prepare_calendar(
     app: Arc<dyn super::Platform>,
     state: &Arc<AppState>,

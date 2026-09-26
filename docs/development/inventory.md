@@ -25,6 +25,21 @@ auch ohne direkten Textverweis erreichbar.
 | `ml/experiments/vlm` | Eigener CMake-Adapter, gepinnte Quellen, `qualify-vlm.py`, `compare-regions.py` und `report-regions.py` bilden einen vorhandenen lokalen Vergleichspfad. | Behalten als dokumentiertes Experiment; keine App-Qualifizierung. Vollständiger Wiederaufbau bei ausreichender Reserve noch offen. |
 | `docs/device/2026-09-26-s12/mehr.png` | Echtes Gerät, referenziert von `kokoro-device-update.md`; Hash unterscheidet sich von allen 22 gewählten Simulatorreferenzen. | Historischen Nachweis unverändert behalten; kein doppelter Simulatorfall. |
 | Vorschau-/Bildvergleichswerkzeuge | Paarweiser Pixelvergleich, Mehransichtenvergleich und XCTest-Triage prüfen unterschiedliche Verträge. | Behalten; Vergleichsregeln und offene Abweichungen nicht durch neue Baselines überdecken. |
+| Acht alte Rust-Servicewrapper | `agenda::{enable_reminders, reminder_status, pending_event_open}`, `calendar::share_export`, `scan::{cancel_processing, source_bytes, scan_image}` und `settings::engine_status` haben keine Rust-Aufrufer, UniFFI-Exporte oder generierte Registrierung. Der Buildgenerator erzeugt ausschließlich Linkereinstellungen. | Entfernt; aktive Ersatzverbraucher unten überprüft. |
+
+Die entfernten Rust-Wrapper werden durch tatsächlich eingebundene native Pfade
+ersetzt: `SettingsView` verwendet `requestReminderPermission` und `reminderStatus`,
+`TermineApp` liest und quittiert `pendingEventOpen` über `NativeBridge`.
+`CalendarView` teilt Exportdateien über `ShareLink`. `ScanModel`, `SourceView` und
+`RecognitionTraceView` verwenden die geprüften UniFFI-Dateipfade `artifactPath`
+beziehungsweise `traceArtifactPath`; Abbruch erfolgt über `NativeApplication.cancel_job`
+für einen bestimmten Auftrag. `NativeApplication.capabilities` liefert Modellverfügbarkeit und
+Manifestpfad. Die native Registrierung und diese FFI-Einstiege bleiben erhalten.
+Die Entfernung greift weder in Speicherformate noch in Wiederherstellungsjournale
+ein. Nach Entfernung bestanden 203 Tests aus `reha-core` und `reha-ffi`, die
+Bindings-Konsistenzprüfung, vier Dokumentationstests und die gezielte
+Rust-Formatprüfung. Eine gleichzeitige Workspace-Prüfung scheiterte am separat
+umgestellten Fehlertyp des CLI; die endgültige gemeinsame Prüfung bleibt nötig.
 
 Der echte Gerätebeleg hat SHA-256
 `ac10f5bd6bdbfa402b7713819dcfdd3b0f2c5b49c6e2b9654878e5358ebf76d1`

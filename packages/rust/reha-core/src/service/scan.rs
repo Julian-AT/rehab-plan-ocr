@@ -190,12 +190,6 @@ pub async fn import_image(
     }
     result
 }
-pub fn cancel_processing(state: &Arc<AppState>) -> Response<()> {
-    for flag in state.cancel.lock().map_err(failure)?.values() {
-        flag.store(true, Ordering::Relaxed);
-    }
-    Ok(())
-}
 pub fn history(state: &Arc<AppState>) -> Response<Value> {
     let store = state.store.lock().map_err(failure)?;
     Ok(
@@ -209,26 +203,6 @@ pub fn load_scan(state: &Arc<AppState>, id: String) -> Response<PipelineRun> {
         store.save_run(&run).map_err(failure)?;
     }
     Ok(run)
-}
-pub fn source_bytes(state: &Arc<AppState>, id: String) -> Response<String> {
-    let store = state.store.lock().map_err(failure)?;
-    Ok(STANDARD.encode(std::fs::read(store.source_path(&id).map_err(failure)?).map_err(failure)?))
-}
-pub fn scan_image(state: &Arc<AppState>, id: String, artifact: String) -> Response<String> {
-    if !["original.png", "page.png"].contains(&artifact.as_str())
-        && !(artifact.starts_with("region-")
-            && artifact.ends_with(".png")
-            && artifact
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.'))
-    {
-        return Err("Unbekanntes Bildartefakt.".into());
-    }
-    let store = state.store.lock().map_err(failure)?;
-    store.load_run(&id).map_err(failure)?;
-    let bytes =
-        std::fs::read(store.scan_dir(&id).map_err(failure)?.join(artifact)).map_err(failure)?;
-    Ok(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
 }
 pub fn save_review(
     state: &Arc<AppState>,

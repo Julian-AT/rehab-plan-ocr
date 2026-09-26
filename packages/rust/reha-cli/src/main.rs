@@ -7,12 +7,12 @@ fn main() {
     }
 }
 
-fn execute() -> Result<()> {
+fn execute() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
         #[cfg(not(target_os = "ios"))]
         Some("lab") => {
-            let value = reha_core::lab::command(&args[2..]).map_err(Error::Invalid)?;
+            let value = reha_core::lab::command(&args[2..])?;
             println!("{}", serde_json::to_string_pretty(&value)?);
         }
         #[cfg(feature = "onnx")]
@@ -63,7 +63,7 @@ fn execute() -> Result<()> {
             std::fs::write(&args[3], reha_core::calendar::ics(&events, chrono::Utc::now())?)?;
             println!("ICS created locally.");
         }
-        _ => return Err(Error::Invalid("Usage: reha scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics [SELECTION.json]\nDesktop inference requires --features onnx-download.".into())),
+        _ => return Err(Error::Invalid("Usage: reha scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics [SELECTION.json]\nDesktop inference requires --features onnx-download.".into()).into()),
     }
     Ok(())
 }

@@ -137,6 +137,3 @@ pub fn settings_value(state: &AppState, value: Option<Value>) -> Response<Value>
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or(json!({"timezone":"Europe/Vienna","reminder":10,"detailed_debug":false})))
 }
-pub fn engine_status(state: &Arc<AppState>) -> Value {
-    json!({"portable_packaged":state.models.join("manifest.json").exists(),"platform":std::env::consts::OS,"runtime":"ONNX Runtime 1.22.0 / ort 2.0.0-rc.10","cloud_recognition":false})
-}
