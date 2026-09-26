@@ -43,7 +43,9 @@ def prepare(baseline, conversion, output):
         h = run["document"]["source_hash"]
         converted = next(e for e in source["entries"] if e["png"]["sha256"] == h)
         image = Path(converted["png"]["path"])
-        if hashlib.file_digest(image.open("rb"), "sha256").hexdigest() != h:
+        with image.open("rb") as original:
+            digest = hashlib.file_digest(original, "sha256").hexdigest()
+        if digest != h:
             raise ValueError("Converted source checksum mismatch.")
         dest = raw / image.name
         # Same filesystem hard link preserves bytes without another full image copy.

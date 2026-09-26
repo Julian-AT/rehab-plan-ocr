@@ -3,13 +3,17 @@ import SwiftUI
 
 private struct ActivityPage: Decodable {
   let items: [ActivityItem]
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let next_cursor: String?
 }
 private struct ActivityItem: Decodable, Identifiable {
   let id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let created_at: Double
   let source: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let source_id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let document_id: String?
   let kind: String
   let status: String
@@ -55,7 +59,7 @@ struct ActivityView: View {
         Text("Erkennungen").tag("recognition")
         Text("Importe").tag("import")
         Text("Terminänderungen").tag("event")
-      }
+      }.accessibilityIdentifier("activity-filter")
       ForEach(items) { item in
         NavigationLink {
           if item.source == "event" {
@@ -152,11 +156,16 @@ struct CalendarStatusView: View {
       let writable: Bool
     }
     let access: String
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let last_read_at: String?
     let calendars: [Calendar]
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let calendar_id: String?
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let display_calendar_ids: [String]?
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let pending_imports: Int
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let pending_events: Int
   }
   @State private var status: Status?

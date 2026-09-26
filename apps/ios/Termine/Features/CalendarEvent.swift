@@ -37,10 +37,13 @@ indirect enum JSONValue: Codable, Equatable, Sendable {
 }
 struct CalendarEventValues: Codable, Equatable, Sendable {
   var title: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   var start_utc: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   var end_utc: String
   var timezone: String
   var location: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   var reminder_minutes: Int?
   var start: Date { ISO8601DateFormatter().date(from: start_utc) ?? .distantPast }
   var end: Date { ISO8601DateFormatter().date(from: end_utc) ?? .distantPast }
@@ -52,17 +55,22 @@ struct CalendarEventValues: Codable, Equatable, Sendable {
 }
 struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
   let id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let external_id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let calendar_id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let calendar_title: String
   let source: String
   let occurrence: String
   let recurring: Bool
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let system_only: Bool
   let writable: Bool
   let values: CalendarEventValues
   let metadata: JSONValue
   let fingerprint: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   var import_id: String?
   var isAllDay: Bool {
     if case .object(let fields) = metadata, case .bool(let value) = fields["all_day"] {

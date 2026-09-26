@@ -83,7 +83,9 @@ public final class LocalDiagnostics: @unchecked Sendable {
           self.flush = flush
           self.queue.asyncAfter(deadline: .now() + 0.2, execute: flush)
         }
-      } catch { /* The read/export path surfaces inaccessible diagnostic storage. */  }
+      } catch {
+        // The read/export path surfaces inaccessible diagnostic storage.
+      }
     }
   }
   private func persist() throws {

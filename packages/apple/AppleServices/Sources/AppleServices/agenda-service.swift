@@ -199,7 +199,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     LocalDiagnostics.shared.record(.reminderSelection, .started, correlation: token)
     refreshAgain = false
     additions = [:]
-    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+    deadline.run {
+      await self.notifications.snapshot()
+    } completion: { result in
       guard self.cycleID == token else { return }
       guard self.generation == version else {
         self.beginCycle()
@@ -305,7 +307,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func readStatus(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
     let version = generation
-    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+    deadline.run {
+      await self.notifications.snapshot()
+    } completion: { result in
       do {
         let snapshot = try result.get()
         if self.generation == version { self.install(snapshot) }
@@ -902,7 +906,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   ) {
     let version = generation
     let reservation = UUID()
-    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+    deadline.run {
+      await self.notifications.snapshot()
+    } completion: { result in
       do {
         guard self.generation == version else {
           throw AgendaError.message("Erinnerungseinstellungen wurden geändert. Auftrag verworfen.")

@@ -70,7 +70,8 @@ def build(transcriptions, root, baseline):
         with image.open("rb") as stream:
             if hashlib.file_digest(stream, "sha256").hexdigest() != source_hash:
                 raise ValueError("Original changed.")
-        w, h = Image.open(image).size
+        with Image.open(image) as original:
+            w, h = original.size
         table_left, t, r, b = spec["table"]
         table = (
             [{"x": float(x * w), "y": float(y * h)} for x, y in spec["table_quad"]]

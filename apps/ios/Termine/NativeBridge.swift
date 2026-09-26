@@ -155,10 +155,13 @@ struct CalendarDestinations: Decodable {
     let title: String
     let source: String
     let writable: Bool
+    // swift-format-ignore: AlwaysUseLowerCamelCase
     let color_components: [Double]?
   }
   let calendars: [Destination]
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let dedicated_id: String?
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let setup_error: String?
 }
 

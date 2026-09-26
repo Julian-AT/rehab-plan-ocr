@@ -590,7 +590,8 @@ def materialize(root, identifier, cache_mb):
     path = root / "raw" / source["filename"]
     if file_hash(path) != entry["source_hash"]:
         raise ValueError("Original checksum mismatch.")
-    raster, lines, m = variant(Image.open(path).convert("RGB"), ref, entry["recipe"])
+    with Image.open(path) as original:
+        raster, lines, m = variant(original.convert("RGB"), ref, entry["recipe"])
     key = digest([identifier, reference_hash(ref)])
     cache = root / "variants/cache"
     cache.mkdir(parents=True, exist_ok=True)

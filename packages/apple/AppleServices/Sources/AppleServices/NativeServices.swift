@@ -13,14 +13,18 @@ struct CalendarArgs: Decodable { let dedicated: Bool? }
 struct Operation: Decodable {
   let kind: String
   let id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let calendar_id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let external_id: String?
   let before: Values?
   let after: Values?
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let requires_resolution: Bool
 }
 struct WriteArgs: Decodable {
   let operation: Operation
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let recovery_only: Bool
 }
 struct PhotoArgs: Decodable { let base64: String }
@@ -449,6 +453,7 @@ public final class NativeServices: @unchecked Sendable {
   func recognize(_ invoke: ServiceRequest) throws {
     struct Args: Decodable {
       let base64: String
+      // swift-format-ignore: AlwaysUseLowerCamelCase
       let budget_ms: Double?
     }
     let args = try invoke.parseArgs(Args.self)

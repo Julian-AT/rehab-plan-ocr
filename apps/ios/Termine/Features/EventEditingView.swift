@@ -7,10 +7,13 @@ struct EventProposalView: Codable, Identifiable, Sendable {
   let session: String
   let revision: UInt64
   let kind: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let calendar_id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let calendar_title: String
   let before: CalendarEvent?
   let patch: [String: JSONValue]
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let undo_of: String?
   var id: String { token }
   var button: String {
@@ -52,15 +55,18 @@ struct EventProposalView: Codable, Identifiable, Sendable {
 }
 struct EventResponse: Decodable {
   var proposal: EventProposalView?
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   var system_editor: CalendarEvent?
   var status: String?
   var message: String?
 }
 struct EventHistoryItem: Decodable, Identifiable {
   let id: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let created_at: Double
   let proposal: EventProposalView
   let status: String
+  // swift-format-ignore: AlwaysUseLowerCamelCase
   let undone_by: String?
 }
 @MainActor func jsonObject<T: Encodable>(_ value: T) throws -> Any {

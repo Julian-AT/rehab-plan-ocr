@@ -31,7 +31,7 @@ private final class ControlledNotifications: NotificationAdapter, @unchecked Sen
       hold = false
       return result
     }
-    callbacks.forEach { $0.resume() }
+    for callback in callbacks { callback.resume() }
   }
   func snapshot() async -> NotificationSnapshot {
     locked {

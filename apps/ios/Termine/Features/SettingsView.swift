@@ -292,6 +292,8 @@ struct SettingsView: View {
   }
 }
 
+// Generated app-owned records already provide a stable ID for SwiftUI sheets.
+// swift-format-ignore: AvoidRetroactiveConformances
 extension CompletionDefault: @retroactive Identifiable {}
 
 private struct CompletionDefaultForm: View {

@@ -173,7 +173,8 @@ import XCTest
         format: "label CONTAINS %@ OR label CONTAINS %@", "Apple Intelligence", "Die Antwort konnte"
       )
     ).firstMatch
-    XCTAssertTrue(freeReply.waitForExistence(timeout: 30))  // Simulator has no Foundation Models runtime.
+    // Simulator has no Foundation Models runtime.
+    XCTAssertTrue(freeReply.waitForExistence(timeout: 30))
     capture("10-freies-gespraech-modellstatus")
     back("Gesprächsdetails")
     app.buttons["stop-speech"].tap()
@@ -373,6 +374,44 @@ import XCTest
     for _ in 0..<4 where !sound.isHittable { app.swipeDown() }
     XCTAssertNotEqual(sound.value as? String, before)
     toggle(sound)
+  }
+  func testActivityCalendarStatusAndReminderFeedback() {
+    launch("one")
+    app.tabBars.buttons["Mehr"].tap()
+    capture("quality-04-mehr-gruppen")
+    let status = app.buttons["Kalenderstatus"]
+    for _ in 0..<5 where !status.isHittable { app.swipeUp() }
+    status.tap()
+    XCTAssertTrue(app.staticTexts["Kalenderzugriff"].waitForExistence(timeout: 10))
+    XCTAssertTrue(app.staticTexts["Vollzugriff"].exists)
+    let refresh = app.buttons["Aktualisieren"]
+    for _ in 0..<5 where !refresh.isHittable { app.swipeUp() }
+    refresh.tap()
+    expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: refresh)
+    waitForExpectations(timeout: 10)
+    capture("quality-05-lesender-kalenderstatus")
+    back("Kalenderstatus")
+    app.buttons["Verlauf"].tap()
+    XCTAssertTrue(app.navigationBars["Verlauf"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.buttons["activity-filter"].exists)
+    capture("quality-06-aktivitaetsverlauf")
+    back("Verlauf")
+    let reminders = app.buttons["Erinnerungen"]
+    for _ in 0..<5 where !reminders.isHittable { app.swipeDown() }
+    reminders.tap()
+    let test = app.buttons["test-reminder"]
+    for _ in 0..<5 where !test.isHittable { app.swipeUp() }
+    XCTAssertGreaterThanOrEqual(test.frame.height, 44)
+    test.tap()
+    let result = app.staticTexts.matching(
+      NSPredicate(
+        format: "label BEGINSWITH %@ OR label CONTAINS %@",
+        "Testauftrag angenommen", "Mitteilungen sind nicht erlaubt"
+      )
+    ).firstMatch
+    XCTAssertTrue(result.waitForExistence(timeout: 25))
+    XCTAssertTrue(test.isEnabled)
+    capture("quality-07-testerinnerung-rueckmeldung")
   }
   func testVoiceIdleDetailsCancelAndUnavailableRecognition() {
     launch("one")
