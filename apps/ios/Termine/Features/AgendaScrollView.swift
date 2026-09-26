@@ -39,13 +39,13 @@ private final class AxisVeto: UIGestureRecognizer {
   override func canBePrevented(by other: UIGestureRecognizer) -> Bool { false }
 }
 
-/// One vertical offset and one fixed gutter for three finger-driven day pages.
+/// One vertical offset for three full-width, finger-driven day pages.
+/// Each page contains its own time axis, so empty days need no width change.
 /// New data, text measurements and size changes are applied only at rest.
 struct AgendaScrollView: UIViewControllerRepresentable {
   let date: Date
   let projection: ReadableAgendaLayout
   let pages: (Double, Double) -> [AnyView]
-  let gutter: AnyView
   let showsTimeline: Bool
   let dataReady: Bool
   let initialMinute: Double
@@ -62,7 +62,6 @@ struct AgendaScrollView: UIViewControllerRepresentable {
     private let vertical = UIScrollView()
     private let horizontal = UIScrollView()
     private var hosts: [UIHostingController<AnyView>] = []
-    private let timeHost = UIHostingController(rootView: AnyView(EmptyView()))
     private var current: AgendaScrollView?
     private var pending: AgendaScrollView?
     private var lastSize = CGSize.zero
@@ -92,16 +91,13 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       horizontal.accessibilityIdentifier = "agenda-days"
       view.addSubview(vertical)
       vertical.addSubview(horizontal)
-      addChild(timeHost)
-      vertical.addSubview(timeHost.view)
-      timeHost.didMove(toParent: self)
-      timeHost.view.backgroundColor = .clear
       for _ in 0..<3 {
         let host = UIHostingController(rootView: AnyView(EmptyView()))
         addChild(host)
         horizontal.addSubview(host.view)
         host.didMove(toParent: self)
         host.view.backgroundColor = .clear
+        host.view.clipsToBounds = true
         hosts.append(host)
       }
       let horizontalVeto = AxisVeto(rejecting: .vertical)
@@ -139,13 +135,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
       lastSize = view.bounds.size
       vertical.frame = view.bounds
       let height = max(view.bounds.height, value.projection.height + 52)
-      let gutterWidth: CGFloat = value.showsTimeline ? 56 : 0
-      // Empty pages use the full width; layout changes only after paging settles.
-      timeHost.rootView = value.gutter
-      timeHost.view.isHidden = !value.showsTimeline
-      timeHost.view.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: height)
-      horizontal.frame = CGRect(
-        x: gutterWidth, y: 0, width: view.bounds.width - gutterWidth, height: height)
+      horizontal.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: height)
       horizontal.contentSize = CGSize(width: horizontal.bounds.width * 3, height: height)
       let y = min(max(0, value.projection.y(anchor)), max(0, height - view.bounds.height))
       let pages = value.pages(view.bounds.height, y)

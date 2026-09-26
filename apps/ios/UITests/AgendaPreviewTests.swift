@@ -79,12 +79,13 @@ import XCTest
     XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
     capture("03-wischen-ueber-wochengrenze")
   }
-  func testAxisLockFixedTimeColumnAndAnchorAcrossEmptyDay() {
+  func testDayTimeAxisPagesWithContentAcrossEmptyDay() throws {
     launch("axis")
     let days = app.scrollViews["agenda-days"]
     XCTAssertTrue(days.waitForExistence(timeout: 8))
     days.swipeLeft()
     XCTAssertTrue(row("Therapie Tag 1, 12 Uhr").waitForExistence(timeout: 8))
+    XCTAssertEqual(days.frame.width, app.frame.width, accuracy: 1)
     let selected = app.buttons.matching(
       NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "weekday-")
     ).firstMatch
@@ -95,26 +96,48 @@ import XCTest
       forDuration: 0.02, thenDragTo: origin.withOffset(CGVector(dx: 40, dy: -170)),
       withVelocity: .slow, thenHoldForDuration: 0.1)
     XCTAssertEqual(selected.label, beforeDay)
-    let hour = app.staticTexts["timeline-hour-12"]
+    let hour = try XCTUnwrap(
+      days.staticTexts.matching(identifier: "timeline-hour-12")
+        .allElementsBoundByIndex.first(where: \.isHittable))
     let anchorY = hour.frame.minY
     let anchorX = hour.frame.minX
     XCTAssertLessThan(anchorX, 56)
-    capture("quality-01-vertikale-diagonale")
+    capture("page-axis-01-vertikale-diagonale")
     let start = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
     start.press(
-      forDuration: 0.02, thenDragTo: start.withOffset(CGVector(dx: -25, dy: 1)),
-      withVelocity: .slow, thenHoldForDuration: 0.1)
+      forDuration: 0.02, thenDragTo: start.withOffset(CGVector(dx: -100, dy: 1)),
+      withVelocity: .slow, thenHoldForDuration: 1)
     XCTAssertEqual(selected.label, beforeDay)
     XCTAssertEqual(hour.frame.minX, anchorX, accuracy: 1)
     XCTAssertEqual(hour.frame.minY, anchorY, accuracy: 2)
     days.swipeLeft()
     XCTAssertTrue(app.staticTexts["Keine Termine"].waitForExistence(timeout: 8))
-    XCTAssertFalse(app.staticTexts["timeline-hour-12"].isHittable)
-    capture("quality-02-leerer-nachbartag")
+    XCTAssertFalse(
+      days.staticTexts.matching(identifier: "timeline-hour-12").allElementsBoundByIndex
+        .contains(where: \.isHittable))
+    XCTAssertEqual(days.frame.width, app.frame.width, accuracy: 1)
+    XCTAssertEqual(app.staticTexts["Keine Termine"].frame.midX, app.frame.midX, accuracy: 2)
+    capture("page-axis-02-leerer-nachbartag")
+    let emptyStart = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+    emptyStart.press(
+      forDuration: 0.02, thenDragTo: emptyStart.withOffset(CGVector(dx: -100, dy: 1)),
+      withVelocity: .slow, thenHoldForDuration: 1)
+    XCTAssertTrue(app.staticTexts["Keine Termine"].isHittable)
+    XCTAssertEqual(days.frame.width, app.frame.width, accuracy: 1)
     days.swipeLeft()
     XCTAssertTrue(row("Therapie Tag 3, 12 Uhr").waitForExistence(timeout: 8))
-    XCTAssertEqual(app.staticTexts["timeline-hour-12"].frame.minY, anchorY, accuracy: 2)
-    capture("quality-03-uhrzeit-erhalten")
+    let nextHour = try XCTUnwrap(
+      days.staticTexts.matching(identifier: "timeline-hour-12")
+        .allElementsBoundByIndex.first(where: \.isHittable))
+    XCTAssertEqual(nextHour.frame.minY, anchorY, accuracy: 2)
+    XCTAssertEqual(nextHour.frame.minX, anchorX, accuracy: 1)
+    XCTAssertEqual(days.frame.width, app.frame.width, accuracy: 1)
+    capture("page-axis-03-uhrzeit-erhalten")
+    days.swipeRight()
+    XCTAssertTrue(app.staticTexts["Keine Termine"].isHittable)
+    days.swipeRight()
+    XCTAssertTrue(row("Therapie Tag 1, 12 Uhr").isHittable)
+    XCTAssertEqual(days.frame.width, app.frame.width, accuracy: 1)
   }
   func testCalendarDensityAndListPersistAfterRestart() {
     launch("readable")

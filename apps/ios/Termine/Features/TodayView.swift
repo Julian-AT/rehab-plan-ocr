@@ -312,12 +312,15 @@ struct TodayView: View {
               return AnyView(day(agenda, now: now).frame(height: viewport).offset(y: offset))
             }
             return AnyView(
-              TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) {
-                id, height in
-                if abs((measuredHeights[id] ?? 0) - height) > 1 { measuredHeights[id] = height }
+              HStack(alignment: .top, spacing: 0) {
+                TimelineGutter(start: window.start, layout: projection).frame(width: 56)
+                TimelineCanvas(window: window, layout: layout, now: now, select: { editor = $0 }) {
+                  id, height in
+                  if abs((measuredHeights[id] ?? 0) - height) > 1 { measuredHeights[id] = height }
+                }
               })
           }
-        }, gutter: AnyView(TimelineGutter(start: windows[1].start, layout: projection)),
+        },
         showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil,
         initialMinute: windows[1].scrollMinute, reset: scrollReset,
         minute: $scrollMinute, selectDate: { selectedDate = $0 })
