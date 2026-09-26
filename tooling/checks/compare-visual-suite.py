@@ -89,6 +89,8 @@ def capture_test_status(summary, tests):
         and summary.get("passedTests") == total
         and summary.get("failedTests") == 0
         and summary.get("skippedTests") == 0
+        and len(cases) == total
+        and all(case.get("result") == "Passed" for case in cases)
     )
     return {
         "passed": complete and all(case["passed"] for case in captures),

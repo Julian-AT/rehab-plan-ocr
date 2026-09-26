@@ -155,6 +155,25 @@ class VisualSuiteTests(unittest.TestCase):
                 summary = self.passed_summary() | change
                 self.assertFalse(suite.capture_test_status(summary, self.capture_tree())["passed"])
 
+    def test_actual_surrounding_cases_must_match_the_successful_summary(self):
+        for change in ("missing", "extra", "failed", "skipped"):
+            with self.subTest(change=change):
+                tree = self.capture_tree()
+                summary = self.passed_summary(4)
+                if change != "missing":
+                    tree["testNodes"].append(
+                        {
+                            "nodeType": "Test Case",
+                            "nodeIdentifier": "Other/test()",
+                            "result": "Passed" if change == "extra" else change.title(),
+                        }
+                    )
+                if change == "extra":
+                    summary = self.passed_summary(3)
+                status = suite.capture_test_status(summary, tree)
+                self.assertFalse(status["passed"])
+                self.assertFalse(status["complete_run_passed"])
+
     def test_export_indexes_only_a_disposable_copy_and_records_unchanged_original(self):
         bundle = self.root / "source.xcresult"
         bundle.mkdir()
