@@ -374,18 +374,20 @@ import XCTest
     let date = app.descendants(matching: .any).matching(identifier: "agenda-date").firstMatch
     XCTAssertTrue(date.waitForExistence(timeout: 8))
     XCTAssertTrue(row("Physiotherapie Tag 0").waitForExistence(timeout: 8))
-    let originalDate = try XCTUnwrap(date.value as? String)
+    XCTAssertTrue(date.isHittable)
     let week = app.descendants(matching: .any).matching(identifier: "agenda-week").firstMatch
     XCTAssertTrue(week.staticTexts["September 2026"].exists)
 
     app.buttons["next-week"].tap()
     XCTAssertTrue(row("Physiotherapie Tag 7").waitForExistence(timeout: 8))
-    XCTAssertNotEqual(date.value as? String, originalDate)
+    // The compact native date picker has an empty container value. Its actual
+    // selected day is observed through the displayed appointments and month.
+    XCTAssertTrue(date.isHittable)
     XCTAssertTrue(week.staticTexts["Oktober 2026"].exists)
 
     app.buttons["previous-week"].tap()
     XCTAssertTrue(row("Physiotherapie Tag 0").waitForExistence(timeout: 8))
-    XCTAssertEqual(date.value as? String, originalDate)
+    XCTAssertTrue(date.isHittable)
     XCTAssertTrue(week.staticTexts["September 2026"].exists)
     capture("large-type-week-navigation")
   }
