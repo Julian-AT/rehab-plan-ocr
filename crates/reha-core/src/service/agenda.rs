@@ -25,7 +25,8 @@ pub async fn sync(app: &Arc<dyn super::Platform>, state: &AppState) -> Response<
             .map_err(failure)?
             .and_then(|v| serde_json::from_str::<Value>(&v).ok())
             .unwrap_or(json!({}));
-        json!({"records": records, "preferences": reminder_preferences(&preferences)})
+        json!({"records": records, "preferences": reminder_preferences(&preferences),
+            "display_calendar_ids": preferences.get("display_calendar_ids").cloned().unwrap_or(json!([]))})
     };
     let app = app.clone();
     tokio::task::spawn_blocking(move || app.call("agenda", args))

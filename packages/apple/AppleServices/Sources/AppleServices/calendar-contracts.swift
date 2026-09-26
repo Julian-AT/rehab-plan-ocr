@@ -1,4 +1,14 @@
+import EventKit
 import Foundation
+
+enum CalendarEventProtection {
+  static func requiresSystemEditor(_ event: EKEvent) -> Bool {
+    event.hasAttendees || event.organizer != nil || event.birthdayContactIdentifier != nil
+  }
+  static func protectsImport(_ event: EKEvent) -> Bool {
+    requiresSystemEditor(event) || event.hasRecurrenceRules || event.isDetached
+  }
+}
 
 struct Values: Codable, Equatable {
   var title: String

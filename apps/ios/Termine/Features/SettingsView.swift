@@ -251,7 +251,7 @@ struct SettingsView: View {
       }.foregroundStyle(AppPalette.destructive)
     }
     .confirmationDialog(
-      "Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen.",
+      "Alle Fotos, Prüfdaten, Einstellungen und lokale Kalenderzuordnungen löschen? Kalendertermine bleiben bestehen. Erinnerungen in nicht zugänglichen Kalendern können nicht wiederhergestellt werden; bitte anschließend im Kalender prüfen.",
       isPresented: $erase, titleVisibility: .visible
     ) {
       Button("Alle lokalen Daten löschen", role: .destructive) {

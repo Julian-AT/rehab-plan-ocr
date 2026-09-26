@@ -190,7 +190,12 @@ public final class NativeServices: @unchecked Sendable {
           event.calendar.calendarIdentifier == record.calendar_id
         {
           current[record.id] = try? self.dictionary(self.values(event))
-          if event.hasRecurrenceRules || event.isDetached { protected.append(record.id) }
+          if CalendarEventProtection.protectsImport(event)
+            || AgendaService.shared.alarmIsProtected(
+              event, approvedMinutes: record.approved.reminder_minutes)
+          {
+            protected.append(record.id)
+          }
         }
       }
       invoke.resolve(["current": current, "protected_ids": protected])
@@ -307,8 +312,14 @@ public final class NativeServices: @unchecked Sendable {
         return
       }
       if op.kind != "create" {
-        if let event = existing, event.hasRecurrenceRules || event.isDetached {
-          finish("conflict", event, "Wiederkehrende Termine und ihre Ausnahmen bleiben geschützt.")
+        if let event = existing,
+          CalendarEventProtection.protectsImport(event)
+            || AgendaService.shared.alarmIsProtected(
+              event, approvedMinutes: op.before?.reminder_minutes)
+        {
+          finish(
+            "conflict", event,
+            "Serien, Einladungen und manuell veränderte Alarme bleiben geschützt.")
           return
         }
         guard let event = existing, let before = op.before, self.values(event) == before else {

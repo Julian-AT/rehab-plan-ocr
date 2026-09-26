@@ -10,9 +10,12 @@ public struct AgendaEvent: Codable, Equatable, Sendable, Identifiable {
   public var title: String
   public var room: String
   public var status: String = "current"
+  public var owned: Bool? = nil
   public var startDate: Date { Date(timeIntervalSince1970: start) }
   public var endDate: Date { Date(timeIntervalSince1970: end) }
-  public var url: URL { URL(string: "reha-calendar://event/\(id)")! }
+  public var url: URL {
+    URL(string: owned == false ? "reha-calendar://today" : "reha-calendar://event/\(id)")!
+  }
   public func isRunning(at date: Date) -> Bool { startDate <= date && date < endDate }
 }
 

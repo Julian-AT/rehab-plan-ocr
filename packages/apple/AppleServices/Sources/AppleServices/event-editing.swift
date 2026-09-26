@@ -132,7 +132,7 @@ final class EventEditingService: @unchecked Sendable {
     return ["access": "fullAccess", "calendars": calendars(), "results": results]
   }
 
-  private func query(_ args: [String: Any]) throws -> [String: Any] {
+  func query(_ args: [String: Any]) throws -> [String: Any] {
     guard let ids = args["calendar_ids"] as? [String],
       let from = args["start_utc"] as? String, let to = args["end_utc"] as? String,
       let start = iso.date(from: from), let end = iso.date(from: to), end > start,
@@ -298,8 +298,7 @@ final class EventEditingService: @unchecked Sendable {
       "source": event.calendar.source.title,
       "occurrence": iso.string(from: occurrence),
       "recurring": event.hasRecurrenceRules || event.isDetached,
-      "system_only": event.hasAttendees || event.organizer != nil
-        || event.birthdayContactIdentifier != nil,
+      "system_only": CalendarEventProtection.requiresSystemEditor(event),
       "writable": event.calendar.allowsContentModifications, "values": values, "metadata": metadata,
       "fingerprint": fingerprint,
     ]
@@ -364,8 +363,8 @@ final class EventEditingService: @unchecked Sendable {
     let existing = try before.flatMap(find)
     if kind != "create" {
       guard let existing, let before,
-        NSDictionary(dictionary: snapshot(existing)).isEqual(to: before), !existing.hasAttendees,
-        existing.organizer == nil
+        NSDictionary(dictionary: snapshot(existing)).isEqual(to: before),
+        !CalendarEventProtection.requiresSystemEditor(existing)
       else {
         return ["status": "conflict", "message": "Termin geändert. Neue Vorschau erforderlich."]
       }

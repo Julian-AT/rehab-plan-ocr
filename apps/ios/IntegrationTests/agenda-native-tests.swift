@@ -5,6 +5,50 @@ import WidgetKit
 import XCTest
 
 final class AgendaNativeTests: XCTestCase {
+  func testLocalErasureDoesNotRequireAnAccessibleCalendar() async throws {
+    #if targetEnvironment(simulator)
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let service = AgendaService(storageRoot: root, widgetRoot: root)
+      service.start(registerBackground: false)
+      let record = OwnedRecord(
+        status: "saved", id: UUID().uuidString,
+        calendar_id: "inaccessible-calendar", external_id: "missing-event",
+        approved: Values(
+          title: "Erfundener Termin", start_utc: "2026-09-17T09:00:00Z",
+          end_utc: "2026-09-17T09:30:00Z", timezone: "Europe/Vienna", location: "",
+          notes: "", reminder_minutes: 10))
+      let _: Void = try await withCheckedThrowingContinuation { continuation in
+        service.queue.async {
+          do {
+            try service.sync(AgendaSyncArgs(records: [record], preferences: ReminderPreferences()))
+            {
+              continuation.resume(with: $0.map { _ in () })
+            }
+          } catch { continuation.resume(throwing: error) }
+        }
+      }
+      try await withCheckedThrowingContinuation {
+        (continuation: CheckedContinuation<Void, Error>) in
+        service.queue.async {
+          do {
+            try service.forget()
+            continuation.resume()
+          } catch { continuation.resume(throwing: error) }
+        }
+      }
+      let privateState =
+        try JSONSerialization.jsonObject(
+          with: Data(
+            contentsOf:
+              root.appendingPathComponent("agenda-private-v1.json"))) as? [String: Any]
+      XCTAssertEqual((privateState?["records"] as? [Any])?.count, 0)
+      XCTAssertTrue(AgendaSnapshot.read(from: root).events.isEmpty)
+    #else
+      throw XCTSkip("Erasure regression uses isolated simulator data")
+    #endif
+  }
   @MainActor
   func testRenderActualWidgetAndNotificationViews() throws {
     let now = Date()
@@ -100,12 +144,16 @@ final class AgendaNativeTests: XCTestCase {
       let rejected = OwnedRecord(
         status: "uncertain", id: UUID().uuidString, calendar_id: calendar.calendarIdentifier,
         external_id: event.eventIdentifier, approved: approved)
-      func sync(_ preferences: ReminderPreferences) async throws -> [String: Any] {
+      func sync(_ preferences: ReminderPreferences, visible: [String]? = nil) async throws
+        -> [String: Any]
+      {
         let data: Data = try await withCheckedThrowingContinuation { continuation in
           service.queue.async {
             do {
               try service.sync(
-                AgendaSyncArgs(records: [record, rejected], preferences: preferences)
+                AgendaSyncArgs(
+                  records: [record, rejected], preferences: preferences,
+                  display_calendar_ids: visible ?? [calendar.calendarIdentifier])
               ) {
                 continuation.resume(
                   with: $0.flatMap { result in
@@ -126,6 +174,22 @@ final class AgendaNativeTests: XCTestCase {
         contentsOf: root.appendingPathComponent(AgendaSnapshot.filename), encoding: .utf8)
       XCTAssertFalse(json.contains("Private Testnotiz"))
       XCTAssertFalse(json.contains(calendar.calendarIdentifier))
+      _ = try await sync(ReminderPreferences(), visible: [])
+      XCTAssertTrue(
+        AgendaSnapshot.read(from: root).events.isEmpty,
+        "An owned save must not implicitly select its calendar for widgets")
+      let foreign = EKEvent(eventStore: store)
+      foreign.calendar = calendar
+      foreign.title = "Sichtbarer externer Termin"
+      foreign.startDate = event.endDate.addingTimeInterval(600)
+      foreign.endDate = foreign.startDate.addingTimeInterval(1800)
+      try store.save(foreign, span: .thisEvent, commit: true)
+      _ = try await sync(ReminderPreferences())
+      let external = try XCTUnwrap(
+        AgendaSnapshot.read(from: root).events.first { $0.title == foreign.title })
+      XCTAssertEqual(external.url.absoluteString, "reha-calendar://today")
+      XCTAssertNotEqual(external.id, foreign.eventIdentifier)
+      try store.remove(foreign, span: .thisEvent, commit: true)
       let permission = Task {
         try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
       }

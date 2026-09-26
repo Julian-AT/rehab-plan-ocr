@@ -13,10 +13,13 @@ private struct AgendaPrivateState: Codable {
   var journal: [String: AlarmJournalEntry] = [:]
   var pendingOpen: String?
   var migrationVersion = 0
+  var displayCalendarIDs: [String]?
 }
 struct AgendaSyncArgs: Decodable {
   var records: [OwnedRecord]
   var preferences: ReminderPreferences
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  var display_calendar_ids: [String]?
 }
 
 enum AgendaError: LocalizedError {
@@ -353,9 +356,10 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     AlarmOwnership.matches(alarms(event), minutes: minutes)
   }
   private func manageable(_ event: EKEvent, entry: AlarmJournalEntry) -> Bool {
-    AlarmOwnership.manageable(
-      alarms(event), recurring: event.hasRecurrenceRules || event.isDetached,
-      writable: event.calendar.allowsContentModifications, entry: entry)
+    !CalendarEventProtection.requiresSystemEditor(event)
+      && AlarmOwnership.manageable(
+        alarms(event), recurring: event.hasRecurrenceRules || event.isDetached,
+        writable: event.calendar.allowsContentModifications, entry: entry)
   }
 
   // Existing review comparisons use the logical app-managed alarm. This does not
@@ -465,6 +469,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     }
     state.records = records
     state.preferences = args.preferences
+    state.displayCalendarIDs = args.display_calendar_ids ?? []
     try persist()
     requestRefresh(completion)
   }
@@ -494,19 +499,17 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       // Keep private ownership evidence so alarms can be restored after access
       // returns. Stale app alerts would be unsafe when events cannot be read.
       for record in state.records { cancel(record.id) }
-      snapshot = .empty(access: state.records.isEmpty ? "empty" : "unavailable")
+      snapshot = .empty(access: (state.displayCalendarIDs ?? []).isEmpty ? "empty" : "unavailable")
       try publish()
       return
     }
     store.refreshSourcesIfNecessary()
     var events: [(OwnedRecord, EKEvent, AgendaEvent)] = []
     var deleted: [String] = []
-    var unavailable = false
     for record in state.records {
       switch lookup(record) {
       case .found(let event):
         guard event.endDate > event.startDate else {
-          unavailable = true
           cancel(record.id)
           continue
         }
@@ -516,7 +519,6 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
         cancel(record.id)
         state.journal.removeValue(forKey: record.id)
       case .unavailable:
-        unavailable = true
         cancel(record.id)
       }
     }
@@ -588,11 +590,35 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     }
     if effective.enabled { state.migrationVersion = 1 }
     try persist()
+    // Reminder ownership and visible calendar selection are independent. Widgets
+    // use the same bounded read as the agenda, including selected external events.
+    let start = Calendar.current.startOfDay(for: now)
+    let end = Calendar.current.date(byAdding: .day, value: 90, to: start)!
+    let query = try EventEditingService(agenda: self).query([
+      "calendar_ids": state.displayCalendarIDs ?? [],
+      "records": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state.records)),
+      "start_utc": iso.string(from: start), "end_utc": iso.string(from: end),
+    ])
+    let visible: [AgendaEvent] = (query["events"] as? [[String: Any]] ?? []).compactMap { event in
+      guard let values = event["values"] as? [String: Any],
+        let rawID = event["id"] as? String,
+        let from = values["start_utc"] as? String, let to = values["end_utc"] as? String,
+        let start = iso.date(from: from), let end = iso.date(from: to)
+      else { return nil }
+      let ownedID = event["import_id"] as? String
+      let id =
+        ownedID ?? SHA256.hash(data: Data(rawID.utf8)).map { String(format: "%02x", $0) }.joined()
+      return AgendaEvent(
+        id: id, start: start.timeIntervalSince1970, end: end.timeIntervalSince1970,
+        timezone: values["timezone"] as? String ?? TimeZone.current.identifier,
+        title: values["title"] as? String ?? "Termin", room: values["location"] as? String ?? "",
+        owned: ownedID != nil)
+    }
+    let visibleUnavailable = !(query["unavailable_calendar_ids"] as? [String] ?? []).isEmpty
     snapshot = AgendaSnapshot(
       updatedAt: now.timeIntervalSince1970,
-      access: unavailable ? "unavailable" : events.isEmpty ? "empty" : "available",
-      events: events.map { $0.2 }
-        .sorted { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }, deletedIDs: deleted)
+      access: visibleUnavailable ? "unavailable" : visible.isEmpty ? "empty" : "available",
+      events: visible, deletedIDs: deleted)
     try publish()
     if !errors.isEmpty {
       throw AgendaError.message(
@@ -841,31 +867,32 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func forget() throws {
     generation &+= 1
-    guard state.records.isEmpty || EKEventStore.authorizationStatus(for: .event) == .fullAccess
-    else {
-      throw AgendaError.message(
-        "Zum sicheren Löschen zuerst Kalenderzugriff erlauben, damit Kalendererinnerungen erhalten bleiben."
-      )
-    }
+    var restorationFailed = false
     for record in state.records {
       switch lookup(record) {
       case .found(let event):
         if let entry = state.journal[record.id], manageable(event, entry: entry) {
-          try restore(
-            event, record: record, minutes: state.preferences.minutes ?? entry.expectedMinutes)
+          do {
+            try restore(
+              event, record: record, minutes: state.preferences.minutes ?? entry.expectedMinutes)
+          } catch { restorationFailed = true }
         }
       case .unavailable:
-        throw AgendaError.message(
-          "Ein Kalender ist nicht zugänglich. Daten nach dem Abgleich löschen.")
+        restorationFailed = true
       case .deleted: break
       }
       cancel(record.id)
     }
     retireOneOff("reha.test")
     state = AgendaPrivateState()
+    loadError = nil
     try persist()
     snapshot = .empty()
     try publish()
+    lastError =
+      restorationFailed
+      ? "Lokale Daten gelöscht. Nicht zugängliche Kalendererinnerungen konnten nicht wiederhergestellt werden. Bitte im Kalender prüfen."
+      : nil
   }
   /// A one-off notification uses the reserved slot and reports acceptance separately.
   func testNotification(_ completion: @escaping @Sendable (Result<[String: Any], Error>) -> Void) {
