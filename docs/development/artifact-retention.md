@@ -150,3 +150,25 @@ Trotz entfernter logischer Daten ist **kein Speichergewinn nachgewiesen**;
 APFS-Snapshots/geteilte Extents und Systemaktivität bleiben mögliche Einflüsse.
 Das Volume hat nach diesen Prüfungen rund 101 GiB frei. Die 20-GiB-Reserve ist
 erfüllt; diese Kapazität stammt vor allem aus der externen Bereinigung des Nutzers.
+
+## Abgeschlossener EventKit-Arbeitsstand am 26. September 2026
+
+Der saubere Worktree `typed-system-editor` an `876c63c` wurde nach Übernahme beider
+Änderungen entfernt. Seine Quellrevision bleibt als Branch und zusätzlich als
+Tararchiv erhalten. Alle Testprodukte und das vollständige Result-Bundle wurden
+vor/nach Entfernung byteweise per SHA-256 mit den separat erhaltenen Kopien
+verglichen. Die produktrelevanten Quellhashes stimmen mit dem gemeinsamen Stand
+überein. `lsof` fand keine aktiven Verbraucher dieses Worktrees.
+
+Entfernt wurden ausschließlich dessen rekonstruierbare Checkout-/Buildbestände:
+3317 ignorierte Dateien mit 158.937.117 logischen Bytes, darunter Compilerprodukte,
+das generierte Testprojekt und ein Pythoncache. Testprodukte, ursprüngliches
+Simulatorumgebungsprotokoll und Ergebnis bleiben unter
+`.local/runs/system-editor-20260926-s19-001/` erhalten. Dort dokumentiert
+`worktree-retirement/` jede entfernte generierte Datei, Quellarchiv, neue
+Nachweisorte und den Abschluss. Historische Berichte wurden nicht verändert.
+
+Währenddessen lief der separate Root-Simulatortest. Die gemessene Volume-Differenz
+beträgt +741.376 Bytes; wegen paralleler Systemaktivität und möglicher APFS-Teilung
+ist dies kein exklusiv diesem Worktree zugerechneter Speichergewinn. Fremde
+Simulatoren, Originale, Checkpoints und Gerätesicherungen waren nicht betroffen.
