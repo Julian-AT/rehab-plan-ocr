@@ -3,6 +3,7 @@ apps/ios/Features/Conversation/ConversationReply.swift
 apps/ios/Features/Conversation/VoiceRules.swift
 apps/ios/Features/Agenda/CalendarEvent.swift
 apps/ios/Features/Conversation/CalendarVocabulary.swift
+apps/ios/Features/Conversation/PlanEvidence.swift
 apps/ios/Features/Conversation/CalendarQuestion.swift
 apps/ios/Features/Conversation/CalendarConversation.swift
 apps/ios/Features/Conversation/InterpretationProvider.swift

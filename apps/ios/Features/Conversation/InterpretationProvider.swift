@@ -8,7 +8,7 @@ struct InterpretationIdentity: Equatable, Sendable {
 }
 
 enum InterpretationCapability: Hashable, Sendable {
-  case calendar, mutation, conversation, appHelp
+  case calendar, mutation, conversation, appHelp, planEvidence
 }
 
 enum InterpretationAvailability: Equatable, Sendable {
@@ -48,9 +48,10 @@ struct InterpretationRequest: Sendable {
 /// Provider-neutral interpretation. Calendar facts and mutation execution stay downstream.
 struct ConversationInterpretation: Sendable {
   enum Action: Sendable {
-    case calendar, create, update, remove, cancel, help, conversation, clarify
+    case calendar, create, update, remove, cancel, help, conversation, clarify, plan
   }
   var action: Action
+  var plan: PlanEvidenceQuery?
   var query: CalendarQuestion?
   var change: VoiceIntent?
   var reply: String?
@@ -61,6 +62,8 @@ struct ConversationInterpretation: Sendable {
     guard action == .help || helpTopic == nil, action == .clarify || problem == nil else {
       throw InterpretationError.invalidRequest
     }
+    guard action == .plan || plan == nil else { throw InterpretationError.invalidRequest }
+    try plan?.validate()
     if let query {
       guard query.validTimeBounds, (1...90).contains(query.days),
         (0...5).contains(query.ordinal), (0...500).contains(query.offset),
@@ -69,6 +72,7 @@ struct ConversationInterpretation: Sendable {
     }
     if let change {
       guard TimeZone(identifier: change.timezone) != nil,
+        change.location.map({ !$0.isEmpty && $0.count <= 100 }) ?? true,
         change.newTime.map({ (0..<1440).contains($0) }) ?? true,
         change.duration.map({ (1...1440).contains($0) }) ?? true,
         change.title.map({
@@ -78,6 +82,7 @@ struct ConversationInterpretation: Sendable {
     }
     let valid: Bool =
       switch action {
+      case .plan: plan != nil && query == nil && change == nil && reply == nil
       case .calendar: query != nil && change == nil && reply == nil
       case .create: query == nil && reply == nil && (change == nil || change?.action == .create)
       case .update: query != nil && reply == nil && (change == nil || change?.action == .update)
@@ -136,8 +141,17 @@ extension InterpretationProvider {
     if intent.action == .cancel {
       return ConversationInterpretation(action: .cancel)
     }
-    if VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar) {
+    if VoiceRules.roomOnlyChange(request.text) == nil,
+      VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar)
+    {
       return ConversationInterpretation(action: .clarify, problem: .invalidDate)
+    }
+    if let room = VoiceRules.roomOnlyChange(request.text) {
+      return ConversationInterpretation(
+        action: .update,
+        query: CalendarQuestion(usesLastPage: true, timezone: request.calendar.timeZone.identifier),
+        change: VoiceIntent(
+          action: .update, location: room, timezone: request.calendar.timeZone.identifier))
     }
     if let title = VoiceRules.titleOnlyRename(request.text) {
       return ConversationInterpretation(
@@ -212,6 +226,7 @@ extension InterpretationProvider {
     try value.validate()
     let required: InterpretationCapability? =
       switch value.action {
+      case .plan: .planEvidence
       case .calendar: .calendar
       case .create, .update, .remove: .mutation
       case .conversation: .conversation

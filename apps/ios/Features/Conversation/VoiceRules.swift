@@ -37,6 +37,7 @@ struct VoiceIntent: Equatable, Sendable {
   var newTime: Int?
   var duration: Int?
   var title: String?
+  var location: String?
   var corrected = false
   var timezone = TimeZone.current.identifier
   var calendar: Calendar {
@@ -330,6 +331,16 @@ enum VoiceRules {
       return named.count == 1 ? named[0] : nil
     }
   }
+  /// A complete room-only correction preserves the recognized identifier and
+  /// does not infer any date, time, or mutation target from history.
+  static func roomOnlyChange(_ input: String) -> String? {
+    let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+    let pattern =
+      #"(?i)^(?:nein[, ]+)?(?:(?:behalte|lass) die (?:uhrzeit|zeit)(?: gleich)?[, —–-]+)?(?:ändere|änder|aendere|aender) (?:nur )?(?:den )?raum(?: auf| zu)? ([a-z]?\d{1,3}(?:[./-]\d{1,3})?[a-z]?|[ivx]{1,6})[.!]?$"#
+    guard let match = matches(pattern, text).first else { return nil }
+    return "Raum " + match[1]
+  }
+
   /// A complete, deliberately narrow exception to the general negation guard:
   /// keep one discussed event, changing only its explicitly named title.
   /// Multiword titles need quotes so a trailing instruction cannot become a title.
@@ -517,6 +528,13 @@ enum VoiceRules {
         .contains(text.trimmingCharacters(in: .punctuationCharacters))
     {
       result.action = .cancel
+      return result
+    }
+    if let room = roomOnlyChange(input) {
+      result.action = .update
+      result.referenceText = "diesen termin"
+      result.location = room
+      result.origins["location"] = .spoken
       return result
     }
     if let title = titleOnlyRename(input) {

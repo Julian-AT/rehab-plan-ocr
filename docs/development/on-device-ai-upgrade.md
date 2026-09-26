@@ -59,3 +59,37 @@ No challenger, custom adapter, neural VAD, TTS replacement or OCR acceleration i
 qualified by these code changes. Adoption requires paired held-out real-device
 measurements and the release gates in the user's implementation plan. Keep the
 Apple and current OCR/CPU incumbents when evidence is absent or inconclusive.
+
+## Grounded assistant implementation
+
+Calendar insight queries (`freeTime`, `conflicts`, `totalDuration`, `dailySummary`)
+use a fresh visible-selection snapshot with event IDs/fingerprints and read time.
+Calculations clip intervals at civil boundaries, merge overlapping busy intervals,
+exclude unknown all-day durations, and decline reliable free-time claims on partial
+reads. Insight windows are limited to seven days/1,000 input records. Repeated or
+nonexistent DST clock bounds require clarification. Total time is explicitly
+**scheduled appointment time**; the app does not infer medical therapy categories
+from arbitrary titles. `nur morgen nachmittags` retains the previous query kind.
+
+A narrow room-only correction preserves time/title and resolves the last discussed
+single appointment afresh. It produces the existing confirmation preview. General
+ambiguous or compound room instructions still require clarification.
+
+`planEvidence` is a typed Rust/UniFFI read with bounded literal OCR excerpts,
+observation/region IDs, source hash, revision, read time and field states. It reads
+retained data without refreshing extraction or running OCR. The assistant keeps a
+five-plan catalog, asks which source when ambiguous, and invalidates removed sources.
+Comparisons recheck the first revision after the second read and describe **OCR text
+differences**, not asserted appointment additions/removals. Complete structured
+revision matching remains a later qualification task. Missing, unreadable, cropped
+and conflicting field states stay distinct in the evidence response.
+
+Apple guided generation gains insight and plan-evidence requests; read-only calendar
+questions use a smaller output schema. Custom Qwen's pinned compact contract and
+historical evaluation scores remain unchanged. Prewarming remains an explicit trial
+until physical latency/memory measurements justify enabling it.
+
+Checks: calendar-insights, plan-evidence, calendar-answers, voice-flow (including
+location-only patch/confirmation), assistant-request, Rust evidence bounds/revision
+unit test and simulator build. Source evidence remains in conversation memory only;
+it never enters routine diagnostics.

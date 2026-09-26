@@ -10,6 +10,8 @@ import RehaCore
     var textual = false
     var answer = ""
     var prepared = ConversationReply()
+    var planSources: [PlanEvidenceResponse] = []
+    var calendarEvidence: CalendarReadEvidence?
     var outputID: UUID?
     var heard = HeardSpeech()
     var spoken: String { heard.text }
@@ -20,6 +22,7 @@ import RehaCore
   private var turnTask: Task<Void, Never>?
   private let calendarConversation: CalendarConversation
   private let understanding: any InterpretationProvider
+  private let planConversation: PlanEvidenceConversation?
   private let interpretation: InterpretationRouter
   private var modelToken = UUID()
   typealias Question = ConversationState.Question
@@ -65,6 +68,7 @@ import RehaCore
     edits: EventSession, recorder: any VoiceRecording, output: any VoiceSpeaking
   ) {
     self.dependencies = dependencies
+    planConversation = dependencies.planEvidence.map { PlanEvidenceConversation(access: $0) }
     self.understanding = understanding
     self.edits = edits
     self.recorder = recorder
@@ -259,8 +263,9 @@ import RehaCore
           "Es wird nichts geändert. Was möchten Sie wissen?"), question: .action)
       return
     }
-    if VoiceRules.hasInvalidDate(
-      text, now: now, calendar: question == .date ? intent.calendar : calendar)
+    if VoiceRules.roomOnlyChange(text) == nil,
+      VoiceRules.hasInvalidDate(
+        text, now: now, calendar: question == .date ? intent.calendar : calendar)
     {
       say("Dieses Datum ist ungültig. Bitte das Datum noch einmal nennen.")
       return
@@ -269,12 +274,16 @@ import RehaCore
       repeatResponse()
       return
     }
+    if let query = PlanEvidenceQuery.direct(text) {
+      await answerPlan(query)
+      return
+    }
     if let request = interpretation.rules.match(text, now: now, calendar: calendar) {
       question = .action
       await answerCalendar(request)
       return
     }
-    if VoiceRules.titleOnlyRename(text) != nil {
+    if VoiceRules.titleOnlyRename(text) != nil || VoiceRules.roomOnlyChange(text) != nil {
       guard question == .action else {
         say(
           "Die bisherige Änderung wurde verworfen. Bitte den gewünschten Termin erneut auswählen.",
@@ -373,6 +382,7 @@ import RehaCore
       guard current == session, modelToken == token, !Task.isCancelled else { return }
       candidates = result.events
       selected = candidates.count == 1 ? candidates.first : nil
+      if !rounds.isEmpty { rounds[rounds.count - 1].calendarEvidence = result.evidence }
       dependencies.trace(.calendarRead(session, true))
       say(result.text, question: .action)
     } catch {
@@ -382,9 +392,27 @@ import RehaCore
         question: .action)
     }
   }
+  private func answerPlan(_ query: PlanEvidenceQuery) async {
+    let current = session
+    guard let planConversation else {
+      say("Gespeicherte Planquellen sind gerade nicht verfügbar.", question: .action)
+      return
+    }
+    do {
+      let result = try await planConversation.answer(query)
+      guard current == session, !Task.isCancelled else { return }
+      if !rounds.isEmpty { rounds[rounds.count - 1].planSources = result.sources }
+      say(result.text, question: .action)
+    } catch {
+      guard current == session, !Task.isCancelled else { return }
+      say(
+        "Die gespeicherte Planquelle ist nicht mehr lesbar oder wurde geändert. Bitte im Archiv prüfen.",
+        question: .action)
+    }
+  }
   private func converse(_ text: String, now: Date, calendar: Calendar) async {
     failures = 0
-    if VoiceRules.titleOnlyRename(text) == nil,
+    if VoiceRules.titleOnlyRename(text) == nil, VoiceRules.roomOnlyChange(text) == nil,
       case .unavailable(let reason) = interpretation.availability
     {
       say(
@@ -405,9 +433,16 @@ import RehaCore
           $0.textual ? "displayed_answer" : "spoken_answer": $0.textual ? $0.answer : $0.spoken,
         ]
       }
+      let planContext = planConversation?.context() ?? []
       let task = Task { @MainActor [interpretation, calendarConversation] in
         try await interpretation.interpret(preparing: {
-          let context = try await calendarConversation.context(now: now, calendar: calendar)
+          let calendarContext = try await calendarConversation.context(now: now, calendar: calendar)
+          var fields =
+            try JSONSerialization.jsonObject(with: Data(calendarContext.utf8)) as! [String: Any]
+          fields["plan_sources"] = planContext
+          let context = String(
+            decoding: try JSONSerialization.data(withJSONObject: fields, options: .sortedKeys),
+            as: UTF8.self)
           return InterpretationRequest(
             text: text, context: context, history: history, now: now, calendar: calendar,
             deadline: ContinuousClock.now.advanced(by: .seconds(30)))
@@ -418,6 +453,9 @@ import RehaCore
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       responseTask = nil
       switch result.action {
+      case .plan:
+        guard let query = result.plan else { throw InterpretationError.invalidRequest }
+        await answerPlan(query)
       case .calendar:
         guard let query = result.query else { throw CalendarUnderstandingError.invalidRequest }
         await answerCalendar(query, token: token)
@@ -611,6 +649,7 @@ import RehaCore
         rememberAnswer: false)
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       guard result.total == 1, let event = result.events.first else {
+        if !rounds.isEmpty { rounds[rounds.count - 1].calendarEvidence = result.evidence }
         dependencies.trace(.calendarRead(session, true))
         say(result.text, question: .action)
         return
@@ -692,7 +731,7 @@ import RehaCore
       await advanceCreation()
     } else if intent.action == .update {
       if intent.newTime == nil && intent.newDate == nil && intent.title == nil
-        && intent.duration == nil
+        && intent.duration == nil && intent.location == nil
       {
         say("Auf welche Uhrzeit soll der Termin verschoben werden?", question: .time)
       } else {
@@ -740,6 +779,7 @@ import RehaCore
       patch["end_utc"] = .string(iso.string(from: effectiveStart.addingTimeInterval(length)))
     }
     if let title = intent.title { patch["title"] = .string(title) }
+    if let location = intent.location { patch["location"] = .string(location) }
     do {
       let p = try await dependencies.preferences()
       guard session == current else { return }

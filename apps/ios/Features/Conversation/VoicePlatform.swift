@@ -43,7 +43,10 @@ extension VoiceModel {
           case .cancelled(let session):
             LocalDiagnostics.shared.record(.speechSession, .cancelled, correlation: session)
           }
-        }, errorMessage: userMessage),
+        }, errorMessage: userMessage,
+        planEvidence: PlanEvidenceAccess(
+          list: { try await core.archivePage(after: nil, limit: 5).plans },
+          read: { try await core.planEvidence(request: $0) })),
       understanding: AssistantProviderSelection.make(),
       edits: EventSession(core: core, origin: "voice"),
       recorder: LocalSpeechRecorder(), output: SpeechOutput.shared)

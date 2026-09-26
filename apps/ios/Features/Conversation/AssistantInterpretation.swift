@@ -14,17 +14,38 @@ enum AssistantInterpretation {
     }
     let intent = VoiceRules.parse(request.text, now: request.now, calendar: request.calendar)
     if intent.action == .cancel { return ConversationInterpretation(action: .cancel) }
-    if VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar) {
+    if VoiceRules.roomOnlyChange(request.text) == nil,
+      VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar)
+    {
       return clarify(.invalidDate)
     }
     let words = VoiceRules.normalized(request.text)
     let renameTitle = VoiceRules.titleOnlyRename(request.text)
+    if value.action == .plan {
+      guard let plan = value.plan, words.contains("plan"),
+        plan.search.isEmpty || words.contains(VoiceRules.normalized(plan.search))
+      else { return clarify() }
+      for number in [plan.source, plan.comparison].compactMap({ $0 }) {
+        guard !VoiceRules.matches("\\bplan \(number)\\b", words).isEmpty else { return clarify() }
+      }
+    }
     let mutation = [.create, .update, .remove].contains(value.action)
     if mutation {
       let expected: VoiceIntent.Action =
         value.action == .create ? .create : value.action == .update ? .update : .remove
       guard intent.action == expected, !intent.negatedChange else { return clarify() }
-      guard VoiceRules.explicitMutation(words) == expected else { return clarify() }
+      if VoiceRules.roomOnlyChange(request.text) != nil {
+        guard value.action == .update, value.change?.location == intent.location,
+          value.change?.title == nil, let query = value.query,
+          query.usesLastPage, query.reference == nil, query.ordinal == 0,
+          query.title.isEmpty, query.excluding.isEmpty, query.date == nil,
+          !query.hasTimeBounds, query.days == 1, query.offset == 0, query.calendarName == nil
+        else { return clarify() }
+      } else {
+        guard VoiceRules.explicitMutation(words) == expected, value.change?.location == nil else {
+          return clarify()
+        }
+      }
       if let renameTitle {
         guard value.action == .update,
           value.change?.title == renameTitle,
@@ -123,7 +144,7 @@ enum AssistantInterpretation {
       ).isEmpty
     }
     let expected: String?
-    if VoiceRules.titleOnlyRename(words) != nil {
+    if VoiceRules.titleOnlyRename(words) != nil || VoiceRules.roomOnlyChange(words) != nil {
       guard page.count == 1 else { return false }
       expected = page[0].reference
     } else if spoken.count == 1, let ordinal = spoken.first?.offset, page.indices.contains(ordinal)
@@ -182,6 +203,15 @@ enum AssistantInterpretation {
       } else {
         upper.insert(minutes)
       }
+    }
+    for match in VoiceRules.matches(
+      #"\b(?:von|zwischen) ([\p{L}\d:]+)(?: uhr)? (?:bis|und) ([\p{L}\d:]+) uhr\b"#, words)
+    {
+      guard let start = VoiceRules.time(match[1] + " uhr"),
+        let end = VoiceRules.time(match[2] + " uhr")
+      else { return false }
+      lower.insert(start)
+      upper.insert(end)
     }
     return lower.count <= 1 && upper.count <= 1
       && query.afterMinutes == lower.first && query.beforeMinutes == upper.first

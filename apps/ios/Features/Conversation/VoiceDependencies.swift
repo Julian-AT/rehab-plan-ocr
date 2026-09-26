@@ -58,4 +58,5 @@ struct VoiceCalendarDestination {
   let destinations: () async throws -> [VoiceCalendarDestination]
   let trace: (VoiceTrace) -> Void
   let errorMessage: (Error) -> String
+  var planEvidence: PlanEvidenceAccess? = nil
 }

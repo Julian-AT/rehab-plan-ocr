@@ -400,6 +400,8 @@ def tests(portable):
             "conversation-state",
             "conversation-replies",
             "calendar-answers",
+            "calendar-insights",
+            "plan-evidence",
             "calendar-read-contracts",
             "calendar-mutation-contracts",
             "calendar-import-contracts",

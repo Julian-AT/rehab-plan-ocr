@@ -36,6 +36,21 @@ import RehaCore
 
   @MainActor static func main() async throws {
     await mutationRouting()
+    let room = Flow()
+    room.provider.availability = .unavailable("No model assets")
+    await room.model.submitText("Nächster Termin")
+    await room.model.submitText("Nein, behalte die Uhrzeit, ändere nur den Raum auf 3.12")
+    precondition(room.calendar.previews.count == 1, "Room correction did not produce a preview")
+    precondition(
+      room.calendar.previews[0].patch == ["location": .string("Raum 3.12")],
+      "Room correction changed time or title")
+    precondition(room.calendar.confirmed.isEmpty, "Room correction bypassed confirmation")
+    await room.model.confirmProposal()
+    precondition(room.calendar.confirmed.count == 1)
+    let ambiguousRoom = Flow()
+    await ambiguousRoom.model.submitText("Termine heute")
+    await ambiguousRoom.model.submitText("Ändere den Raum auf 2.14")
+    precondition(ambiguousRoom.calendar.previews.isEmpty, "Ambiguous room target accepted")
     let rules = Flow()
     rules.provider.availability = .unavailable("No model assets")
     await rules.model.submitText("Nächster Termin")

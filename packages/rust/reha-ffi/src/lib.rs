@@ -30,6 +30,8 @@ mod application;
 mod application_projections;
 mod review_projections;
 pub use application::*;
+mod plan_evidence;
+pub use plan_evidence::*;
 mod assistant;
 pub use assistant::*;
 

@@ -834,6 +834,21 @@ impl NativeApplication {
         })
         .await
     }
+    /// Read retained evidence without refreshing extraction or invoking calendar effects.
+    pub async fn plan_evidence(
+        &self,
+        request: crate::PlanEvidenceRequest,
+    ) -> Result<crate::PlanEvidenceResponse> {
+        self.blocking(move |s| {
+            uuid::Uuid::parse_str(&request.document_id).map_err(storage)?;
+            let store = s.store.lock().map_err(storage)?;
+            let run = store
+                .load_run(&request.document_id)
+                .map_err(|error| failure(service::domain_failure(error)))?;
+            crate::plan_evidence::project(&run, &request)
+        })
+        .await
+    }
     /// Full, local recognition evidence for the explicitly opened tracing workspace.
     pub async fn recognition_trace(&self, id: String) -> Result<String> {
         self.blocking(move |s| {

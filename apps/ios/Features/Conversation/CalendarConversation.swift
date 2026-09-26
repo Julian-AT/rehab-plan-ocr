@@ -121,7 +121,10 @@ actor CalendarConversation {
     scope = response.scope
     let scoped = CalendarQueryResponse(
       scope: response.scope,
-      events: response.events.filter { $0.values.start < end && $0.values.end > start },
+      events: response.events.filter {
+        response.scope.calendarIDs.contains($0.calendar_id) && $0.values.start < end
+          && $0.values.end > start
+      },
       unavailableCalendarIDs: response.unavailableCalendarIDs,
       unavailableEvents: response.unavailableEvents)
     cached[key] = scoped
@@ -142,9 +145,24 @@ actor CalendarConversation {
     try check(token)
     guard (1...90).contains(input.days), (0...500).contains(input.offset),
       (0...5).contains(input.ordinal), input.title.count <= 160, input.excluding.count <= 160,
-      input.validTimeBounds
+      input.validTimeBounds,
+      !input.detail.isInsight
+        || (input.reference == nil && input.ordinal == 0 && !input.usesLastPage)
     else { throw CalendarUnderstandingError.invalidRequest }
     var question = input
+    if input.refinesPrevious {
+      guard let previous = lastQuestion, previous.reference == nil, previous.ordinal == 0 else {
+        return CalendarAnswer.Result(text: "Bitte zuerst eine Kalenderfrage mit Zeitraum stellen.")
+      }
+      question = previous
+      question.date = input.date
+      question.days = input.days
+      question.afterMinutes = input.afterMinutes
+      question.beforeMinutes = input.beforeMinutes
+      question.offset = 0
+      question.usesLastPage = false
+      question.refinesPrevious = false
+    }
     if input.usesLastPage && input.detail == .list && input.offset > 0 {
       guard let previous = lastQuestion else {
         return CalendarAnswer.Result(text: "Bitte zuerst einen Zeitraum auswählen.")
@@ -218,8 +236,20 @@ actor CalendarConversation {
       return CalendarAnswer.Result(
         text: "Der zuvor besprochene Termin ist in den ausgewählten Kalendern nicht mehr lesbar.")
     }
-    let result = CalendarAnswer.build(
-      question, events: events, warning: warning, now: now, address: address)
+    var result: CalendarAnswer.Result
+    if question.detail.isInsight {
+      let insight = try CalendarInsightRequest(question: question, start: start)
+      result = CalendarInsights.answer(insight, response: response)
+    } else {
+      result = CalendarAnswer.build(
+        question, events: events, warning: warning, now: now, address: address)
+    }
+    result.evidence = CalendarReadEvidence(
+      observedAt: Date(), selection: response.scope,
+      sources: response.events.map { .init(id: $0.id, fingerprint: $0.fingerprint) },
+      complete: response.unavailableCalendarIDs?.isEmpty != false
+        && response.unavailableEvents?.isEmpty != false)
+
     // Resolving an edit target is not a new spoken page. In particular, a later
     // constraint failure must not silently renumber the page the person heard.
     guard rememberAnswer else { return result }

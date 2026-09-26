@@ -65,6 +65,12 @@
       let calendar = try sample.request().calendar
       func date(_ value: Date) -> String { CalendarConversation.day(value, calendar: calendar) }
       func time(_ value: Int) -> String { String(format: "%02d:%02d", value / 60, value % 60) }
+      if let plan = value.plan {
+        var fields: [String: Any] = ["search": plan.search]
+        fields["source"] = plan.source
+        fields["comparison"] = plan.comparison
+        output["plan"] = fields
+      }
       if let query = value.query {
         var result: [String: Any] = [:]
         if value.action == .calendar { result["detail"] = query.detail.rawValue }
@@ -83,6 +89,7 @@
         if !query.excluding.isEmpty { result["excluding"] = query.excluding }
         result["calendar_name"] = query.calendarName
         if query.ordinal != 0 { result["ordinal"] = query.ordinal }
+        if query.refinesPrevious { result["refines_previous"] = true }
         if query.offset != 0 { result["offset"] = query.offset }
         if query.timezone != sample.timezone { result["timezone"] = query.timezone }
         result["after_event_id"] = query.afterEventID
@@ -98,6 +105,7 @@
         if let day = change.newDate { result["date"] = date(day) }
         if let minutes = change.newTime { result["time"] = time(minutes) }
         result["duration"] = change.duration
+        result["location"] = change.location
         if change.negatedChange { result["negated"] = true }
         if !change.referenceText.isEmpty { result["reference_text"] = change.referenceText }
         result["calendar_name"] = change.calendarName

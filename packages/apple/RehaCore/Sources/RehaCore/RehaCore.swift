@@ -748,6 +748,11 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func planCalendar(id: String) async throws  -> PlanCalendar
     
+    /**
+     * Read retained evidence without refreshing extraction or invoking calendar effects.
+     */
+    func planEvidence(request: PlanEvidenceRequest) async throws  -> PlanEvidenceResponse
+    
     func preferences() async throws  -> Preferences
     
     func prepareCalendar(id: String, calendarId: String, timezone: String, reminder: UInt32?, selection: [String], replacement: Bool) async throws  -> Proposal
@@ -1345,6 +1350,25 @@ open func planCalendar(id: String)async throws  -> PlanCalendar  {
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypePlanCalendar_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+    /**
+     * Read retained evidence without refreshing extraction or invoking calendar effects.
+     */
+open func planEvidence(request: PlanEvidenceRequest)async throws  -> PlanEvidenceResponse  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_plan_evidence(
+                        self.uniffiCloneHandle(),FfiConverterTypePlanEvidenceRequest_lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePlanEvidenceResponse_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -6818,6 +6842,262 @@ public func FfiConverterTypePlanCalendar_lower(_ value: PlanCalendar) -> RustBuf
 }
 
 
+public struct PlanEvidenceExcerpt: Equatable, Hashable {
+    public var id: String
+    public var text: String
+    public var regionIds: [String]
+    public var uncertain: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, text: String, regionIds: [String], uncertain: Bool) {
+        self.id = id
+        self.text = text
+        self.regionIds = regionIds
+        self.uncertain = uncertain
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlanEvidenceExcerpt: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanEvidenceExcerpt: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanEvidenceExcerpt {
+        return
+            try PlanEvidenceExcerpt(
+                id: FfiConverterString.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                regionIds: FfiConverterSequenceString.read(from: &buf), 
+                uncertain: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlanEvidenceExcerpt, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterSequenceString.write(value.regionIds, into: &buf)
+        FfiConverterBool.write(value.uncertain, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceExcerpt_lift(_ buf: RustBuffer) throws -> PlanEvidenceExcerpt {
+    return try FfiConverterTypePlanEvidenceExcerpt.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceExcerpt_lower(_ value: PlanEvidenceExcerpt) -> RustBuffer {
+    return FfiConverterTypePlanEvidenceExcerpt.lower(value)
+}
+
+
+public struct PlanEvidenceField: Equatable, Hashable {
+    public var appointmentId: String
+    public var field: String
+    public var state: PrintedState
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(appointmentId: String, field: String, state: PrintedState) {
+        self.appointmentId = appointmentId
+        self.field = field
+        self.state = state
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlanEvidenceField: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanEvidenceField: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanEvidenceField {
+        return
+            try PlanEvidenceField(
+                appointmentId: FfiConverterString.read(from: &buf), 
+                field: FfiConverterString.read(from: &buf), 
+                state: FfiConverterTypePrintedState.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlanEvidenceField, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.appointmentId, into: &buf)
+        FfiConverterString.write(value.field, into: &buf)
+        FfiConverterTypePrintedState.write(value.state, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceField_lift(_ buf: RustBuffer) throws -> PlanEvidenceField {
+    return try FfiConverterTypePlanEvidenceField.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceField_lower(_ value: PlanEvidenceField) -> RustBuffer {
+    return FfiConverterTypePlanEvidenceField.lower(value)
+}
+
+
+public struct PlanEvidenceRequest: Equatable, Hashable {
+    public var documentId: String
+    public var expectedRevision: String?
+    public var search: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(documentId: String, expectedRevision: String?, search: String) {
+        self.documentId = documentId
+        self.expectedRevision = expectedRevision
+        self.search = search
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlanEvidenceRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanEvidenceRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanEvidenceRequest {
+        return
+            try PlanEvidenceRequest(
+                documentId: FfiConverterString.read(from: &buf), 
+                expectedRevision: FfiConverterOptionString.read(from: &buf), 
+                search: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlanEvidenceRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.documentId, into: &buf)
+        FfiConverterOptionString.write(value.expectedRevision, into: &buf)
+        FfiConverterString.write(value.search, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceRequest_lift(_ buf: RustBuffer) throws -> PlanEvidenceRequest {
+    return try FfiConverterTypePlanEvidenceRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceRequest_lower(_ value: PlanEvidenceRequest) -> RustBuffer {
+    return FfiConverterTypePlanEvidenceRequest.lower(value)
+}
+
+
+public struct PlanEvidenceResponse: Equatable, Hashable {
+    public var documentId: String
+    public var revision: String
+    public var sourceHash: String
+    public var observedAt: Int64
+    public var excerpts: [PlanEvidenceExcerpt]
+    public var fields: [PlanEvidenceField]
+    public var truncated: Bool
+    public var completePageConfirmed: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(documentId: String, revision: String, sourceHash: String, observedAt: Int64, excerpts: [PlanEvidenceExcerpt], fields: [PlanEvidenceField], truncated: Bool, completePageConfirmed: Bool) {
+        self.documentId = documentId
+        self.revision = revision
+        self.sourceHash = sourceHash
+        self.observedAt = observedAt
+        self.excerpts = excerpts
+        self.fields = fields
+        self.truncated = truncated
+        self.completePageConfirmed = completePageConfirmed
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlanEvidenceResponse: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanEvidenceResponse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanEvidenceResponse {
+        return
+            try PlanEvidenceResponse(
+                documentId: FfiConverterString.read(from: &buf), 
+                revision: FfiConverterString.read(from: &buf), 
+                sourceHash: FfiConverterString.read(from: &buf), 
+                observedAt: FfiConverterInt64.read(from: &buf), 
+                excerpts: FfiConverterSequenceTypePlanEvidenceExcerpt.read(from: &buf), 
+                fields: FfiConverterSequenceTypePlanEvidenceField.read(from: &buf), 
+                truncated: FfiConverterBool.read(from: &buf), 
+                completePageConfirmed: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlanEvidenceResponse, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.documentId, into: &buf)
+        FfiConverterString.write(value.revision, into: &buf)
+        FfiConverterString.write(value.sourceHash, into: &buf)
+        FfiConverterInt64.write(value.observedAt, into: &buf)
+        FfiConverterSequenceTypePlanEvidenceExcerpt.write(value.excerpts, into: &buf)
+        FfiConverterSequenceTypePlanEvidenceField.write(value.fields, into: &buf)
+        FfiConverterBool.write(value.truncated, into: &buf)
+        FfiConverterBool.write(value.completePageConfirmed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceResponse_lift(_ buf: RustBuffer) throws -> PlanEvidenceResponse {
+    return try FfiConverterTypePlanEvidenceResponse.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanEvidenceResponse_lower(_ value: PlanEvidenceResponse) -> RustBuffer {
+    return FfiConverterTypePlanEvidenceResponse.lower(value)
+}
+
+
 public struct PlanSummary: Equatable, Hashable {
     public var id: String
     public var importedAt: Int64
@@ -11691,6 +11971,56 @@ fileprivate struct FfiConverterSequenceTypePlan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePlanEvidenceExcerpt: FfiConverterRustBuffer {
+    typealias SwiftType = [PlanEvidenceExcerpt]
+
+    public static func write(_ value: [PlanEvidenceExcerpt], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePlanEvidenceExcerpt.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PlanEvidenceExcerpt] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PlanEvidenceExcerpt]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePlanEvidenceExcerpt.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePlanEvidenceField: FfiConverterRustBuffer {
+    typealias SwiftType = [PlanEvidenceField]
+
+    public static func write(_ value: [PlanEvidenceField], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePlanEvidenceField.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PlanEvidenceField] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PlanEvidenceField]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePlanEvidenceField.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePlanSummary: FfiConverterRustBuffer {
     typealias SwiftType = [PlanSummary]
 
@@ -12231,6 +12561,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_plan_calendar() != 53543) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_plan_evidence() != 12550) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_preferences() != 47882) {
