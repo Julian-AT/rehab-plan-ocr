@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Reha Calendar Lab",
+  "version": "0.1.0",
+  "identifier": "at.rehakalender.personal",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Reha Calendar Lab",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 360,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost; script-src 'self'; object-src 'none'; base-uri 'self'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app"],
+    "resources": {
+      "../models/private/small/": "models/",
+      "../licenses/": "licenses/"
+    },
+    "iOS": {
+      "minimumSystemVersion": "17.0",
+      "infoPlist": "ios-info.plist"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+target
+artifacts
+data
+models/private
+src-tauri/gen
+plugins/calendar/ios/.build
+plugins/calendar/ios/.tauri
+package-lock.json
+public/sample-run.json
+licenses
+
+verify

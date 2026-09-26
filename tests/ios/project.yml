@@ -1,0 +1,24 @@
+name: RehaSmoke
+options:
+  bundleIdPrefix: at.rehakalender.tests
+  deploymentTarget:
+    iOS: '17.0'
+targets:
+  RehaSmoke:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: smoke-tests.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Simulator integration tests use invented appointments and remove them afterward.
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_VERSION: '5.0'
+schemes:
+  RehaSmoke:
+    build:
+      targets:
+        RehaSmoke: [test]
+    test:
+      targets:
+        - RehaSmoke

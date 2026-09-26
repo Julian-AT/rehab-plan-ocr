@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "engine": "PP-OCRv6_small",
+  "runtime": "ONNX Runtime 1.22.0 / ort 2.0.0-rc.10",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "path": "det-inference.onnx",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx",
+      "sha256": "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+      "bytes": 9880512
+    },
+    {
+      "path": "det-inference.yml",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.yml",
+      "sha256": "193f435274bf9f0b5f71a929bbfbcf148282df7e633b34e7c373e8f44741b516",
+      "bytes": 885
+    },
+    {
+      "path": "rec-inference.onnx",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx",
+      "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+      "bytes": 21159378
+    },
+    {
+      "path": "rec-inference.yml",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml",
+      "sha256": "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
+      "bytes": 150579
+    }
+  ],
+  "dictionary_sha256": "e6948b0b16c8d2c1255403b884fb9b3ecc3e5dea0ddafdfebe7276ef41520a08"
+}

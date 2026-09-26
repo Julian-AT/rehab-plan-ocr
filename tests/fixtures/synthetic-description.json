@@ -1,0 +1,56 @@
+{
+  "synthetic": true,
+  "day": "2026-09-10",
+  "rows": [
+    [
+      "07:30",
+      "08:00",
+      "Frühstück",
+      "Speisesaal"
+    ],
+    [
+      "08:15",
+      "08:45",
+      "Bewegungstherapie",
+      "Raum A2"
+    ],
+    [
+      "09:00",
+      "09:20",
+      "Ärztliches Gespräch",
+      "Raum B1"
+    ],
+    [
+      "10:00",
+      "10:30",
+      "Entspannung",
+      "Raum C3"
+    ],
+    [
+      "10:00",
+      "10:30",
+      "Entspannung",
+      "Raum C3"
+    ],
+    [
+      "11:15",
+      null,
+      "Übungen im Wasser",
+      "Raum D4"
+    ],
+    [
+      "12:00",
+      "12:45",
+      "Mittagessen",
+      "Speisesaal"
+    ],
+    [
+      "14:00",
+      "14:30",
+      "Pause",
+      ""
+    ]
+  ],
+  "known_missing_end_row": 5,
+  "note": "Invented fixture; not a clinic benchmark."
+}

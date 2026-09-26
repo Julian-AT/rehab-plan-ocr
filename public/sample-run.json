@@ -1,0 +1,2047 @@
+{
+  "schema_version": 1,
+  "extraction_version": 2,
+  "id": "de37c1b9-91a6-4bb6-82ec-bc3159d992e5",
+  "document": {
+    "schema_version": 1,
+    "id": "9fe78df5-04b1-40e0-8100-8a5c3470645d",
+    "source_hash": "838b2ffd4a05bbf26a097b7e10040762927d67aac4d871e18050589c9b4850f0",
+    "filename": "synthetic-day.png",
+    "width": 1400,
+    "height": 1800,
+    "orientation": 1,
+    "imported_at": 1789039828,
+    "source": "import"
+  },
+  "config": {
+    "engine": "portable-small",
+    "timezone": "Europe/Vienna",
+    "detector_side": 1280,
+    "detector_threshold": 0.3,
+    "box_threshold": 0.6,
+    "detailed_debug": false,
+    "quarter_turns": 0,
+    "page_corners": null
+  },
+  "engine": "PP-OCRv6_small",
+  "model_manifest": {
+    "dictionary_sha256": "e6948b0b16c8d2c1255403b884fb9b3ecc3e5dea0ddafdfebe7276ef41520a08",
+    "engine": "PP-OCRv6_small",
+    "files": [
+      {
+        "bytes": 9880512,
+        "path": "det-inference.onnx",
+        "sha256": "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+        "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx"
+      },
+      {
+        "bytes": 885,
+        "path": "det-inference.yml",
+        "sha256": "193f435274bf9f0b5f71a929bbfbcf148282df7e633b34e7c373e8f44741b516",
+        "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.yml"
+      },
+      {
+        "bytes": 21159378,
+        "path": "rec-inference.onnx",
+        "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+        "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx"
+      },
+      {
+        "bytes": 150579,
+        "path": "rec-inference.yml",
+        "sha256": "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
+        "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml"
+      }
+    ],
+    "license": "Apache-2.0",
+    "runtime": "ONNX Runtime 1.22.0 / ort 2.0.0-rc.10",
+    "schema_version": 1
+  },
+  "stages": [
+    {
+      "name": "model_load",
+      "status": "complete",
+      "duration_ms": 108,
+      "detail": "Hash-verified ONNX models; CPU execution; two intra-op threads.",
+      "artifacts": []
+    },
+    {
+      "name": "decode",
+      "status": "complete",
+      "duration_ms": 3,
+      "detail": "1400×1800; EXIF 1; upright 1400×1800",
+      "artifacts": [
+        "original.png"
+      ]
+    },
+    {
+      "name": "preprocessing",
+      "status": "complete",
+      "duration_ms": 2,
+      "detail": "EXIF orientation applied; original bytes retained. No automatic page-boundary claim.",
+      "artifacts": [
+        "page.png"
+      ]
+    },
+    {
+      "name": "quality",
+      "status": "complete",
+      "duration_ms": 6,
+      "detail": "Resolution and contrast heuristic (variance 481.9); blur, shadow and handwritten-change classifiers unavailable.",
+      "artifacts": []
+    },
+    {
+      "name": "detection",
+      "status": "complete",
+      "duration_ms": 258,
+      "detail": "CPU / 992×1280 / 32 regions. DB connected components; axis-aligned crop boxes.",
+      "artifacts": []
+    },
+    {
+      "name": "recognition",
+      "status": "complete",
+      "duration_ms": 576,
+      "detail": "CTC greedy decoding. Mean token scores are engine signals, not appointment-correctness probabilities. Alternatives unavailable.",
+      "artifacts": []
+    },
+    {
+      "name": "layout_and_fields",
+      "status": "complete",
+      "duration_ms": 1,
+      "detail": "Geometric line grouping; explicit date labels; printed times only. Unassigned observations retained.",
+      "artifacts": []
+    },
+    {
+      "name": "validation",
+      "status": "complete",
+      "duration_ms": 0,
+      "detail": "8 appointments; 7 unassigned observations; 2 document issues",
+      "artifacts": []
+    },
+    {
+      "name": "selective_reread",
+      "status": "unavailable",
+      "duration_ms": 0,
+      "detail": "No retry adapter configured; difficult fields require review.",
+      "artifacts": []
+    }
+  ],
+  "regions": [
+    {
+      "id": "region-0000",
+      "polygon": [
+        {
+          "x": 90.88709677419357,
+          "y": 68.0625
+        },
+        {
+          "x": 453.8709677419355,
+          "y": 68.0625
+        },
+        {
+          "x": 453.8709677419355,
+          "y": 95.06249999999999
+        },
+        {
+          "x": 90.88709677419357,
+          "y": 95.06249999999999
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0000",
+      "children": []
+    },
+    {
+      "id": "region-0001",
+      "polygon": [
+        {
+          "x": 91.02822580645162,
+          "y": 134.296875
+        },
+        {
+          "x": 514.4153225806451,
+          "y": 134.296875
+        },
+        {
+          "x": 514.4153225806451,
+          "y": 184.921875
+        },
+        {
+          "x": 91.02822580645162,
+          "y": 184.921875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0001",
+      "children": []
+    },
+    {
+      "id": "region-0002",
+      "polygon": [
+        {
+          "x": 91.31048387096774,
+          "y": 200.67187499999997
+        },
+        {
+          "x": 361.71370967741933,
+          "y": 200.67187499999997
+        },
+        {
+          "x": 361.71370967741933,
+          "y": 231.046875
+        },
+        {
+          "x": 91.31048387096774,
+          "y": 231.046875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0002",
+      "children": []
+    },
+    {
+      "id": "region-0003",
+      "polygon": [
+        {
+          "x": 1105.7459677419354,
+          "y": 280.546875
+        },
+        {
+          "x": 1166.4314516129032,
+          "y": 280.546875
+        },
+        {
+          "x": 1166.4314516129032,
+          "y": 331.171875
+        },
+        {
+          "x": 1105.7459677419354,
+          "y": 331.171875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0003",
+      "children": []
+    },
+    {
+      "id": "region-0004",
+      "polygon": [
+        {
+          "x": 80.7258064516129,
+          "y": 282.9375
+        },
+        {
+          "x": 145.08064516129033,
+          "y": 282.9375
+        },
+        {
+          "x": 145.08064516129033,
+          "y": 330.1875
+        },
+        {
+          "x": 80.7258064516129,
+          "y": 330.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0003",
+      "children": []
+    },
+    {
+      "id": "region-0005",
+      "polygon": [
+        {
+          "x": 394.59677419354847,
+          "y": 286.3125
+        },
+        {
+          "x": 481.8145161290322,
+          "y": 286.3125
+        },
+        {
+          "x": 481.8145161290322,
+          "y": 326.8125
+        },
+        {
+          "x": 394.59677419354847,
+          "y": 326.8125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0003",
+      "children": []
+    },
+    {
+      "id": "region-0006",
+      "polygon": [
+        {
+          "x": 1112.5201612903227,
+          "y": 373.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 373.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 410.203125
+        },
+        {
+          "x": 1112.5201612903227,
+          "y": 410.203125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0004",
+      "children": []
+    },
+    {
+      "id": "region-0007",
+      "polygon": [
+        {
+          "x": 89.33467741935483,
+          "y": 377.296875
+        },
+        {
+          "x": 270.5443548387097,
+          "y": 377.296875
+        },
+        {
+          "x": 270.5443548387097,
+          "y": 414.421875
+        },
+        {
+          "x": 89.33467741935483,
+          "y": 414.421875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0004",
+      "children": []
+    },
+    {
+      "id": "region-0008",
+      "polygon": [
+        {
+          "x": 397.41935483870975,
+          "y": 376.31250000000006
+        },
+        {
+          "x": 542.5,
+          "y": 376.31250000000006
+        },
+        {
+          "x": 542.5,
+          "y": 416.8125
+        },
+        {
+          "x": 397.41935483870975,
+          "y": 416.8125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0004",
+      "children": []
+    },
+    {
+      "id": "region-0009",
+      "polygon": [
+        {
+          "x": 1110.1209677419354,
+          "y": 505.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 505.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 546.1875
+        },
+        {
+          "x": 1110.1209677419354,
+          "y": 546.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0005",
+      "children": []
+    },
+    {
+      "id": "region-0010",
+      "polygon": [
+        {
+          "x": 86.93548387096774,
+          "y": 509.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 509.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 550.40625
+        },
+        {
+          "x": 86.93548387096774,
+          "y": 550.40625
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0005",
+      "children": []
+    },
+    {
+      "id": "region-0011",
+      "polygon": [
+        {
+          "x": 398.40725806451616,
+          "y": 513.703125
+        },
+        {
+          "x": 664.2943548387096,
+          "y": 513.703125
+        },
+        {
+          "x": 664.2943548387096,
+          "y": 550.828125
+        },
+        {
+          "x": 398.40725806451616,
+          "y": 550.828125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0005",
+      "children": []
+    },
+    {
+      "id": "region-0012",
+      "polygon": [
+        {
+          "x": 399.39516129032256,
+          "y": 551.25
+        },
+        {
+          "x": 694.3548387096774,
+          "y": 551.25
+        },
+        {
+          "x": 694.3548387096774,
+          "y": 585.0
+        },
+        {
+          "x": 399.39516129032256,
+          "y": 585.0
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0006",
+      "children": []
+    },
+    {
+      "id": "region-0013",
+      "polygon": [
+        {
+          "x": 1110.1209677419354,
+          "y": 640.6875
+        },
+        {
+          "x": 1219.9193548387098,
+          "y": 640.6875
+        },
+        {
+          "x": 1219.9193548387098,
+          "y": 681.1875
+        },
+        {
+          "x": 1110.1209677419354,
+          "y": 681.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0007",
+      "children": []
+    },
+    {
+      "id": "region-0014",
+      "polygon": [
+        {
+          "x": 86.93548387096774,
+          "y": 644.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 644.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 685.40625
+        },
+        {
+          "x": 86.93548387096774,
+          "y": 685.40625
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0007",
+      "children": []
+    },
+    {
+      "id": "region-0015",
+      "polygon": [
+        {
+          "x": 397.8427419354838,
+          "y": 643.921875
+        },
+        {
+          "x": 673.3266129032259,
+          "y": 643.921875
+        },
+        {
+          "x": 673.3266129032259,
+          "y": 687.796875
+        },
+        {
+          "x": 397.8427419354838,
+          "y": 687.796875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0007",
+      "children": []
+    },
+    {
+      "id": "region-0016",
+      "polygon": [
+        {
+          "x": 1110.1209677419354,
+          "y": 775.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 775.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 816.1875
+        },
+        {
+          "x": 1110.1209677419354,
+          "y": 816.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0008",
+      "children": []
+    },
+    {
+      "id": "region-0017",
+      "polygon": [
+        {
+          "x": 88.77016129032258,
+          "y": 778.921875
+        },
+        {
+          "x": 273.93145161290323,
+          "y": 778.921875
+        },
+        {
+          "x": 273.93145161290323,
+          "y": 822.796875
+        },
+        {
+          "x": 88.77016129032258,
+          "y": 822.796875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0008",
+      "children": []
+    },
+    {
+      "id": "region-0018",
+      "polygon": [
+        {
+          "x": 396.4314516129032,
+          "y": 781.734375
+        },
+        {
+          "x": 583.0040322580645,
+          "y": 781.734375
+        },
+        {
+          "x": 583.0040322580645,
+          "y": 825.609375
+        },
+        {
+          "x": 396.4314516129032,
+          "y": 825.609375
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0008",
+      "children": []
+    },
+    {
+      "id": "region-0019",
+      "polygon": [
+        {
+          "x": 1110.1209677419354,
+          "y": 910.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 910.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 951.1875
+        },
+        {
+          "x": 1110.1209677419354,
+          "y": 951.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0009",
+      "children": []
+    },
+    {
+      "id": "region-0020",
+      "polygon": [
+        {
+          "x": 88.77016129032258,
+          "y": 913.921875
+        },
+        {
+          "x": 273.93145161290323,
+          "y": 913.921875
+        },
+        {
+          "x": 273.93145161290323,
+          "y": 957.796875
+        },
+        {
+          "x": 88.77016129032258,
+          "y": 957.796875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0009",
+      "children": []
+    },
+    {
+      "id": "region-0021",
+      "polygon": [
+        {
+          "x": 396.4314516129032,
+          "y": 916.734375
+        },
+        {
+          "x": 583.0040322580645,
+          "y": 916.734375
+        },
+        {
+          "x": 583.0040322580645,
+          "y": 960.609375
+        },
+        {
+          "x": 396.4314516129032,
+          "y": 960.609375
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0009",
+      "children": []
+    },
+    {
+      "id": "region-0022",
+      "polygon": [
+        {
+          "x": 1110.1209677419354,
+          "y": 1045.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 1045.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 1086.1875
+        },
+        {
+          "x": 1110.1209677419354,
+          "y": 1086.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0010",
+      "children": []
+    },
+    {
+      "id": "region-0023",
+      "polygon": [
+        {
+          "x": 83.97177419354838,
+          "y": 1045.546875
+        },
+        {
+          "x": 179.93951612903226,
+          "y": 1045.546875
+        },
+        {
+          "x": 179.93951612903226,
+          "y": 1096.171875
+        },
+        {
+          "x": 83.97177419354838,
+          "y": 1096.171875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0010",
+      "children": []
+    },
+    {
+      "id": "region-0024",
+      "polygon": [
+        {
+          "x": 399.25403225806446,
+          "y": 1048.921875
+        },
+        {
+          "x": 674.7379032258065,
+          "y": 1048.921875
+        },
+        {
+          "x": 674.7379032258065,
+          "y": 1092.796875
+        },
+        {
+          "x": 399.25403225806446,
+          "y": 1092.796875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0010",
+      "children": []
+    },
+    {
+      "id": "region-0025",
+      "polygon": [
+        {
+          "x": 1112.5201612903227,
+          "y": 1183.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 1183.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 1220.203125
+        },
+        {
+          "x": 1112.5201612903227,
+          "y": 1220.203125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0011",
+      "children": []
+    },
+    {
+      "id": "region-0026",
+      "polygon": [
+        {
+          "x": 89.75806451612904,
+          "y": 1184.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 1184.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 1225.40625
+        },
+        {
+          "x": 89.75806451612904,
+          "y": 1225.40625
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0011",
+      "children": []
+    },
+    {
+      "id": "region-0027",
+      "polygon": [
+        {
+          "x": 396.4314516129032,
+          "y": 1185.328125
+        },
+        {
+          "x": 570.3024193548387,
+          "y": 1185.328125
+        },
+        {
+          "x": 570.3024193548387,
+          "y": 1229.203125
+        },
+        {
+          "x": 396.4314516129032,
+          "y": 1229.203125
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0011",
+      "children": []
+    },
+    {
+      "id": "region-0028",
+      "polygon": [
+        {
+          "x": 89.75806451612904,
+          "y": 1319.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 1319.90625
+        },
+        {
+          "x": 272.94354838709677,
+          "y": 1360.40625
+        },
+        {
+          "x": 89.75806451612904,
+          "y": 1360.40625
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0012",
+      "children": []
+    },
+    {
+      "id": "region-0029",
+      "polygon": [
+        {
+          "x": 392.6209677419355,
+          "y": 1317.9375
+        },
+        {
+          "x": 499.31451612903226,
+          "y": 1317.9375
+        },
+        {
+          "x": 499.31451612903226,
+          "y": 1365.1875
+        },
+        {
+          "x": 392.6209677419355,
+          "y": 1365.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0012",
+      "children": []
+    },
+    {
+      "id": "region-0030",
+      "polygon": [
+        {
+          "x": 92.2983870967742,
+          "y": 1588.2187500000002
+        },
+        {
+          "x": 648.6290322580644,
+          "y": 1588.2187500000002
+        },
+        {
+          "x": 648.6290322580644,
+          "y": 1615.2187499999998
+        },
+        {
+          "x": 92.2983870967742,
+          "y": 1615.2187499999998
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0013",
+      "children": []
+    },
+    {
+      "id": "region-0031",
+      "polygon": [
+        {
+          "x": 92.2983870967742,
+          "y": 1638.84375
+        },
+        {
+          "x": 717.7822580645161,
+          "y": 1638.84375
+        },
+        {
+          "x": 717.7822580645161,
+          "y": 1665.84375
+        },
+        {
+          "x": 92.2983870967742,
+          "y": 1665.84375
+        }
+      ],
+      "frame": "page",
+      "kind": "text",
+      "parent": "row-0014",
+      "children": []
+    },
+    {
+      "id": "page",
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "x": 1400.0,
+          "y": 0.0
+        },
+        {
+          "x": 1400.0,
+          "y": 1800.0
+        },
+        {
+          "x": 0.0,
+          "y": 1800.0
+        }
+      ],
+      "frame": "page",
+      "kind": "page",
+      "parent": null,
+      "children": [
+        "row-0000",
+        "row-0001",
+        "row-0002",
+        "row-0003",
+        "row-0004",
+        "row-0005",
+        "row-0006",
+        "row-0007",
+        "row-0008",
+        "row-0009",
+        "row-0010",
+        "row-0011",
+        "row-0012",
+        "row-0013",
+        "row-0014"
+      ]
+    },
+    {
+      "id": "row-0000",
+      "polygon": [
+        {
+          "x": 90.88709677419357,
+          "y": 68.0625
+        },
+        {
+          "x": 453.8709677419355,
+          "y": 68.0625
+        },
+        {
+          "x": 453.8709677419355,
+          "y": 95.06249999999999
+        },
+        {
+          "x": 90.88709677419357,
+          "y": 95.06249999999999
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0000"
+      ]
+    },
+    {
+      "id": "row-0001",
+      "polygon": [
+        {
+          "x": 91.02822580645162,
+          "y": 134.296875
+        },
+        {
+          "x": 514.4153225806451,
+          "y": 134.296875
+        },
+        {
+          "x": 514.4153225806451,
+          "y": 184.921875
+        },
+        {
+          "x": 91.02822580645162,
+          "y": 184.921875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0001"
+      ]
+    },
+    {
+      "id": "row-0002",
+      "polygon": [
+        {
+          "x": 91.31048387096774,
+          "y": 200.67187499999997
+        },
+        {
+          "x": 361.71370967741933,
+          "y": 200.67187499999997
+        },
+        {
+          "x": 361.71370967741933,
+          "y": 231.046875
+        },
+        {
+          "x": 91.31048387096774,
+          "y": 231.046875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0002"
+      ]
+    },
+    {
+      "id": "row-0003",
+      "polygon": [
+        {
+          "x": 80.7258064516129,
+          "y": 280.546875
+        },
+        {
+          "x": 1166.4314516129032,
+          "y": 280.546875
+        },
+        {
+          "x": 1166.4314516129032,
+          "y": 331.171875
+        },
+        {
+          "x": 80.7258064516129,
+          "y": 331.171875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0004",
+        "region-0005",
+        "region-0003"
+      ]
+    },
+    {
+      "id": "row-0004",
+      "polygon": [
+        {
+          "x": 89.33467741935483,
+          "y": 373.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 373.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 416.8125
+        },
+        {
+          "x": 89.33467741935483,
+          "y": 416.8125
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0007",
+        "region-0008",
+        "region-0006"
+      ]
+    },
+    {
+      "id": "row-0005",
+      "polygon": [
+        {
+          "x": 86.93548387096774,
+          "y": 505.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 505.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 550.828125
+        },
+        {
+          "x": 86.93548387096774,
+          "y": 550.828125
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0010",
+        "region-0011",
+        "region-0009"
+      ]
+    },
+    {
+      "id": "row-0006",
+      "polygon": [
+        {
+          "x": 399.39516129032256,
+          "y": 551.25
+        },
+        {
+          "x": 694.3548387096774,
+          "y": 551.25
+        },
+        {
+          "x": 694.3548387096774,
+          "y": 585.0
+        },
+        {
+          "x": 399.39516129032256,
+          "y": 585.0
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0012"
+      ]
+    },
+    {
+      "id": "row-0007",
+      "polygon": [
+        {
+          "x": 86.93548387096774,
+          "y": 640.6875
+        },
+        {
+          "x": 1219.9193548387098,
+          "y": 640.6875
+        },
+        {
+          "x": 1219.9193548387098,
+          "y": 687.796875
+        },
+        {
+          "x": 86.93548387096774,
+          "y": 687.796875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0014",
+        "region-0015",
+        "region-0013"
+      ]
+    },
+    {
+      "id": "row-0008",
+      "polygon": [
+        {
+          "x": 88.77016129032258,
+          "y": 775.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 775.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 825.609375
+        },
+        {
+          "x": 88.77016129032258,
+          "y": 825.609375
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0017",
+        "region-0018",
+        "region-0016"
+      ]
+    },
+    {
+      "id": "row-0009",
+      "polygon": [
+        {
+          "x": 88.77016129032258,
+          "y": 910.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 910.6875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 960.609375
+        },
+        {
+          "x": 88.77016129032258,
+          "y": 960.609375
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0020",
+        "region-0021",
+        "region-0019"
+      ]
+    },
+    {
+      "id": "row-0010",
+      "polygon": [
+        {
+          "x": 83.97177419354838,
+          "y": 1045.546875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 1045.546875
+        },
+        {
+          "x": 1221.3306451612902,
+          "y": 1096.171875
+        },
+        {
+          "x": 83.97177419354838,
+          "y": 1096.171875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0023",
+        "region-0024",
+        "region-0022"
+      ]
+    },
+    {
+      "id": "row-0011",
+      "polygon": [
+        {
+          "x": 89.75806451612904,
+          "y": 1183.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 1183.078125
+        },
+        {
+          "x": 1235.866935483871,
+          "y": 1229.203125
+        },
+        {
+          "x": 89.75806451612904,
+          "y": 1229.203125
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0026",
+        "region-0027",
+        "region-0025"
+      ]
+    },
+    {
+      "id": "row-0012",
+      "polygon": [
+        {
+          "x": 89.75806451612904,
+          "y": 1317.9375
+        },
+        {
+          "x": 499.31451612903226,
+          "y": 1317.9375
+        },
+        {
+          "x": 499.31451612903226,
+          "y": 1365.1875
+        },
+        {
+          "x": 89.75806451612904,
+          "y": 1365.1875
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0028",
+        "region-0029"
+      ]
+    },
+    {
+      "id": "row-0013",
+      "polygon": [
+        {
+          "x": 92.2983870967742,
+          "y": 1588.2187500000002
+        },
+        {
+          "x": 648.6290322580644,
+          "y": 1588.2187500000002
+        },
+        {
+          "x": 648.6290322580644,
+          "y": 1615.2187499999998
+        },
+        {
+          "x": 92.2983870967742,
+          "y": 1615.2187499999998
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0030"
+      ]
+    },
+    {
+      "id": "row-0014",
+      "polygon": [
+        {
+          "x": 92.2983870967742,
+          "y": 1638.84375
+        },
+        {
+          "x": 717.7822580645161,
+          "y": 1638.84375
+        },
+        {
+          "x": 717.7822580645161,
+          "y": 1665.84375
+        },
+        {
+          "x": 92.2983870967742,
+          "y": 1665.84375
+        }
+      ],
+      "frame": "page",
+      "kind": "row",
+      "parent": "page",
+      "children": [
+        "region-0031"
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "id": "obs-region-0000",
+      "text": "MUSTER·ERFUNDENE TERMINE",
+      "region_ids": [
+        "region-0000"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9994888,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0001",
+      "text": "Tagesplan 10.09.2026",
+      "region_ids": [
+        "region-0001"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99944675,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0002",
+      "text": "Gedruckt 09.09.2026 16:45",
+      "region_ids": [
+        "region-0002"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9962499,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0003",
+      "text": "Ort",
+      "region_ids": [
+        "region-0003"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9989174,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0004",
+      "text": "Zeit",
+      "region_ids": [
+        "region-0004"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99965715,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0005",
+      "text": "Termin",
+      "region_ids": [
+        "region-0005"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99893254,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0006",
+      "text": "Speisesaal",
+      "region_ids": [
+        "region-0006"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9997927,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0007",
+      "text": "07:30 - 08:00",
+      "region_ids": [
+        "region-0007"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.94575363,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0008",
+      "text": "Frühstück",
+      "region_ids": [
+        "region-0008"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99981564,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0009",
+      "text": "Raum A2",
+      "region_ids": [
+        "region-0009"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99990404,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0010",
+      "text": "08:15 - 08:45",
+      "region_ids": [
+        "region-0010"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9697819,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0011",
+      "text": "Bewegungstherapie",
+      "region_ids": [
+        "region-0011"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999743,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0012",
+      "text": "Bitte feste Schuhe mitbringen",
+      "region_ids": [
+        "region-0012"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9942423,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0013",
+      "text": "Raum B1",
+      "region_ids": [
+        "region-0013"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99989074,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0014",
+      "text": "09:00 - 09:20",
+      "region_ids": [
+        "region-0014"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9724031,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0015",
+      "text": "Ärztliches Gespräch",
+      "region_ids": [
+        "region-0015"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.977683,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0016",
+      "text": "Raum C3",
+      "region_ids": [
+        "region-0016"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99991184,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0017",
+      "text": "10:00 - 10:30",
+      "region_ids": [
+        "region-0017"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99364007,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0018",
+      "text": "Entspannung",
+      "region_ids": [
+        "region-0018"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999772,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0019",
+      "text": "Raum C3",
+      "region_ids": [
+        "region-0019"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99991184,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0020",
+      "text": "10:00 - 10:30",
+      "region_ids": [
+        "region-0020"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99364007,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0021",
+      "text": "Entspannung",
+      "region_ids": [
+        "region-0021"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999772,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0022",
+      "text": "Raum D4",
+      "region_ids": [
+        "region-0022"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99983245,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0023",
+      "text": "11:15",
+      "region_ids": [
+        "region-0023"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999527,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0024",
+      "text": "Übungen im Wasser",
+      "region_ids": [
+        "region-0024"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9997386,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0025",
+      "text": "Speisesaal",
+      "region_ids": [
+        "region-0025"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9997927,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0026",
+      "text": "12:00 - 12:45",
+      "region_ids": [
+        "region-0026"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.98604876,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0027",
+      "text": "Mittagessen",
+      "region_ids": [
+        "region-0027"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999357,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0028",
+      "text": "14:00 - 14:30",
+      "region_ids": [
+        "region-0028"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9850123,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0029",
+      "text": "Pause",
+      "region_ids": [
+        "region-0029"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9999517,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0030",
+      "text": "Synthetischer Testplan. Keine echten Behandlungsdaten.",
+      "region_ids": [
+        "region-0030"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.99514115,
+      "alternatives": []
+    },
+    {
+      "id": "obs-region-0031",
+      "text": "Eine Endzeit fehlt absichtlich. Wiederholungen sind beabsichtigt.",
+      "region_ids": [
+        "region-0031"
+      ],
+      "engine": "PP-OCRv6_small",
+      "score": 0.9913769,
+      "alternatives": []
+    }
+  ],
+  "appointments": [
+    {
+      "id": "c8097777-bc78-595f-a011-cfeff4bc079f",
+      "date": "2026-09-10",
+      "start": "07:30",
+      "end": "08:00",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Frühstück",
+      "location": "Speisesaal",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0007"
+        ],
+        "end": [
+          "obs-region-0007"
+        ],
+        "location": [
+          "obs-region-0006"
+        ],
+        "start": [
+          "obs-region-0007"
+        ],
+        "title": [
+          "obs-region-0008"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "10d2da3b-ae7c-54f2-94b8-c3bf91c1fa2d",
+      "date": "2026-09-10",
+      "start": "08:15",
+      "end": "08:45",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Bewegungstherapie Bitte feste Schuhe mitbringen",
+      "location": "Raum A2",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0010"
+        ],
+        "end": [
+          "obs-region-0010"
+        ],
+        "location": [
+          "obs-region-0009"
+        ],
+        "start": [
+          "obs-region-0010"
+        ],
+        "title": [
+          "obs-region-0011",
+          "obs-region-0012"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "4f73fd1c-c9d2-516b-9196-14334e709734",
+      "date": "2026-09-10",
+      "start": "09:00",
+      "end": "09:20",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Ärztliches Gespräch",
+      "location": "Raum B1",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0014"
+        ],
+        "end": [
+          "obs-region-0014"
+        ],
+        "location": [
+          "obs-region-0013"
+        ],
+        "start": [
+          "obs-region-0014"
+        ],
+        "title": [
+          "obs-region-0015"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "e3acfe56-1239-51e4-a11c-7097b3c7e533",
+      "date": "2026-09-10",
+      "start": "10:00",
+      "end": "10:30",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Entspannung",
+      "location": "Raum C3",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0017"
+        ],
+        "end": [
+          "obs-region-0017"
+        ],
+        "location": [
+          "obs-region-0016"
+        ],
+        "start": [
+          "obs-region-0017"
+        ],
+        "title": [
+          "obs-region-0018"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "8f440c04-1499-5b34-a0f2-08119274148c",
+      "date": "2026-09-10",
+      "start": "10:00",
+      "end": "10:30",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Entspannung",
+      "location": "Raum C3",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0020"
+        ],
+        "end": [
+          "obs-region-0020"
+        ],
+        "location": [
+          "obs-region-0019"
+        ],
+        "start": [
+          "obs-region-0020"
+        ],
+        "title": [
+          "obs-region-0021"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "db39a1b3-7eeb-5d7a-a554-f5ad6b022ae5",
+      "date": "2026-09-10",
+      "start": "11:15",
+      "end": null,
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Übungen im Wasser",
+      "location": "Raum D4",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0023"
+        ],
+        "end": [
+          "obs-region-0023"
+        ],
+        "location": [
+          "obs-region-0022"
+        ],
+        "start": [
+          "obs-region-0023"
+        ],
+        "title": [
+          "obs-region-0024"
+        ]
+      },
+      "issues": [
+        {
+          "code": "missing_end",
+          "message": "Endzeit oder Dauer am Papier ergänzen.",
+          "field": "end",
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "7ca92414-316f-5253-8e06-9774a9b2ae91",
+      "date": "2026-09-10",
+      "start": "12:00",
+      "end": "12:45",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Mittagessen",
+      "location": "Speisesaal",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0026"
+        ],
+        "end": [
+          "obs-region-0026"
+        ],
+        "location": [
+          "obs-region-0025"
+        ],
+        "start": [
+          "obs-region-0026"
+        ],
+        "title": [
+          "obs-region-0027"
+        ]
+      },
+      "issues": []
+    },
+    {
+      "id": "b8bf3995-8796-53dd-9fc2-40e8bf086da0",
+      "date": "2026-09-10",
+      "start": "14:00",
+      "end": "14:30",
+      "end_date": null,
+      "duration_minutes": null,
+      "title": "Pause",
+      "location": "",
+      "therapist": "",
+      "notes": "",
+      "included": true,
+      "provenance": {
+        "date": [
+          "obs-region-0001"
+        ],
+        "duration_minutes": [
+          "obs-region-0028"
+        ],
+        "end": [
+          "obs-region-0028"
+        ],
+        "start": [
+          "obs-region-0028"
+        ],
+        "title": [
+          "obs-region-0029"
+        ]
+      },
+      "issues": []
+    }
+  ],
+  "issues": [
+    {
+      "code": "unassigned_text",
+      "message": "Unassigned observations require inspection.",
+      "field": null,
+      "blocking": false
+    },
+    {
+      "code": "page_completeness",
+      "message": "Vollständige Seite und mögliche handschriftliche Änderungen mit dem Papier vergleichen.",
+      "field": null,
+      "blocking": false
+    }
+  ],
+  "unassigned": [
+    "obs-region-0000",
+    "obs-region-0002",
+    "obs-region-0003",
+    "obs-region-0004",
+    "obs-region-0005",
+    "obs-region-0030",
+    "obs-region-0031"
+  ],
+  "original_to_page": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "page_to_original": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "page_width": 1400,
+  "page_height": 1800,
+  "complete_page_confirmed": false,
+  "review_confirmed": false,
+  "total_ms": 956,
+  "peak_memory_bytes": null,
+  "cache_used": false
+}

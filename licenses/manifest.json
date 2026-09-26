@@ -1,0 +1,20 @@
+{
+  "class-variance-authority-license.txt": "0ccbf956cffc8dcf515809433cb5242ee67c94513d46e48c261d68d0880de406",
+  "cn-license.txt": "00ff8408e93e2ecc4d90c0edeabdf434100c3aff50acc5d330e17eccd4a3faa5",
+  "lucide-react-license": "668dcc52803480e0a026b31140a4cae668772663cd764e5991d252eef03f98db",
+  "next-license.txt": "ee765244e2d59f5234d474f62e0766fa0c8b99af967fdd4c0cb8dcb0c76ea224",
+  "onnx-runtime-license": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+  "onnx-runtime-third-party-notices.txt": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc",
+  "ort-license-mit": "b880185add684cd1c6d24394a2e30fe08b75ba4586619b0890ce764bc4cd43a0",
+  "paddle-ocr-license": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
+  "radix-ui-license.txt": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138",
+  "react-dom-license": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+  "react-dom-license.txt": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+  "react-license": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+  "react-license.txt": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+  "shadcn-license.txt": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f",
+  "tailwindcss-license.txt": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+  "tauri-license-mit": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d",
+  "tw-animate-css-license.txt": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109",
+  "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
+}

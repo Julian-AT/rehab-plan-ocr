@@ -1,0 +1,29 @@
+[package]
+name = "rehab-plan-ocr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "reha_calendar_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = ["desktop-onnx"]
+desktop-onnx = ["reha-core/onnx-download"]
+ios-onnx = ["reha-core/onnx"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reha-core = { path = "../crates/reha-core" }
+tauri-plugin-reha-calendar = { path = "../plugins/calendar" }
+base64 = "0.22"
+chrono = "0.4"
+chrono-tz = "0.10"
+tokio = { version = "1", features = ["sync"] }
+uuid = { version = "1", features = ["v4"] }
