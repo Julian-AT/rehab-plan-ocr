@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use rusqlite::{Connection, TransactionBehavior};
 
-pub const STORE_VERSION: u32 = 8;
+pub const STORE_VERSION: u32 = 9;
 
 pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
     // Reject a newer store before changing any pragma or schema. A preserved old
@@ -91,6 +91,11 @@ pub(super) fn migrate(connection: &mut Connection) -> Result<()> {
             let record: crate::contracts::ImportRecord = serde_json::from_str(&raw)?;
             super::owned_events::upsert(&tx, &record.into())?;
         }
+    }
+    if version < 9 {
+        tx.execute_batch(
+            "CREATE TABLE source_deletions(id TEXT PRIMARY KEY); PRAGMA user_version=9;",
+        )?;
     }
     tx.commit()?;
     Ok(())

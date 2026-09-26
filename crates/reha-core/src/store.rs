@@ -11,6 +11,7 @@ mod intake;
 mod migrations;
 mod owned_events;
 mod plans;
+mod retention;
 pub use batches::{BatchOperation, ImportBatch};
 pub use intake::Intake;
 pub use migrations::STORE_VERSION;
@@ -34,12 +35,17 @@ pub struct ScanSummary {
 impl Store {
     pub fn open(root: &Path) -> Result<Self> {
         std::fs::create_dir_all(root.join("scans"))?;
+        let new_store = !root.join("ledger.sqlite").exists();
         let mut connection = Connection::open(root.join("ledger.sqlite"))?;
         migrations::migrate(&mut connection)?;
         let store = Self {
             connection,
             root: root.into(),
         };
+        if new_store {
+            store.set_setting("preferences", r#"{"timezone":"Europe/Vienna","reminder":10,"detailed_debug":false,"retention_days":30}"#)?;
+        }
+        store.recover_source_deletions()?;
         store.recover_intakes()?;
         Ok(store)
     }
@@ -147,53 +153,7 @@ impl Store {
         Ok(result)
     }
     pub fn delete_scan(&self, id: &str) -> Result<()> {
-        let dir = self.scan_dir(id)?;
-        if dir.exists() {
-            std::fs::remove_dir_all(dir)?;
-        }
-        self.connection
-            .execute("UPDATE scans SET run=NULL WHERE id=?1", [id])?;
-        self.connection.execute(
-            "UPDATE intakes SET status='deleted',error=NULL WHERE id=?1",
-            [id],
-        )?;
-        self.connection.execute(
-            "DELETE FROM settings WHERE key=?1",
-            [format!("pdf-evidence:{id}")],
-        )?;
-        self.connection
-            .execute("DELETE FROM failures WHERE id=?1", [id])?;
-        self.connection
-            .execute("DELETE FROM processing_attempts WHERE scan_id=?1", [id])?;
-        Ok(())
-    }
-    pub fn cleanup(&self, now: i64) -> Result<usize> {
-        // Retention is opt-in. Never expire unfinished work or orphaned source files.
-        let preferences: serde_json::Value = self
-            .setting("preferences")?
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default();
-        let Some(days) = preferences["retention_days"]
-            .as_u64()
-            .filter(|d| (1..=3650).contains(d))
-        else {
-            return Ok(0);
-        };
-        let cutoff = now.saturating_sub(days as i64 * 86400);
-        let mut q = self
-            .connection
-            .prepare("SELECT id FROM scans WHERE imported_at<=?1 AND run IS NOT NULL
-                AND json_valid(run) AND json_extract(run,'$.review_confirmed')=1
-                AND NOT EXISTS(SELECT 1 FROM intakes WHERE intakes.id=scans.id AND status!='completed')
-                AND NOT EXISTS(SELECT 1 FROM failures WHERE failures.id=scans.id)
-                AND NOT EXISTS(SELECT 1 FROM operations WHERE status IN ('queued','pending','uncertain'))")?;
-        let ids = q
-            .query_map([cutoff], |r| r.get::<_, String>(0))?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        for id in &ids {
-            self.delete_scan(id)?;
-        }
-        Ok(ids.len())
+        self.delete_sources(&[id.to_owned()])
     }
     pub fn records(&self, schedule_id: Option<&str>) -> Result<Vec<ImportRecord>> {
         let mut q = self
@@ -320,7 +280,7 @@ impl Store {
             std::fs::remove_dir_all(&scans)?;
         }
         std::fs::create_dir_all(scans)?;
-        self.connection.execute_batch("DELETE FROM owned_events; DELETE FROM event_mutations; DELETE FROM plan_acceptances; DELETE FROM processing_attempts; DELETE FROM plan_pages; DELETE FROM plans; DELETE FROM batch_operations; DELETE FROM import_batches; DELETE FROM intakes; DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
+        self.connection.execute_batch("DELETE FROM source_deletions; DELETE FROM owned_events; DELETE FROM event_mutations; DELETE FROM plan_acceptances; DELETE FROM processing_attempts; DELETE FROM plan_pages; DELETE FROM plans; DELETE FROM batch_operations; DELETE FROM import_batches; DELETE FROM intakes; DELETE FROM operations; DELETE FROM imports; DELETE FROM scans; DELETE FROM schedules; DELETE FROM settings; DELETE FROM failures; VACUUM;")?;
         Ok(())
     }
 }
@@ -342,6 +302,9 @@ mod tests {
                 "INSERT INTO scans VALUES(?1,'hash',100,'{\"review_confirmed\":true}','schedule')",
                 [&id],
             )
+            .unwrap();
+        store
+            .set_setting("preferences", r#"{"retention_days":null}"#)
             .unwrap();
         assert_eq!(store.cleanup(100 + 30 * 86400 - 1).unwrap(), 0);
         assert!(dir.exists());

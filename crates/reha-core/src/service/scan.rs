@@ -340,10 +340,7 @@ pub fn delete_scan(state: &Arc<AppState>, id: String) -> Response<()> {
         return Err("Eine Verarbeitung läuft bereits. Bitte warten oder abbrechen.".into());
     }
     let store = state.store.lock().map_err(failure)?;
-    for id in removed {
-        store.delete_scan(&id).map_err(failure)?;
-    }
-    Ok(())
+    store.delete_sources(&removed).map_err(failure)
 }
 
 /// Explicit photo reassignment is local. Calendar proposals still require a
