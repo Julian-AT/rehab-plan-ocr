@@ -134,6 +134,7 @@ help:
 	@echo 'Build: make build [TARGET=simulator|device]; make bindings; make check-bindings'
 	@echo 'Checks: make lint test test-tools test-ios verify-assets; make test-<probe>'
 	@echo 'Visual baseline: make test-visual-baseline TEST_ARGS="--run .local/runs/<new-run>" (serial disposable simulator)'
+	@echo 'Retained UI result: make verify-ui-result RESULT_BUNDLE=<xcresult> RUN=<new-private-directory> UI_TESTS="<target/class/method> ..."'
 	@echo 'Accessibility: make test-reduced-motion (actual system setting, restored after the test)'
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
@@ -173,6 +174,11 @@ bootstrap doctor format lint test:
 
 test-tools:
 	python3 tooling/dev/quality.py test-tools
+
+.PHONY: verify-ui-result
+verify-ui-result:
+	@test -n "$(RESULT_BUNDLE)" -a -n "$(RUN)" || { echo 'Set RESULT_BUNDLE and a new RUN verification directory'; exit 2; }
+	python3 tooling/checks/ui-test-result.py --bundle "$(RESULT_BUNDLE)" --output "$(RUN)" $(foreach test,$(UI_TESTS),--only-test "$(test)")
 
 # Audit tool restoration and advisory updates are explicit network/setup steps.
 .PHONY: download-dependency-audit setup-dependency-audit update-dependency-advisories audit-dependencies test-dependency-audit

@@ -365,3 +365,10 @@ den bestandenen 68-Test-Lauf qualifiziert.
   Testverfahren startete sie neu. Ein fehlender Link erhält ausgewählten Tag
   und Termine. Die unvollständige gemeinsame Testauswahl wird nicht als
   vollständiger Erfolg gezählt. Nachweise und Grenzen: [native Grenzen](typed-boundaries.md).
+
+- Vollständigkeit ausdrücklich ausgewählter UI-Methoden: **verifiziert** durch
+  neun Werkzeugregressionen, Auswertung der erhaltenen Teilausführung und zwei
+  echte Simulatorstarts. Eine nicht vorhandene Methode führt trotz Xcode-Erfolg
+  mit null Tests jetzt zu einem Fehler des Make-Befehls; ein tatsächlich
+  ausgeführter Fall besteht. Originalbundles und alte Berichte bleiben unverändert.
+  [Prüfvertrag und Laufidentitäten](build-reproducibility.md#tatsächlich-ausgeführte-ui-testauswahl).

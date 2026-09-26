@@ -86,6 +86,7 @@ jobs:
             .local/builds/ios/*-bundle-verification.json
             .local/builds/ios/simulator-environment-*.json
             .local/builds/ios/ci-ui.xcresult
+            .local/builds/ios/ci-ui.xcresult.verification
             .local/builds/ios/ci-ui.log
             .local/builds/ios/EventTests/Logs/Test/*.xcresult
           retention-days: 14

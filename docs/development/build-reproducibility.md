@@ -78,6 +78,43 @@ Paketabhängigkeiten. Der erste gemeinsame Build hatte trotz arm64-App-Einstellu
 zusätzliche x86_64-Paketkompilierungen begonnen. Die bereits unterstützten
 Apple-Silicon-Simulatoren, Gerätearchitektur und iOS-Mindestversion bleiben erhalten.
 
+## Tatsächlich ausgeführte UI-Testauswahl
+
+`make test-native-ui` prüft nach Xcode auch das Ergebnisbundle. Jede ausdrücklich
+angeforderte Methode muss mit passender Ziel-/Klassen-/Methodenidentität ausgeführt
+worden sein. Leere, fehlgeschlagene, übersprungene, doppelte oder widersprüchlich
+gezählte Läufe scheitern auch bei Xcode-Exitcode 0. Ein negativer Xcode-Exitcode
+bleibt negativ. Klassen-/Zielauswahl verlangt passende ausgeführte Tests, liefert
+aber keine unabhängige vollständige Aufzählung aller kompilierten Methoden.
+
+Ein bestehender Ergebnis- oder Prüfpfad wird nicht überschrieben. Ohne expliziten
+`-resultBundlePath` entsteht ein neuer privater Lauf unter `.local/runs`; neben
+jedem Bundle bleibt `<bundle>.verification` mit Befehlen, Zählung, tatsächlichen
+Testidentitäten und Quellenhashes erhalten. Das Originalbundle wird ausschließlich
+über eine geprüfte Wegwerfkopie ausgewertet. Die CI sichert diesen zusätzlichen
+Nachweis zusammen mit ihrem bereits vorgesehenen synthetischen UI-Bundle.
+
+Vorhandene Resultate lassen sich gesondert prüfen:
+
+```sh
+make verify-ui-result RESULT_BUNDLE=.local/runs/<run>/result.xcresult \
+  RUN=.local/runs/<new-verification> \
+  UI_TESTS="TermineUITests/AgendaPreviewTests/testMissingOwnedLinkKeepsSelectedDayAndAppointments"
+```
+
+Neun Werkzeugregressionen prüfen unter anderem fehlende zweite Methoden,
+Namenspräfixe, fremde Testziele, Duplikate, falsche Zähler und geschützte Nachweise.
+Der tatsächlich unvollständige Lauf `owned-link-ui-20260926-s19-002` wird für seine
+zwei angeforderten Methoden abgewiesen; `003` besteht für seine eine ausgeführte
+Methode. Nachweise: `.local/runs/ui-result-gate-20260926-s19-001/`.
+
+Der neue echte Simulatorlauf `ui-result-gate-live-20260926-s19-001` besteht mit einer
+ausgeführten Methode, null Fehlern/Skips und bestandenem Gate. Der absichtliche
+Negativfall `ui-result-gate-missing-20260926-s19-001` bestätigt die ganze Befehlskette:
+Xcode meldet Exitcode 0 bei null Tests, das Gate weist die fehlende Methode ab
+und Make liefert einen Fehler. Das ist Werkzeugabnahme, kein zusätzlicher
+vollständiger Produkt- oder CI-Nachweis.
+
 ## Release-Symbole
 
 Das Rust-Releaseprofil erzeugt optimierte Builds mit Zeileninformationen und

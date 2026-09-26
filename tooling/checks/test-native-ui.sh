@@ -106,6 +106,6 @@ for name, target in run.items():
     ]
 (staging / "Termine.xctestrun").write_bytes(plistlib.dumps(run))
 PYRUN
-xcodebuild test-without-building -xctestrun "$staging/Termine.xctestrun" \
+python3 tooling/checks/ui-test-result.py run -xctestrun "$staging/Termine.xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator" \
   -parallel-testing-enabled NO "$@"
