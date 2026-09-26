@@ -21,6 +21,9 @@ import Foundation
         UserDefaults.standard.set(original.displayCalendarIds, forKey: "preview.originalDisplay")
         UserDefaults.standard.set(original.appearance, forKey: "preview.originalAppearance")
         UserDefaults.standard.set(
+          UserDefaults.standard.string(forKey: AppointmentColors.storageKey) ?? "",
+          forKey: "preview.originalColors")
+        UserDefaults.standard.set(
           UserDefaults.standard.string(forKey: "agenda.density") ?? "overview",
           forKey: "preview.originalDensity")
         UserDefaults.standard.set(
@@ -46,12 +49,17 @@ import Foundation
           forKey: "agenda.density")
         UserDefaults.standard.set(
           UserDefaults.standard.bool(forKey: "preview.originalList"), forKey: "agenda.list")
+        UserDefaults.standard.set(
+          UserDefaults.standard.string(forKey: "preview.originalColors") ?? "",
+          forKey: AppointmentColors.storageKey)
         for key in [
           "preview.originalDensity", "preview.originalList", "preview.calendar.ids",
           "preview.originalCalendar", "preview.originalDisplay", "preview.originalAppearance",
+          "preview.originalColors",
         ] { UserDefaults.standard.removeObject(forKey: key) }
         return
       }
+      UserDefaults.standard.set("", forKey: AppointmentColors.storageKey)
       UserDefaults.standard.set("overview", forKey: "agenda.density")
       UserDefaults.standard.set(false, forKey: "agenda.list")
       guard
@@ -78,7 +86,7 @@ import Foundation
       let day = Calendar.current.startOfDay(for: .now)
       func add(
         _ title: String, start: Date, end: Date, calendar: Int = 0, allDay: Bool = false,
-        room: String = "Raum 2.14"
+        room: String = "Raum 2.14", includeDetails: Bool = true
       ) throws {
         let event = EKEvent(eventStore: store)
         event.calendar = calendars[calendar]
@@ -87,17 +95,33 @@ import Foundation
         event.startDate = start
         event.endDate = end
         event.isAllDay = allDay
-        event.notes =
-          "Therapeut: Anna Beispiel\nKlinik: Laßnitzhöhe\nAbteilung: Therapiezentrum\nHinweise: Öffentliche synthetische Simulatorvorschau."
+        if includeDetails {
+          event.notes =
+            "Therapeut: Anna Beispiel\nKlinik: Laßnitzhöhe\nAbteilung: Therapiezentrum\nHinweise: Öffentliche synthetische Simulatorvorschau."
+        }
         try store.save(event, span: .thisEvent, commit: true)
       }
+      if mode == "audio-probe" { try LocalSpeechRecorder.verifyAudioPipeline() }
+      if mode == "dense-short" {
+        let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        for index in 0..<8 {
+          let start = next.addingTimeInterval(Double(12 * 3600 + index * 60))
+          try add(
+            "Kurzer Prüftermin \(index + 1)", start: start, end: start.addingTimeInterval(30),
+            room: "", includeDetails: false)
+        }
+      }
       if mode == "tool-probe" {
+        // Import UI tests keep owned events; isolate the tool fixture's date.
+        let probeDay = Calendar.current.date(byAdding: .year, value: 30, to: day)!
         for index in 1...12 {
           try add(
-            "Prüftermin \(index)", start: day.addingTimeInterval(Double(6 * 3600 + index * 1800)),
-            end: day.addingTimeInterval(Double(6 * 3600 + index * 1800 + 900)))
+            "Prüftermin \(index)",
+            start: probeDay.addingTimeInterval(Double(6 * 3600 + index * 1800)),
+            end: probeDay.addingTimeInterval(Double(6 * 3600 + index * 1800 + 900)),
+            room: index == 12 ? "   " : "Raum 2.14", includeDetails: index != 12)
         }
-        try await CalendarToolProbe.run(core, day: day)
+        try await CalendarToolProbe.run(core, day: probeDay)
       }
       if mode == "colors" {
         let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!

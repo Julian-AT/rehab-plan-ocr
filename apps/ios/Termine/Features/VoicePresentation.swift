@@ -219,12 +219,11 @@ private struct VoiceDetailsView: View {
   @State private var output = SpeechOutput.shared
   @State private var editor = false
   @State private var editingEvent: CalendarEvent?
-  @State private var sending = false
   @State private var history = false
   @Environment(\.dismiss) private var dismiss
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private var blocked: Bool {
-    sending || model.busy || model.edits.busy || model.edits.proposal != nil
+    model.busy || model.edits.busy || model.edits.proposal != nil
   }
   var body: some View {
     ScrollViewReader { proxy in
@@ -307,7 +306,8 @@ private struct VoiceDetailsView: View {
           }.disabled(model.busy || model.edits.busy)
           Color.clear.frame(height: 1).id("conversation-bottom")
         }.padding()
-      }.scrollDismissesKeyboard(.interactively)
+      }.accessibilityIdentifier("conversation-transcript")
+        .scrollDismissesKeyboard(.interactively)
         .onChange(of: model.rounds.count) { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
         .onChange(of: model.busy) { _, busy in
           if !busy {
@@ -375,11 +375,9 @@ private struct VoiceDetailsView: View {
   private func send() {
     guard !blocked else { return }
     let text = model.messageDraft
-    sending = true
     Task {
       let success = await model.submitText(text)
       if success && model.messageDraft == text { model.messageDraft = "" }
-      sending = false
     }
   }
 }

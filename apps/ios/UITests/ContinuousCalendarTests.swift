@@ -10,7 +10,7 @@ import XCTest
     app.launch()
     XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 25))
   }
-  override func tearDown() {
+  override func tearDown() async throws {
     guard let app else { return }
     app.terminate()
     app.launchArguments = ["--agenda-fixture", "cleanup"]
@@ -71,8 +71,8 @@ import XCTest
     capture("04-kalender-dunkel")
     app.tabBars.buttons["Mehr"].tap()
     app.buttons["Darstellung"].tap()
+    app.buttons["Terminfarben"].tap()
     app.swipeUp()
-    XCTAssertTrue(app.staticTexts["Terminfarben"].exists)
     XCTAssertTrue(app.staticTexts["Mahlzeiten"].exists)
     capture("05-farblegende")
   }
@@ -85,6 +85,7 @@ import XCTest
     app.tabBars.buttons["Sprechen"].tap()
     XCTAssertEqual(app.buttons["speak"].label, "Gespräch starten")
     app.buttons["voice-details"].tap()
+    app.buttons["voice-actions"].tap()
     app.buttons["voice-next"].tap()
     app.navigationBars["Gesprächsdetails"].buttons.firstMatch.tap()
     expectation(for: NSPredicate(format: "value == %@", "playback"), evaluatedWith: state)
@@ -97,6 +98,7 @@ import XCTest
     XCTAssertEqual(state.value as? String, "idle")
     XCTAssertFalse(app.staticTexts["voice-response"].exists)
     app.buttons["voice-details"].tap()
+    app.buttons["voice-actions"].tap()
     app.buttons["voice-next"].tap()
     app.tabBars.buttons["Mehr"].tap()
     app.tabBars.buttons["Sprechen"].tap()

@@ -79,6 +79,14 @@ import Foundation
     precondition(layout[0].height == 44 && layout[1].height == 44)
     precondition(layout[0].column != layout[1].column && layout[0].columns == 2)
     precondition(layout[2].columns == 1 && layout[2].height == 48)
+    let tinyEvents = (0..<8).map { index in
+      event("tiny-\(index)", "2026-09-12T13:0\(index):00Z", "2026-09-12T13:0\(index):30Z")
+    }
+    let tinyDay = DayAgenda(events: tinyEvents, date: now, now: now, calendar: calendar)
+    for scale in [96.0, 144, 192] {
+      precondition(AgendaLayout.requiresList(tinyDay.timed, pointsPerHour: scale))
+      precondition(!AgendaLayout.requiresList(Array(tinyDay.timed.prefix(2)), pointsPerHour: scale))
+    }
     let overlaps = AgendaLayout.place(day.timed)
     for a in overlaps {
       for b in overlaps where a.id != b.id && a.column == b.column {

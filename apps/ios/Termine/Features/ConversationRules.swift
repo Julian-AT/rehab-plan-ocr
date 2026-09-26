@@ -130,7 +130,10 @@ struct SpokenText: Sendable {
   }
   private static func tokens(_ text: String) -> [String] {
     // Internal punctuation binds dates, times, rooms, hyphenated names and decimals.
-    let regex = try! NSRegularExpression(pattern: #"[\p{L}\p{N}]+(?:[.:,/’'−–-][\p{L}\p{N}]+)*"#)
+    let regex = try! NSRegularExpression(
+      pattern:
+        #"\b(?:Dr|Prof|Min|Std|ca|bzw|z|B)\.|\b\d+\.(?=\s+\p{L})|[\p{L}\p{N}]+(?:[.:,/’'−–-][\p{L}\p{N}]+)*"#
+    )
     return regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap {
       Range($0.range, in: text).map { String(text[$0]) }
     }

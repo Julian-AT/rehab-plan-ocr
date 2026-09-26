@@ -226,7 +226,8 @@ struct TodayView: View {
     .sheet(isPresented: $create, onDismiss: reload) { EventEditorView(core: core, changed: reload) }
   }
   private func usesList(_ agenda: DayAgenda) -> Bool {
-    let crowded = AgendaLayout.place(agenda.timed, minimumHeight: 0).contains { $0.columns > 2 }
+    let crowded = AgendaLayout.requiresList(
+      agenda.timed, pointsPerHour: (AgendaDensity(rawValue: density) ?? .standard).pointsPerHour)
     let onlyOutside =
       !agenda.events.isEmpty && AgendaWindow(agenda: agenda, now: agenda.date).timed.isEmpty
     return typeSize.isAccessibilitySize || listView || crowded || onlyOutside

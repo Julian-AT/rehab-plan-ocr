@@ -38,11 +38,17 @@ import Foundation
       source.replacingOccurrences(of: "09:15", with: "09:50"),
       source.replacingOccurrences(of: "2.14", with: "2 14"),
       source.replacingOccurrences(of: "II", with: "I"),
+      source.replacingOccurrences(of: "Dr.", with: "Dr"),
       source.replacingOccurrences(of: "Muster", with: "Mustermann"), "Bitte " + source,
     ] {
       precondition(SpokenText(source: source, candidate: changed).text == source)
       precondition(!SpokenText(source: source, candidate: changed).refined)
     }
+    precondition(
+      !SpokenText(
+        source: "Am 14. September ist Therapie.",
+        candidate: "Am 14 September ist Therapie."
+      ).refined)
     for strength in stride(from: 0.1, through: 0.7, by: 0.01) {
       var colors = AppointmentColors()
       colors.strength = strength

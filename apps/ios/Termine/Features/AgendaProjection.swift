@@ -142,6 +142,12 @@ struct TimelinePlacement: Identifiable {
 }
 
 enum AgendaLayout {
+  /// Dense visual targets use the day list instead of shrinking hit areas
+  /// below 44 points or changing the hour scale on narrow iPhone screens.
+  static func requiresList(_ segments: [DayAgenda.Segment], pointsPerHour: Double) -> Bool {
+    place(segments, pointsPerHour: pointsPerHour, minimumHeight: 0).contains { $0.columns > 2 }
+      || place(segments, pointsPerHour: pointsPerHour).contains { $0.columns > 5 }
+  }
   /// Use visual hit areas for collision detection as well as real durations.
   /// Short adjacent events therefore remain separately tappable.
   static func place(

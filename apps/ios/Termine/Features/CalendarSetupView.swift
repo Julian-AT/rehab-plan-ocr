@@ -93,22 +93,28 @@ struct CalendarSetupView: View {
       .interactiveDismissDisabled(busy).navigationBarBackButtonHidden(embedded && busy)
       .task {
         guard !busy else { return }
+        let token = generation
         operation = "Kalender laden …"
-        defer { operation = nil }
+        defer { if generation == token { operation = nil } }
         await store.load()
         await load()
       }
       .onChange(of: scenePhase) { _, phase in
         if phase == .active && !busy { perform("Kalender laden …") { await load() } }
       }
-      .onDisappear { generation = UUID() }
+      .onDisappear {
+        generation = UUID()
+        operation = nil
+      }
   }
   private func perform(_ title: String, action: @escaping @MainActor () async -> Void) {
     guard !busy else { return }
+    let token = generation
     operation = title
     Task {
+      guard generation == token else { return }
       await action()
-      operation = nil
+      if generation == token { operation = nil }
     }
   }
   private func load(requestAccess: Bool = false, dedicated: Bool = false) async {
@@ -193,6 +199,11 @@ struct CalendarPreferencesView: View {
   @Environment(PreferencesStore.self) private var store
   @State private var destinations: [CalendarDestinations.Destination] = []
   @State private var error: String?
+  private var destinationTitle: String {
+    destinations.first { $0.id == store.value?.calendarId }.map {
+      "\($0.title) · \($0.source)"
+    } ?? "Noch nicht ausgewählt"
+  }
   var body: some View {
     Form {
       Section {
@@ -228,11 +239,10 @@ struct CalendarPreferencesView: View {
         }
       }
       Section {
-        LabeledContent(
-          "Speicherziel",
-          value: destinations.first { $0.id == store.value?.calendarId }.map {
-            "\($0.title) · \($0.source)"
-          } ?? "Noch nicht ausgewählt")
+        LabeledContent("Speicherziel", value: destinationTitle)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("Speicherziel").accessibilityValue(destinationTitle)
+          .accessibilityIdentifier("calendar-destination")
         NavigationLink("Speicherziel ändern") { CalendarSetupView(core: core, embedded: true) }
         if let id = store.value?.calendarId, !id.isEmpty,
           store.value?.displayCalendarIds.contains(id) == false

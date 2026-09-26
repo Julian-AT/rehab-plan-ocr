@@ -240,7 +240,11 @@ struct CalendarStatusView: View {
           Button {
             Task { await load() }
           } label: {
-            if busy { ProgressView() } else { Image(systemName: "arrow.clockwise") }
+            if busy {
+              ProgressView()
+            } else {
+              Image(systemName: "arrow.clockwise").foregroundStyle(AppPalette.tint)
+            }
           }.frame(width: 44, height: 44).disabled(busy)
             .accessibilityLabel("Aktualisieren").accessibilityIdentifier("refresh-calendar-status")
         }

@@ -104,8 +104,8 @@ import XCTest
     openPlan("plan-33333333-3333-4333-8333-333333333333")
     if app.buttons["Kalender einrichten"].waitForExistence(timeout: 2) {
       app.buttons["Kalender einrichten"].tap()
-      app.buttons["Laßnitzhöhe-Kalender verwenden"].tap()
-      let done = app.buttons["Diesen Kalender verwenden"]
+      app.buttons["select-clinic-calendar"].tap()
+      let done = app.buttons["save-calendar-destination"]
       for _ in 0..<6 where !done.isHittable { app.swipeUp() }
       expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: done)
       waitForExpectations(timeout: 10)
@@ -183,11 +183,11 @@ import XCTest
     openPlan(clearID)
     if app.buttons["Kalender einrichten"].waitForExistence(timeout: 3) {
       app.buttons["Kalender einrichten"].tap()
-      app.buttons["Laßnitzhöhe-Kalender verwenden"].tap()
+      app.buttons["select-clinic-calendar"].tap()
       let remember = app.switches["Für neue Pläne merken"]
       for _ in 0..<6 where !remember.isHittable { app.swipeUp() }
       remember.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-      let done = app.buttons["Diesen Kalender verwenden"]
+      let done = app.buttons["save-calendar-destination"]
       for _ in 0..<6 where !done.isHittable { app.swipeUp() }
       let enabled = NSPredicate(format: "enabled == true")
       expectation(for: enabled, evaluatedWith: done)
@@ -317,6 +317,7 @@ import XCTest
   func testVoiceCreationPreviewIsRevokedOnBackground() {
     app.tabBars.buttons["Sprechen"].tap()
     app.buttons["voice-details"].tap()
+    app.buttons["voice-actions"].tap()
     app.buttons["voice-create"].tap()
     let title = app.textFields["Bezeichnung"]
     XCTAssertTrue(title.waitForExistence(timeout: 5))
