@@ -1,14 +1,17 @@
 """Recognition route identity, forced inference and retained-trace regressions."""
 
+import contextlib
 import copy
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
+from ml.evaluation.recognition import app_trial  # noqa: E402
 from ml.evaluation.recognition.app_trial import complete, prepare_models, sha  # noqa: E402
 
 
@@ -112,6 +115,166 @@ class RecognitionAppTrialTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             prepare_models(self.folder / "unwanted", "full", self.folder)
         self.assertFalse((self.folder / "unwanted").exists())
+
+
+class AppTrialSourceBindingTests(unittest.TestCase):
+    """Run the orchestration against invented files and a simulated app response."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        self.output = self.root / ".local/runs/trial"
+        self.source = self.root / "ml/evaluation/fixtures/synthetic-day.png"
+        self.card = self.root / "ml/registry/invented.json"
+        self.evaluator = self.root / "ml/evaluation/recognition/app_trial.py"
+        self.binary = (
+            self.root
+            / "build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app/Termine.debug.dylib"
+        )
+        self.container = self.root / "container"
+        (self.container / "Documents").mkdir(parents=True)
+        for path in [
+            self.source,
+            self.card,
+            self.evaluator,
+            self.binary,
+            self.root / "ml/evaluation/device/simulator.py",
+            self.root / "ml/evaluation/conversation/native.py",
+        ]:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("invented fixture " + path.name)
+        self.original = sha(self.source)
+        self.requests = []
+        self.mutation = None
+
+    def prepare(self, output, variant, **kwargs):
+        if variant == "frozen" and self.mutation == "between-variants":
+            self.source.write_text("different invented source")
+        output.mkdir()
+        manifest = {"engine": "simulated", "files": []}
+        (output / "manifest.json").write_text(json.dumps(manifest))
+        return manifest
+
+    def fake_tool(self, command, **kwargs):
+        if command[:2] == ["git", "ls-files"]:
+            name = str(self.source.relative_to(self.root))
+            return name if name in command else ""
+        if command[:3] == ["xcrun", "simctl", "launch"]:
+            folder = self.container / "Documents/recognition-probe"
+            request = json.loads((folder / "input.json").read_text())
+            self.requests.append(request)
+            self.assertEqual(sha(folder / "input.png"), request["source_sha256"])
+            manifest = json.loads((folder / "models/manifest.json").read_text())
+            cases = []
+            for index in range(2):
+                trace = {
+                    "document": {
+                        "id": f"document-{index}",
+                        "source_hash": request["source_sha256"],
+                    },
+                    "cache_used": index == 1,
+                    "model_manifest": manifest,
+                    "engine": manifest["engine"],
+                    "stages": [
+                        {"name": name, "status": "complete"}
+                        for name in ["model_load", "recognition", "vision_refinement"]
+                    ],
+                    "appointments": [],
+                }
+                (folder / f"trace-{index}.json").write_text(json.dumps(trace))
+                cases.append(
+                    {
+                        "index": index,
+                        "document_id": f"document-{index}",
+                        "duplicate": False,
+                        "trace": f"trace-{index}.json",
+                        "import_seconds": 1.0,
+                        "appointments": 0,
+                    }
+                )
+            result = dict(
+                request,
+                stage="passed",
+                qualified=False,
+                calendar_operations=0,
+                host_calls={"rejected_calendar_calls": 0, "native_reread_calls": 2},
+                cases=cases,
+            )
+            (folder / "result.json").write_text(json.dumps(result))
+            if request["variant"] == "frozen" and self.mutation == "after-final-launch":
+                self.source.write_text("changed after the final launch")
+        return "simulated tool output"
+
+    def evaluate(self):
+        with contextlib.ExitStack() as stack:
+            for name, value in {
+                "ROOT": self.root,
+                "__file__": str(self.evaluator),
+                "run": self.fake_tool,
+                "disposable": lambda *args: {"name": "invented disposable simulator"},
+                "registry_path": lambda name: self.card,
+                "install": lambda *args: self.container,
+                "prepare_models": self.prepare,
+            }.items():
+                stack.enter_context(patch.object(app_trial, name, value))
+            stack.enter_context(
+                patch.object(app_trial.workspace, "location", return_value=self.root / "build")
+            )
+            stack.enter_context(
+                patch.object(
+                    sys,
+                    "argv",
+                    [str(self.evaluator), "--run", str(self.output), "--simulator", "simulated"],
+                )
+            )
+            app_trial.main()
+
+    def report(self):
+        return json.loads((self.output / "report.json").read_text())
+
+    def test_both_variants_use_the_one_frozen_original(self):
+        self.evaluate()
+        self.assertEqual(
+            [request["source_sha256"] for request in self.requests], [self.original, self.original]
+        )
+        report = self.report()
+        self.assertEqual(report["stage"], "compatibility_passed")
+        self.assertEqual(report["source_sha256"], self.original)
+        self.assertEqual(
+            report["evaluation_sources"][str(self.source.relative_to(self.root))], self.original
+        )
+        self.assertFalse(report["qualified"])
+
+    def test_changed_source_between_variants_stops_before_second_launch(self):
+        self.mutation = "between-variants"
+        with self.assertRaisesRegex(ValueError, "source|Source"):
+            self.evaluate()
+        self.assertEqual([request["variant"] for request in self.requests], ["baseline"])
+        self.assertEqual(self.report()["stage"], "failed")
+        self.assertEqual(self.report()["source_sha256"], self.original)
+
+    def test_changed_source_after_final_launch_cannot_pass(self):
+        self.mutation = "after-final-launch"
+        with self.assertRaises(ValueError):
+            self.evaluate()
+        self.assertEqual(self.report()["stage"], "failed")
+        self.assertEqual(self.report()["source_sha256"], self.original)
+
+    def test_changed_copy_is_rejected_before_launch(self):
+        copyfile = app_trial.shutil.copyfile
+
+        def corrupt(source, destination, **kwargs):
+            result = copyfile(source, destination, **kwargs)
+            if source == self.source:
+                Path(destination).write_text("different copied bytes")
+            return result
+
+        with patch.object(app_trial.shutil, "copyfile", side_effect=corrupt):
+            with self.assertRaisesRegex(ValueError, "source|Source"):
+                self.evaluate()
+        self.assertEqual(self.requests, [])
+        self.assertEqual(self.report()["stage"], "failed")
 
 
 class FrozenPreparationTests(unittest.TestCase):

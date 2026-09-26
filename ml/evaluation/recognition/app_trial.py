@@ -227,18 +227,22 @@ def main():
     card = registry_path(args.model_card)
     output.mkdir(parents=True, exist_ok=False)
     snapshot = sources()
+    source = ROOT / "ml/evaluation/fixtures/synthetic-day.png"
     helpers = [
         Path(__file__),
         ROOT / "ml/evaluation/device/simulator.py",
         ROOT / "ml/evaluation/conversation/native.py",
         card,
+        source,
     ]
     helper_hashes = {str(path.relative_to(ROOT)): sha(path) for path in helpers}
+    source_sha256 = helper_hashes[str(source.relative_to(ROOT))]
     report = dict(
         stage="building",
         qualified=False,
         physical_device=False,
         independent_synthetic_sources=1,
+        source_sha256=source_sha256,
         source_revision=run(["git", "rev-parse", "HEAD"]),
         sources=snapshot,
         simulator=device,
@@ -267,12 +271,15 @@ def main():
             destination.mkdir()
             manifest = prepare_models(destination / "models", variant, model_card=args.model_card)
             shutil.copytree(destination / "models", folder / "models", dirs_exist_ok=True)
-            source = ROOT / "ml/evaluation/fixtures/synthetic-day.png"
+            if sha(source) != source_sha256:
+                raise ValueError("Synthetic source changed before variant import")
             shutil.copyfile(source, folder / "input.png")
+            if sha(folder / "input.png") != source_sha256 or sha(source) != source_sha256:
+                raise ValueError("Copied synthetic source does not match the frozen original")
             request = dict(
                 run_id=str(uuid.uuid4()),
                 variant=variant,
-                source_sha256=sha(source),
+                source_sha256=source_sha256,
                 model_manifest_sha256=sha(destination / "models/manifest.json"),
             )
             write(destination / "input.json", request)
@@ -334,7 +341,7 @@ def main():
         if snapshot != sources():
             raise ValueError("Sources changed during evaluation")
         if helper_hashes != {str(path.relative_to(ROOT)): sha(path) for path in helpers}:
-            raise ValueError("Evaluation helpers changed during evaluation")
+            raise ValueError("Evaluation sources changed during evaluation")
         report["stage"] = "compatibility_passed"
     except Exception as error:
         report.update(stage="failed", error=str(error))
