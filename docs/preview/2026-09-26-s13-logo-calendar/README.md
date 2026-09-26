@@ -3,6 +3,8 @@
 # Logogrün und gleichmäßiger Kalender
 
 Simulatorvorschau für Build **2026092616** mit ausschließlich erfundenen Terminen.
+Nach ausdrücklicher Freigabe auf dem iPhone 17 installiert;
+[Geräteupdate, Sicherung und Datenvergleich](../../logo-calendar-device-update.md) sind dokumentiert.
 
 Das Logogrün **#009640** färbt Bedienelemente, Auswahl und aktive Navigationsicons.
 Beschriftungen bleiben neutral; ergänzende Angaben verwenden ein gemeinsames Grau
@@ -100,4 +102,5 @@ und Fokusnavigation mit laufendem VoiceOver wurde nicht durchgeführt.
 
 Kalenderdaten, öffentliche Schnittstellen, Datenbankschema, Sprachverarbeitung und
 Terminfarben-Konfiguration werden durch diese Darstellungskorrekturen nicht geändert.
-Diese Vorschau wurde ausschließlich auf einem Simulator installiert.
+Die Aufnahmen und UI-Testnachweise dieser Vorschau entstanden im Simulator;
+das anschließende Geräteupdate ist im oben verlinkten Bericht dokumentiert.

@@ -150,6 +150,28 @@
     }
   },
   "deviceInstallation": "None; simulator only",
+  "subsequentDeviceUpdate": {
+    "date": "2026-09-26",
+    "userAuthorized": true,
+    "installedBuild": "2026092616",
+    "previousBuild": "2026092613",
+    "device": "iPhone 17",
+    "iOS": "26.6",
+    "withoutUninstall": true,
+    "firstLaunch": "Passed; loaded calendar captured privately",
+    "backupFiles": 93,
+    "backupBytes": 604404084,
+    "backupReverified": true,
+    "databaseTablesUnchanged": 15,
+    "schema": 8,
+    "originalFilesRetained": 17,
+    "existingPreferencesUnchanged": true,
+    "durableFilesByteIdentical": 83,
+    "durableFilesSemanticallyIdentical": 1,
+    "diagnostics": "Only appended operational entries: 730 before, 765 after. Existing entries preserved.",
+    "finalReopen": "Device became locked after the post-launch data comparison; iOS denied this later launch.",
+    "report": "../../logo-calendar-device-update.md"
+  },
   "record_kind": "historical-technical-record",
   "original_attestation": "external-private-archive"
 }
