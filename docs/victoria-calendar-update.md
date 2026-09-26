@@ -24,3 +24,9 @@ Die tatsächliche Stimmdatei enthält 510 × 1 × 256 Werte. Konfiguration und A
 - Zehn unterschiedliche UI-Tests bestanden: Kalendernavigation und Zeitgrenzen, kurze und überlappende Termine, echte Wiedergabe samt Pegeln, Abbrechen, Wiederholen, Tab- und Hintergrundwechsel, Bestätigung von Kalenderänderungen, Spracheinstellungen, große Schrift und reduzierte Bewegung. Eine Abfrage des Testprogramms wurde an die zusammengefasste native Beschriftung angepasst und erfolgreich erneut geprüft.
 
 [Simulatorbilder, Hörproben und abschließende Prüfergebnisse](preview/2026-09-26-s12-victoria/README.md).
+
+## Gerätepaket
+
+Das geprüfte Release-Paket 2026092609 ist bereit. Alle vier Komponenten sind für das bekannte iPhone signiert; 15 Sprachdateien und vier Erkennungsdateien sind geprüft. Paket-SHA-256: `71ec9952a7c1c711559d8bbce4690e45e6d10c0a11e85a3ecc9ff739bcfc256d`.
+
+Vor der Installation wurden App und beide App-Gruppen frisch gesichert: 97 Dateien, 524.128.489 Byte, Schema 7 mit intakter Datenbank; 17 Pläne und 14 Originalaufnahmen. Die Sicherung und die bisherige signierte Version 2026092608 sind erhalten. Beim abschließenden Gerätecheck war das iPhone nicht mehr per USB oder CoreDevice erreichbar; es wurde daher noch kein Update installiert. Paket, Sicherung und Protokolle bleiben ausschließlich unter `artifacts/private/victoria-device-20260926-s12/`.
