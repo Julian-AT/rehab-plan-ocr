@@ -477,13 +477,20 @@ import XCTest
     let preview = XCUIApplication(bundleIdentifier: "com.apple.Preview")
     if preview.wait(for: .runningForeground, timeout: 5) { host = preview }
     let share = button(["Share", "Teilen"])
-    XCTAssertTrue(share.waitForExistence(timeout: 5))
+    // Preview draws its bottom toolbar before the document's controls are
+    // exposed and actionable. Wait for that state instead of tapping a stale node.
+    expectation(
+      for: NSPredicate(format: "exists == true AND hittable == true"), evaluatedWith: share)
+    waitForExpectations(timeout: 20)
     share.tap()
     let activity = host.descendants(matching: .any).matching(
       NSPredicate(format: "label == %@", "Laßnitzhöhe")
     ).firstMatch
     if !activity.waitForExistence(timeout: 3) {
-      let more = button(["More", "Mehr"])
+      let more = host.buttons.matching(
+        NSPredicate(
+          format: "label IN %@ AND identifier != %@", ["More", "Mehr"], "OverflowBarButtonItem")
+      ).firstMatch
       XCTAssertTrue(more.waitForExistence(timeout: 5))
       more.tap()
     }
