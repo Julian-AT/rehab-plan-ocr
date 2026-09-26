@@ -13,18 +13,15 @@
     ".local/builds/ios/Laßnitzhöhe.xcarchive",
     "external originals and simulators",
     ".local/objects",
-    ".local/builds/ios/generations"
+    ".local/builds/ios/generations",
+    ".local/builds/rust/debug",
+    ".local/builds/ios/DerivedData",
+    ".local/builds/ios/EventTests",
+    ".local/builds/ios/AuditCalendar-20260926-s21-102313",
+    ".local/builds/ios/CalendarLocalNegative-20260926-s20-001",
+    ".local/builds/audio-engine-isolation"
   ],
   "rebuildable": [
-    {
-      "path": ".local/builds/ios/DerivedData/Build/Intermediates.noindex",
-      "consumers": [
-        "tooling/build/build-native.sh",
-        "apps/ios/project.yml"
-      ],
-      "reason": "Xcode object files and dependency scanning; products and test evidence remain",
-      "rebuild": "make build TARGET=simulator"
-    },
     {
       "path": ".local/builds/ios/DerivedData/ModuleCache.noindex",
       "consumers": [
@@ -40,14 +37,6 @@
       ],
       "reason": "Editor index; EventKit test results and executable remain",
       "rebuild": "make test-calendar-events"
-    },
-    {
-      "path": ".local/builds/assistant-app-trial/DerivedData/Build/Intermediates.noindex",
-      "consumers": [
-        "tooling/build/build-assistant-trial.py"
-      ],
-      "reason": "Intermediate objects; failed-provider app binary, models and reports retained",
-      "rebuild": "make build-assistant-trial"
     },
     {
       "path": ".local/builds/assistant-app-trial/DerivedData/ModuleCache.noindex",
@@ -120,6 +109,101 @@
       ],
       "reason": "Retired per-probe Swift module cache; executable hashes and run receipts remain. New probes use temporary compiler caches.",
       "rebuild": "make probe-document / probe-speech-availability / benchmark-voice-rules with a new RUN"
+    },
+    {
+      "path": ".local/builds/rust/debug/deps",
+      "selector": "rust-debug-deps-compiler-v1",
+      "consumers": [
+        "tooling/dev/quality.py",
+        "tooling/build/build-native.sh",
+        "tooling/checks/test-native-bindings.sh"
+      ],
+      "reason": "Only immediate regular .rlib/.rmeta/.o compiler files without runtime/debug-map consumers; DLLs, archives *.a, executables, dep-info and diagnostics remain",
+      "rebuild": "CARGO_NET_OFFLINE=true UV_OFFLINE=true make lint; CARGO_NET_OFFLINE=true UV_OFFLINE=true make test; CARGO_NET_OFFLINE=true UV_OFFLINE=true make build TARGET=simulator (serially after the quiet cleanup)"
+    },
+    {
+      "path": ".local/builds/ios/generations/1431fabc21cb49d39c9e6f785040f6c4/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed retained generation compiler modules/editor index; preserve Products, Intermediates, Logs, symbols and unchanged transition receipts",
+      "rebuild": "CARGO_NET_OFFLINE=true UV_OFFLINE=true make build TARGET=simulator regenerates current caches; historical intermediate byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/generations/1431fabc21cb49d39c9e6f785040f6c4/DerivedData/Index.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed retained generation compiler modules/editor index; preserve Products, Intermediates, Logs, symbols and unchanged transition receipts",
+      "rebuild": "CARGO_NET_OFFLINE=true UV_OFFLINE=true make build TARGET=simulator regenerates current caches; historical intermediate byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/generations/53e92e4a9ff04810b6f880d5d047f6fb/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed retained generation compiler modules/editor index; preserve Products, Intermediates, Logs, symbols and unchanged transition receipts",
+      "rebuild": "CARGO_NET_OFFLINE=true UV_OFFLINE=true make build TARGET=simulator regenerates current caches; historical intermediate byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/generations/53e92e4a9ff04810b6f880d5d047f6fb/DerivedData/Index.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed retained generation compiler modules/editor index; preserve Products, Intermediates, Logs, symbols and unchanged transition receipts",
+      "rebuild": "CARGO_NET_OFFLINE=true UV_OFFLINE=true make build TARGET=simulator regenerates current caches; historical intermediate byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/CalendarLocalNegative-20260926-s20-001/Index.noindex",
+      "consumers": [
+        ".local/runs/local-calendar-refresh-negative-20260926-s20-001/build.json"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/CalendarLocalNegative-20260926-s20-001/ModuleCache.noindex",
+      "consumers": [
+        ".local/runs/local-calendar-refresh-negative-20260926-s20-001/build.json"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/AuditCalendar-20260926-s21-102313/DerivedData/Index.noindex",
+      "consumers": [
+        "tooling/checks/test-calendar-events.sh"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/AuditCalendar-20260926-s21-102313/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/checks/test-calendar-events.sh"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/EventTests/ModuleCache.noindex",
+      "consumers": [
+        "tooling/checks/test-calendar-events.sh"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/DerivedData/Index.noindex",
+      "consumers": [
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
+      "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
     }
   ]
 }

@@ -313,3 +313,110 @@ unter `.local/maintenance/package-signer-worktree-retirement-20260926-s20-001.js
 und `package-signer-worktree-retirement-result-20260926-s20-001.json`; der Plan enthält
 auch den konkreten Wiederherstellungsbefehl. Wegen gleichzeitigem isoliertem Build
 und APFS-Teilung wird kein zurechenbarer physischer Speichergewinn behauptet.
+
+## Symbolbewusste Compilerbereinigung
+
+Die Verbraucherprüfung ist ausdrücklich auf Darwin/Mach-O begrenzt. Andere
+Hostplattformen verweigern neue Pläne und jede noch offene Entfernung.
+Auch auf macOS verhindern vorhandene ELF-Dateien, rohe LLVM-Bitcode-Dateien
+(einschließlich Wrapper), Split-Debug-Dateien (`.dwo`, `.dwp`), ThinLTO-Sidecars
+(`.thinlto.bc`, `.imports`) und Thin-Archive (`!<thin>`) die gesamte Planung bzw.
+Fortsetzung vor einem Unlink. Ihre möglichen externen Referenzen sind nicht
+implementiert; sie dürfen weder als unreferenziert gelten noch zum Umgehen des
+Guards verschoben werden. Normale `!<arch>`-Archive enthalten ihre Mitglieder
+selbst und erzwingen keine Erhaltung gleichnamiger externer Objektdateien.
+Die selektive `.o`-Auswahl akzeptiert ausschließlich erkannte Mach-O-MH_OBJECT-
+Dateien; ELF und LLVM-Bitcode sind dafür nicht zugelassen. Das ist eine bewusst
+konservative Formatgrenze, keine allgemeine Verbraucherprüfung fremder
+Toolchains oder beliebiger benutzerdefinierter Dateiformate.
+Leere reguläre `.o`- und `.rmeta`-Dateien sind unbekannte Platzhalter: Sie bleiben geschützt,
+werden im Plan unter `retained_empty_objects` einzeln mit Fingerprint ausgewiesen
+und gehören niemals zur Löschmenge. Ein vor der Ausführung gefüllter oder
+veränderter Platzhalter stoppt die Bereinigung. Nichtleere unbekannte
+Compilerformate bleiben ein Ablehnungsgrund.
+Ein tatsächlicher Offline-Kontrolllauf mit Cargo 1.98.1 erzeugte beim Prüfen
+eines Binary-Crates eine leere `.rmeta`; deren Erhaltung behauptet kein erkanntes
+Metadatenformat und erweitert die Löschmenge nicht.
+
+Neue Bereinigungspläne verwenden Format 2 und binden zusätzlich die lokalen
+Mach-O-Verbraucher samt Dateihashes sowie deren Runtime-, OSO- und AST-Verweise.
+Die Erkennung prüft den Header jeder regulären Datei unabhängig von
+Ausführungsrechten oder Dateiendung, einschließlich Framework-Images und dSYMs.
+Nicht referenzierte, ausdrücklich ausgewählte Compilerobjekte sind keine
+erhaltenen Verbraucher; von erhaltenen Images referenzierte Objekte werden
+einschließlich ihrer eigenen Debugmap-Verweise transitiv geschützt.
+`nm` und `otool` erhalten pro Aufruf höchstens 30 Sekunden; Timeout oder Startfehler
+verhindern eine Fortsetzung der Bereinigung.
+Aliasziele, Archivmitglieder und die ursprünglichen Pfade abgeschlossener
+Produktgenerationen werden berücksichtigt; unauflösbare Rpath-Verweise erhalten
+vorsorglich alle lokalen Dateien desselben Namens. Fehler der Verbraucherprüfung
+verhindern die Planung. Ein alter Plan ohne diese Bindung muss neu erstellt werden.
+
+Die Rust-Auswahl gilt ausschließlich für unmittelbare reguläre `.rlib`, `.rmeta`
+und `.o` unter `.local/builds/rust/debug/deps`, mit erkanntem Compilerformat und
+erhaltener `.d`-Zuordnung. Referenzierte Symboldateien, DLLs, `.a`-Archive,
+ausführbare Tests, Diagnosen, Fingerprints und Buildskriptausgaben bleiben erhalten.
+Ein referenziertes Cargo-Archiv oder -Objekt schützt außerdem sämtliche `.rlib`,
+`.rmeta` und gespeicherten `.o` derselben unmittelbaren Crate-/Hash-Gruppe im
+Deps-Verzeichnis. Der Verbraucherbeleg führt diese `compiler_families` explizit
+auf; andere Hash-Gruppen bleiben unabhängig. Im tatsächlichen Kontrolllauf
+änderte die Entfernung der zugehörigen Metadaten beim Cargo-Neubau die Zeiten
+erhaltener OSO-Eingaben trotz gleicher Bytes. Deshalb bleiben die Familien
+zusammen erhalten und die Zeitprüfung wird nicht abgeschwächt.
+Die geschützte Prüfsumme umfasst auch alle nicht ausgewählten Dateien innerhalb
+der Cachewurzeln; ausgenommen werden nur die geprüften einzelnen Löschpfade.
+Sie muss vor und nach der Bereinigung identisch sein. Ganze Intermediates-Wurzeln
+sind vorerst aus der Aufbewahrungsregel entfernt; alte Generationen geben nur
+Modulcache und Index frei. Übergangsbelege werden weder verändert noch ersetzt.
+
+Aktuelle Compilerprodukte können aus dem gepinnten Quellstand offline neu
+entstehen. Alte Cachebytes sind damit nicht als byteidentisch wiederherstellbar
+ausgewiesen. Ihre Entfernung ist nur zulässig, wenn historische ausführbare
+Belege, Fehlerfälle und Symbole erhalten bleiben und kein geschützter Verbraucher
+sie benötigt. Eine fehlende Quelldatei ist kein Löschbeweis.
+
+Bereinigung und anschließende Wiederanlaufprüfungen bleiben seriell und verlangen
+ein abgestimmtes Ruhefenster. Bestehende Prozess-, Worktree-, offene-Dateien-,
+Symlink- und Locksperren bleiben bestehen; fremde Schreiber halten Projektlocks
+nicht zwingend ein. APFS-Blockzahlen sind Obergrenzen. Für den Vierarm-Appversuch
+muss die tatsächliche freie Kapazität anschließend mindestens 20 GiB Reserve
+plus 24 GiB Spitzenbedarf erreichen; Metadatenabschätzungen ersetzen diesen Gate
+nicht. Die vorhandenen Werkzeugarchive bleiben für verifizierte Offline-Reparatur
+erhalten.
+
+### Tatsächlicher Wiederanlauf am 26. September 2026
+
+Der getrennte Offline-Kontrolllauf
+`.local/maintenance/artifact-cleanup-control-20260926-s21-004` besteht mit Cargo 1.98.1:
+Fünf echte Compilerdateien wurden nach protokolliertem Unlink und SIGKILL im
+neuen Prozess vollständig entfernt und anschließend bytegleich regeneriert.
+Alle sechs erhaltenen Symboleingaben behielten Inhalt und `mtime_ns`; ein erneuter
+Aufruf des abgeschlossenen Bereinigungsbelegs löschte keine neu erzeugten Dateien.
+Der Erfolgsbeleg hat SHA256
+`bfc540036d971f6f300028227fc52560f6118b0996995177153df80e8b4e33d6`.
+Die vorherigen Fehlversuche bleiben erhalten: zunächst eine leere Cargo-`.rmeta`,
+danach neu geschriebene OSO-Zeitstempel wegen entfernter Familienmetadaten.
+
+Dieser kleine Pfadabhängigkeits-Test ist keine vollständige Projektbereinigung.
+Das lesende Headerinventar über 401.197 reguläre Dateien fand 1.615 LLVM-Wrapper
+in Rust-Inkrementalständen und vier erhaltenen CPython-Objekten. Deren mögliche
+Referenzen sind noch nicht vollständig unterstützt; die echte Projektplanung
+bleibt deshalb vor jedem Löschen gesperrt. Die bestandenen 142 Werkzeugtests und
+der Kontrolllauf ersetzen diesen ausstehenden Verbraucherbeleg nicht.
+
+### Vier abgeschlossene eigene Simulatoren
+
+Vier ausschließlich projektverwaltete, erfolgreiche Testsimulatoren wurden am
+26. September 2026 nach Sicherung ihrer geprüften Nutzdaten entfernt. Historische
+Appprodukte, Ergebnisbündel und Sicherungsinhalte wurden danach erneut gehasht;
+alle Prüfungen bestanden. Fremde Simulatoren, offene Fehlerfälle und physische
+Geräte blieben unberührt. Die unmittelbar gemessene freie Kapazität stieg von
+37.585.948.672 auf 39.739.559.936 Bytes: beobachtete Differenz **2.153.611.264 Bytes**.
+Dies umfasst mögliche gleichzeitige Systemaktivität; die benötigten 44 GiB waren
+zu diesem Messzeitpunkt noch nicht erreicht. Spätere Volumenänderungen werden
+dieser Aktion nicht nachträglich zugerechnet.
+
+Der separate Abschlussbeleg
+`.local/runs/disposable-simulator-retirement-20260926-s21-001/evidence/completion.json`
+hat SHA256 `f78ebfe559e0bb25e55244e85a85a1d54a7fde6bcd07a3eb10f542e3c78a1650`.
+Er ist keine vollständige Simulatorwiederherstellung oder Gerätesicherung.
