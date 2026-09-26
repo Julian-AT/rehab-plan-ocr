@@ -45,7 +45,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Independent locked training and app-tooling environments.
 - [ ] Discoverable isolated tests and portable/native/simulator/policy/package CI.
 - [x] First content independent of reminder reconciliation; coalesced refreshes.
-- [ ] Typed timestamp projections, indexed archive summaries and pagination.
+- [x] Typed timestamp projections, indexed archive summaries and pagination.
 - [ ] Background image/audio processing, bounded buffers and waveform updates.
 - [ ] Paired measurements for latency, memory, energy, thermal and session reuse.
 
@@ -111,7 +111,7 @@ the current request when older FoundationModels sessions exceed context limits.
 Title/duration changes produce minimal patches. Broader German dialogue coverage
 and actual older-iOS inference remain open.
 
-Verification: 165 Rust workspace tests passed; workspace Clippy passed with warnings
+Verification: 169 Rust workspace tests passed; workspace Clippy passed with warnings
 as errors. The native calendar suite completed 14 tests with one simulator-only
 skip and zero failures. Voice/date/state probes and four model-restoration tests
 passed. The current simulator app builds. The Today-link UI regression passed.
@@ -132,7 +132,15 @@ desktop microbenchmark is recorded in
 Schema 10 adds disposable compact archive summaries, deterministic chronological
 indexes and transactional backfill. Original runs/preferences remain unchanged;
 four new cache/migration regressions, the workspace suite and simulator build pass.
-Archive pagination is not yet complete.
+Schema 11 adds indexed batch-document membership and typed keyset archive pages.
+The archive reads 20 summaries per page and loads full evidence through existing
+detail APIs. Refresh keeps the prior loaded range, coalesces matching requests and
+rejects canceled/superseded results. Four more Rust regressions, the real generated
+Swift/Rust binding probe, the isolated Swift archive state probe and the simulator
+archive/cold-launch test pass. The archive screenshot matches the pre-pagination
+capture exactly below the 160-pixel system status bar; the fixed reference is in
+`apps/ios/Tests/Visual`. The first UI attempt stalled in simulator OS migration
+before app tests started; a fresh disposable-simulator run completed successfully.
 
 Training environments are separately locked and load successfully. The official
 PP-OCRv6 Small training checkpoint matches all 422 state tensors and the exact
@@ -145,7 +153,9 @@ local runtime execution with hashes and lineage. Its first-token fusion probe
 passed 12/12 cases; full-answer parity is unverified. Both base and tuned artifacts
 failed all 12 strict structured-output cases and remain unqualified. See
 [the assistant experiment](../ml/experiments/2026-09-26-s16-assistant-compatibility.md).
-The 47 portable Python tooling tests pass, including eight intent-contract tests.
+The portable Python tooling tests include eight intent-contract tests and exact
+screenshot comparison checks. No new whole-app visual or device-performance claim
+follows from the isolated archive verification.
 
 The known iPhone 17 was unavailable during the read-only device inventory. No
 device was updated. No real-device speed, energy, thermal or usability improvement

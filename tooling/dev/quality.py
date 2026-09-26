@@ -209,6 +209,7 @@ def tests(portable):
         for probe in [
             "agenda-projection",
             "agenda-cache",
+            "archive",
             "agenda",
             "voice-rules",
             "conversation-rules",

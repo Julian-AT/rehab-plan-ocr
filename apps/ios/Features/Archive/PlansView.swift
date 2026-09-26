@@ -2,56 +2,38 @@ import AppleServices
 import RehaCore
 import SwiftUI
 
-@MainActor @Observable private final class PlansModel {
-  var history: History?
-  var error: String?
-  func refresh(_ core: NativeApplication) async {
-    do {
-      history = try await core.history()
-      error = nil
-    } catch { self.error = userMessage(error) }
-  }
-}
-
 struct PlansView: View {
   let core: NativeApplication
   let scanner: ScanModel
   let refreshID: Int
-  @State private var model = PlansModel()
+  @State private var model = PlansModel(describe: userMessage)
   var body: some View {
     List {
       if let error = model.error {
         Text(error).foregroundStyle(.secondary)
-        Button("Erneut versuchen") { Task { await model.refresh(core) } }
+        Button("Erneut versuchen") { Task { await model.refresh(core, revision: refreshID) } }
       }
-      if let history = model.history {
-        let plans = history.plans.filter { plan in
-          plan.pageIds.contains { page in
-            history.scans.contains { $0.id == page && $0.retained }
-              || history.intakes.contains { $0.id == page && $0.status != "deleted" }
-          }
-            || history.intakes.contains { $0.id == plan.id && $0.status != "deleted" }
-            || history.batches.contains { batch in
-              batch.documentIds.contains { plan.pageIds.contains($0) }
-            }
-            || history.scans.contains { scan in
-              plan.pageIds.contains(scan.id)
-                && history.imports.contains { $0.scheduleId == scan.scheduleId }
-            }
-        }
-        if plans.isEmpty {
+      if model.loaded {
+        if model.plans.isEmpty {
           ContentUnavailableView(
             "Noch keine Pläne", systemImage: "doc.on.doc",
             description: Text("Aufgenommene Pläne erscheinen hier."))
         }
-        ForEach(plans, id: \.id) { plan in
+        ForEach(model.plans, id: \.id) { plan in
           NavigationLink(value: plan.id) {
             ArchiveRow(
-              core: core, plan: plan, history: history,
+              core: core, plan: plan,
               processing: scanner.running
                 && (scanner.currentID == plan.id || plan.pageIds.contains(scanner.currentID ?? "")))
           }
           .accessibilityIdentifier("plan-\(plan.id)")
+        }
+        if model.next != nil && model.error == nil {
+          ProcessingRow(text: "Archiv laden …")
+            .task(id: model.isRefreshing ? nil : model.next) {
+              guard !model.isRefreshing else { return }
+              await model.loadMore(core)
+            }
         }
       } else if model.error == nil {
         ProcessingRow(text: "Archiv laden …")
@@ -67,38 +49,26 @@ struct PlansView: View {
         }
       }
     }
-    .task(id: refreshID) { await model.refresh(core) }
-    .refreshable { await model.refresh(core) }
+    .task(id: refreshID) { await model.refresh(core, revision: refreshID) }
+    .refreshable { await model.refresh(core, revision: refreshID) }
   }
 }
 private struct ArchiveRow: View {
   let core: NativeApplication
-  let plan: Plan
-  let history: History
+  let plan: PlanSummary
   let processing: Bool
   @State private var thumbnail: UIImage?
   @Environment(\.dynamicTypeSize) private var typeSize
-  private var scans: [ScanSummary] { history.scans.filter { plan.pageIds.contains($0.id) } }
   private var status: String {
     if processing { return "Wird erkannt" }
-    let batches = history.batches.filter { $0.documentIds.contains { plan.pageIds.contains($0) } }
-    if batches.contains(where: {
-      $0.operations.contains { ["pending", "uncertain", "queued"].contains($0.status) }
-    }) {
-      return "Kalenderabgleich nötig"
+    switch plan.status {
+    case .reconciliationNeeded: return "Kalenderabgleich nötig"
+    case .undone: return "Rückgängig gemacht"
+    case .saved: return "Im Kalender"
+    case .partiallySaved: return "Teilweise gespeichert"
+    case .recognitionPending: return "Erkennung offen"
+    case .readyForReview: return "Bereit zum Prüfen"
     }
-    if let latest = batches.first, latest.undoOf != nil,
-      latest.operations.allSatisfy({ $0.status == "saved" || $0.status == "skipped" })
-    {
-      return "Rückgängig gemacht"
-    }
-    let records = history.imports.filter { record in
-      scans.contains { $0.scheduleId == record.scheduleId }
-    }
-    let count = scans.reduce(0) { $0 + Int($1.itemCount) }
-    if !records.isEmpty { return records.count >= count ? "Im Kalender" : "Teilweise gespeichert" }
-    if scans.count < plan.pageIds.count { return "Erkennung offen" }
-    return "Bereit zum Prüfen"
   }
   var body: some View {
     HStack(alignment: .top, spacing: AppSpacing.section) {
@@ -113,9 +83,9 @@ private struct ArchiveRow: View {
           .accessibilityHidden(true)
       }
       VStack(alignment: .leading, spacing: AppSpacing.small) {
-        Text(planDateRange(scans.flatMap(\.dates), fallback: plan.importedAt)).font(.body)
+        Text(planDateRange(plan.dates, fallback: plan.importedAt)).font(.body)
           .fixedSize(horizontal: false, vertical: true)
-        Text("\(scans.reduce(0) { $0 + Int($1.itemCount) }) Termine · \(status)").font(.subheadline)
+        Text("\(plan.itemCount) Termine · \(status)").font(.subheadline)
           .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
       }
     }.padding(.vertical, AppSpacing.small).accessibilityElement(children: .combine)

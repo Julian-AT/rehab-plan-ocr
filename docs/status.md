@@ -25,13 +25,17 @@ a fresh backup and a persistent-data comparison without uninstalling.
   aggregate deletion, including PDF originals, with interruption recovery.
 - Schema 10 caches compact scan summaries with transactional backfill and
   invalidation on recognition changes. Original evidence and preferences survive
-  migration. Archive pagination is still being implemented.
+  migration. Schema 11 adds indexed, typed archive pages; the list retains visible
+  rows on refresh and rejects obsolete results. Full evidence loads in detail views.
 - Recognition preserves unreadable day boundaries and rejects clipped column
   rereads. German date corrections and explicit conversation states have targeted
   regressions; broader dialogue and patient testing are still required.
-- The Rust workspace passes 165 tests and Clippy. Native calendar tests pass
+- The Rust workspace passes 169 tests and Clippy. Native calendar tests pass
   with one simulator-only skip. Current simulator builds pass. The full UI suite
   is still under verification; the ledger records failures and targeted reruns.
+- The archive/cold-launch UI regression and asynchronous pagination probe pass.
+  Its fixed synthetic screenshot has zero changed app pixels against the capture
+  before pagination, excluding only the changing system status bar.
 - iOS sources now live by feature; Apple and Rust packages, model development,
   tooling, runtime model manifests and notices have dedicated locations. Normal
   builds verify assets/bindings without restoring or converting them. An offline

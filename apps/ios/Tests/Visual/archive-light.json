@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "size": [
+    1206,
+    2622
+  ],
+  "ignored_top_pixels": 160,
+  "different_pixels": 0,
+  "difference_bounds": null,
+  "baseline_sha256": "0d56257de200b8f4ed884290ec0ebc7e290e59d83c7a41aecf3cba0f88fb4ace",
+  "candidate_sha256": "70780d98d9523193b306601d78cc2c7ae815d7fe79f8f3ecfbea316a244bbe5f",
+  "scenario": "NativeFlowTests/testNativeTabsArchiveSettingsAndColdLaunch",
+  "fixture_now": "2026-09-16T12:00:00Z",
+  "fixture": "packages/rust/reha-ffi/examples/seed_fixture.rs --ui",
+  "device": "iPhone 17 simulator",
+  "runtime": "iOS 26.4 (23E244)",
+  "locale": "de_AT",
+  "appearance": "light",
+  "content": "public synthetic plans only",
+  "comparison": "before pagination vs typed archive pages; exact pixels below status bar",
+  "candidate_core_revision": "16a4210",
+  "candidate_ui_sha256": {
+    "apps/ios/Features/Archive/PlansModel.swift": "ab1442797ee0f0f92c3af73e6081104a52eddf7908e0b086883daab8b4b0688d",
+    "apps/ios/Features/Archive/PlansView.swift": "5066ec79114f14747c87efa971d3cfe9140b17578d44f9a3e9509609b784fbc2"
+  }
+}

@@ -1,6 +1,13 @@
 //! Writes public synthetic data only. Refuses to touch an existing database.
 use reha_core::{contracts::PipelineRun, store::Store};
 fn main() {
+    let now = std::env::var("REHA_FIXTURE_NOW")
+        .map(|value| {
+            chrono::DateTime::parse_from_rfc3339(&value)
+                .expect("valid fixture timestamp")
+                .with_timezone(&chrono::Utc)
+        })
+        .unwrap_or_else(|_| chrono::Utc::now());
     let root = std::path::PathBuf::from(std::env::args().nth(1).expect("fresh fixture directory"));
     assert!(
         !root.join("ledger.sqlite").exists(),
@@ -12,7 +19,7 @@ fn main() {
     ))
     .unwrap();
     reha_core::review::migrate(&mut run).unwrap();
-    run.document.imported_at = chrono::Utc::now().timestamp();
+    run.document.imported_at = now.timestamp();
     run.document.filename = "synthetic-day.png".into();
     let dir = store.scan_dir(&run.document.id).unwrap();
     std::fs::create_dir_all(&dir).unwrap();
@@ -33,7 +40,7 @@ fn main() {
         clear.appointments = (0..2)
             .map(|i| {
                 let mut a = Appointment::empty(format!("22222222-2222-4222-8222-22222222222{i}"));
-                a.date = Some(chrono::Utc::now().format("%Y-%m-%d").to_string());
+                a.date = Some(now.format("%Y-%m-%d").to_string());
                 a.title = format!("Testtherapie {}", i + 1);
                 a.start = Some(format!("{:02}:00", 8 + i));
                 a.end = Some(format!("{:02}:30", 8 + i));
@@ -55,7 +62,7 @@ fn main() {
         for a in &mut third.appointments {
             a.id = uuid::Uuid::new_v4().to_string();
             a.date = Some(
-                (chrono::Utc::now() + chrono::Duration::days(2))
+                (now + chrono::Duration::days(2))
                     .format("%Y-%m-%d")
                     .to_string(),
             );
