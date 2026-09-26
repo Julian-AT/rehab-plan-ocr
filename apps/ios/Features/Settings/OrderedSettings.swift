@@ -1,12 +1,18 @@
 import Foundation
 import Observation
 
+struct SettingsWriteResult<Value: Sendable>: Sendable {
+  var value: Value
+  var maintenanceWarnings: [String] = []
+}
+
 /// One queue for every preferences screen. Mutations are applied to the last
 /// saved value, so a suspended write cannot overwrite a later field change.
 @MainActor @Observable final class OrderedSettings<Value: Equatable & Sendable> {
   typealias Mutation = (inout Value) -> Void
   private(set) var value: Value?
   private(set) var error: String?
+  private(set) var maintenanceWarnings: [String] = []
   private(set) var isSaving = false
   private(set) var canRetry = false
   private var saved: Value?
@@ -15,15 +21,24 @@ import Observation
   private var worker: Task<Void, Never>?
   private var loadGeneration = UUID()
   private let read: () async throws -> Value
-  private let write: (Value) async throws -> Value
+  private let write: (Value) async throws -> SettingsWriteResult<Value>
   private let describe: (Error) -> String
 
-  init(
+  convenience init(
     read: @escaping () async throws -> Value, write: @escaping (Value) async throws -> Value,
     describe: @escaping (Error) -> String = { $0.localizedDescription }
   ) {
+    self.init(
+      read: read, writeResult: { SettingsWriteResult(value: try await write($0)) },
+      describe: describe)
+  }
+  init(
+    read: @escaping () async throws -> Value,
+    writeResult: @escaping (Value) async throws -> SettingsWriteResult<Value>,
+    describe: @escaping (Error) -> String = { $0.localizedDescription }
+  ) {
     self.read = read
-    self.write = write
+    self.write = writeResult
     self.describe = describe
   }
   func load() async {
@@ -78,6 +93,7 @@ import Observation
     pending = []
     failed = []
     canRetry = false
+    maintenanceWarnings = []
     saved = nil
     value = nil
     await load()
@@ -102,7 +118,9 @@ import Observation
       let mutation = pending.removeFirst()
       mutation(&next)
       do {
-        saved = try await write(next)
+        let result = try await write(next)
+        saved = result.value
+        maintenanceWarnings = result.maintenanceWarnings
         project()
         if failed.isEmpty { error = nil }
       } catch {

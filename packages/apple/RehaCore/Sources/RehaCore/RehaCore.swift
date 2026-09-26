@@ -761,6 +761,8 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func savePreferences(value: Preferences) async throws  -> Preferences
     
+    func savePreferencesDetailed(value: Preferences) async throws  -> PreferencesSaveResult
+    
     func saveReview(id: String, revision: String, appointments: [Appointment], complete: Bool, selection: [String]) async throws  -> ReviewSnapshot
     
     func selectPlanCalendar(id: String, calendarId: String) async throws 
@@ -1396,6 +1398,22 @@ open func savePreferences(value: Preferences)async throws  -> Preferences  {
             completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypePreferences_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func savePreferencesDetailed(value: Preferences)async throws  -> PreferencesSaveResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_save_preferences_detailed(
+                        self.uniffiCloneHandle(),FfiConverterTypePreferences_lower(value)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePreferencesSaveResult_lift,
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
@@ -4212,6 +4230,60 @@ public func FfiConverterTypePreferences_lift(_ buf: RustBuffer) throws -> Prefer
 #endif
 public func FfiConverterTypePreferences_lower(_ value: Preferences) -> RustBuffer {
     return FfiConverterTypePreferences.lower(value)
+}
+
+
+public struct PreferencesSaveResult: Equatable, Hashable {
+    public var preferences: Preferences
+    public var maintenanceWarnings: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(preferences: Preferences, maintenanceWarnings: [String]) {
+        self.preferences = preferences
+        self.maintenanceWarnings = maintenanceWarnings
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PreferencesSaveResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePreferencesSaveResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PreferencesSaveResult {
+        return
+            try PreferencesSaveResult(
+                preferences: FfiConverterTypePreferences.read(from: &buf), 
+                maintenanceWarnings: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PreferencesSaveResult, into buf: inout [UInt8]) {
+        FfiConverterTypePreferences.write(value.preferences, into: &buf)
+        FfiConverterSequenceString.write(value.maintenanceWarnings, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreferencesSaveResult_lift(_ buf: RustBuffer) throws -> PreferencesSaveResult {
+    return try FfiConverterTypePreferencesSaveResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreferencesSaveResult_lower(_ value: PreferencesSaveResult) -> RustBuffer {
+    return FfiConverterTypePreferencesSaveResult.lower(value)
 }
 
 
@@ -7591,6 +7663,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_save_preferences() != 63481) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_save_preferences_detailed() != 7741) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_save_review() != 5993) {

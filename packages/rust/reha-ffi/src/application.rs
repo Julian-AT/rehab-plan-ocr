@@ -99,6 +99,11 @@ pub struct Preferences {
     pub completion_defaults: Vec<CompletionDefault>,
     pub retention_days: Option<u32>,
 }
+#[derive(Clone, uniffi::Record)]
+pub struct PreferencesSaveResult {
+    pub preferences: Preferences,
+    pub maintenance_warnings: Vec<String>,
+}
 impl Default for Preferences {
     fn default() -> Self {
         Self {
@@ -738,6 +743,12 @@ impl NativeApplication {
         .await
     }
     pub async fn save_preferences(&self, value: Preferences) -> Result<Preferences> {
+        Ok(self.save_preferences_detailed(value).await?.preferences)
+    }
+    pub async fn save_preferences_detailed(
+        &self,
+        value: Preferences,
+    ) -> Result<PreferencesSaveResult> {
         let bridge = self.bridge.clone();
         self.blocking(move |s| {
             let _guard = s.calendar_lock.try_lock().map_err(|_| AppError::Busy)?;
@@ -752,20 +763,21 @@ impl NativeApplication {
                         .unwrap()
                         .clone(),
                 );
-            service::settings::settings_value(&s, Some(existing)).map_err(failure)?;
-            let records = {
-                let store = s.store.lock().map_err(storage)?;
-                store.owned_records().map_err(storage)?
+            let persisted =
+                service::settings::settings_value(&s, Some(existing)).map_err(failure)?;
+            let preferences = convert(persisted)?;
+            // Preferences are durable. Neither cache preparation nor an OS
+            // reminder/widget failure may report the user's save as rejected.
+            let maintenance =
+                service::agenda::sync_request(&s).and_then(|args| bridge.call("agenda", args));
+            let maintenance_warnings = match maintenance {
+                Ok(response) => service::agenda::maintenance_warnings(&response),
+                Err(error) => vec![error.to_string()],
             };
-            bridge.host.calendar_event_call(
-                "agenda".into(),
-                json!({"records":records,"preferences":{
-                    "enabled":value.app_reminders_enabled,"minutes":value.app_reminder_minutes,
-                    "sound":value.reminder_sound,"preview":value.reminder_preview
-                }})
-                .to_string(),
-            )?;
-            Ok(value)
+            Ok(PreferencesSaveResult {
+                preferences,
+                maintenance_warnings,
+            })
         })
         .await
     }
@@ -1270,15 +1282,24 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
 #[cfg(test)]
 mod host_routing_tests {
     use super::*;
+    #[derive(Default)]
     struct Host {
         failure: Option<service::ServiceError>,
+        calls: Option<Arc<Mutex<Vec<(String, Value)>>>>,
+        response: Option<Value>,
     }
     impl AppleHost for Host {
         fn calendar_event_call(&self, command: String, arguments: String) -> Result<String> {
+            if let Some(calls) = &self.calls {
+                calls
+                    .lock()
+                    .unwrap()
+                    .push((command.clone(), serde_json::from_str(&arguments).unwrap()));
+            }
             if let Some(error) = &self.failure {
                 return Err(failure(error.clone()));
             }
-            Ok(json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()}).to_string())
+            Ok(self.response.clone().unwrap_or_else(|| json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()})).to_string())
         }
         fn snapshot(&self, _: Vec<ImportRecord>) -> Result<LiveCalendar> {
             unreachable!()
@@ -1306,7 +1327,7 @@ mod host_routing_tests {
     #[test]
     fn vision_and_current_event_effects_reach_the_native_callback() {
         let bridge = HostBridge {
-            host: Box::new(Host { failure: None }),
+            host: Box::new(Host::default()),
             progress: Mutex::new(HashMap::new()),
             cancelled: Mutex::new(HashSet::new()),
         };
@@ -1336,6 +1357,7 @@ mod host_routing_tests {
             let bridge = HostBridge {
                 host: Box::new(Host {
                     failure: Some(expected.clone()),
+                    ..Host::default()
                 }),
                 progress: Mutex::new(HashMap::new()),
                 cancelled: Mutex::new(HashSet::new()),
@@ -1356,6 +1378,7 @@ mod host_routing_tests {
             // Any JSON effect would fail; only the binary photo callback succeeds.
             host: Box::new(Host {
                 failure: Some(service::ServiceError::Cancelled),
+                ..Host::default()
             }),
             progress: Mutex::new(HashMap::new()),
             cancelled: Mutex::new(HashSet::new()),
@@ -1365,6 +1388,71 @@ mod host_routing_tests {
             bridge.decode_photo(&bytes).unwrap(),
             bytes.into_iter().rev().collect::<Vec<_>>()
         );
+    }
+    #[tokio::test]
+    async fn saved_preferences_keep_widget_scope_and_separate_maintenance_failures() {
+        for (failure, response, warned) in [
+            (None, json!({}), false),
+            (
+                Some(service::ServiceError::PermissionDenied),
+                json!({}),
+                true,
+            ),
+            (
+                None,
+                json!({"reminders":{"error":"Synthetic notification failure"}}),
+                true,
+            ),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let calls = Arc::new(Mutex::new(vec![]));
+            let app = open_application(
+                directory.path().to_str().unwrap().into(),
+                "missing".into(),
+                Box::new(Host {
+                    failure,
+                    calls: Some(calls.clone()),
+                    response: Some(response),
+                }),
+            )
+            .await
+            .unwrap();
+            for selected in [vec!["selected-calendar".to_string()], vec![]] {
+                let mut preferences = app.preferences().await.unwrap();
+                preferences.display_calendar_ids = selected.clone();
+                preferences.appearance = "dark".into();
+                let saved = app
+                    .save_preferences_detailed(preferences.clone())
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    serde_json::to_value(&saved.preferences).unwrap(),
+                    serde_json::to_value(&preferences).unwrap()
+                );
+                assert_eq!(!saved.maintenance_warnings.is_empty(), warned);
+                assert_eq!(
+                    serde_json::to_value(app.preferences().await.unwrap()).unwrap(),
+                    serde_json::to_value(preferences).unwrap()
+                );
+                let call = calls.lock().unwrap().last().unwrap().clone();
+                assert_eq!(call.0, "agenda");
+                assert_eq!(call.1["display_calendar_ids"], json!(selected));
+            }
+            assert_eq!(
+                calls.lock().unwrap().len(),
+                2,
+                "Maintenance failure must not repeat a save"
+            );
+            let mut invalid = app.preferences().await.unwrap();
+            invalid.timezone = "invalid-timezone".into();
+            assert!(app.save_preferences_detailed(invalid).await.is_err());
+            assert_eq!(
+                calls.lock().unwrap().len(),
+                2,
+                "Rejected preferences must not change native caches"
+            );
+            assert_eq!(app.preferences().await.unwrap().timezone, "Europe/Vienna");
+        }
     }
 }
 

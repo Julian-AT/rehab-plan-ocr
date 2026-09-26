@@ -50,7 +50,10 @@ pub async fn settings(
     #[cfg(target_os = "ios")]
     if changed {
         let _guard = state.calendar_lock.lock().await;
-        crate::service::agenda::sync(&app, state).await?;
+        let mut response = result;
+        response["maintenance_warnings"] =
+            json!(crate::service::agenda::sync_warnings(&app, state).await);
+        return Ok(response);
     }
     #[cfg(not(target_os = "ios"))]
     let _ = (app, changed);

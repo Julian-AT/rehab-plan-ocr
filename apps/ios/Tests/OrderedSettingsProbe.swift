@@ -107,8 +107,31 @@ import Foundation
     uncertain.change { $0.appearance = "system" }
     _ = await uncertain.flush()
     precondition(uncertain.value?.appearance == "system" && uncertain.canRetry)
+    // A known durable save is never offered for retry because maintenance failed.
+    var maintenanceFails = true
+    let maintained = OrderedSettings(
+      read: read,
+      writeResult: { value in
+        try JSONEncoder().encode(value).write(to: file, options: .atomic)
+        return SettingsWriteResult(
+          value: value,
+          maintenanceWarnings: maintenanceFails ? ["Erinnerungen nicht aktualisiert."] : [])
+      })
+    await maintained.load()
+    maintained.change { $0.appearance = "light" }
+    let durable = await maintained.flush()
+    let actual = try await read()
+    precondition(durable && maintained.value == actual && actual.appearance == "light")
+    precondition(maintained.error == nil && !maintained.canRetry)
+    precondition(maintained.maintenanceWarnings == ["Erinnerungen nicht aktualisiert."])
+    maintained.retry()
+    precondition(!maintained.isSaving)
+    maintenanceFails = false
+    maintained.change { $0.appearance = "dark" }
+    let successful = await maintained.flush()
+    precondition(successful && maintained.maintenanceWarnings.isEmpty)
     print(
-      "Settings: ordered rapid edits, optimistic display, failure rollback, retry, uncertain-write readback, restart persistence and stale reads after erasure passed"
+      "Settings: ordered edits, rollback, retry, uncertain readback, separate maintenance warnings, restart and stale-read protection passed"
     )
   }
 }

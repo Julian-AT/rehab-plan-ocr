@@ -57,6 +57,12 @@ final class TestHost: AppleHost, Sendable {
     preferences.reminderPreview = true
     let savedPreferences = try await core.savePreferences(value: preferences)
     precondition(savedPreferences == preferences)
+    host.failure.withLock { $0 = .PermissionDenied }
+    preferences.displayCalendarIds = ["selected"]
+    let withMaintenanceFailure = try await core.savePreferencesDetailed(value: preferences)
+    precondition(withMaintenanceFailure.preferences == preferences)
+    precondition(withMaintenanceFailure.maintenanceWarnings.count == 1)
+    host.failure.withLock { $0 = nil }
     let preferencesReopened = try await openApplication(
       root: root, models: "/unavailable-test-model", host: host)
     let restoredPreferences = try await preferencesReopened.preferences()

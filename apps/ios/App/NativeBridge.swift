@@ -116,7 +116,11 @@ final class NativeBridge: AppleHost, Sendable {
   }
   func syncAgenda(records: [ImportRecord], preferences: Preferences) throws {
     _ = try blocking(
-      "agenda", ["records": records.map(Self.record), "preferences": Self.preferences(preferences)])
+      "agenda",
+      [
+        "records": records.map(Self.record), "preferences": Self.preferences(preferences),
+        "display_calendar_ids": preferences.displayCalendarIds,
+      ])
   }
   func forgetCalendar() throws { _ = try blocking("forgetCalendar") }
   func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] {

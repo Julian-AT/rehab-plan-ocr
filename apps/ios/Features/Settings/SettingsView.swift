@@ -9,18 +9,24 @@ extension OrderedSettings where Value == Preferences {
       var failNext = ProcessInfo.processInfo.arguments.contains("--preview-settings-failure")
       self.init(
         read: { try await core.preferences() },
-        write: {
+        writeResult: {
           if failNext {
             failNext = false
             print("Preview: rejecting first changed preferences write")
             throw LocalSpeechError.message("Test: Einstellungen konnten nicht gespeichert werden.")
           }
-          return try await core.savePreferences(value: $0)
+          let result = try await core.savePreferencesDetailed(value: $0)
+          return SettingsWriteResult(
+            value: result.preferences, maintenanceWarnings: result.maintenanceWarnings)
         }, describe: userMessage)
     #else
       self.init(
         read: { try await core.preferences() },
-        write: { try await core.savePreferences(value: $0) }, describe: userMessage)
+        writeResult: {
+          let result = try await core.savePreferencesDetailed(value: $0)
+          return SettingsWriteResult(
+            value: result.preferences, maintenanceWarnings: result.maintenanceWarnings)
+        }, describe: userMessage)
     #endif
   }
   func binding<T>(_ key: WritableKeyPath<Preferences, T>, fallback: T) -> Binding<T> {
@@ -43,6 +49,12 @@ struct SettingsSaveStatus: View {
         }
         .accessibilityIdentifier("retry-settings")
       }
+    }
+    if !store.maintenanceWarnings.isEmpty {
+      Section("Einstellungen gespeichert") {
+        Text(store.maintenanceWarnings.joined(separator: "\n\n"))
+          .foregroundStyle(AppPalette.secondaryText)
+      }.accessibilityIdentifier("settings-maintenance-warning")
     }
   }
 }
