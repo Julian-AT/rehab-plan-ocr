@@ -182,7 +182,9 @@ targets:
       - target: Termine
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.native-tests
+        # Override only the test target when using an existing device profile.
+        REHA_TEST_BUNDLE_IDENTIFIER: at.rehakalender.personal.native-tests
+        PRODUCT_BUNDLE_IDENTIFIER: $(REHA_TEST_BUNDLE_IDENTIFIER)
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
 schemes:

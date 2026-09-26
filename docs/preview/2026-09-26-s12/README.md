@@ -4,6 +4,8 @@
 
 Build 2026092607, iPhone 17, iOS 26.4. Alle Bilder sind unveränderte Simulatoraufnahmen der bedienten App, überwiegend aus XCTest. Kalender und Archiv enthalten ausschließlich öffentliche synthetische Testdaten. Das persönliche iPhone wurde nicht aktualisiert.
 
+Diese Vorschau entstand vor dem Geräteupdate. Der inzwischen ausdrücklich freigegebene und installierte Stand ist im [Gerätebericht](../../kokoro-device-update.md) dokumentiert.
+
 Die Aufnahmen entstanden während der einzelnen Prüfschritte. Herkunft, Aufnahmezeitpunkte und SHA-256 stehen in [preview-manifest.json](preview-manifest.json); die einzelnen bestandenen und noch offenen Tests in [verification-results.json](verification-results.json).
 
 ## Bilder

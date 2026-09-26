@@ -53,4 +53,4 @@ Build 2026092605 adds per-plan calendar selection, separate display preferences,
 
 Build 2026092606 replaces system TTS with bundled German Supertonic 3 voices and repairs menu presentation and playback actions. See [UI refresh and verification](../docs/ui-voice-refresh.md).
 
-Build 2026092607 is the monochrome native preview with a dedicated Sprechen tab and checksum-pinned offline Kokoro/Martin (24 kHz). It is awaiting preview/audio feedback before any iPhone update. See [preview and verification](../docs/apple-voice-preview.md). eSpeak-NG is statically linked for phonemes only; the corresponding-source and GPL notices are in `licenses/kokoro-source.txt`.
+Build 2026092607 adds the monochrome native interface with a dedicated Sprechen tab and checksum-pinned offline Kokoro/Martin (24 kHz). It is installed on the iPhone 17 after approval, backup and data-retention verification. See [device delivery and remaining audio acceptance](../docs/kokoro-device-update.md) and [preview and verification](../docs/apple-voice-preview.md). eSpeak-NG is statically linked for phonemes only; the corresponding-source and GPL notices are in `licenses/kokoro-source.txt`.

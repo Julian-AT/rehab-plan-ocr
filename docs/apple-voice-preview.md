@@ -2,7 +2,7 @@
 
 # Laßnitzhöhe: native Oberfläche und deutsche Kokoro-Stimme
 
-Build 2026092607 ist die Simulatorvorschau. **Das iPhone wurde nicht aktualisiert.** Vor einem Geräteupdate sind Rückmeldung zu den Bildern und Hörproben sowie eine ausdrückliche Freigabe nötig. Danach: frische Sicherung, signiertes Update ohne Deinstallation und Vergleich von Datenbank, Originalen, Einstellungen und Wiederherstellungsdaten.
+Build 2026092607 wurde zunächst als Simulatorvorschau geprüft. **Nach ausdrücklicher Freigabe ist das Update inzwischen auf dem iPhone 17 installiert.** Die frische Sicherung, das signierte Update ohne Deinstallation, der erfolgreiche Datenvergleich und die noch offene Audio-Abnahme stehen im [Gerätebericht](kokoro-device-update.md). Die folgenden Ergebnisse dokumentieren die vorherige Simulatorprüfung.
 
 ## Oberfläche und Tagesliste
 
@@ -63,7 +63,7 @@ Kokoro erzeugt gültiges Audio auch im Simulator. Die Wiedergabe im Simulator is
 
 Nach Wiederherstellung des Mac-Audios sind Wiedergabe, Stopp/Wiederholen, Tab- und Hintergrundwechsel während Audio sowie die tatsächlich mit Audio bewegte Orb-Aufnahme erneut zu prüfen. Es wird keine erfolgreiche Wiedergabe oder synchronisierte Orb-Aufnahme behauptet. VoiceOver mit tatsächlich hörbarer Ausgabe, Mikrofoneingabe mit langen Pausen, physische Kamera und Unterbrechungen durch Anrufe bleiben zusätzliche Geräteprüfungen nach Freigabe.
 
-Automatisierte Audioprüfungen ersetzen die Klangbewertung durch den Nutzer nicht. Das iPhone bleibt bis zur ausdrücklichen Freigabe unverändert.
+Automatisierte Audioprüfungen ersetzen die Klangbewertung durch den Nutzer nicht. Das iPhone blieb während dieser Vorschau unverändert; der später freigegebene Gerätestand ist separat dokumentiert.
 
 ## Commits und Fortsetzung
 
@@ -74,13 +74,13 @@ Automatisierte Audioprüfungen ersetzen die Klangbewertung durch den Nutzer nich
 - `d21aaed`: monochrome Oberfläche, Tagesliste und eigener Sprachbereich.
 - `a9fd15e`: aktualisierte Importtests und neue Agenda-/Sprachvorschauprüfungen.
 
-Die [einzelnen UI-Ergebnisse](preview/2026-09-26-s12/verification-results.json) unterscheiden erfolgreiche Fälle, den reproduzierten Audiofehler und deshalb nicht ausgeführte Tests. Der verwendete Testsimulator `2E0B2C4B-7603-4590-A473-AA475CDB5535` bleibt mit ausschließlich synthetischen Daten für die Fortsetzung erhalten. „Bewegung reduzieren“ wurde anschließend wieder deaktiviert; Kalender- und Mikrofonzugriff sind erteilt. Der zuvor laufende persönliche Simulator wurde wieder gestartet, ohne dessen App zu installieren oder Daten zu verändern.
+Die [einzelnen UI-Ergebnisse](preview/2026-09-26-s12/verification-results.json) unterscheiden erfolgreiche Fälle, den reproduzierten Audiofehler und deshalb nicht ausgeführte Tests. Der verwendete Wegwerfsimulator `2E0B2C4B-7603-4590-A473-AA475CDB5535` wurde nach Sicherung der Vorschauartefakte für das spätere Geräteupdate entfernt. Der persönliche Simulator blieb davon unberührt. Für weitere Simulatorprüfungen einen neuen Testsimulator anlegen und dessen ID einsetzen.
 
 Nach Wiederherstellung des Mac-Audios können die drei offenen UI-Fälle gezielt mit `xcodebuild` ausgeführt werden, beispielsweise:
 
 ```sh
 xcodebuild -project apple/Termine.xcodeproj -scheme Termine -configuration Debug \
-  -destination 'platform=iOS Simulator,id=2E0B2C4B-7603-4590-A473-AA475CDB5535' \
+  -destination 'platform=iOS Simulator,id=<Testsimulator-ID>' \
   -derivedDataPath apple/build/DerivedData -parallel-testing-enabled NO \
   -only-testing:TermineUITests/AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt \
   -only-testing:TermineUITests/NativeFlowTests/testNeuralPlaybackStopAndRepeat \
