@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -189,6 +190,84 @@ class ToolInstallationTests(unittest.TestCase):
             with self.subTest(receipt=value):
                 receipt.write_text(json.dumps(value))
                 self.assertFalse(quality.installed("uv", local=True))
+
+    def test_offline_bootstrap_repairs_permissions_without_archive_or_receipt_rewrite(self):
+        cache = self.cached_archive()
+        quality.install_tool("uv")
+        cache.unlink()
+        self.binary.chmod(0o644)
+        receipt = self.prefix / "receipts/uv.json"
+        before = {
+            path: (path.read_bytes(), path.stat().st_mtime_ns, path.stat().st_ino)
+            for path in [self.binary, receipt]
+        }
+        self.assertFalse(quality.installed("uv", local=True))
+        original_installed, original_run = quality.installed, quality.run
+
+        def run(*command, **kwargs):
+            if command[0] == str(self.binary):
+                return original_run(*command, **kwargs)
+            self.assertIn(command[0], ["uv", "rustc", "rustup"])
+            return quality.VERSIONS["rust"]
+
+        with (
+            patch.object(
+                quality,
+                "installed",
+                side_effect=lambda tool, **kwargs: (
+                    original_installed(tool, **kwargs) if tool == "uv" else True
+                ),
+            ),
+            patch.object(quality, "space"),
+            patch.object(quality.workspace, "prepare"),
+            patch.object(quality, "run", side_effect=run),
+            patch.object(quality, "install_tool") as install,
+        ):
+            quality.bootstrap()
+            install.assert_not_called()
+        self.assertTrue(quality.installed("uv", local=True))
+        self.assertEqual(self.binary.stat().st_mode & 0o777, 0o755)
+        self.assertFalse(cache.exists())
+        self.assertEqual(
+            {
+                path: (path.read_bytes(), path.stat().st_mtime_ns, path.stat().st_ino)
+                for path in before
+            },
+            before,
+        )
+
+    def test_version_start_oserror_is_not_installed_but_command_failure_is_preserved(self):
+        self.cached_archive()
+        quality.install_tool("uv")
+        with patch.object(quality, "run", side_effect=OSError("invalid executable")):
+            self.assertFalse(quality.installed("uv", local=True))
+        with patch.object(
+            quality, "run", side_effect=subprocess.CalledProcessError(2, ["uv", "--version"])
+        ):
+            with self.assertRaises(subprocess.CalledProcessError):
+                quality.installed("uv", local=True)
+
+    def test_global_tool_permissions_are_not_repaired_by_version_check(self):
+        global_binary = self.prefix / "global-uv"
+        global_binary.write_bytes(self.data)
+        global_binary.chmod(0o644)
+        with patch.object(quality.shutil, "which", return_value=str(global_binary)):
+            self.assertFalse(quality.installed("uv"))
+        self.assertEqual(global_binary.stat().st_mode & 0o777, 0o644)
+
+    def test_install_replaces_tool_symlink_without_changing_external_permissions(self):
+        self.cached_archive()
+        external = self.prefix / "external-uv"
+        external.write_bytes(self.data)
+        external.chmod(0o644)
+        self.binary.symlink_to(external)
+        with patch.object(quality, "run") as run:
+            quality.install_tool("uv")
+            run.assert_not_called()
+        self.assertFalse(self.binary.is_symlink())
+        self.assertEqual(external.stat().st_mode & 0o777, 0o644)
+        self.assertEqual(external.read_bytes(), self.data)
+        self.assertTrue(quality.installed("uv", local=True))
 
     def test_corrupt_download_cannot_legitimize_legacy_binary(self):
         self.legacy_binary(self.data + b"# unknown provenance\n")

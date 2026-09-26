@@ -158,7 +158,10 @@ def installed(tool, *, local=False):
         return False
     if Path(binary).resolve() == (BIN / tool).resolve() and not tool_installation_ready(tool):
         return False
-    output = run(binary, "--version", capture=True)
+    try:
+        output = run(binary, "--version", capture=True)
+    except OSError:
+        return False
     return re.search(
         r"(?<![\d.])" + re.escape(VERSIONS[tool]) + r"(?![\d.])", output
     ) is not None and (tool != "xcodegen" or xcodegen_resources_ready(binary))
@@ -212,7 +215,7 @@ def install_tool(tool):
             data = archive_path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         target = BIN / tool
-        if not target.is_file() or file_sha256(target) != digest:
+        if target.is_symlink() or not target.is_file() or file_sha256(target) != digest:
             binary = staging / tool
             binary.write_bytes(data)
             binary.chmod(0o755)
@@ -260,6 +263,13 @@ def bootstrap():
     for tool in ["uv", "shellcheck", "shfmt"] + (["xcodegen"] if APPLE else []):
         if installed(tool, local=True):
             continue
+        binary = BIN / tool
+        if not binary.is_symlink() and tool_installation_ready(tool):
+            mode = binary.stat().st_mode
+            if mode & 0o111 != 0o111:
+                binary.chmod(mode | 0o111)
+                if installed(tool, local=True):
+                    continue
         install_tool(tool)
         if not installed(tool, local=True):
             raise RuntimeError(f"Version von {tool} stimmt nicht.")
