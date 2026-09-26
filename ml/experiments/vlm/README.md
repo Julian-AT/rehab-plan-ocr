@@ -9,6 +9,19 @@ that library for repeatable desktop measurements.
 
 The lock in `ml/registry/runtime/vlm-experiments.lock.json` pins the runtime revision, source
 checkpoints, known upstream hashes, prompts, preprocessing and output limits.
+Files without an upstream hash require their original `source-manifest.json`
+download receipt when reused or converted. Existing bytes are never used to
+recreate a missing receipt, and a changed file or receipt is not repaired in place.
+Keep historical directories unchanged and explicitly fetch into a new directory
+when provenance is missing, for example:
+
+```sh
+python3 ml/experiments/vlm/fetch-vlm.py \
+  --destination .local/models/runtime/experiments/checkpoints-new
+```
+
+First acquisition downloads every file from the pinned repository revision and
+records its hash; later reuse verifies that original identity without rewriting it.
 Check every model file before invoking the library. `mtmd_init_from_file` checks
 projector/text embedding compatibility; an image smoke test is also required.
 Model-family support alone does not establish checkpoint compatibility.

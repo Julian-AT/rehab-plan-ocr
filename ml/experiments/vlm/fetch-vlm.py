@@ -8,16 +8,72 @@ fetching from their immutable revision. No downloaded Python model code is run.
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def verify_candidate(directory, candidate):
+    """Reuse bytes only against the original download receipt or an upstream hash."""
+    try:
+        manifest = directory / "source-manifest.json"
+        recorded = (
+            json.loads(manifest.read_text()) if manifest.exists() or manifest.is_symlink() else None
+        )
+        expected_files = {item["path"]: item for item in candidate["files"]}
+        if len(expected_files) != len(candidate["files"]) or any(
+            Path(name).name != name for name in expected_files
+        ):
+            raise ValueError("Unsafe or duplicate checkpoint path")
+        if recorded is None and any(not item["sha256"] for item in expected_files.values()):
+            raise ValueError("Original download receipt is required for unhashed upstream files")
+        records = {}
+        if recorded is not None:
+            if any(recorded[key] != candidate[key] for key in ["id", "repository", "revision"]):
+                raise ValueError("Download origin changed")
+            records = {item["path"]: item for item in recorded["files"]}
+            if set(records) != set(expected_files) or len(records) != len(recorded["files"]):
+                raise ValueError("Download receipt files are missing or duplicated")
+        verified = []
+        for name, item in expected_files.items():
+            path = directory / name
+            expected = item["sha256"]
+            if recorded is not None:
+                previous = records[name]
+                if (
+                    previous["bytes"] != item["bytes"]
+                    or not isinstance(previous["sha256"], str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", previous["sha256"])
+                    or (expected and previous["sha256"] != expected)
+                ):
+                    raise ValueError("Download receipt identity is invalid")
+                expected = previous["sha256"]
+            if path.stat().st_size != item["bytes"]:
+                raise ValueError("Checkpoint size changed")
+            with path.open("rb") as source:
+                actual = hashlib.file_digest(source, "sha256").hexdigest()
+            if actual != expected:
+                raise ValueError("Checkpoint differs from its original identity")
+            verified.append({**item, "sha256": actual})
+        return verified
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        raise ValueError(
+            "Checkpoint provenance is missing or changed; preserve this directory and "
+            "explicitly download to a new --destination for a new receipt"
+        ) from error
+
+
 def fetch(lock, destination):
     for candidate in lock["candidates"]:
+        if Path(candidate["id"]).name != candidate["id"]:
+            raise ValueError("Unsafe candidate directory")
         directory = destination / candidate["id"]
-        directory.mkdir(parents=True, exist_ok=True)
+        if directory.exists() or directory.is_symlink():
+            verify_candidate(directory, candidate)
+            continue  # Never rewrite or regenerate an existing provenance receipt.
+        directory.mkdir(parents=True, exist_ok=False)
         verified = []
         for item in candidate["files"]:
             name = item["path"]
@@ -57,9 +113,8 @@ def fetch(lock, destination):
             with target.open("rb") as source:
                 checksum = hashlib.file_digest(source, "sha256").hexdigest()
             verified.append({"path": name, "sha256": checksum, "bytes": target.stat().st_size})
-        (directory / "source-manifest.json").write_text(
-            json.dumps({**candidate, "files": verified}, indent=2) + "\n"
-        )
+        with (directory / "source-manifest.json").open("x") as manifest:
+            manifest.write(json.dumps({**candidate, "files": verified}, indent=2) + "\n")
 
 
 if __name__ == "__main__":

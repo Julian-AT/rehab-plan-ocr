@@ -7,6 +7,7 @@ and invented-image check, never accuracy or permission to package a model.
 import argparse
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import platform
 import subprocess
@@ -14,6 +15,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+_source_spec = importlib.util.spec_from_file_location(
+    "vlm_download_provenance", Path(__file__).with_name("fetch-vlm.py")
+)
+_source = importlib.util.module_from_spec(_source_spec)
+_source_spec.loader.exec_module(_source)
 
 
 def sha(path):
@@ -38,17 +44,17 @@ def qualify(args):
         raise ValueError("Use the pinned clean runtime checkout.")
     sources = {"glm-ocr": args.glm, "paddleocr-vl-1.6": args.paddle}
     source_hashes = {}
+    source_manifests = {}
     for candidate in lock["candidates"]:
-        items = []
-        for item in candidate["files"]:
-            path = sources[candidate["id"]] / item["path"]
-            digest = sha(path)
-            if path.stat().st_size != item["bytes"] or (
-                item["sha256"] and digest != item["sha256"]
-            ):
-                raise ValueError("Checkpoint integrity failed: " + item["path"])
-            items.append({**item, "sha256": digest})
-        source_hashes[candidate["id"]] = items
+        source_hashes[candidate["id"]] = _source.verify_candidate(
+            sources[candidate["id"]], candidate
+        )
+        manifest = sources[candidate["id"]] / "source-manifest.json"
+        if manifest.is_file():
+            source_manifests[candidate["id"]] = {
+                "path": str(manifest.resolve()),
+                "sha256": sha(manifest),
+            }
     output = args.output
     output.mkdir(parents=True, exist_ok=False)
     converter = args.runtime / "convert_hf_to_gguf.py"
@@ -113,6 +119,8 @@ def qualify(args):
         "converter_sha256": sha(converter),
         "converter_commands": converter_commands,
         "source_files": source_hashes,
+        "source_manifests": source_manifests,
+        "source_verifier_sha256": sha(Path(__file__).with_name("fetch-vlm.py")),
         "conversion_environment": {
             name: importlib.metadata.version(name)
             for name in ["torch", "transformers", "numpy", "sentencepiece", "protobuf"]
