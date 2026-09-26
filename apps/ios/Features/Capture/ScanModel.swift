@@ -475,8 +475,8 @@ struct StagedPhoto: Transferable, Sendable {
     recoveringShares = true
     defer { recoveringShares = false }
     do {
-      let receipts = try await Task.detached { try IntakeStaging.pending() }.value
-      for (receipt, url, folder) in receipts {
+      let pending = try await Task.detached { try IntakeStaging.pending() }.value
+      for (receipt, url, folder) in pending.receipts {
         guard admission.accepts(ticket) else { return }
         captureTickets[receipt.id] = ticket
         await ingestFile(url, id: receipt.id, navigate: false)
@@ -486,6 +486,7 @@ struct StagedPhoto: Transferable, Sendable {
           try? FileManager.default.removeItem(at: folder)
         }
       }
+      if let warning = pending.warning, admission.accepts(ticket) { self.error = warning }
     } catch { self.error = userMessage(error) }
   }
   func recoverInbox() async {
