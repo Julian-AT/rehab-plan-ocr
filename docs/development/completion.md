@@ -280,3 +280,11 @@ synthetische Regressionen ersetzt.
 Diese Nachweise ersetzen keine Modell-, physische Geräte-, menschliche Stimmen-
 oder Veröffentlichungsfreigabe. Spätere Änderungen sind nicht rückwirkend durch
 den bestandenen 68-Test-Lauf qualifiziert.
+
+- Gemeinsame lokale Befehle an `ec413cd`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 238 Rusttests, 385 Pythonfälle in
+  66 Gruppen (sieben Umgebungs-Skips), alle geplanten nativen Probes und der echte
+  Swift–Rust–Swift-Rundweg. Arbeitsstand vorher/nachher sauber. Quellen, Patch,
+  Einzelbefehle, vollständige Logs und Abschlussbeleg bleiben unter
+  `.local/runs/combined-verification-20260926-s19-001/` erhalten. Die später angepasste
+  visuelle Rahmenabtastung benötigt weiterhin ihren eigenen Simulatornachweis.

@@ -82,13 +82,14 @@ Current verified implementation slices:
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
-The full combined `make lint` and `make test` commands now pass at `cf4e39d`,
-including 232 Rust tests, 377 Python cases in 65 groups (seven explicit environment
+The full combined `make lint` and `make test` commands now pass at `ec413cd`,
+including 238 Rust tests, 385 Python cases in 66 groups (seven explicit environment
 skips), all scheduled native probes and the actual Swift–Rust–Swift integration.
 The checkout is clean before and after both commands. Source archive, source
 identity and complete logs are preserved under
-`.local/runs/combined-verification-20260926-s18-002/`. This closes the earlier missing
-shell-entrypoint failure; it is not complete UI, physical-device or model acceptance.
+`.local/runs/combined-verification-20260926-s19-001/`. This includes the typed agenda,
+system editor and preserved repair warnings; it is not complete UI, physical-device
+or model acceptance. The previous `cf4e39d` proof remains unchanged in its own run.
 The earlier fresh isolated build at `026430a` and its offline repeat remain separate
 historical evidence. Later source changes still need their own combined checks.
 
