@@ -221,6 +221,17 @@ import XCTest
         .exists)
     capture("Saved with undo")
     app.tabBars.buttons["Termine"].tap()
+    // Choosing a save destination must not silently change visible calendars.
+    XCTAssertTrue(app.staticTexts["Kalender auswählen"].waitForExistence(timeout: 10))
+    XCTAssertFalse(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Testtherapie 1")).firstMatch
+        .exists)
+    app.buttons["Kalender auswählen"].tap()
+    let includeDestination = app.buttons["Auch anzeigen"]
+    XCTAssertTrue(includeDestination.waitForExistence(timeout: 10))
+    for _ in 0..<6 where !includeDestination.isHittable { app.swipeUp() }
+    includeDestination.tap()
+    app.navigationBars["Kalender"].buttons.firstMatch.tap()
     if app.buttons["past-events"].waitForExistence(timeout: 3) { app.buttons["past-events"].tap() }
     XCTAssertTrue(
       app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Testtherapie 1")).firstMatch
@@ -247,9 +258,9 @@ import XCTest
         .waitForExistence(timeout: 10))
     app.navigationBars["Importverlauf"].buttons["Fertig"].tap()
     app.tabBars.buttons["Termine"].tap()
-    // Saving chooses a destination, not an additional display calendar.
-    // Once the last import is undone the dedicated selection state returns.
-    XCTAssertTrue(app.staticTexts["Kalender auswählen"].waitForExistence(timeout: 10))
+    // Undo preserves the display selection; the explicitly selected calendar is empty.
+    XCTAssertTrue(app.staticTexts["Heute keine Termine"].waitForExistence(timeout: 10))
+    XCTAssertFalse(app.staticTexts["Kalender auswählen"].exists)
     XCTAssertFalse(
       app.buttons.matching(
         NSPredicate(

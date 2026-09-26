@@ -39,6 +39,10 @@ a fresh backup and a persistent-data comparison without uninstalling.
 - The archive/cold-launch UI regression and asynchronous pagination probe pass.
   Its fixed synthetic screenshot has zero changed app pixels against the capture
   before pagination, excluding only the changing system status bar.
+- The save/undo UI regression passes with explicit calendar visibility selection;
+  saving and undoing keep that selection independent of the destination. Real
+  speech output and spoken-confirmation UI runs still abort on a CoreAudio RPC
+  timeout and require investigation before release qualification.
 - iOS sources now live by feature; Apple and Rust packages, model development,
   tooling, runtime model manifests and notices have dedicated locations. Normal
   builds verify assets/bindings without restoring or converting them. An offline

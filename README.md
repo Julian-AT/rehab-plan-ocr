@@ -60,6 +60,10 @@ Build-Schritte prüfen vorab ihre Mindestreserve und entfernen keine privaten Da
 `make build` erzeugt eine Simulator-App; `make build TARGET=device` prüft den
 unsignierten Gerätebuild. Beide verwenden die zuvor geprüften lokalen Artefakte.
 `make test-ios` verwendet Wegwerfsimulatoren und erfundene Termine.
+Gezielte Kalender- und Sprachtests können die Vorbereitung der Foto- und Dateienauswahl
+mit `REHA_UI_MEDIA=0 make test-native-ui TEST_ARGS='--built -only-testing:TermineUITests/VoiceSurfaceTests/testSilentMicrophoneStaysFlat'`
+überspringen. `--built` setzt einen aktuellen Simulator-Build voraus; Tests der
+Foto-, Datei- und Share-Importe benötigen die standardmäßig aktivierten Medienfixtures.
 
 ## Daten und Auslieferung
 

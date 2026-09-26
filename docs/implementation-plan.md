@@ -227,3 +227,13 @@ path check detects missing Xcode sources. A fresh simulator installation gets on
 bounded retry for unavailable installation services. Rust import/undo, legacy
 result, merged-warning and Swift/Rust binding regressions pass, as do Clippy and
 the offline simulator build. The full UI gate remains open.
+
+The save/undo UI regression now follows the visible-calendar contract: saving into
+the destination leaves an empty display selection unchanged, explicit selection
+shows each imported event once, and undo preserves that selection while removing
+the events. It passes in a fresh disposable simulator (59.369 seconds). Targeted
+calendar/voice runs can skip unrelated Photos/Files fixture setup with
+`REHA_UI_MEDIA=0`; full runs keep those fixtures by default. Repeated real-output
+and voice-confirmation UI runs still abort in CoreAudio's `AURemoteIO::Cleanup`
+RPC timeout during `ConversationAudio.attachPlayer`. Their failures remain open;
+the save/undo pass does not qualify speech output or the full UI suite.
