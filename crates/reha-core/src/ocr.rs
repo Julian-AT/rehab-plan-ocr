@@ -221,29 +221,59 @@ impl OnnxEngine {
         drop(outputs);
         let start = Instant::now();
         let mut observations = vec![];
-        for region in &regions {
+        let batch_limit = config.recognition_batch_size.clamp(1, 8);
+        let mut scheduled: Vec<_> = regions.iter().collect();
+        if batch_limit > 1 {
+            scheduled.sort_by_key(|r| crop_width(&r.polygon));
+        }
+        let mut cursor = 0;
+        while cursor < scheduled.len() {
             if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
                 break;
             }
-            let crop = match geometry::rectify(page, &region.polygon) {
-                Ok(crop) => crop,
-                Err(_) => continue,
-            };
-            let (cw, ch) = crop.dimensions();
-            if config.detailed_debug {
-                crop.save(artifacts.join(format!("{}.png", region.id)))?;
-            }
-            let rw = ((48. * cw as f64 / ch as f64).ceil() as u32).clamp(8, 3200);
-            let padded = rw.max(320).div_ceil(8) * 8;
-            let resized = image::imageops::resize(&crop, rw, 48, FilterType::Triangle);
-            let mut input = vec![0f32; 3 * (padded * 48) as usize];
-            for (x, y, p) in resized.enumerate_pixels() {
-                for c in 0..3 {
-                    input[c * (padded * 48) as usize + (y * padded + x) as usize] =
-                        (p[2 - c] as f32 / 255. - 0.5) / 0.5;
+            let width = crop_width(&scheduled[cursor].polygon);
+            let count = scheduled[cursor..]
+                .iter()
+                .take(batch_limit)
+                .take_while(|r| crop_width(&r.polygon) == width)
+                .count();
+            let batch = &scheduled[cursor..cursor + count];
+            cursor += count;
+            let mut inputs = Vec::new();
+            let mut recognized = Vec::new();
+            let mut padded = 0;
+            for region in batch {
+                if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
+                    break;
                 }
+                let crop = match geometry::rectify(page, &region.polygon) {
+                    Ok(crop) => crop,
+                    Err(_) => continue,
+                };
+                if config.detailed_debug {
+                    crop.save(artifacts.join(format!("{}.png", region.id)))?;
+                }
+                let (rw, pw) = recognition_width(crop.width(), crop.height());
+                if padded != 0 && padded != pw {
+                    return Err(err("Inconsistent exact-width recognition batch"));
+                }
+                padded = pw;
+                let resized = image::imageops::resize(&crop, rw, 48, FilterType::Triangle);
+                let offset = inputs.len();
+                inputs.resize(offset + 3 * (padded * 48) as usize, 0f32);
+                for (x, y, p) in resized.enumerate_pixels() {
+                    for c in 0..3 {
+                        inputs[offset + c * (padded * 48) as usize + (y * padded + x) as usize] =
+                            (p[2 - c] as f32 / 255. - 0.5) / 0.5;
+                    }
+                }
+                recognized.push(*region);
             }
-            let tensor = Tensor::from_array(([1, 3, 48, padded as usize], input)).map_err(err)?;
+            if recognized.is_empty() {
+                continue;
+            }
+            let tensor = Tensor::from_array(([recognized.len(), 3, 48, padded as usize], inputs))
+                .map_err(err)?;
             let outputs = match self
                 .recognizer
                 .run_with_options(ort::inputs![tensor], options)
@@ -258,26 +288,63 @@ impl OnnxEngine {
                 Err(e) => return Err(err(e)),
             };
             let (shape, data) = outputs[0].try_extract_tensor::<f32>().map_err(err)?;
-            if shape.len() != 3 || shape[0] != 1 || shape[2] as usize != self.dictionary.len() {
+            if shape.len() != 3
+                || shape[0] as usize != recognized.len()
+                || shape[1] < 1
+                || shape[2] as usize != self.dictionary.len()
+            {
                 return Err(err(format!(
                     "Recognizer/dictionary mismatch: shape {:?}, dictionary {}",
                     shape,
                     self.dictionary.len()
                 )));
             }
-            let (text, score) = ctc(data, shape[2] as usize, &self.dictionary);
-            observations.push(Observation {
-                id: format!("obs-{}", region.id),
-                text,
-                region_ids: vec![region.id.clone()],
-                engine: self.name.clone(),
-                score,
-                alternatives: vec![],
-            });
+            for (region, scores) in recognized
+                .iter()
+                .zip(data.chunks_exact((shape[1] * shape[2]) as usize))
+            {
+                let (text, score) = ctc(scores, shape[2] as usize, &self.dictionary);
+                observations.push(Observation {
+                    id: format!("obs-{}", region.id),
+                    text,
+                    region_ids: vec![region.id.clone()],
+                    engine: self.name.clone(),
+                    score,
+                    alternatives: vec![],
+                });
+            }
+        }
+        if batch_limit > 1 {
+            let order: std::collections::HashMap<_, _> = regions
+                .iter()
+                .enumerate()
+                .map(|(i, r)| (&r.id, i))
+                .collect();
+            observations
+                .sort_by_key(|o| order.get(&o.region_ids[0]).copied().unwrap_or(usize::MAX));
         }
         stages.push(Stage{name:"recognition".into(),status:if observations.len() == regions.len() { "complete" } else { "partial" }.into(),duration_ms:start.elapsed().as_millis() as u64,detail:"CTC greedy decoding. Mean token scores are engine signals, not appointment-correctness probabilities. Alternatives unavailable.".into(),artifacts:if config.detailed_debug{regions.iter().map(|r|format!("{}.png",r.id)).collect()}else{vec![]}});
         Ok((regions, observations, stages))
     }
+}
+fn recognition_width(width: u32, height: u32) -> (u32, u32) {
+    let resized = ((48. * width as f64 / height.max(1) as f64).ceil() as u32).clamp(8, 3200);
+    (resized, resized.max(320).div_ceil(8) * 8)
+}
+fn crop_width(polygon: &[Point]) -> u32 {
+    if polygon.len() != 4 {
+        return 0;
+    }
+    let mut w = geometry::distance(&polygon[0], &polygon[1])
+        .max(geometry::distance(&polygon[3], &polygon[2]))
+        .ceil() as u32;
+    let mut h = geometry::distance(&polygon[0], &polygon[3])
+        .max(geometry::distance(&polygon[1], &polygon[2]))
+        .ceil() as u32;
+    if h as f64 / w.max(1) as f64 >= 1.5 {
+        std::mem::swap(&mut w, &mut h);
+    }
+    recognition_width(w, h).1
 }
 pub fn check_cancel(cancel: &AtomicBool) -> Result<()> {
     if cancel.load(Ordering::Relaxed) {
@@ -401,6 +468,26 @@ fn components(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn scheduled_width_matches_rotated_and_perspective_crops() {
+        let page = image::RgbImage::new(600, 600);
+        for polygon in [
+            geometry::rect(5., 5., 520., 31.),
+            geometry::rect(10., 10., 23., 430.),
+            vec![
+                Point { x: 20., y: 20. },
+                Point { x: 401., y: 40. },
+                Point { x: 398., y: 67. },
+                Point { x: 18., y: 49. },
+            ],
+        ] {
+            let crop = geometry::rectify(&page, &polygon).unwrap();
+            assert_eq!(
+                crop_width(&polygon),
+                recognition_width(crop.width(), crop.height()).1
+            );
+        }
+    }
     #[test]
     fn ctc_blank_separates_repeated_letters() {
         let d = vec!["".into(), "A".into(), "B".into()];
