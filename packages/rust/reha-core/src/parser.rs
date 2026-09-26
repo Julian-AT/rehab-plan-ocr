@@ -518,6 +518,19 @@ pub(crate) fn clock_value(text: &str) -> Option<String> {
         .then(|| format!("{:0>2}:{}", &captures[1], &captures[2]))
 }
 
+fn duration_cell(text: &str) -> Option<u32> {
+    let text = clean(text);
+    text.parse().ok().or_else(|| {
+        let captures = DURATION.captures(&text)?;
+        let matched = captures.get(0)?;
+        // A labeled duration may retain its minute unit. Consume the whole cell
+        // so a sign, decimal, unsupported unit or trailing text is not discarded.
+        (matched.start() == 0 && matched.end() == text.len())
+            .then(|| captures[1].parse().ok())
+            .flatten()
+    })
+}
+
 fn treatment_date(rows: &[Row<'_>]) -> (Option<String>, Vec<String>) {
     let mut dates = BTreeSet::new();
     let mut sources = vec![];
@@ -814,7 +827,7 @@ fn extract_section(
                 .iter()
                 .find(|o| columns.field(x(o)) == Some("duration_minutes"))
             {
-                a.duration_minutes = clean(&o.text).parse().ok().or(a.duration_minutes);
+                a.duration_minutes = duration_cell(&o.text).or(a.duration_minutes);
                 a.provenance
                     .insert("duration_minutes".into(), vec![o.id.clone()]);
             }
@@ -2228,5 +2241,89 @@ mod tests {
             .issues
             .iter()
             .any(|i| i.code == "possible_cancellation"));
+    }
+
+    fn duration_column(clock: &str, duration: &str, title: &str) -> Appointment {
+        let (mut appointments, _, _) = positioned(&[
+            (0., 0., "Donnerstag, der 10.09.2026"),
+            (0., 40., "Uhrzeit"),
+            (200., 40., "Dauer"),
+            (400., 40., "Therapie"),
+            (0., 80., clock),
+            (200., 80., duration),
+            (400., 80., title),
+        ]);
+        assert_eq!(appointments.len(), 1);
+        appointments.remove(0)
+    }
+
+    #[test]
+    fn duration_column_accepts_printed_minute_units_and_retains_evidence() {
+        for text in [
+            "30",
+            "30 min",
+            "30min",
+            "30 Minuten",
+            "30Minuten",
+            " 30 MIN ",
+        ] {
+            let a = duration_column("08:00", text, "Gymnastik");
+            assert_eq!(a.duration_minutes, Some(30), "{text}");
+            assert_eq!(a.start.as_deref(), Some("08:00"));
+            assert_eq!(a.end, None);
+            assert_eq!(a.title, "Gymnastik");
+            assert_eq!(a.provenance["duration_minutes"], ["o5"]);
+            assert!(!a.issues.iter().any(|issue| issue.code == "missing_end"));
+            let event = crate::calendar::validated_values(&a, "Europe/Vienna", None).unwrap();
+            assert_eq!(event.end_utc, "2026-09-10T06:30:00Z");
+        }
+    }
+
+    #[test]
+    fn duration_column_does_not_extract_a_valid_substring_from_invalid_text() {
+        for text in [
+            "-30 min",
+            "+30 min",
+            "30.5 min",
+            "30 Stunden",
+            "30 minutes",
+            "1441 min",
+            "999999 min",
+            "30 min zusätzlich",
+        ] {
+            let a = duration_column("08:00", text, "Gymnastik");
+            assert_eq!(a.duration_minutes, None, "{text}");
+            assert!(a
+                .issues
+                .iter()
+                .any(|issue| issue.code == "missing_end" && issue.blocking));
+            assert!(crate::calendar::validated_values(&a, "Europe/Vienna", None).is_err());
+        }
+        for text in ["0", "0 min", "1441"] {
+            let a = duration_column("08:00", text, "Gymnastik");
+            assert!(crate::calendar::validated_values(&a, "Europe/Vienna", None).is_err());
+        }
+    }
+
+    #[test]
+    fn duration_column_keeps_printed_end_conflicts_and_title_minutes_separate() {
+        let a = duration_column("08:00 - 08:30", "30 min", "Gymnastik 45 min");
+        assert_eq!(a.duration_minutes, Some(30));
+        assert_eq!(a.end.as_deref(), Some("08:30"));
+        assert_eq!(a.title, "Gymnastik 45 min");
+        assert!(crate::calendar::validated_values(&a, "Europe/Vienna", None).is_ok());
+
+        let a = duration_column("08:00 - 08:30", "20 Minuten", "Gymnastik");
+        assert_eq!(a.duration_minutes, Some(20));
+        assert_eq!(a.end.as_deref(), Some("08:30"));
+        assert!(crate::calendar::validated_values(&a, "Europe/Vienna", None)
+            .unwrap_err()
+            .to_string()
+            .contains("Gedruckte Dauer und Endzeit widersprechen sich"));
+
+        let a = duration_column("08:00", "", "Gymnastik 45 min");
+        assert_eq!(a.duration_minutes, None);
+        assert_eq!(a.title, "Gymnastik 45 min");
+        assert!(a.issues.iter().any(|issue| issue.code == "missing_end"));
     }
 }
