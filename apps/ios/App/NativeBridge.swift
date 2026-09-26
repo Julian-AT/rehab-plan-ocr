@@ -4,20 +4,20 @@ import RehaCore
 
 /// Only Rust worker threads use synchronous callbacks. EventKit remains owned
 /// by AppleServices' serial queue; SwiftUI uses the asynchronous entry point.
-final class NativeBridge: AppleHost, @unchecked Sendable {
-  private final class ResultBox: @unchecked Sendable {
-    let lock = NSLock()
-    private var value: Result<Data, Error>?
-    func set(_ result: Result<Data, Error>) {
-      lock.lock()
-      value = result
-      lock.unlock()
+final class NativeBridge: AppleHost, Sendable {
+  static func appError(_ error: Error) -> AppError {
+    if let error = error as? AppError { return error }
+    if let error = error as? NativeServiceError {
+      switch error {
+      case .permissionDenied: return .PermissionDenied
+      case .invalidInput(let message): return .Validation(message: message)
+      case .storage(let message): return .Storage(message: message)
+      case .timeout(let operation): return .Timeout(operation: operation)
+      case .uncertainWrite: return .UncertainWrite
+      case .cancelled: return .Cancelled
+      }
     }
-    func get() -> Result<Data, Error>? {
-      lock.lock()
-      defer { lock.unlock() }
-      return value
-    }
+    return .Storage(message: error.localizedDescription)
   }
   @MainActor static func request(_ command: String, _ arguments: [String: Any] = [:]) async throws
     -> Data
@@ -29,34 +29,25 @@ final class NativeBridge: AppleHost, @unchecked Sendable {
   }
   private func blocking(_ command: String, _ arguments: [String: Any] = [:]) throws -> [String: Any]
   {
-    precondition(!Thread.isMainThread, "Native callbacks must not block the main thread")
-    let gate = DispatchSemaphore(value: 0)
-    let box = ResultBox()
     do {
-      let data = try JSONSerialization.data(withJSONObject: arguments)
-      DispatchQueue.main.async {
-        NativeServices.shared.perform(command, arguments: data) { result in
-          box.set(result)
-          gate.signal()
-        }
+      guard let operation = NativeOperation(rawValue: command) else {
+        throw NativeServiceError.invalidInput("Unbekannte native Aktion.")
       }
+      let data = try JSONSerialization.data(withJSONObject: arguments)
       let timeout =
         command == "recognize"
         ? min(60, max(0.001, (arguments["budget_ms"] as? Double ?? 60000) / 1000)) : 60
-      guard gate.wait(timeout: .now() + timeout) == .success, let result = box.get() else {
-        if command == "recognize" {
-          throw AppError.Validation(message: "Zeitbudget der lokalen Nachprüfung erschöpft.")
-        }
-        throw AppError.UncertainWrite
+      let responseData = try NativeServiceCall.wait(for: operation, timeout: timeout) {
+        completion in
+        NativeServices.shared.perform(command, arguments: data, completion: completion)
       }
-      let responseData = try result.get()
-      return (try JSONSerialization.jsonObject(with: responseData, options: .fragmentsAllowed))
-        as? [String: Any] ?? [:]
-    } catch let error as AppError { throw error } catch {
-      let message = error.localizedDescription
-      if message.contains("Kalenderzugriff") { throw AppError.PermissionDenied }
-      throw AppError.Storage(message: message)
-    }
+      let value = try JSONSerialization.jsonObject(with: responseData, options: .fragmentsAllowed)
+      if value is NSNull { return [:] }
+      guard let object = value as? [String: Any] else {
+        throw NativeServiceError.storage("Native Antwort hat ein ungültiges Format.")
+      }
+      return object
+    } catch { throw Self.appError(error) }
   }
 
   static func values(_ value: EventValues) -> [String: Any] {
@@ -176,6 +167,7 @@ func userMessage(_ error: Error) -> String {
   case .StaleProposal: return "Die Prüfdaten wurden geändert. Erstelle eine neue Kalendervorschau."
   case .PermissionDenied:
     return "Kalenderzugriff fehlt. Zugriff erlauben oder eine ICS-Datei exportieren."
+  case .Timeout: return "Die lokale Aktion hat zu lange gedauert. Bitte erneut versuchen."
   case .UncertainWrite:
     return "Der Schreibstatus ist unklar. Gleiche den Kalender vor weiteren Änderungen ab."
   case .Busy: return "Eine Erkennung läuft bereits. Bitte warten oder abbrechen."

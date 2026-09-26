@@ -280,6 +280,7 @@ async fn stale_preview_permission_and_selection_are_rechecked() {
     assert!(confirm(&state, calendar.clone(), &p)
         .await
         .unwrap_err()
+        .to_string()
         .contains("geändert"));
     let p = preview(&state, calendar.clone(), "remove", json!({})).await;
     calendar.calendars.lock().unwrap()["calendars"][0]["writable"] = json!(false);
@@ -499,6 +500,7 @@ async fn deselection_revokes_external_edit_even_when_same_calendar_has_imports()
     assert!(confirm(&state, calendar.clone(), &p)
         .await
         .unwrap_err()
+        .to_string()
         .contains("Kalenderauswahl"));
     assert_eq!(*calendar.calls.lock().unwrap(), 0);
 }

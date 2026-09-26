@@ -29,7 +29,7 @@ fn required<'a>(v: &'a Value, key: &str) -> Response<&'a str> {
     v[key]
         .as_str()
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| format!("{key} fehlt."))
+        .ok_or_else(|| format!("{key} fehlt.").into())
 }
 fn preferences(state: &AppState) -> Response<Value> {
     super::settings::settings_value(state, None)

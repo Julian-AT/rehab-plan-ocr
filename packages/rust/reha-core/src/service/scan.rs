@@ -133,12 +133,12 @@ pub async fn import_image(
             let _ = store.intake_status(
                 &worker_id,
                 status,
-                result.as_ref().err().map(String::as_str),
+                result.as_ref().err().map(ToString::to_string).as_deref(),
             );
             let _ = store.finish_processing(
                 &processing_attempt,
                 status,
-                result.as_ref().err().map(String::as_str),
+                result.as_ref().err().map(ToString::to_string).as_deref(),
             );
         }
         if let Ok(mut active) = shared.cancel.lock() {

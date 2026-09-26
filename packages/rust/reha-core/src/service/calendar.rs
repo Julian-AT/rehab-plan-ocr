@@ -633,7 +633,7 @@ pub(super) async fn execute_batch(
     // Calendar writes are already committed; report maintenance independently.
     if let Err(warning) = crate::service::agenda::sync(&app, state).await {
         for result in &mut results {
-            result.maintenance_warnings.push(warning.clone());
+            result.maintenance_warnings.push(warning.to_string());
         }
     }
     Ok(results)
@@ -673,7 +673,7 @@ pub async fn reconcile_calendar(
     }
     if let Err(warning) = crate::service::agenda::sync(&app, state).await {
         for result in &mut results {
-            result.maintenance_warnings.push(warning.clone());
+            result.maintenance_warnings.push(warning.to_string());
         }
     }
     Ok(results)

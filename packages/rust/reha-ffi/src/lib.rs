@@ -40,4 +40,6 @@ pub enum AppError {
     Busy,
     #[error("Abgebrochen; vorhandener Entwurf bleibt erhalten.")]
     Cancelled,
+    #[error("Zeitbudget der Aktion {operation} erschöpft.")]
+    Timeout { operation: String },
 }

@@ -20,7 +20,9 @@ final class ServiceRequest: Sendable {
     self.completion = OSAllocatedUnfairLock(initialState: completion)
   }
   func parseArgs<T: Decodable>(_ type: T.Type) throws -> T {
-    try JSONDecoder().decode(type, from: arguments)
+    do { return try JSONDecoder().decode(type, from: arguments) } catch {
+      throw NativeServiceError.invalidInput("Auftrag unvollständig oder ungültig.")
+    }
   }
   private func finish(_ result: Result<Data, Error>) {
     let callback = completion.withLock { value in
@@ -37,4 +39,5 @@ final class ServiceRequest: Sendable {
     }
   }
   func reject(_ message: String) { finish(.failure(AgendaError.message(message))) }
+  func reject(_ error: Error) { finish(.failure(error)) }
 }

@@ -55,7 +55,7 @@ fn revision_check_is_atomic_and_stale_approval_cannot_return() {
         None,
         Some(revision),
     );
-    assert_eq!(stale.unwrap_err(), "stale_revision");
+    assert_eq!(stale.unwrap_err(), "stale_revision".into());
     let saved = app
         .store
         .lock()

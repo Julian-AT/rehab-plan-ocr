@@ -262,7 +262,7 @@ pub(super) async fn approve_locked(
         .remove(&proposal.token);
     if let Err(warning) = super::agenda::sync(&app, state).await {
         for result in &mut results {
-            result.maintenance_warnings.push(warning.clone());
+            result.maintenance_warnings.push(warning.to_string());
         }
     }
     Ok(results)

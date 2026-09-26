@@ -6,9 +6,11 @@ use std::{
     sync::{atomic::AtomicBool, Arc, Mutex},
 };
 
-pub type Response<T> = std::result::Result<T, String>;
-pub fn failure(e: impl std::fmt::Display) -> String {
-    e.to_string()
+mod error;
+pub use error::ServiceError;
+pub type Response<T> = std::result::Result<T, ServiceError>;
+pub fn failure(e: impl std::fmt::Display) -> ServiceError {
+    ServiceError::Legacy(e.to_string())
 }
 pub struct Application {
     pub store: Mutex<Store>,

@@ -82,7 +82,7 @@ public final class NativeServices: @unchecked Sendable {
       case "agendaPresentation":
         calendarQueue.async {
           do { request.resolve(try self.agendaService.presentation()) } catch {
-            request.reject(error.localizedDescription)
+            request.reject(error)
           }
         }
       case "enableReminders": try enableReminders(request)
@@ -94,23 +94,23 @@ public final class NativeServices: @unchecked Sendable {
       case "photos": DispatchQueue.main.async { NativePresentation.shared.photos(request) }
       case "decodePhoto":
         DispatchQueue.global(qos: .userInitiated).async {
-          do { try self.decodePhoto(request) } catch { request.reject(error.localizedDescription) }
+          do { try self.decodePhoto(request) } catch { request.reject(error) }
         }
       case "recognize":
         DispatchQueue.global(qos: .userInitiated).async {
-          do { try self.recognize(request) } catch { request.reject(error.localizedDescription) }
+          do { try self.recognize(request) } catch { request.reject(error) }
         }
       case "protectStorage": try protectStorage(request)
       case "share":
         DispatchQueue.main.async {
           do { try NativePresentation.shared.share(request) } catch {
-            request.reject(error.localizedDescription)
+            request.reject(error)
           }
         }
       case "deviceInfo": DispatchQueue.main.async { NativePresentation.shared.deviceInfo(request) }
       default: request.reject("Unbekannte native Aktion.")
       }
-    } catch { request.reject(error.localizedDescription) }
+    } catch { request.reject(error) }
   }
   private let agendaService: AgendaService
   private var store: EKEventStore { agendaService.store }
@@ -140,7 +140,7 @@ public final class NativeServices: @unchecked Sendable {
   }
   private func checkAccess(_ invoke: ServiceRequest) -> Bool {
     guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-      invoke.reject("Kalenderzugriff fehlt. Vollzugriff erlauben oder ICS exportieren.")
+      invoke.reject(NativeServiceError.permissionDenied)
       return false
     }
     return true
@@ -149,8 +149,7 @@ public final class NativeServices: @unchecked Sendable {
     let args = try invoke.parseArgs(CalendarArgs.self)
     store.requestFullAccessToEvents { granted, error in
       guard granted else {
-        invoke.reject(
-          error?.localizedDescription ?? "Kalenderzugriff abgelehnt. ICS-Export bleibt verfügbar.")
+        invoke.reject(NativeServiceError.permissionDenied)
         return
       }
       self.calendarQueue.async {
@@ -243,7 +242,7 @@ public final class NativeServices: @unchecked Sendable {
         try EventEditingService.shared.forget()
         self.dedicatedCalendar.forget()
         invoke.resolve()
-      } catch { invoke.reject(error.localizedDescription) }
+      } catch { invoke.reject(error) }
     }
   }
   func apply(_ invoke: ServiceRequest) throws {
@@ -389,10 +388,10 @@ public final class NativeServices: @unchecked Sendable {
         try self.agendaService.sync(args) { result in
           switch result {
           case .success(let value): invoke.resolve(value)
-          case .failure(let error): invoke.reject(error.localizedDescription)
+          case .failure(let error): invoke.reject(error)
           }
         }
-      } catch { invoke.reject(error.localizedDescription) }
+      } catch { invoke.reject(error) }
     }
   }
   func enableReminders(_ invoke: ServiceRequest) throws {
@@ -400,7 +399,7 @@ public final class NativeServices: @unchecked Sendable {
     self.agendaService.activate(args) { result in
       switch result {
       case .success(let value): invoke.resolve(value)
-      case .failure(let error): invoke.reject(error.localizedDescription)
+      case .failure(let error): invoke.reject(error)
       }
     }
   }
@@ -415,10 +414,10 @@ public final class NativeServices: @unchecked Sendable {
           self.agendaService.readStatus { result in
             switch result {
             case .success(let value): invoke.resolve(value)
-            case .failure(let error): invoke.reject(error.localizedDescription)
+            case .failure(let error): invoke.reject(error)
             }
           }
-        } catch { invoke.reject(error.localizedDescription) }
+        } catch { invoke.reject(error) }
       }
     }
   }
@@ -427,7 +426,7 @@ public final class NativeServices: @unchecked Sendable {
       self.agendaService.readStatus { result in
         switch result {
         case .success(let value): invoke.resolve(value)
-        case .failure(let error): invoke.reject(error.localizedDescription)
+        case .failure(let error): invoke.reject(error)
         }
       }
     }
@@ -438,7 +437,7 @@ public final class NativeServices: @unchecked Sendable {
     calendarQueue.async {
       do {
         invoke.resolve(try self.agendaService.pendingOpen(acknowledge: args.acknowledge))
-      } catch { invoke.reject(error.localizedDescription) }
+      } catch { invoke.reject(error) }
     }
   }
   func testReminder(_ invoke: ServiceRequest) {
@@ -446,7 +445,7 @@ public final class NativeServices: @unchecked Sendable {
       self.agendaService.testNotification { result in
         switch result {
         case .success(let value): invoke.resolve(value)
-        case .failure(let error): invoke.reject(error.localizedDescription)
+        case .failure(let error): invoke.reject(error)
         }
       }
     }

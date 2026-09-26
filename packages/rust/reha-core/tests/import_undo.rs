@@ -324,7 +324,7 @@ async fn overlap_added_after_preview_blocks_import_without_recording_intent() {
     }]);
     let result =
         service::calendar::approve_calendar(calendar.clone(), &app, preview.token, false).await;
-    assert!(result.unwrap_err().contains("überschneidungen"));
+    assert!(result.unwrap_err().to_string().contains("überschneidungen"));
     assert_eq!(*calendar.writes.lock().unwrap(), 0);
     assert_eq!(app.store.lock().unwrap().batches().unwrap().len(), 1);
     assert!(app.store.lock().unwrap().pending().unwrap().is_empty());

@@ -4887,6 +4887,8 @@ enum AppError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case UncertainWrite
     case Busy
     case Cancelled
+    case Timeout(operation: String
+    )
 
     
 
@@ -4929,6 +4931,9 @@ public struct FfiConverterTypeAppError: FfiConverterRustBuffer {
         case 7: return .UncertainWrite
         case 8: return .Busy
         case 9: return .Cancelled
+        case 10: return .Timeout(
+            operation: try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -4978,6 +4983,11 @@ public struct FfiConverterTypeAppError: FfiConverterRustBuffer {
         case .Cancelled:
             writeInt(&buf, Int32(9))
         
+        
+        case let .Timeout(operation):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(operation, into: &buf)
+            
         }
     }
 }

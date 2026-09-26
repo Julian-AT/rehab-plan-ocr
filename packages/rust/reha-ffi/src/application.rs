@@ -22,7 +22,21 @@ fn storage(e: impl std::fmt::Display) -> AppError {
         message: e.to_string(),
     }
 }
-fn failure(message: String) -> AppError {
+fn failure(error: service::ServiceError) -> AppError {
+    use service::ServiceError as E;
+    let message = match error {
+        E::Validation(message) => return AppError::Validation { message },
+        E::Storage(message) => return AppError::Storage { message },
+        E::PermissionDenied => return AppError::PermissionDenied,
+        E::Timeout(operation) => return AppError::Timeout { operation },
+        E::UncertainWrite => return AppError::UncertainWrite,
+        E::ExpiredScan => return AppError::ExpiredScan,
+        E::StaleRevision => return AppError::StaleRevision,
+        E::StaleProposal => return AppError::StaleProposal,
+        E::Busy => return AppError::Busy,
+        E::Cancelled => return AppError::Cancelled,
+        E::Legacy(message) => message,
+    };
     if message == "Kalenderzugriff fehlt." {
         AppError::PermissionDenied
     } else if message == "stale_revision" {
@@ -39,6 +53,21 @@ fn failure(message: String) -> AppError {
         AppError::UncertainWrite
     } else {
         AppError::Validation { message }
+    }
+}
+fn platform_failure(error: AppError) -> service::ServiceError {
+    use service::ServiceError as E;
+    match error {
+        AppError::Validation { message } => E::Validation(message),
+        AppError::Storage { message } => E::Storage(message),
+        AppError::PermissionDenied => E::PermissionDenied,
+        AppError::Timeout { operation } => E::Timeout(operation),
+        AppError::UncertainWrite => E::UncertainWrite,
+        AppError::ExpiredScan => E::ExpiredScan,
+        AppError::StaleRevision => E::StaleRevision,
+        AppError::StaleProposal => E::StaleProposal,
+        AppError::Busy => E::Busy,
+        AppError::Cancelled => E::Cancelled,
     }
 }
 #[derive(Clone, uniffi::Record)]
@@ -283,7 +312,7 @@ impl Platform for HostBridge {
     ) -> service::Response<Option<Vec<domain::CalendarOverlap>>> {
         let result =
             (|| -> Result<_> { convert(self.host.overlaps(convert(events)?, exclude)?) })();
-        result.map(Some).map_err(|e| e.to_string())
+        result.map(Some).map_err(platform_failure)
     }
     fn cancelled(&self, id: &str) -> bool {
         self.cancelled
@@ -338,7 +367,7 @@ impl Platform for HostBridge {
                 }),
             }
         };
-        run().map_err(|e| e.to_string())
+        run().map_err(platform_failure)
     }
     fn progress(&self, value: Value) {
         if let Some(id) = value["id"].as_str() {
@@ -1215,7 +1244,8 @@ pub fn accept_suggestion(
     suggestion.status = if accept { "accepted" } else { "rejected" }.into();
     let (field, value) = (suggestion.field.clone(), suggestion.value.clone());
     if accept {
-        reha_core::review::set_value(&mut a, &field, value).map_err(|e| failure(e.to_string()))?;
+        reha_core::review::set_value(&mut a, &field, value)
+            .map_err(|e| failure(e.to_string().into()))?;
     }
     convert(a)
 }
@@ -1235,9 +1265,14 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
 #[cfg(test)]
 mod host_routing_tests {
     use super::*;
-    struct Host;
+    struct Host {
+        failure: Option<service::ServiceError>,
+    }
     impl AppleHost for Host {
         fn calendar_event_call(&self, command: String, arguments: String) -> Result<String> {
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
             Ok(json!({"received_command": command, "arguments": serde_json::from_str::<Value>(&arguments).unwrap()}).to_string())
         }
         fn snapshot(&self, _: Vec<ImportRecord>) -> Result<LiveCalendar> {
@@ -1266,7 +1301,7 @@ mod host_routing_tests {
     #[test]
     fn vision_and_current_event_effects_reach_the_native_callback() {
         let bridge = HostBridge {
-            host: Box::new(Host),
+            host: Box::new(Host { failure: None }),
             progress: Mutex::new(HashMap::new()),
             cancelled: Mutex::new(HashSet::new()),
         };
@@ -1277,6 +1312,38 @@ mod host_routing_tests {
             assert_eq!(result["arguments"], args);
         }
         assert!(bridge.call("unregistered-effect", json!({})).is_err());
+    }
+    #[test]
+    fn every_native_failure_preserves_identity_through_service_dispatch() {
+        use service::ServiceError as E;
+        for expected in [
+            E::Validation("Kalenderzugriff fehlt.".into()),
+            E::Storage("Vorschau abgelaufen; läuft bereits".into()),
+            E::PermissionDenied,
+            E::Timeout("queryEvents".into()),
+            E::UncertainWrite,
+            E::ExpiredScan,
+            E::StaleRevision,
+            E::StaleProposal,
+            E::Busy,
+            E::Cancelled,
+        ] {
+            let bridge = HostBridge {
+                host: Box::new(Host {
+                    failure: Some(expected.clone()),
+                }),
+                progress: Mutex::new(HashMap::new()),
+                cancelled: Mutex::new(HashSet::new()),
+            };
+            let actual = bridge.call("queryEvents", json!({})).unwrap_err();
+            assert_eq!(actual, expected);
+            assert_eq!(platform_failure(failure(actual.clone())), expected);
+            // Journal/maintenance projections keep their original string schema.
+            assert_eq!(
+                serde_json::to_value(actual).unwrap(),
+                json!(expected.to_string())
+            );
+        }
     }
 }
 

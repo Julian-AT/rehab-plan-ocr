@@ -44,7 +44,7 @@ final class EventEditingService: @unchecked Sendable {
           return
         }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-          throw self.fail("Kalenderzugriff fehlt.")
+          throw NativeServiceError.permissionDenied
         }
         let args =
           try JSONSerialization.jsonObject(with: request.argumentsData) as? [String: Any] ?? [:]
@@ -69,7 +69,7 @@ final class EventEditingService: @unchecked Sendable {
           DispatchQueue.main.async { SystemEventEditor.shared.open(reference, request: request) }
         default: throw self.fail("Unbekannte Kalenderfunktion.")
         }
-      } catch { request.reject(error.localizedDescription) }
+      } catch { request.reject(error) }
     }
   }
   func forget() throws {
@@ -127,7 +127,7 @@ final class EventEditingService: @unchecked Sendable {
       }
     }
     guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-      throw fail("Kalenderzugriff fehlt. Bitte erneut prüfen.")
+      throw NativeServiceError.permissionDenied
     }
     return ["access": "fullAccess", "calendars": calendars(), "results": results]
   }

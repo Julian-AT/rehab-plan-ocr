@@ -42,6 +42,65 @@ import os
     } catch { invalid.reject(error.localizedDescription) }
     invalid.resolve()
     precondition(invalidResults.withLock { $0 } == 1)
+
+    let failures: [NativeServiceError] = [
+      .permissionDenied, .invalidInput("Ungültig"), .storage("Speicherfehler"),
+      .timeout("snapshot"), .uncertainWrite, .cancelled,
+    ]
+    for expected in failures {
+      let observed = OSAllocatedUnfairLock<NativeServiceError?>(initialState: nil)
+      let request = ServiceRequest(arguments: Data()) { result in
+        if case .failure(let error) = result {
+          observed.withLock { $0 = error as? NativeServiceError }
+        }
+      }
+      request.reject(expected)
+      precondition(observed.withLock { $0 } == expected, "Typed request failure was lost")
+    }
+
+    let finished = DispatchSemaphore(value: 0)
+    DispatchQueue.global().async {
+      defer { finished.signal() }
+      for operation in [
+        NativeOperation.snapshot, .queryEvents, .getEvent, .decodePhoto, .recognize,
+      ] {
+        do {
+          _ = try NativeServiceCall.wait(for: operation, timeout: 0.001) { _ in }
+          preconditionFailure("Missing completion must expire")
+        } catch {
+          precondition(error as? NativeServiceError == .timeout(operation.rawValue))
+        }
+      }
+      for operation in [NativeOperation.apply, .mutateEvent, .agenda] {
+        do {
+          _ = try NativeServiceCall.wait(for: operation, timeout: 0.001) { _ in }
+          preconditionFailure("Missing write completion must remain uncertain")
+        } catch { precondition(error as? NativeServiceError == .uncertainWrite) }
+      }
+      for expected in failures {
+        do {
+          _ = try NativeServiceCall.wait(for: .snapshot) { $0(.failure(expected)) }
+          preconditionFailure("Failure must propagate")
+        } catch { precondition(error as? NativeServiceError == expected) }
+      }
+      let late = OSAllocatedUnfairLock<NativeServiceCall.Completion?>(initialState: nil)
+      do {
+        _ = try NativeServiceCall.wait(for: .snapshot, timeout: 0.001) { callback in
+          late.withLock { $0 = callback }
+        }
+        preconditionFailure("Late callback must expire")
+      } catch { precondition(error as? NativeServiceError == .timeout("snapshot")) }
+      late.withLock { $0 }?(.success(Data("late".utf8)))
+      late.withLock { $0 }?(.failure(NativeServiceError.uncertainWrite))
+      do {
+        let next = try NativeServiceCall.wait(for: .snapshot) { callback in
+          callback(.success(Data("current".utf8)))
+          callback(.failure(NativeServiceError.cancelled))
+        }
+        precondition(next == Data("current".utf8), "Late or duplicate result changed another call")
+      } catch { preconditionFailure("Successful completion failed: \(error)") }
+    }
+    precondition(finished.wait(timeout: .now() + 5) == .success, "Bridge tests stalled")
     print("Native request: concurrent completion, re-entry and invalid-input checks passed")
   }
 }

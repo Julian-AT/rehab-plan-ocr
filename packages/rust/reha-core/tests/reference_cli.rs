@@ -83,7 +83,7 @@ fn command(root: &std::path::Path, action: &str, arguments: &[&str]) -> Result<V
         .chain(arguments.iter().copied())
         .map(str::to_string)
         .collect();
-    lab::command(&args)
+    lab::command(&args).map_err(|error| error.to_string())
 }
 fn dataset() -> (tempfile::TempDir, Vec<String>) {
     let dir = tempfile::tempdir().unwrap();

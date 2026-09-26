@@ -1,7 +1,12 @@
 import Foundation
+import os
 
-final class TestHost: AppleHost, @unchecked Sendable {
-  func calendarEventCall(command: String, arguments: String) throws -> String { "{}" }
+final class TestHost: AppleHost, Sendable {
+  let failure = OSAllocatedUnfairLock<AppError?>(initialState: nil)
+  func calendarEventCall(command: String, arguments: String) throws -> String {
+    if let error = failure.withLock({ $0 }) { throw error }
+    return "{}"
+  }
   func overlaps(events: [String: EventValues], exclude: [String]) throws -> [CalendarOverlap] { [] }
   func snapshot(records: [ImportRecord]) throws -> LiveCalendar {
     precondition(!Thread.isMainThread)
@@ -30,6 +35,22 @@ final class TestHost: AppleHost, @unchecked Sendable {
     try FileManager.default.copyItem(atPath: root, toPath: draftRoot)
     let host = TestHost()
     let core = try await openApplication(root: root, models: "/unavailable-test-model", host: host)
+    let nativeFailures: [AppError] = [
+      .Validation(message: "Kalenderzugriff fehlt."),
+      .Storage(message: "Vorschau abgelaufen; läuft bereits"),
+      .PermissionDenied, .Timeout(operation: "queryEvents"), .UncertainWrite,
+      .ExpiredScan, .StaleRevision, .StaleProposal, .Busy, .Cancelled,
+    ]
+    for expected in nativeFailures {
+      host.failure.withLock { $0 = expected }
+      do {
+        _ = try await core.calendarRequest(command: "calendarStatus", arguments: "{}")
+        preconditionFailure("Native failure disappeared")
+      } catch {
+        precondition(error as? AppError == expected, "Native failure identity changed: \(error)")
+      }
+    }
+    host.failure.withLock { $0 = nil }
     var preferences = try await core.preferences()
     preferences.appearance = "dark"
     preferences.reminderSound = false
