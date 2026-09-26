@@ -102,8 +102,14 @@ beobachtet, mit zwei Sekunden äußerem Testbudget. Auch die vorhandenen Fälle 
 Bereinigung und erneute Zulassung bestehen. Belege liegen unter
 `.local/runs/notification-owner-lifetime-20260926-s19-001`. Dies belegt die konkrete
 Besitzbindung, noch nicht die Ursache sämtlicher EventKit-Meldungen oder eine
-gemessene Verbesserung des Gerätespeichers. Die gemeinsame EventKit-Abnahme auf
-diesem geänderten Stand folgt separat.
+gemessene Verbesserung des Gerätespeichers.
+
+Der anschließende saubere EventKit-Lauf an `ebdf4b8` besteht 20 Fälle einschließlich
+aller sechs Mitteilungs-Rennbedingungen; ein erwarteter Simulator-Dateischutz-Skip,
+null Fehler. Das unveränderte Ergebnisbundle, die tatsächlichen Testprodukte und
+Quellen liegen unter `.local/runs/notification-owner-eventkit-20260926-s19-001`.
+Die Meldung über zu viele EventKit-Stores trat in diesem Lauf nicht auf; daraus
+wird keine vollständige Ursachen- oder Gerätespeicherabnahme abgeleitet.
 
 - **Gespräch:** `VoiceModel` besitzt Turn- und Antworttask; Gesprächs-, Anfrage-
   und EventSession-Generationen verwerfen verspätete Antworten. Stop/Interrupt
