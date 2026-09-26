@@ -48,3 +48,23 @@ und Diagnoseproben erfolgreich. Simulator-App kompiliert. Drei native Integratio
 für EventKit, Kalenderalarme, Fremdtermine, Widgets und Mitteilungsansichten bestanden.
 Die abschließende App-Laufzeitprüfung benötigt noch das neu gebaute Rust-XCFramework.
 Neue Gestenaufnahmen, umfassende Ausfallprüfungen und Geräteabnahme stehen aus.
+
+## Zweiter Umsetzungsschritt
+
+- Kalenderinitialisierung wartet auf geladene Daten; explizite Navigation hat Vorrang
+  vor einem noch auslaufenden Wischen. Leerseiten sind oben im gemeinsamen Layout verankert.
+- Mitteilungsaufrufe haben ein Zeitlimit. Reservierungen bleiben getrennt von Systemabfragen;
+  verspätete Aufträge nach einer Einstellungsänderung werden verworfen.
+- Rücknahme vergleicht bei nachweislich appverwalteten Erinnerungen deren logischen Zustand.
+  Fremde oder nachträglich geänderte Alarme behalten ihren vollständigen Vergleichsschutz.
+- Gelöschte Terminzuordnungen behalten ihre Herkunft für die Rücknahme.
+- Bestätigte Erkennungsfelder bleiben geschützt; Herkunftsverweise folgen erhaltenen IDs.
+  Unsichere Ausschnitte können zusätzlich lokal mit Apple Vision geprüft werden.
+- Referenzbewertung zählt Dauer und Enddatum; eingefrorene Messläufe verwenden und prüfen
+  das eingefrorene Programm. Eine Genauigkeitszusage wird daraus nicht abgeleitet.
+- Fehlerpfad beim Anlegen des Audio-Konverters gibt den VAD frei; Konverterzustand ist gekapselt.
+
+Prüfung: 128 Rust-Tests erfolgreich. Fünf weitere native Tests für Rücknahme,
+Fremdmetadaten, Fünf-Sekunden-Test, verzögerte/fehlerhafte Mitteilungsantworten,
+Schlummerkapazität und Ausschalten während der Planung bestanden. App-Build erfolgreich.
+Die neue iOS-Rust-Nachprüfung ist noch nicht im XCFramework gebaut oder zur Laufzeit geprüft.

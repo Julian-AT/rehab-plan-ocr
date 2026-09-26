@@ -9,8 +9,12 @@ final class VoiceActivityDetector: @unchecked Sendable {
     private let format = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: false)!
     private var samples: [Int16] = []
     init(input: AVAudioFormat) throws {
-        guard let detector = fvad_new(), let converter = AVAudioConverter(from: input, to: format) else {
+        guard let detector = fvad_new() else {
             throw LocalSpeechError.message("Die Spracherkennung konnte nicht vorbereitet werden.")
+        }
+        guard let converter = AVAudioConverter(from: input, to: format) else {
+            fvad_free(detector)
+            throw LocalSpeechError.message("Das Mikrofonformat kann nicht verarbeitet werden.")
         }
         self.detector = detector; self.converter = converter
         fvad_set_sample_rate(detector, 16_000); fvad_set_mode(detector, 2)
@@ -19,12 +23,9 @@ final class VoiceActivityDetector: @unchecked Sendable {
     func append(_ buffer: AVAudioPCMBuffer, frame: (Bool, Double) -> Void) {
         let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 320)
         guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return }
-        var supplied = false
+        let input = ConverterInput(buffer)
         var error: NSError?
-        converter.convert(to: output, error: &error) { _, status in
-            if supplied { status.pointee = .noDataNow; return nil }
-            supplied = true; status.pointee = .haveData; return buffer
-        }
+        converter.convert(to: output, error: &error) { _, status in input.take(status) }
         guard error == nil, let channel = output.int16ChannelData?[0] else { return }
         samples.append(contentsOf: UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
         var offset = 0
@@ -36,6 +37,19 @@ final class VoiceActivityDetector: @unchecked Sendable {
             offset += 320
         }
         samples.removeFirst(offset)
+    }
+}
+
+/// The converter receives the tap buffer once; access to consumption state is locked.
+private final class ConverterInput: @unchecked Sendable {
+    private let lock = NSLock()
+    private var buffer: AVAudioPCMBuffer?
+    init(_ buffer: AVAudioPCMBuffer) { self.buffer = buffer }
+    func take(_ status: UnsafeMutablePointer<AVAudioConverterInputStatus>) -> AVAudioBuffer? {
+        lock.lock(); defer { lock.unlock() }
+        guard let buffer else { status.pointee = .noDataNow; return nil }
+        self.buffer = nil; status.pointee = .haveData
+        return buffer
     }
 }
 

@@ -16,7 +16,7 @@ enum EventCategory: String, CaseIterable {
         let rules: [(Self, String)] = [
             (.medical, #"\b(visite|arztgesprach|arzttermin|arztliche\s+untersuchung|arztliches\s+gesprach|blutabnahme|ekg|laboruntersuchung)\b"#),
             (.meal, #"\b(fruhstuck|mittagessen|abendessen|jause)\b"#),
-            (.therapy, #"\b(physiotherapie|ergotherapie|logopadie|psychotherapie|therapie|einzeltherapie|gruppentherapie|ruckengymnastik|fruhgymnastik|heilgymnastik|gangschule|massage|lymphdrainage|bewegungstherapie|wassertherapie|behandlung)\b"#),
+            (.therapy, #"\b(physiotherapie|ergotherapie|logopadie|psychotherapie|therapie|einzeltherapie|gruppentherapie|ruckengymnastik|fruhgymnastik|heilgymnastik|atemgymnastik|funktionstraining|heilmassage|fussreflexzonenmassage|ergo\s+kreativgruppe|gangschule|massage|lymphdrainage|bewegungstherapie|wassertherapie|behandlung)\b"#),
             (.organization, #"\b(aufnahme|anmeldung|entlassung|planung|organisatorisches|information|einfuhrung)\b"#)
         ]
         let matches = rules.filter { text.range(of: $0.1, options: .regularExpression) != nil }

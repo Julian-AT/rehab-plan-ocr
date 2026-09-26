@@ -44,7 +44,11 @@ impl Store {
             .connection
             .prepare("SELECT record FROM owned_events ORDER BY id")?;
         let rows = query.query_map([], |row| row.get::<_, String>(0))?;
-        rows.map(|row| Ok(serde_json::from_str(&row?)?)).collect()
+        rows.map(|row| Ok(serde_json::from_str::<OwnedEventRecord>(&row?)?))
+            .filter(|row: &Result<OwnedEventRecord>| {
+                row.as_ref().map_or(true, |r| r.status == "saved")
+            })
+            .collect()
     }
     pub fn owned_record(&self, id: &str) -> Result<Option<OwnedEventRecord>> {
         let raw: Option<String> = self
@@ -84,7 +88,17 @@ pub(super) fn finish_owned_mutation(
         return Ok(());
     };
     if proposal.kind == "remove" {
-        connection.execute("DELETE FROM owned_events WHERE id=?1", [id])?;
+        if let Some(raw) = connection
+            .query_row("SELECT record FROM owned_events WHERE id=?1", [id], |r| {
+                r.get::<_, String>(0)
+            })
+            .optional()?
+        {
+            let mut record: OwnedEventRecord = serde_json::from_str(&raw)?;
+            record.status = "removed".into();
+            record.operation_id = proposal.token.clone();
+            upsert(connection, &record)?;
+        }
         return Ok(());
     }
     let event = &result["event"];

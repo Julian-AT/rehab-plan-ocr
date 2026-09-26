@@ -381,7 +381,12 @@ pub fn compare(
                     matches!(s.state, PrintedState::Legible | PrintedState::NotPrinted)
                 })
             });
-        for field in fields {
+        // Older approved schema-2 references may omit assessments for these
+        // auxiliary fields. Nonempty values still participate in exactness.
+        if let Some(p) = matched {
+            full &= truth.end_date == p.end_date && truth.duration_minutes == p.duration_minutes;
+        }
+        for field in fields.into_iter().chain(["end_date", "duration_minutes"]) {
             let state = truth.fields.get(field).map(|f| &f.state);
             if !matches!(
                 state,
@@ -445,10 +450,12 @@ pub fn compare(
                 usize::from(legible("date") && truth.date == p.date && truth.date.is_some());
             m.start_correct +=
                 usize::from(legible("start") && truth.start == p.start && truth.start.is_some());
+            // One ending obligation is used in both numerator and denominator.
             m.end_or_duration_correct += usize::from(
                 legible("end")
                     && (truth.end.is_some() && truth.end == p.end && truth.end_date == p.end_date)
                     || (truth.end.is_none()
+                        && legible("duration_minutes")
                         && truth.duration_minutes.is_some()
                         && truth.duration_minutes == p.duration_minutes),
             );
@@ -491,9 +498,24 @@ pub fn compare(
         (m.predicted_count > 0).then(|| m.matched_count as f64 / m.predicted_count as f64);
     m.appointment_recall =
         (m.reference_count > 0).then(|| m.matched_count as f64 / m.reference_count as f64);
-    let critical_total: usize = ["date", "start", "end"]
+    let critical_total: usize = reference
+        .appointments
         .iter()
-        .map(|f| m.printed_fields.get(*f).copied().unwrap_or(0))
+        .map(|a| {
+            let printed = |field: &str| {
+                a.fields
+                    .get(field)
+                    .is_some_and(|f| f.state == PrintedState::Legible)
+            };
+            usize::from(printed("date"))
+                + usize::from(printed("start"))
+                + usize::from(
+                    printed("end")
+                        || (a.end.is_none()
+                            && a.duration_minutes.is_some()
+                            && printed("duration_minutes")),
+                )
+        })
         .sum();
     m.critical_field_accuracy = (critical_total > 0).then(|| {
         (m.date_correct + m.start_correct + m.end_or_duration_correct) as f64
@@ -703,6 +725,49 @@ mod tests {
         }
         r.approval_hash = Some(reference_hash(&r));
         r
+    }
+    #[test]
+    fn duration_only_reference_has_bounded_accuracy_and_catches_auxiliary_errors() {
+        let mut r = approved_fixture();
+        for a in &mut r.appointments {
+            a.end = None;
+            a.duration_minutes = Some(30);
+            let end = a.fields.get_mut("end").unwrap();
+            end.state = PrintedState::NotPrinted;
+            end.confirmed_value = Some(serde_json::Value::Null);
+            a.fields.insert(
+                "duration_minutes".into(),
+                crate::contracts::FieldAssessment {
+                    state: PrintedState::Legible,
+                    frame: "original".into(),
+                    polygon: a.row_polygon.clone(),
+                    confirmed_value: Some(serde_json::json!(30)),
+                    confirmed_at: Some(100),
+                    ..Default::default()
+                },
+            );
+            r.lines.push(ReferenceLine {
+                id: format!("{}-duration", a.id),
+                source_hash: r.document_hashes[0].clone(),
+                appointment_id: a.id.clone(),
+                field: "duration_minutes".into(),
+                text: "30".into(),
+                polygon: a.row_polygon.clone(),
+                state: PrintedState::Legible,
+                error_causes: vec![],
+            });
+        }
+        r.lines.retain(|line| line.field != "end");
+        r.approval_hash = Some(reference_hash(&r));
+        let metrics = compare(&r, &r.appointments, false).unwrap();
+        assert_eq!(metrics.critical_field_accuracy, Some(1.));
+        assert!(metrics.schedule_without_correction);
+        let mut predicted = r.appointments.clone();
+        predicted[0].duration_minutes = Some(45);
+        predicted[1].end_date = Some("2026-09-11".into());
+        let metrics = compare(&r, &predicted, false).unwrap();
+        assert_eq!(metrics.fully_correct_count, 0);
+        assert!(!metrics.schedule_without_correction);
     }
     #[test]
     fn geometry_matching_exposes_swapped_rooms_with_identical_times() {

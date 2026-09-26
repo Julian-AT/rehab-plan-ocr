@@ -47,24 +47,28 @@ pub fn process(
             .and_then(|id| store.load_run(&id).ok())
     };
     let last_notification = std::sync::Mutex::new(None::<std::time::Instant>);
+    let draft_saved = AtomicBool::new(false);
     let progress = |stage: &str, run: Option<&PipelineRun>| {
         if let Some(run) = run.filter(|_| !cancel.load(std::sync::atomic::Ordering::Relaxed)) {
             let mut draft = run.clone();
             draft.document.source_hash = source_hash.clone();
-            if let Some(old) = &previous {
-                let _ = reha_core::refinement::preserve_review(old, &mut draft);
-            }
+            let preserved = previous
+                .as_ref()
+                .map(|old| reha_core::refinement::preserve_review(old, &mut draft))
+                .transpose()
+                .is_ok();
             if let Ok(store) = state.store.lock() {
                 // Check under the same lock as the deadline's retained-draft save.
-                if !cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                if preserved && !cancel.load(std::sync::atomic::Ordering::Relaxed) {
                     // The shared decoder retains original source bytes, including macOS HEIC.
                     // Native conversions must restore the actual input photo.
-                    if !directly_decodable {
-                        if let Ok(dir) = store.scan_dir(&request.id) {
-                            let _ = std::fs::write(dir.join("source.bin"), &bytes);
-                        }
+                    let source_retained = directly_decodable
+                        || store.scan_dir(&request.id).ok().is_some_and(|dir| {
+                            std::fs::write(dir.join("source.bin"), &bytes).is_ok()
+                        });
+                    if source_retained && store.save_run(&draft).is_ok() {
+                        draft_saved.store(true, std::sync::atomic::Ordering::Relaxed);
                     }
-                    let _ = store.save_run(&draft);
                 }
             }
         }
@@ -73,7 +77,7 @@ pub fn process(
             return;
         }
         *last = Some(std::time::Instant::now());
-        app.progress( json!({"id": request.id, "stage": stage, "elapsed_ms": started.elapsed().as_millis() as u64, "budget_ms": 60000, "draft_available": run.is_some()}));
+        app.progress( json!({"id": request.id, "stage": stage, "elapsed_ms": started.elapsed().as_millis() as u64, "budget_ms": 60000, "draft_available": draft_saved.load(std::sync::atomic::Ordering::Relaxed)}));
     };
     progress("Foto laden", None);
 
@@ -188,6 +192,53 @@ pub fn process(
             )
             .map_err(failure)?
         };
+        // Retain a useful first draft before the second independent local reader.
+        progress("Ersten Entwurf sichern", Some(&run));
+        #[cfg(target_os = "ios")]
+        if !cancel.load(std::sync::atomic::Ordering::Relaxed) && started.elapsed().as_secs() < 55 {
+            let refinement = reha_core::refinement::refine_with_reader(
+                &mut run,
+                &directory,
+                &cancel,
+                started + std::time::Duration::from_secs(55),
+                None,
+                &mut |crop, _, flag, _, _| {
+                    if flag.load(std::sync::atomic::Ordering::Relaxed) {
+                        return Err(reha_core::Error::Invalid("Nachprüfung abgebrochen.".into()));
+                    }
+                    let mut png = std::io::Cursor::new(Vec::new());
+                    image::DynamicImage::ImageRgb8(crop.clone())
+                        .write_to(&mut png, image::ImageFormat::Png)?;
+                    let response = app
+                        .call(
+                            "recognize",
+                            json!({"base64":STANDARD.encode(png.into_inner())}),
+                        )
+                        .map_err(reha_core::Error::Invalid)?;
+                    Ok((
+                        serde_json::from_value(response["regions"].clone())?,
+                        serde_json::from_value(response["observations"].clone())?,
+                        vec![Stage {
+                            name: "vision_crop".into(),
+                            status: "complete".into(),
+                            duration_ms: response["duration_ms"].as_u64().unwrap_or(0),
+                            detail: "Gezielte lokale Apple-Vision-Nachprüfung".into(),
+                            artifacts: vec![],
+                        }],
+                    ))
+                },
+            );
+            if refinement.is_err() {
+                run.stages.push(Stage {
+                    name: "vision_refinement".into(),
+                    status: "failed".into(),
+                    duration_ms: 0,
+                    detail: "Nachprüfung nicht abgeschlossen. Der erste Entwurf bleibt erhalten."
+                        .into(),
+                    artifacts: vec![],
+                });
+            }
+        }
         if cancel.load(std::sync::atomic::Ordering::Relaxed) {
             let saved = state
                 .store

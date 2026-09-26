@@ -1,7 +1,6 @@
 //! Bounded, source-linked local rereading. Conflicts never compete on confidence score.
 use crate::geometry;
 use crate::{contracts::*, review, Result};
-#[cfg(feature = "onnx")]
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
@@ -82,9 +81,10 @@ pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
 pub fn apply_readings(run: &mut PipelineRun, readings: &[Reading]) -> Result<()> {
     for a in &mut run.appointments {
         for field in review::FIELDS {
-            if a.origins
-                .get(*field)
-                .is_some_and(|o| ["manual", "suggested"].contains(&o.kind.as_str()))
+            if review::field_confirmed(a, field)
+                || a.origins
+                    .get(*field)
+                    .is_some_and(|o| ["manual", "suggested"].contains(&o.kind.as_str()))
             {
                 continue;
             }
@@ -215,6 +215,37 @@ pub(crate) fn refine_with_original(
     deadline: std::time::Instant,
     original: Option<&image::RgbImage>,
 ) -> Result<()> {
+    refine_with_reader(
+        run,
+        dir,
+        cancel,
+        deadline,
+        original,
+        &mut |crop, config, cancel, dir, deadline| {
+            engine.recognize_until(crop, config, cancel, dir, deadline)
+        },
+    )
+}
+
+/// Both OCR readers return the same source-linked observations. Confidence never
+/// resolves disagreement between printed values or overrides a confirmed field.
+pub fn refine_with_reader<F>(
+    run: &mut PipelineRun,
+    dir: &std::path::Path,
+    cancel: &std::sync::atomic::AtomicBool,
+    deadline: std::time::Instant,
+    original: Option<&image::RgbImage>,
+    recognize: &mut F,
+) -> Result<()>
+where
+    F: FnMut(
+        &image::RgbImage,
+        &PipelineConfig,
+        &std::sync::atomic::AtomicBool,
+        &std::path::Path,
+        Option<std::time::Instant>,
+    ) -> Result<(Vec<Region>, Vec<Observation>, Vec<Stage>)>,
+{
     use std::{sync::atomic::Ordering, time::Instant};
     let started = Instant::now();
     let available = || !cancel.load(Ordering::Relaxed) && Instant::now() < deadline;
@@ -373,7 +404,7 @@ pub(crate) fn refine_with_original(
             let mut config = run.config.clone();
             config.detailed_debug = false; // artifacts are written under unique attempt names below
             config.detector_side = 1920;
-            match engine.recognize_until(&crop, &config, cancel, dir, Some(deadline)) {
+            match recognize(&crop, &config, cancel, dir, Some(deadline)) {
                 Ok((mut regions, mut observations, stages)) => {
                     let complete = stages.iter().all(|s| s.status == "complete");
                     if !complete {
@@ -565,7 +596,6 @@ pub(crate) fn refine_with_original(
     });
     Ok(())
 }
-#[cfg(feature = "onnx")]
 fn apparent_time(text: &str) -> bool {
     static TIME: std::sync::LazyLock<regex::Regex> =
         std::sync::LazyLock::new(|| regex::Regex::new(r"\b[0-2]?\d:[0-5]\d\b").unwrap());
@@ -612,6 +642,7 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
                 .collect::<Vec<_>>()
         })
         .collect();
+    let mut identities = std::collections::HashMap::new();
     for (old, candidates) in previous.appointments.iter().zip(&matches) {
         if candidates.len() == 1
             && matches
@@ -621,6 +652,7 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
                 == 1
         {
             let a = &mut next.appointments[candidates[0]];
+            identities.insert(a.id.clone(), old.id.clone());
             a.id = old.id.clone();
             a.included = old.included;
             a.calendar_event_id = old.calendar_event_id.clone();
@@ -629,14 +661,16 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
             a.ics_exported_hash = old.ics_exported_hash.clone();
             a.suggestions = old.suggestions.clone();
             for field in review::FIELDS {
-                if old
-                    .origins
-                    .get(*field)
-                    .is_some_and(|o| ["manual", "suggested"].contains(&o.kind.as_str()))
+                if review::field_confirmed(old, field)
+                    || old
+                        .origins
+                        .get(*field)
+                        .is_some_and(|o| ["manual", "suggested"].contains(&o.kind.as_str()))
                 {
                     review::set_value(a, field, review::value(old, field))?;
-                    a.origins
-                        .insert((*field).into(), old.origins[*field].clone());
+                    if let Some(origin) = old.origins.get(*field) {
+                        a.origins.insert((*field).into(), origin.clone());
+                    }
                     if let Some(f) = a.fields.get_mut(*field) {
                         f.confirmed_at = None;
                         f.confirmed_value = None;
@@ -723,6 +757,19 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
             next.appointments.push(retained);
         }
     }
+    for reading in &mut next.refinement_readings {
+        if let Some(id) = identities.get(&reading.appointment_id) {
+            reading.appointment_id = id.clone();
+        }
+    }
+    for attempt in &mut next.refinement_attempts {
+        for target in &mut attempt.target_ids {
+            if let Some(id) = identities.get(target) {
+                *target = id.clone();
+            }
+        }
+    }
+
     Ok(())
 }
 

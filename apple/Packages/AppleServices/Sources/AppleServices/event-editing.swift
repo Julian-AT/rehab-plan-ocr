@@ -9,12 +9,14 @@ import UIKit
 /// ownership to an external event and never replaces its URL with an app marker.
 final class EventEditingService: NSObject, EKEventEditViewDelegate {
   static let shared = EventEditingService()
-  private let store = AgendaService.shared.store
-  private let queue = AgendaService.shared.queue
+  private let agenda: AgendaService
+  private var store: EKEventStore { agenda.store }
+  private var queue: DispatchQueue { agenda.queue }
   private let iso = ISO8601DateFormatter()
   private var editorRequest: ServiceRequest?
   private let isForeground: () -> Bool
-  init(isForeground: @escaping () -> Bool = { DispatchQueue.main.sync { UIApplication.shared.applicationState == .active } }) {
+  init(isForeground: @escaping () -> Bool = { DispatchQueue.main.sync { UIApplication.shared.applicationState == .active } }, agenda: AgendaService = .shared) {
+    self.agenda = agenda
     self.isForeground = isForeground
     super.init()
   }
@@ -64,7 +66,7 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
       _ = external
       let owned = try JSONDecoder().decode(OwnedRecord.self, from: JSONSerialization.data(withJSONObject: record))
       let event: EKEvent
-      switch AgendaService.shared.lookup(owned) {
+      switch agenda.lookup(owned) {
       case .found(let found): event = found
       case .deleted: continue
       case .unavailable: throw fail("Ein importierter Kalender ist nicht verfügbar.")
@@ -120,14 +122,18 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
   private func snapshot(_ event: EKEvent) -> [String: Any] {
     let occurrence = event.occurrenceDate ?? event.startDate!
     let firstReminder = event.alarms?.first(where: { $0.absoluteDate == nil && $0.structuredLocation == nil && $0.relativeOffset <= 0 }).map { Int(-$0.relativeOffset / 60) }
-    let logicalReminder = AgendaService.shared.logicalReminder(for: event, actual: firstReminder)
+    let logicalReminder = agenda.logicalReminder(for: event, actual: firstReminder)
     let values: [String: Any] = ["title": event.title ?? "", "start_utc": iso.string(from: event.startDate), "end_utc": iso.string(from: event.endDate),
       "timezone": event.timeZone?.identifier ?? TimeZone.current.identifier, "location": event.location ?? "", "reminder_minutes": logicalReminder.map { $0 as Any } ?? NSNull()]
+    let managedAlarm = agenda.comparisonAlarmEntry(for: event)
+    let comparisonAlarms: [[String: Any]] = managedAlarm.map { entry in
+      entry.approvedMinutes.map { [["relative": -Double($0) * 60, "absolute": NSNull(), "location": NSNull(), "proximity": 0]] } ?? []
+    } ?? alarms(event)
     let metadata: [String: Any] = ["notes": event.notes ?? NSNull() as Any, "url": event.url?.absoluteString ?? NSNull() as Any,
-      "alarms": alarms(event), "structured_location": location(event.structuredLocation), "all_day": event.isAllDay,
+      "alarms": comparisonAlarms, "structured_location": location(event.structuredLocation), "all_day": event.isAllDay,
       "availability": event.availability.rawValue, "timezone": event.timeZone?.identifier ?? NSNull() as Any,
       "recurrence": event.recurrenceRules?.map(recurrence) ?? [], "detached": event.isDetached,
-      "modified": event.lastModifiedDate.map { iso.string(from: $0) } ?? "",
+      "modified": managedAlarm == nil ? event.lastModifiedDate.map { iso.string(from: $0) } ?? "" : "",
       "attendees": event.attendees?.map { $0.url.absoluteString + ":\($0.participantStatus.rawValue)" } ?? [],
       "organizer": event.organizer?.url.absoluteString ?? "", "status": event.status.rawValue]
     let bytes = (try? JSONSerialization.data(withJSONObject: ["values": values, "metadata": metadata], options: [.sortedKeys])) ?? Data()
@@ -185,7 +191,7 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
       guard (oldReceipt?["result"] as? [String: Any])?["status"] as? String == "saved" else { throw fail("Wiederherstellungsdaten fehlen.") }
     }
     let event = existing ?? EKEvent(eventStore: store)
-    let alarmState = try existing.flatMap { try AgendaService.shared.editingAlarmState($0) }
+    let alarmState = try existing.flatMap { try agenda.editingAlarmState($0) }
     if kind == "create" {
       event.calendar = calendar
       if let id = p["owned_id"] as? String {
@@ -228,12 +234,24 @@ final class EventEditingService: NSObject, EKEventEditViewDelegate {
       else { try store.save(event, span: .thisEvent, commit: true) }
       if kind != "remove", patch["reminder_minutes"] != nil {
         if let id = p["owned_id"] as? String, event.url?.absoluteString == "reha-calendar://event/\(id)" {
-          try AgendaService.shared.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
+          try agenda.approvedAlarmChanged(id: id, minutes: patch["reminder_minutes"] as? Int)
         } else {
-          try AgendaService.shared.manuallyEditedAlarm(event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
+          try agenda.manuallyEditedAlarm(event, restoring: oldReceipt?["alarm_journal"] as? [String: Any])
         }
       }
-      let result: [String: Any] = ["status": "saved", "event": kind == "remove" ? NSNull() : snapshot(event), "operation_id": token]
+      var savedEvent: Any = NSNull()
+      if kind != "remove" {
+        // EventKit may finalize detached-instance metadata during commit. Journal
+        // the persisted occurrence rather than the object's pre-commit cache.
+        let written = snapshot(event)
+        guard let persisted = try find(written) else { throw fail("Gespeicherter Termin kann noch nicht gelesen werden.") }
+        let checked = snapshot(persisted)
+        guard NSDictionary(dictionary: written["values"] as? [String: Any] ?? [:]).isEqual(to: checked["values"] as? [String: Any] ?? [:]) else {
+          throw fail("Termin wurde während des Speicherns erneut geändert.")
+        }
+        savedEvent = checked
+      }
+      let result: [String: Any] = ["status": "saved", "event": savedEvent, "operation_id": token]
       try persist(["proposal": p, "result": result, "alarm_journal": alarmState ?? NSNull() as Any], id: token)
       return result
     } catch { return ["status": "uncertain", "message": "Schreibstatus unklar. Kalender abgleichen."] }

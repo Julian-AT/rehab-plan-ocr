@@ -2,7 +2,7 @@ import EventKit
 import XCTest
 
 final class EventEditingTests: XCTestCase {
-    private let editing = EventEditingService(isForeground: { true })
+    private var editing = EventEditingService(isForeground: { true })
     private func call(_ command: String, _ args: [String: Any]) async throws -> [String: Any] {
         let data = try JSONSerialization.data(withJSONObject: args)
         let response: Data = try await withCheckedThrowingContinuation { continuation in
@@ -77,4 +77,45 @@ final class EventEditingTests: XCTestCase {
         XCTAssertEqual((final["events"] as? [Any])?.count, 3)
         #endif
     }
+    func testManagedAlarmHandoffKeepsUndoSnapshotStable() async throws {
+        #if targetEnvironment(simulator)
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw XCTSkip("Simulator calendar access required") }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let agenda = AgendaService(storageRoot: root, widgetRoot: root)
+        agenda.start(registerBackground: false)
+        editing = EventEditingService(isForeground: { true }, agenda: agenda)
+        let store = agenda.store
+        let calendar = EKCalendar(for: .event, eventStore: store)
+        calendar.title = "Erfundener Rücknahmetest"; calendar.source = try XCTUnwrap(store.defaultCalendarForNewEvents?.source)
+        try store.saveCalendar(calendar, commit: true)
+        defer { try? store.removeCalendar(calendar, commit: true) }
+        let id = UUID().uuidString
+        let iso = ISO8601DateFormatter()
+        let start = Date(timeIntervalSince1970: floor(Date().addingTimeInterval(7200).timeIntervalSince1970))
+        let token = UUID().uuidString
+        let patch: [String: Any] = ["title": "Erfundene Therapie", "start_utc": iso.string(from: start), "end_utc": iso.string(from: start.addingTimeInterval(1800)), "timezone": "Europe/Vienna", "location": "", "reminder_minutes": 10]
+        let saved = try await call("mutateEvent", ["proposal": ["token": token, "kind": "create", "owned_id": id, "calendar_id": calendar.calendarIdentifier, "patch": patch]])
+        XCTAssertEqual(saved["status"] as? String, "saved")
+        let after = try XCTUnwrap(saved["event"] as? [String: Any])
+        let values = Values(title: "Erfundene Therapie", start_utc: iso.string(from: start), end_utc: iso.string(from: start.addingTimeInterval(1800)), timezone: "Europe/Vienna", location: "", notes: "", reminder_minutes: 10)
+        let record = OwnedRecord(status: "saved", id: id, calendar_id: calendar.calendarIdentifier, external_id: try XCTUnwrap(after["external_id"] as? String), approved: values)
+        let _: [String: Any] = try await withCheckedThrowingContinuation { continuation in
+            agenda.queue.async {
+                do { try agenda.sync(AgendaSyncArgs(records: [record], preferences: ReminderPreferences(enabled: true))) { continuation.resume(with: $0) } }
+                catch { continuation.resume(throwing: error) }
+            }
+        }
+        XCTAssertTrue((store.event(withIdentifier: record.external_id!)?.alarms ?? []).isEmpty)
+        let readBack = try await call("getEvent", ["event": after])
+        XCTAssertTrue(NSDictionary(dictionary: try XCTUnwrap(readBack["event"] as? [String: Any])).isEqual(to: after))
+        let removal = try await call("mutateEvent", ["proposal": ["token": UUID().uuidString, "kind": "remove", "owned_id": id, "calendar_id": calendar.calendarIdentifier, "before": after, "patch": [:], "undo_of": token]])
+        XCTAssertEqual(removal["status"] as? String, "saved")
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            agenda.queue.async { continuation.resume(with: Result { try agenda.forget() }) }
+        }
+        #endif
+    }
+
 }

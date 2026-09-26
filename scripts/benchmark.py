@@ -57,6 +57,12 @@ def freeze_baseline(binary, models, config, root, destination):
 
 def record_baseline_runs(binary, models, root, destination):
     """Record unchanged outputs and latency, never accuracy on unapproved labels."""
+    manifest = json.loads((destination / "baseline.json").read_text())
+    binary = (destination / "reha").resolve()
+    for path, key in [(binary, "binary_sha256"), (destination / "config.json", "config_sha256"),
+                      (models / "manifest.json", "model_manifest_sha256"), (root / "inventory.json", "inventory_sha256")]:
+        if sha(path) != manifest[key]:
+            raise ValueError(f"Frozen baseline identity changed: {key}")
     inventory = json.loads((root / "inventory.json").read_text())
     results = []
     seen = set()
@@ -199,7 +205,7 @@ def main():
             raise ValueError("Freezing a baseline is not final acceptance.")
         freeze_baseline(args.binary.resolve(), args.models, args.config, root, args.freeze_baseline)
         if args.record_baseline_runs:
-            record_baseline_runs(args.binary.resolve(), args.models, root, args.freeze_baseline)
+            record_baseline_runs((args.freeze_baseline / "reha").resolve(), args.models, root, args.freeze_baseline)
         print(args.freeze_baseline)
         return
     if args.final:

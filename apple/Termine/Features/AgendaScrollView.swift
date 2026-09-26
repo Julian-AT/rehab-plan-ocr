@@ -5,6 +5,7 @@ import UIKit
 /// Recognizing this gate vetoes its dependent scroll view for the whole touch.
 private final class AxisVeto: UIGestureRecognizer {
     let rejectedAxis: AgendaAxisLock.Axis
+    var finished: (() -> Void)?
     private var origin: CGPoint?
     private var lock = AgendaAxisLock()
     init(rejecting axis: AgendaAxisLock.Axis) {
@@ -22,8 +23,9 @@ private final class AxisVeto: UIGestureRecognizer {
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         state = state == .possible ? .failed : .ended
+        finished?()
     }
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { state = .cancelled }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { state = .cancelled; finished?() }
     override func reset() { super.reset(); origin = nil; lock.reset() }
     override func canPrevent(_ other: UIGestureRecognizer) -> Bool { false }
     override func canBePrevented(by other: UIGestureRecognizer) -> Bool { false }
@@ -37,6 +39,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
     let pages: (Double, Double) -> [AnyView]
     let gutter: AnyView
     let showsTimeline: Bool
+    let dataReady: Bool
     let initialMinute: Double
     let reset: Int
     @Binding var minute: Double?
@@ -82,6 +85,8 @@ struct AgendaScrollView: UIViewControllerRepresentable {
             let horizontalVeto = AxisVeto(rejecting: .vertical)
             let verticalVeto = AxisVeto(rejecting: .horizontal)
             view.addGestureRecognizer(horizontalVeto); view.addGestureRecognizer(verticalVeto)
+            horizontalVeto.finished = { [weak self] in self?.drainAfterTouch() }
+            verticalVeto.finished = { [weak self] in self?.drainAfterTouch() }
             horizontal.panGestureRecognizer.require(toFail: horizontalVeto)
             vertical.panGestureRecognizer.require(toFail: verticalVeto)
         }
@@ -101,8 +106,11 @@ struct AgendaScrollView: UIViewControllerRepresentable {
             // Store a civil-time anchor, never a page-specific pixel offset.
             let anchor = value.reset != previousReset ? value.initialMinute :
                 (value.minute ?? anchorMinute ?? value.initialMinute)
-            anchorMinute = anchor
-            previousReset = value.reset; current = value; pending = nil
+            if value.dataReady {
+                if value.showsTimeline { anchorMinute = anchor }
+                previousReset = value.reset
+            }
+            current = value; pending = nil
             lastSize = view.bounds.size
             vertical.frame = view.bounds
             let height = max(view.bounds.height, value.projection.height + 52)
@@ -116,7 +124,7 @@ struct AgendaScrollView: UIViewControllerRepresentable {
             let y = min(max(0, value.projection.y(anchor)), max(0, height - view.bounds.height))
             let pages = value.pages(view.bounds.height, y)
             for (index, host) in hosts.enumerated() {
-                host.rootView = pages[index]
+                host.rootView = AnyView(pages[index].frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top))
                 host.view.frame = CGRect(x: CGFloat(index) * horizontal.bounds.width, y: 0,
                                          width: horizontal.bounds.width, height: height)
             }
@@ -135,8 +143,19 @@ struct AgendaScrollView: UIViewControllerRepresentable {
             if !decelerate { settle() }
         }
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { settle() }
+        private func drainAfterTouch() {
+            // UIKit updates tracking flags after the recognizer's terminal callback.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.busy else { return }
+                self.settle()
+            }
+        }
         private func settle() {
             guard let current, horizontal.bounds.width > 0 else { return }
+            if let pending, pending.date != current.date || pending.reset != current.reset {
+                applyPending()
+                return
+            }
             let page = min(2, max(0, Int((horizontal.contentOffset.x / horizontal.bounds.width).rounded())))
             if page != 1 {
                 let date = Calendar.current.date(byAdding: .day, value: page - 1, to: current.date)!

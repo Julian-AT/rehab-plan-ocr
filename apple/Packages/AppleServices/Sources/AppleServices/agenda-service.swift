@@ -41,6 +41,10 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private var notificationState = NotificationSnapshot(authorization: "notDetermined", pending: [], delivered: [])
   private var pendingRequests: [String: UNNotificationRequest] = [:]
   private var additions: [String: UNNotificationRequest] = [:]
+  private var reservations: [String: UUID] = [:]
+  private var generation: UInt64 = 0
+  private let notificationTimeout: TimeInterval
+  private lazy var deadline = NotificationDeadline(queue: queue, seconds: notificationTimeout)
   private var refreshing = false
   private var refreshAgain = false
   private var confirming = false
@@ -58,8 +62,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private let iso = ISO8601DateFormatter()
   private let storageRoot: URL?
   private let widgetRoot: URL?
-  init(storageRoot: URL? = nil, widgetRoot: URL? = nil, notifications: any NotificationAdapter = SystemNotificationAdapter()) {
+  init(storageRoot: URL? = nil, widgetRoot: URL? = nil, notifications: any NotificationAdapter = SystemNotificationAdapter(), notificationTimeout: TimeInterval = 20) {
     self.notifications = notifications
+    self.notificationTimeout = notificationTimeout
     self.storageRoot = storageRoot
     self.widgetRoot = widgetRoot
     super.init()
@@ -154,7 +159,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   private func authorized() throws -> Bool { ["authorized", "provisional"].contains(notificationState.authorization) }
   private func reserve(_ request: UNNotificationRequest) throws {
     if pendingRequests[request.identifier] == nil && additions[request.identifier] == nil {
-      let ids = Set(pendingRequests.keys).union(additions.keys)
+      let ids = Set(pendingRequests.keys).union(additions.keys).union(reservations.keys)
       guard ids.count < 64, !request.identifier.hasPrefix("reha.event.") || ids.filter({ $0.hasPrefix("reha.event.") }).count < ReminderPolicy.limit else {
         throw AgendaError.message("Mitteilungsplätze belegt. Kalenderreserve bleibt zuständig.")
       }
@@ -175,39 +180,62 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   private func beginCycle() {
     cycleID = UUID().uuidString
-    LocalDiagnostics.shared.record(.reminderSelection, .started, correlation: cycleID)
+    let token = cycleID
+    let version = generation
+    LocalDiagnostics.shared.record(.reminderSelection, .started, correlation: token)
     refreshAgain = false
     additions = [:]
-    Task {
-      let snapshot = await notifications.snapshot()
-      queue.async {
-        self.install(snapshot); self.lastError = nil; self.confirming = false
-        do {
-          try self.refresh()
-          let requests = Array(self.additions.values)
-          LocalDiagnostics.shared.record(.reminderPlan, .started, correlation: self.cycleID, count: requests.count)
-          self.additions = [:]
-          Task {
-            var failures: [String] = []
-            for request in requests {
-              do { try await self.notifications.add(request) }
-              catch { failures.append("Mitteilung konnte nicht geplant werden. Kalenderreserve bleibt erhalten.") }
-            }
-            let confirmed = await self.notifications.snapshot()
-            let errors = failures
-            self.queue.async {
-              self.install(confirmed); self.confirming = true
-              do { try self.refresh() } catch { self.lastError = error.localizedDescription }
-              if !errors.isEmpty { self.lastError = errors.joined(separator: " ") }
-              self.confirming = false
-              if self.refreshAgain { self.beginCycle() } else { self.finishRefresh() }
+    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+      guard self.cycleID == token else { return }
+      guard self.generation == version else { self.beginCycle(); return }
+      do {
+        self.install(try result.get()); self.lastError = nil; self.confirming = false
+        try self.refresh()
+        let requests = Array(self.additions.values)
+        let reservation = UUID()
+        for request in requests { self.reservations[request.identifier] = reservation }
+        LocalDiagnostics.shared.record(.reminderPlan, .started, correlation: token, count: requests.count)
+        self.additions = [:]
+        self.deadline.run(operation: {
+          var failures = false
+          for request in requests {
+            guard await self.cycleIsCurrent(token, version: version) else { break }
+            do { try await self.notifications.add(request) } catch { failures = true }
+            if !(await self.cycleIsCurrent(token, version: version)) {
+              self.notifications.removePending([request.identifier])
             }
           }
-        } catch {
-          self.lastError = error.localizedDescription
-          self.finishRefresh()
+          return (await self.notifications.snapshot(), failures)
+        }, late: { _ in
+          self.release(requests, reservation: reservation)
+          self.requestRefresh()
+        }) { result in
+          self.release(requests, reservation: reservation)
+          guard self.cycleID == token else { return }
+          guard self.generation == version else { self.beginCycle(); return }
+          do {
+            let (confirmed, failed) = try result.get()
+            self.install(confirmed); self.confirming = true
+            try self.refresh()
+            if failed { self.lastError = "Mitteilung konnte nicht geplant werden. Kalenderreserve bleibt erhalten." }
+          } catch { self.lastError = error.localizedDescription }
+          self.confirming = false
+          if self.refreshAgain { self.beginCycle() } else { self.finishRefresh() }
         }
+      } catch {
+        self.lastError = error.localizedDescription
+        self.finishRefresh()
       }
+    }
+  }
+  private func cycleIsCurrent(_ token: String, version: UInt64) async -> Bool {
+    await withCheckedContinuation { continuation in
+      queue.async { continuation.resume(returning: self.refreshing && self.cycleID == token && self.generation == version) }
+    }
+  }
+  private func release(_ requests: [UNNotificationRequest], reservation: UUID) {
+    for request in requests where reservations[request.identifier] == reservation {
+      reservations.removeValue(forKey: request.identifier)
     }
   }
   private func finishRefresh() {
@@ -219,9 +247,13 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     for callback in callbacks { callback(result) }
   }
   func readStatus(_ completion: @escaping (Result<[String: Any], Error>) -> Void) {
-    Task {
-      let snapshot = await notifications.snapshot()
-      queue.async { self.install(snapshot); completion(Result { try self.response() }) }
+    let version = generation
+    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+      do {
+        let snapshot = try result.get()
+        if self.generation == version { self.install(snapshot) }
+        completion(Result { try self.response() })
+      } catch { completion(.failure(error)) }
     }
   }
   private func requestID(_ id: String) -> String { "reha.event.\(id)" }
@@ -255,6 +287,14 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     else { return actual }
     return entry.approvedMinutes
   }
+  /// Only a journaled, still-manageable app alarm is normalized for edit receipts.
+  /// Foreign and externally changed alarms keep their complete physical snapshot.
+  func comparisonAlarmEntry(for event: EKEvent) -> AlarmJournalEntry? {
+    guard let id = event.url?.lastPathComponent,
+          event.url?.absoluteString == "reha-calendar://event/\(id)",
+          let entry = state.journal[id], manageable(event, entry: entry) else { return nil }
+    return entry
+  }
   func alarmIsProtected(_ event: EKEvent, approvedMinutes: Int?) -> Bool {
     guard let id = event.url?.lastPathComponent else { return true }
     let entry =
@@ -269,6 +309,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func manuallyEditedAlarm(_ event: EKEvent, restoring saved: [String: Any]? = nil) throws {
     guard let id = event.url?.lastPathComponent, event.url?.absoluteString == "reha-calendar://event/\(id)", state.records.contains(where: { $0.id == id }) else { return }
+    generation &+= 1
     cancel(id)
     if let saved { state.journal[id] = try JSONDecoder().decode(AlarmJournalEntry.self, from: JSONSerialization.data(withJSONObject: saved)) }
     else {
@@ -279,6 +320,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   // Called only after an explicitly approved EventKit write that changed alarms.
   func approvedAlarmChanged(id: String, minutes: Int?) throws {
+    generation &+= 1
     cancel(id)
     state.journal[id] = AlarmJournalEntry(expectedMinutes: minutes, approvedMinutes: minutes)
     try persist()
@@ -317,7 +359,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   func sync(_ args: AgendaSyncArgs, completion: @escaping (Result<[String: Any], Error>) -> Void) throws {
     if let loadError { throw AgendaError.message(loadError) }
-    // Rust supplies only committed ImportRecords. The native cache is needed for
+    generation &+= 1
+    // Rust supplies committed app-owned records. The native cache is needed for
     // foreground/OS background refresh while the web interface is not running.
     let records = args.records.filter { $0.status == "saved" && $0.external_id != nil }
     let incoming = Set(records.map(\.id))
@@ -672,6 +715,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
     return ["id": state.pendingOpen as Any? ?? NSNull()]
   }
   func forget() throws {
+    generation &+= 1
     guard state.records.isEmpty || EKEventStore.authorizationStatus(for: .event) == .fullAccess
     else {
       throw AgendaError.message(
@@ -718,7 +762,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
             let entry = self.state.journal[id], entry.phase == "app", self.manageable(event, entry: entry) else {
         throw AgendaError.message("Dieser Termin kann nicht mehr geschlummert werden.")
       }
-      guard self.pendingRequests.keys.filter({ $0.hasPrefix("reha.snooze.") && $0 != "reha.snooze.\(id)" }).count < 3 else {
+      guard Set(self.pendingRequests.keys).union(self.reservations.keys).filter({ $0.hasPrefix("reha.snooze.") && $0 != "reha.snooze.\(id)" }).count < 3 else {
         throw AgendaError.message("Die drei Schlummerplätze sind belegt.")
       }
       let value = self.model(event, id: id)
@@ -730,32 +774,49 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   }
   private func scheduleOne(make: @escaping () throws -> UNNotificationRequest,
                            completion: @escaping (Result<[String: Any], Error>) -> Void) {
-    Task {
-      let snapshot = await notifications.snapshot()
-      queue.async {
-        do {
-          self.install(snapshot)
-          guard try self.authorized() else { throw AgendaError.message("Mitteilungen sind nicht erlaubt. In den iPhone-Einstellungen freigeben.") }
-          let request = try make()
-          try self.reserve(request)
-          self.additions.removeValue(forKey: request.identifier)
-          self.pendingRequests[request.identifier] = request
-          Task {
-            do {
-              try await self.notifications.add(request)
-              let system = await self.notifications.snapshot()
-              self.queue.async {
-                self.install(system)
-                completion(.success(["accepted": true, "delay_seconds": (request.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval ?? 0,
-                  "confirmed_pending": system.pending.contains { $0.identifier == request.identifier },
-                  "observed_delivered": system.delivered.contains(request.identifier)]))
-              }
-            } catch {
-              self.queue.async { self.pendingRequests.removeValue(forKey: request.identifier); completion(.failure(error)) }
+    let version = generation
+    let reservation = UUID()
+    deadline.run(operation: { await self.notifications.snapshot() }) { result in
+      do {
+        guard self.generation == version else { throw AgendaError.message("Erinnerungseinstellungen wurden geändert. Auftrag verworfen.") }
+        self.install(try result.get())
+        guard try self.authorized() else { throw AgendaError.message("Mitteilungen sind nicht erlaubt. In den iPhone-Einstellungen freigeben.") }
+        let request = try make()
+        guard self.reservations[request.identifier] == nil else { throw AgendaError.message("Dieser Mitteilungsauftrag wird bereits bearbeitet.") }
+        try self.reserve(request)
+        self.additions.removeValue(forKey: request.identifier)
+        self.reservations[request.identifier] = reservation
+        self.deadline.run(operation: {
+          try await self.notifications.add(request)
+          let valid = await self.oneIsCurrent(request.identifier, reservation: reservation, version: version)
+          if !valid || Task.isCancelled { self.notifications.removePending([request.identifier]) }
+          return await self.notifications.snapshot()
+        }, late: { _ in
+          self.notifications.removePending([request.identifier])
+          self.requestRefresh()
+        }) { result in
+          self.release([request], reservation: reservation)
+          do {
+            guard self.generation == version else {
+              self.notifications.removePending([request.identifier])
+              throw AgendaError.message("Erinnerungseinstellungen wurden geändert. Auftrag verworfen.")
             }
+            let system = try result.get()
+            self.install(system)
+            completion(.success(["accepted": true, "delay_seconds": (request.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval ?? 0,
+              "confirmed_pending": system.pending.contains { $0.identifier == request.identifier },
+              "observed_delivered": system.delivered.contains(request.identifier)]))
+          } catch {
+            self.notifications.removePending([request.identifier])
+            completion(.failure(error))
           }
-        } catch { completion(.failure(error)) }
-      }
+        }
+      } catch { completion(.failure(error)) }
+    }
+  }
+  private func oneIsCurrent(_ id: String, reservation: UUID, version: UInt64) async -> Bool {
+    await withCheckedContinuation { continuation in
+      queue.async { continuation.resume(returning: self.generation == version && self.reservations[id] == reservation) }
     }
   }
   func userNotificationCenter(

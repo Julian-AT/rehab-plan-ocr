@@ -25,9 +25,11 @@ import EventKit
         }
         struct Response: Decodable { let events: [CalendarEvent] }
         do {
-            let history = try await core.history(); let preferences = try await core.preferences()
+            struct Ownership: Decodable { struct Record: Decodable { let id: String }; let records: [Record] }
+            let owned = try await core.eventRequest("ownedEventRecords", [:], as: Ownership.self)
+            let preferences = try await core.preferences()
             guard request == epoch, !Task.isCancelled else { return }
-            guard !preferences.displayCalendarIds.isEmpty || !history.imports.isEmpty else {
+            guard !preferences.displayCalendarIds.isEmpty || !owned.records.isEmpty else {
                 cache = [:]; availability = .noSelection; return
             }
             _ = try await core.calendarRequest(command: "refreshAgenda", arguments: "{}")
@@ -222,7 +224,7 @@ struct TodayView: View {
                     })
                 }
             }, gutter: AnyView(TimelineGutter(start: windows[1].start, layout: projection)),
-               showsTimeline: visible, initialMinute: windows[1].scrollMinute, reset: scrollReset,
+               showsTimeline: visible, dataReady: model.events(on: selectedDate) != nil, initialMinute: windows[1].scrollMinute, reset: scrollReset,
                minute: $scrollMinute, selectDate: { selectedDate = $0 })
             if !windows[1].outside.isEmpty {
                 DisclosureGroup("Außerhalb von 06:00–18:00") {

@@ -363,7 +363,18 @@ fn reprocessing_preserves_manual_values_and_calendar_identity_in_original_coordi
         &previous.page_to_original,
         &[2., 0., 0., 0., 2., 0., 0., 0., 1.],
     );
+    next.refinement_readings.push(RefinementReading {
+        appointment_id: "new-detector-id".into(),
+        field: "title".into(),
+        value: serde_json::json!("New OCR reading"),
+        evidence: vec![],
+        attempt: "crop".into(),
+    });
     refinement::preserve_review(&previous, &mut next).unwrap();
+    assert_eq!(
+        next.refinement_readings[0].appointment_id,
+        previous.appointments[0].id
+    );
     assert_eq!(next.appointments.len(), 1);
     assert_eq!(next.appointments[0].id, previous.appointments[0].id);
     assert_eq!(next.appointments[0].title, "Meine Korrektur");
@@ -676,4 +687,34 @@ fn recurring_calendar_updates_remain_protected_and_partial_checks_do_not_remove(
     let dir = tempfile::tempdir().unwrap();
     let store = Store::open(dir.path()).unwrap();
     assert!(store.begin_operation("schedule", &op).is_err());
+}
+
+#[test]
+fn explicitly_confirmed_absent_field_survives_rereading() {
+    let mut r = run();
+    let mut a = complete("a");
+    a.fields.insert(
+        "location".into(),
+        FieldAssessment {
+            state: PrintedState::NotPrinted,
+            confirmed_value: Some(serde_json::json!("")),
+            confirmed_at: Some(100),
+            ..Default::default()
+        },
+    );
+    assert!(review::field_confirmed(&a, "location"));
+    r.appointments = vec![a];
+    refinement::apply_readings(
+        &mut r,
+        &[refinement::Reading {
+            appointment_id: "a".into(),
+            field: "location".into(),
+            value: serde_json::json!("Raum 2"),
+            evidence: vec!["vision-observation".into()],
+            attempt: "vision-crop".into(),
+        }],
+    )
+    .unwrap();
+    assert!(r.appointments[0].location.is_empty());
+    assert!(review::field_confirmed(&r.appointments[0], "location"));
 }
