@@ -412,3 +412,15 @@ den bestandenen 68-Test-Lauf qualifiziert.
   umfasst den typisierten Verlauf, die Lebensdauer von Terminlinks und die
   Entfernung der unbenutzten nativen JSON-Hilfe. Die vollständige UI-Suite umfasst
   inzwischen 70 Methoden; ihr erneuter gemeinsamer Lauf bleibt separat.
+
+- Vollständiger gemeinsamer UI-Lauf an `c8c5211`: **verifiziert**, alle 70
+  ausdrücklich angeforderten Methoden tatsächlich bestanden, null Fehler und
+  null Skips. Die Auswahl aus allen neun Testklassen stimmt vollständig mit dem
+  Ergebnisbundle überein; eine unabhängige Aufzählung kompilierter Tests wird
+  nicht behauptet. Checkout und Quellarchiv blieben unverändert. Die tatsächlichen
+  Testprodukte und das Simulatorpaket sind inventarisiert; alle zwölf Mach-O-
+  Dateien, Ressourcen, Notices und Datenschutzmanifeste bestehen die Paketprüfung.
+  Belege: `.local/runs/ui-complete-20260926-s19-003/verification.json` und das
+  unveränderte Ergebnisbundle. Der anfängliche Installationsversuch benötigte den
+  vorhandenen automatischen Retry; das vollständige Log bleibt erhalten.
+  Bildvergleich, physische Geräte, Modelle und Gesamtproduktabnahme bleiben offen.
