@@ -14,6 +14,22 @@ offen. Insbesondere sind UniFFI-Exporte, rekursive Xcode-Quellgruppen, SwiftPM/C
 Module, Assetkataloge, Erweiterungseinstiegspunkte und automatisch gefundene Tests
 auch ohne direkten Textverweis erreichbar.
 
+Am 26. September 2026 wurden die fünf Dateien unter `config` und der einzige
+GitHub-Workflow zusätzlich inhaltlich gegen ihre Verbraucher geprüft. Der Beleg
+`.local/maintenance/configuration-content-review-20260926-s20-001.json` enthält je
+Datei Hash, Zweck, Entscheidung, geprüfte Eigenschaften und Grenzen. Alle sechs
+Dateien sind unverändert gegenüber der bestandenen Werkzeugprüfung an `3e26fc6`.
+
+Werkzeugpins/Downloadidentitäten, getrennte Audit-Einrichtung, feste
+Simulatorversionen, vier kanonische/kompatible Pfadzuordnungen und die explizite
+Cache-Auswahl bleiben erforderlich. Die sieben früheren Probe-Modulcaches sind
+leer; ihre Aufbewahrungsregeln erlauben weiterhin die kontrollierte Bereinigung
+älterer lokaler Bestände. Neue Probes verwenden temporäre Modulcaches. Der Workflow
+verwendet nur Leserechte, gepinnte Aktionen und 14 Tage Aufbewahrung für ausdrücklich
+ausgewählte synthetische Ergebnisse. Diese Inhaltsprüfung ist keine neue
+Sicherheitsdatenbank-Abfrage und keine bestandene gehostete CI-Ausführung. Die
+übrige vollständige Inhaltsprüfung bleibt offen.
+
 ## Geprüfte Kandidaten ab 8d81c4c
 
 | Kandidat | Verbraucher/Prüfung | Entscheidung |
