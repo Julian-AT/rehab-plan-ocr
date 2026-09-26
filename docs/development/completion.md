@@ -311,3 +311,11 @@ den bestandenen 68-Test-Lauf qualifiziert.
   ohne Fehler/Skip in `repair-report-ui-20260926-s19-001`; dessen erhaltenes Paket
   besteht die Prüfung aller zwölf Mach-O-Dateien, Ressourcen und Notices.
   Der vollständige gemeinsame Endlauf und die Geräteabnahme bleiben separat.
+
+- Gemeinsame lokale Befehle an `e590917`: **verifiziert**, `make lint` und
+  `make test` vollständig erfolgreich; 240 Rusttests, 388 Pythonfälle in
+  67 Gruppen (neun ausdrückliche Umgebungs-Skips), alle vorgesehenen nativen
+  Probes und der echte FFI-Rundweg. Checkout vorher/nachher sauber. Quellen,
+  Befehle und vollständige Logs bleiben unter
+  `.local/runs/combined-verification-20260926-s19-002/` erhalten. Die Produkt-,
+  Modell-, Geräte- und Veröffentlichungsabnahme bleibt offen.

@@ -7,8 +7,9 @@
 The [completion ledger](completion.md) tracks the full remaining user plan.
 This continuation is **not complete product acceptance**. Storage is no longer
 blocking work: after the user's cleanup, the reserve check measured 93.12 GiB
-free and passed the additional 8 GiB peak allowance. Subsequent builds and the
-verified workspace migration retained more than 80 GiB free.
+free and passed the additional 8 GiB peak allowance. The September 26, 2026 check
+before the latest simulator run showed 51 GiB available; each large workflow
+checks its additional peak allowance above the protected 20 GiB reserve.
 
 Current verified implementation slices:
 
@@ -82,16 +83,16 @@ Current verified implementation slices:
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
-The full combined `make lint` and `make test` commands now pass at `ec413cd`,
-including 238 Rust tests, 385 Python cases in 66 groups (seven explicit environment
+The full combined `make lint` and `make test` commands pass at `e590917`,
+including 240 Rust tests, 388 Python cases in 67 groups (nine explicit environment
 skips), all scheduled native probes and the actual Swift–Rust–Swift integration.
 The checkout is clean before and after both commands. Source archive, source
 identity and complete logs are preserved under
-`.local/runs/combined-verification-20260926-s19-001/`. This includes the typed agenda,
-system editor and preserved repair warnings; it is not complete UI, physical-device
-or model acceptance. The previous `cf4e39d` proof remains unchanged in its own run.
-The earlier fresh isolated build at `026430a` and its offline repeat remain separate
-historical evidence. Later source changes still need their own combined checks.
+`.local/runs/combined-verification-20260926-s19-002/`. This includes typed ownership
+inspection and repair reports/confirmation. It is not complete UI, physical-device
+or model acceptance. Previous combined runs remain unchanged. The earlier fresh
+isolated build at `026430a` and its offline repeat are separate historical evidence;
+later source changes still require a fresh-checkout build.
 
 See [inventory decisions](inventory.md), [cleanup evidence](artifact-retention.md),
 [workspace/build evidence](build-reproducibility.md) and
@@ -126,14 +127,23 @@ This run also builds the common app and UI test bundle after `8b188d2` and
 across all twelve Mach-O files, runtime assets and notices. This is neither a
 device-signing check nor a repeat of the full 68-test suite. Source archive/patch,
 products and logs remain in `.local/runs/visual-capture-control-20260926-s19-004/`.
-Complete evidence is in `.local/runs/visual-baseline-20260926-s19-003/`.
+Image-comparison evidence is in `.local/runs/visual-baseline-20260926-s19-004/`.
 
 Later changes remain separately scoped: `083f82d` preserves all post-commit
 maintenance warnings in calendar-link cleanup (nine targeted Rust tests pass).
 `8b188d2` types system-editor occurrence identity and completion; its actual
 EventKit run passes 20 tests with one expected simulator file-protection skip and
-zero failures. This later source still needs its common app build and combined
-checks; it is not retrospectively covered by the 68-test candidate run.
+zero failures. The later common app build and combined checks pass as recorded
+above; the 68-test result remains scoped to its original candidate.
+
+Typed ownership inspection (`57c3612`) passes a later actual EventKit run with
+20 passes, one expected file-protection skip and no failures. Typed repair reports
+and confirmation (`e590917`) pass 240 Rust tests and the native roundtrip, including
+invalid confirmation, duplicate/stale selections and retained imports after reopen.
+The common app/UI build, unavailable-calendar dialog test (one pass, no skip), and
+all twelve Mach-O/resource/notice checks pass in `repair-report-ui-20260926-s19-001`.
+The dialog case does not exercise selecting and confirming a repair; those guards
+have core and actual FFI evidence, with full device acceptance still open.
 
 ## Application and data
 
@@ -171,15 +181,15 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | Full `make lint` / `make test` pass at `cf4e39d`: 232 Rust tests, 377 Python cases (seven environment skips) and all native probes; tracked files unchanged. Sixteen monitor tests have separate retained evidence. Linux and physical-device behavior remain separate. |
-| EventKit | Run `.local/runs/eventkit-20260926-s18-004/` passes 19 of 20 tests, with one simulator-only file-protection skip and zero failures. This includes typed import recovery, committed writes despite alarm-journal failure, and a notification link retained after failed durable acknowledgement (`9d0c240`). Complete results and executable products are retained. |
+| Portable/native logic | Full `make lint` / `make test` pass at `e590917`: 240 Rust tests, 388 Python cases (nine environment skips) and all scheduled native probes; checkout clean before/after. Linux and physical-device behavior remain separate. |
+| EventKit | Run `.local/runs/typed-calendar-links-20260926-s19-002/` passes 20 tests, with one simulator-only file-protection skip and zero failures. It includes typed ownership inspection, system-editor occurrence identity, import recovery and notification races. Complete results and executable products are retained. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | The latest inspected run [35382848454](archive:github/run-35382848454) at `5718dd5` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
 | Portable CI scope | Runs 35299521071 (`9c8d31c`), 35300286611 (`b8d31a2`) and 35302894860 (`10c5f39`) pass with their Apple jobs explicitly skipped. The latest has 174 Rust, 211 tool and fourteen monitor tests. Full remains the default for manual dispatch and the required push/PR scope. These runs do not qualify native behavior. |
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
 | Local audio/UI | Real playback, advancing word display and cancellation pass in runs `ui-regressions-20260926-s18-002` and `003`. Large-font week/month navigation passes in run `003`; archive editing, retained title/room, cancellation and source access pass in run `004`. Test helpers now handle native date-picker values, covered tap points and virtualized fields (`9fffab3`, `cf4e39d`). Full-suite and physical latency/audio qualification remain open. Earlier failed attempts remain preserved. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
-| Appearance | All 22 original PNGs are unchanged. Current common-run comparison remains failed at 14/22: six missing scroll indicators and the two retained small finished-day raster differences. All normal/large content positions and the dark legend now match. The original 15/22 and 13/22 reports remain separate historical evidence. No baseline replacement, image alignment or tolerance hides differences. |
+| Appearance | All 22 original PNGs are unchanged. Latest comparison remains failed at 15/22: five transient scroll-indicator states/positions and two small finished-day raster differences. All normal/large content positions and the dark legend now match. The original 15/22 and 13/22 reports remain separate historical evidence. No baseline replacement, image alignment or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
 | Packaging | Signed private archive/IPA at `21ff054` passes four-component signature/profile, model, notice and privacy checks. The earliest profile expired on September 26, 2026 at 11:56:33 UTC; this is historical package evidence, not current installation eligibility. See the [package record](../releases/history/2026-09-26-s18-signed-package.md); recheck signing before any approved update. |
 
