@@ -4,7 +4,57 @@ import UserNotifications
 import WidgetKit
 import XCTest
 
+/// Counts attempted network-source synchronization without initiating one.
+/// The service owns EventKit access; the counter has its own lock for assertions.
+private final class LocalOnlyEventStore: EKEventStore {
+  private let lock = NSLock()
+  private var attempts = 0
+  var remoteSyncAttempts: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return attempts
+  }
+  override func refreshSourcesIfNecessary() {
+    lock.lock()
+    attempts += 1
+    lock.unlock()
+  }
+}
+
 final class AgendaNativeTests: XCTestCase {
+  func testLocalCalendarQueriesRepairAndMaintenanceDoNotRequestRemoteSync() async throws {
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+      throw XCTSkip("Simulator runner calendar access required")
+    }
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = LocalOnlyEventStore()
+    let service = AgendaService(storageRoot: root, widgetRoot: root, eventStore: store)
+    service.start(registerBackground: false)
+    let native = NativeServices(agenda: service)
+    let query = NativeCalendarQuery(
+      calendarIDs: [], startUTC: "2026-09-20T00:00:00Z", endUTC: "2026-09-21T00:00:00Z",
+      timezone: "Europe/Vienna", selectionRevision: 1, records: [])
+    let read: NativeCalendarReadResult = try await withCheckedThrowingContinuation { done in
+      native.queryCalendar(query) { done.resume(with: $0) }
+    }
+    XCTAssertTrue(read.events.isEmpty)
+    XCTAssertEqual(store.remoteSyncAttempts, 0, "Calendar reads requested a remote source sync")
+    let links: NativeCalendarLinkInspection = try await withCheckedThrowingContinuation { done in
+      native.inspectCalendarLinks([]) { done.resume(with: $0) }
+    }
+    XCTAssertTrue(links.results.isEmpty)
+    XCTAssertEqual(store.remoteSyncAttempts, 0, "Link inspection requested a remote source sync")
+    let _: NativeAgendaStatus = try await withCheckedThrowingContinuation { done in
+      native.synchronizeAgenda(
+        records: [], preferences: ReminderPreferences(), displayCalendarIDs: []
+      ) { done.resume(with: $0) }
+    }
+    XCTAssertEqual(
+      store.remoteSyncAttempts, 0, "Local calendar work requested a remote source sync")
+  }
+
   private static func pendingOpen(_ service: AgendaService, acknowledge: String? = nil)
     async throws -> String?
   {

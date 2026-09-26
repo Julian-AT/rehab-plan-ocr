@@ -35,6 +35,11 @@ EventKit-Dienste besitzen serialisierte Queues. UniFFI-Aufrufe laufen außerhalb
 UI, während die Plattformbrücke synchrone Rust-Effekte in native Aufträge übersetzt.
 Mitteilungssnapshots und Systemplanung sind asynchron und zeitlich begrenzt.
 
+Kalenderansicht, Zuordnungsprüfung und Erinnerungswartung lesen lokal vorhandene
+EventKit-Daten. Sie stoßen keine Synchronisierung der Kalenderquellen an.
+Systemeigene Kontosynchronisierung liegt außerhalb dieses App-Pfads; nach
+EventKit-Änderungsmeldungen werden die lokalen Terminobjekte erneut abgefragt.
+
 Ein Erkennungslauf belegt die Pipeline. Abbruch wird vor Stufen und zwischen
 Ausschnitten geprüft; ein einzelner ONNX-Aufruf ist nicht vorzeitig unterbrechbar.
 Generationstickets verhindern die Übernahme alter Kamera-, Foto-, PDF- und

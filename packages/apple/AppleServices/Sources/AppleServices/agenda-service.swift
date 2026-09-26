@@ -30,7 +30,7 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   static let noSnoozeCategory = "REHA_APPOINTMENT_OPEN"
   static let backgroundID = "at.rehakalender.personal.agenda-refresh"
   let queue = DispatchQueue(label: "at.rehakalender.agenda")
-  let store = EKEventStore()
+  let store: EKEventStore
   private let center = UNUserNotificationCenter.current()
   private let notifications: any NotificationAdapter
   private var notificationState = NotificationSnapshot(
@@ -62,8 +62,9 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   init(
     storageRoot: URL? = nil, widgetRoot: URL? = nil,
     notifications: any NotificationAdapter = SystemNotificationAdapter(),
-    notificationTimeout: TimeInterval = 20
+    notificationTimeout: TimeInterval = 20, eventStore: EKEventStore = EKEventStore()
   ) {
+    self.store = eventStore
     self.notifications = notifications
     self.notificationTimeout = notificationTimeout
     self.storageRoot = storageRoot
@@ -497,7 +498,8 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
       try publish()
       return
     }
-    store.refreshSourcesIfNecessary()
+    // Refetch local objects; EventKit source synchronization belongs to the system.
+    // Do not initiate a remote sync from offline maintenance or link inspection.
     var events: [(OwnedRecord, EKEvent, AgendaEvent)] = []
     var deleted: [String] = []
     for record in state.records {

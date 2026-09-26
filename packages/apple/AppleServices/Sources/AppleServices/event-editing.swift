@@ -137,7 +137,8 @@ final class EventEditingService: @unchecked Sendable {
     -> (calendarIDs: [String], results: [(String, LinkLookup)])
   {
     try requireReadAccess()
-    store.refreshSourcesIfNecessary()
+    // Refetch local objects; EventKit source synchronization belongs to the system.
+    // Do not initiate a remote sync from offline maintenance or link inspection.
     let readable = store.calendars(for: .event)
     var results: [(String, LinkLookup)] = []
     for native in records {
