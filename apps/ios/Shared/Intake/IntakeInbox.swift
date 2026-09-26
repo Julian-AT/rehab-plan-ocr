@@ -5,6 +5,17 @@ import Foundation
 enum IntakeInbox {
   private static let maximumBytes = 40 * 1024 * 1024
 
+  static func writeRenderedPage(_ data: Data, at destination: URL) throws -> URL {
+    guard !data.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+    guard data.count <= maximumBytes else { throw CocoaError(.fileReadTooLarge) }
+    // A directly retained share PDF can be the first intake on this install;
+    // it has no preliminary inbox copy that would create this directory.
+    try FileManager.default.createDirectory(
+      at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try data.write(to: destination, options: .atomic)
+    return destination
+  }
+
   static func stage(
     _ source: URL, at destination: URL,
     copy: (FileHandle, FileHandle) throws -> Void = copyContents

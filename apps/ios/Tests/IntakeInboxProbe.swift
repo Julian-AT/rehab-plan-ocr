@@ -6,6 +6,17 @@ import Foundation
     let root = files.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try files.createDirectory(at: root, withIntermediateDirectories: true)
     defer { try? files.removeItem(at: root) }
+    // The first shared PDF bypasses file-to-inbox staging because its original
+    // is already retained. Its first rendered page must create a fresh inbox.
+    let freshInbox = root.appendingPathComponent("fresh-install/inbox")
+    let firstPage = freshInbox.appendingPathComponent(UUID().uuidString + ".png")
+    let rendered = Data("synthetic complete rendered PNG".utf8)
+    precondition(!files.fileExists(atPath: freshInbox.path))
+    _ = try IntakeInbox.writeRenderedPage(rendered, at: firstPage)
+    let storedPage = try Data(contentsOf: firstPage)
+    precondition(storedPage == rendered)
+    let freshPending = try IntakeInbox.pending(in: freshInbox)
+    precondition(freshPending.map(\.lastPathComponent) == [firstPage.lastPathComponent])
     let inbox = root.appendingPathComponent("inbox")
     let source = root.appendingPathComponent("synthetic.pdf")
     let bytes = Data("%PDF-complete synthetic original".utf8)

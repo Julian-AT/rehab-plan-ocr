@@ -536,8 +536,7 @@ struct StagedPhoto: Transferable, Sendable {
         let temporary = try await Task.detached {
           let folder = try AppStorage.prepare().appendingPathComponent("inbox")
           let url = folder.appendingPathComponent(page).appendingPathExtension("png")
-          try rendered.png.write(to: url, options: .atomic)
-          return url
+          return try IntakeInbox.writeRenderedPage(rendered.png, at: url)
         }.value
         guard canRetain(attempt), canRetain(child) else { return }
         _ = try await core.stagePhoto(id: page, path: temporary.path)
