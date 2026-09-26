@@ -1,0 +1,16 @@
+[project]
+name = "reha-ocr-training"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "paddlepaddle==3.3.1",
+  "paddle2onnx==2.1.0",
+  # Match the shipping runtime for export parity, not a newer desktop runtime.
+  "onnxruntime==1.22.0",
+  "shapely", "scikit-image", "pyclipper", "lmdb", "tqdm", "numpy",
+  "rapidfuzz", "opencv-contrib-python", "cython", "pillow", "pyyaml",
+  "requests", "albumentations", "albucore", "packaging",
+]
+
+[tool.uv]
+package = false

@@ -1,4 +1,5 @@
 .git
+.local
 target
 data/private
 models/private
