@@ -198,19 +198,52 @@ import Foundation
     let historical =
       try JSONSerialization.jsonObject(with: Data(contentsOf: recorded))
       as! [String: Any]
-    let rows = historical["cases"] as! [[String: Any]]
+    if let variants = historical["variants"] as? [[String: Any]] {
+      guard !variants.isEmpty else { throw InterpretationError.invalidRequest }
+      var results: [[String: Any]] = []
+      for variant in variants {
+        var result = try await replayVariant(variant, fixture: fixture)
+        result["id"] = variant["id"]
+        results.append(result)
+      }
+      let report: [String: Any] = [
+        "schema_version": 1, "kind": "paired-recorded-synthetic-response-replay",
+        "qualified": false, "fresh_inference": false, "full_voice_workflow": false,
+        "independent_real_dialogues": 0, "variants": results,
+      ]
+      try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+        .write(to: output, options: .withoutOverwriting)
+    } else {
+      let report = try await replayVariant(historical, fixture: fixture)
+      try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+        .write(to: output, options: .withoutOverwriting)
+    }
+  }
+
+  @MainActor private static func replayVariant(
+    _ historical: [String: Any], fixture: InterpretationEvaluation.Fixture
+  ) async throws -> [String: Any] {
+    guard let rows = historical["cases"] as? [[String: Any]],
+      rows.compactMap({ $0["id"] as? String }) == fixture.cases.map(\.id),
+      let identity = historical["model_identity"] as? String, !identity.isEmpty
+    else { throw InterpretationError.invalidRequest }
     let byID = Dictionary(uniqueKeysWithValues: rows.map { ($0["id"] as! String, $0) })
     var replayed: [[String: Any]] = []
     var admitted = 0
     for sample in fixture.cases {
       let row = byID[sample.id]!
-      let observation = row["observation"] as! [String: Any]
+      let observation = row["observation"] as? [String: Any] ?? [:]
+      var usedRecording = false
       let provider = CustomAssistantProvider(
         identity: InterpretationIdentity(
-          provider: "recorded-response", model: historical["model_identity"] as! String,
+          provider: "recorded-response", model: identity,
           schemaVersion: 1), system: "Synthetic response replay"
       ) { _, _ in
         admitted += 1
+        usedRecording = true
+        // Preserve model text, including invalid/duplicate keys. Only the CLI's
+        // presentation marker is removed by the evidence preparation adapter.
+        if let text = row["raw_response"] as? String { return text }
         guard let operation = observation["operation"] as? [String: Any] else {
           throw InterpretationError.invalidRequest
         }
@@ -228,15 +261,14 @@ import Foundation
       } catch {
         result["error"] = String(describing: error)
       }
+      result["recorded_response_admitted"] = usedRecording
       replayed.append(result)
     }
-    let report: [String: Any] = [
+    return [
       "schema_version": 1, "kind": "recorded-synthetic-response-replay",
       "qualified": false, "fresh_inference": false, "full_voice_workflow": false,
       "independent_real_dialogues": 0, "cases": replayed,
       "recorded_responses_admitted": admitted,
     ]
-    try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
-      .write(to: output, options: .withoutOverwriting)
   }
 }

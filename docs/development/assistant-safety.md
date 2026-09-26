@@ -133,3 +133,40 @@ Diese Fälle sind Teil desselben echten VoiceModel-Ablaufprobes. Die ursprüngli
 fehlende Auflösung wurde vor der Änderung durch dessen fehlschlagende Zusicherung
 `Spoken ordinal must use the discussed page` reproduziert. Die Prüfhülle begrenzt
 Cargo und Swift jeweils auf einen Compilerjob.
+
+## Gepaarter Replay nach Korrektur des CLI-Prompts
+
+Die am 26.09.2026 neu erzeugten 40 Antworten aus
+`assistant-token-trace-20260926-s18-004` wurden unverändert durch denselben aktuellen
+Swift-Router geschickt. Zwei Vergleichsvarianten verwenden die historischen
+CLI-Texte beziehungsweise damaligen App-Interpretationen. Entfernt werden nur
+äußere Leerzeichen und der abschließende CLI-Anzeigemarker; JSON wird vor dem
+Router weder repariert noch neu serialisiert. Kontext, Ziele und Prompt-Hashes
+sind gegen die ursprünglichen erfundenen Entwicklungsfälle geprüft.
+
+Alle drei Varianten erreichen 33/40 exakte Antworten und 0/40 unsichere
+Änderungsvorschläge. 24 Fälle beantwortet jeweils die vollständige Regel,
+16 aufgezeichnete Modellantworten erreichen den Anbieter. Die korrigierte CLI
+verursacht hinter dem Router weder neue unsichere Vorschläge noch neue falsche
+Fälle. Die sieben bekannten Abweichungen bleiben erhalten. Dies ist ein Replay
+frischer Inferenztexte, keine zusätzliche Modellinferenz, Laufzeitmessung oder
+vollständige VoiceModel-/Audioabnahme. Die Fälle bilden weiterhin nur eine
+verbundene Entwicklungsgruppe und keine unabhängigen realen Dialoge.
+
+Beleg: `.local/runs/assistant-router-replay-20260926-s18-001/`, mit Quellen-/Inputhashes,
+unveränderten Antworttexten, Swift-Log und gepaartem Ergebnis. Drei zusätzliche
+Regressionen verhindern unter anderem das Verbergen einer neuen unsicheren
+Änderung im Gesamtwert sowie die Annahme unvollständiger oder widersprüchlicher
+Anbieterbelege. Die vorhandene vollständige Custom-Provider-Probe besteht ebenfalls.
+
+Wiederholung in einem neuen privaten Verzeichnis:
+
+```sh
+make prepare-assistant-router-replay RUN=.local/runs/<neu> \
+  APP_RUN=.local/runs/assistant-app-40-custom-20260926-s18-001 \
+  DEPLOYMENT_RUN=.local/runs/assistant-development-001/deployment \
+  NATIVE_RUN=.local/runs/assistant-token-trace-20260926-s18-004
+make test-custom-assistant-provider \
+  TEST_ARGS='.local/runs/<neu>/input.json .local/runs/<neu>/recorded.json .local/runs/<neu>/router.json'
+make assess-assistant-router-replay RUN=.local/runs/<neu>
+```

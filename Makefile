@@ -475,3 +475,12 @@ diagnose-ocr-convolution-stage: PEAK_GIB = 2
 diagnose-ocr-convolution-stage: check-storage
 	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private experiment directory'; exit 2; }
 	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_stage.py execute --output "$(DIAGNOSTIC_RUN)"
+
+.PHONY: prepare-assistant-router-replay assess-assistant-router-replay
+prepare-assistant-router-replay:
+	@test -n "$(RUN)" -a -n "$(APP_RUN)" -a -n "$(DEPLOYMENT_RUN)" -a -n "$(NATIVE_RUN)" || { echo 'Set RUN (new), APP_RUN, DEPLOYMENT_RUN and NATIVE_RUN'; exit 2; }
+	python3 ml/evaluation/conversation/router_replay.py prepare --output "$(RUN)" --app "$(APP_RUN)" --deployment "$(DEPLOYMENT_RUN)" --native "$(NATIVE_RUN)"
+
+assess-assistant-router-replay:
+	@test -n "$(RUN)" || { echo 'Set RUN to the prepared and executed router replay'; exit 2; }
+	python3 ml/evaluation/conversation/router_replay.py summarize --output "$(RUN)"
