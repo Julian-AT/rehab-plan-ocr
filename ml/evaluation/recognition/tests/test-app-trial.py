@@ -19,6 +19,7 @@ class RecognitionAppTrialTests(unittest.TestCase):
         self.folder = Path(self.temp.name)
         (self.folder / "models").mkdir()
         self.trace = json.loads((ROOT / "ml/evaluation/fixtures/sample-run.json").read_text())
+        self.trace["stages"].append({"name": "vision_refinement", "status": "complete"})
         self.manifest = self.trace["model_manifest"]
         manifest = self.folder / "models/manifest.json"
         manifest.write_text(json.dumps(self.manifest))
@@ -65,6 +66,8 @@ class RecognitionAppTrialTests(unittest.TestCase):
             ("calendar_operations", 1),
             ("host_calls", {"rejected_calendar_calls": 1}),
             ("host_calls", {"rejected_calendar_calls": False}),
+            ("host_calls", {"rejected_calendar_calls": 0, "native_reread_calls": 0}),
+            ("host_calls", {"rejected_calendar_calls": 0, "native_reread_calls": True}),
             ("model_manifest_sha256", "changed"),
             ("source_sha256", "changed"),
             ("cases", []),
@@ -95,6 +98,7 @@ class RecognitionAppTrialTests(unittest.TestCase):
             ("engine", "Apple Vision"),
             ("model_manifest", {}),
             ("stages", []),
+            ("stages", [s for s in original["stages"] if s["name"] != "vision_refinement"]),
         ]:
             path.write_text(json.dumps(dict(original, **{key: value})))
             with self.subTest(key=key), self.assertRaises(ValueError):

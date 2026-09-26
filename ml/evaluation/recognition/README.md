@@ -19,6 +19,8 @@ fresh recognition. The trace's historical `cache_used` field means **model-sessi
 reuse**, not duplicate-image result reuse: the second import must reuse warm model
 sessions. Recognition, selective rereading and native Apple Vision refinement stay
 in the normal pipeline. Review and trace APIs reread the persisted results.
+The verifier requires a positive native reread count and completed Vision refinement
+in each trace, so a result that silently skipped that branch cannot pass.
 
 The host adapter allows photo decoding and native recognition calls only. Calendar
 reads, writes and synchronization fail and invalidate the evaluation. Neither audio

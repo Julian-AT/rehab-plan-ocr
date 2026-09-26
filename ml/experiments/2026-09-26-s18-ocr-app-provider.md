@@ -49,6 +49,12 @@ Nine new isolated tool regressions cover result/lineage validation, session reus
 model staging and disposable installation. All 188 tool tests, repository lint,
 the normal simulator build and built-bundle verification pass.
 
+A later verifier audit makes the native-rereading requirement explicit: a missing,
+zero or invalid native call count, or missing Vision refinement in either trace,
+fails compatibility. Seven focused tests pass, and both retained variants pass
+the stricter check without repeating inference. Receipt:
+`.local/runs/ocr-app-provider-20260926-s18-004-native-audit/report.json`.
+
 These are compatibility observations from a serial synthetic development run.
 The timing includes import, pipeline and persistence, but excludes camera/picker
 startup and first visible content. It supplies no p50/p95, interleaved speed claim,

@@ -97,6 +97,8 @@ def complete(result, request, folder):
         or result.get("model_manifest_sha256") != request["model_manifest_sha256"]
         or type(result.get("host_calls", {}).get("rejected_calendar_calls")) is not int
         or result["host_calls"]["rejected_calendar_calls"] != 0
+        or type(result.get("host_calls", {}).get("native_reread_calls")) is not int
+        or result["host_calls"]["native_reread_calls"] < 1
     ):
         raise ValueError("Recognition probe did not complete with the requested identities")
     cases = result.get("cases")
@@ -135,6 +137,10 @@ def complete(result, request, folder):
             )
             or not any(
                 s["name"] == "recognition" and s["status"] in {"complete", "partial"}
+                for s in trace["stages"]
+            )
+            or not any(
+                s["name"] == "vision_refinement" and s["status"] == "complete"
                 for s in trace["stages"]
             )
             or type(row["appointments"]) is not int
