@@ -80,14 +80,14 @@ import RehaCore
     recorder.onEndpoint = { [weak self] in self?.turnTask = Task { await self?.endTurn() } }
     recorder.onBargeIn = { [weak self] in self?.interruptAnswer() }
     recorder.onFailure = { [weak self] message in
-      self?.pauseSession()
+      self?.pauseSession(reason: .microphoneFailure)
       self?.failure = message
     }
   }
   private func installOutputCallbacks() {
     output.onFinished = { [weak self] in self?.answerFinished() }
     output.onFailure = { [weak self] message in
-      self?.pauseSession()
+      self?.pauseSession(reason: .playbackFailure)
       self?.failure = message
     }
   }
@@ -103,7 +103,7 @@ import RehaCore
     rememberSpoken()
     guard running, edits.proposal == nil else { return }
     if dependencies.isVoiceOverRunning() {
-      pauseSession()
+      pauseSession(reason: .voiceOver)
       return
     }
     turnTask = Task { [weak self] in
@@ -113,8 +113,8 @@ import RehaCore
       await self.beginTurn()
     }
   }
-  func pauseSession() {
-    dependencies.trace(.interrupted(session))
+  func pauseSession(reason: VoiceInterruptionReason = .userPause) {
+    dependencies.trace(.interrupted(session, reason))
     let endedToken = modelToken
     running = false
     sessionState = .paused
@@ -134,7 +134,7 @@ import RehaCore
   }
   private func interruptAnswer() {
     guard running, edits.proposal == nil else { return }
-    dependencies.trace(.interrupted(session))
+    dependencies.trace(.interrupted(session, .speechOnset))
     let endedToken = modelToken
     responseTask?.cancel()
     understanding.discard()
@@ -208,7 +208,7 @@ import RehaCore
     recorder.contextualTitles = candidates.map { $0.values.title }
     do { try await recorder.beginTurn(preRoll: preRoll) } catch {
       if session == current {
-        pauseSession()
+        pauseSession(reason: .microphoneStartup)
         failure = error.localizedDescription
         response = error.localizedDescription
       }
@@ -235,7 +235,7 @@ import RehaCore
       await interpret(text)
     } catch {
       if session == current {
-        pauseSession()
+        pauseSession(reason: .recognitionFinalization)
         failure = error.localizedDescription
       }
     }
@@ -253,7 +253,7 @@ import RehaCore
     let calendar = dependencies.calendar()
     let parsed = VoiceRules.parse(text, now: now, calendar: calendar)
     if parsed.action == .cancel {
-      cancelSession()
+      cancelSession(reason: .spokenStop)
       return
     }
     if parsed.negatedChange || interaction.rejectsPendingChange(text) {
@@ -452,6 +452,8 @@ import RehaCore
       let result = try await task.value.value
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       responseTask = nil
+      dependencies.trace(
+        .interpretationCompleted(current, InterpretationDiagnostics.action(result)))
       switch result.action {
       case .plan:
         guard let query = result.plan else { throw InterpretationError.invalidRequest }
@@ -514,6 +516,7 @@ import RehaCore
     } catch {
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       responseTask = nil
+      dependencies.trace(.interpretationFailed(current, InterpretationDiagnostics.failure(error)))
       say(
         error is CalendarUnderstandingError
           ? "Bitte die Frage kürzer formulieren und einen eindeutigen Zeitraum oder Termin nennen."
@@ -834,8 +837,10 @@ import RehaCore
     selected = nil
     say(edits.conversationResult ?? edits.error ?? "Bitte Kalender abgleichen.", question: .action)
   }
-  func cancelSession(preserveResponse: Bool = false, reason: String = "action") {
-    dependencies.trace(.cancelled(session))
+  func cancelSession(
+    preserveResponse: Bool = false, reason: VoiceCancellationReason = .action
+  ) {
+    dependencies.trace(.cancelled(session, reason))
     #if DEBUG && targetEnvironment(simulator)
       if ProcessInfo.processInfo.arguments.contains("--agenda-fixture") {
         print("Voice session ended: \(reason), phase \(sessionState), question \(question)")

@@ -32,12 +32,26 @@ enum VoiceRecordingState { case idle, preparing, recording, finishing }
 
 enum VoiceTrace {
   case playbackCompleted(String)
-  case interrupted(String)
+  case interrupted(String, VoiceInterruptionReason)
   case recognitionStarted(String)
   case recognitionCompleted(String, Int)
   case interpretationStarted(String)
+  case interpretationCompleted(String, Int)
+  case interpretationFailed(String, Int)
   case calendarRead(String, Bool)
-  case cancelled(String)
+  case cancelled(String, VoiceCancellationReason)
+}
+
+// Stable technical categories; never include recognized words or error text.
+enum VoiceCancellationReason: Int {
+  case action = 1
+  case spokenStop, tab, background, systemInterruption, routeChange
+  case mediaReset, mediaLost, erase, settings
+}
+enum VoiceInterruptionReason: Int {
+  case userPause = 1
+  case microphoneFailure, playbackFailure, voiceOver, speechOnset
+  case microphoneStartup, recognitionFinalization
 }
 
 struct VoiceCalendarDestination {

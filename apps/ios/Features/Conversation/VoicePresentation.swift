@@ -194,7 +194,7 @@ struct VoiceView: View {
         }
         .accessibilityIdentifier("voice-details")
         Button("Spracheinstellungen", systemImage: "slider.horizontal.3") {
-          model.cancelSession()
+          model.cancelSession(reason: .settings)
           settings = true
         }
         .accessibilityIdentifier("voice-settings")

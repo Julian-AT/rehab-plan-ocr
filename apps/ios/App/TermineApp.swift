@@ -42,6 +42,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         #if DEBUG && REHA_CUSTOM_ASSISTANT_TRIAL && targetEnvironment(simulator)
           if await AssistantProviderScenario.runIfRequested() { return }
         #endif
+        #if REHA_PRIVATE_VICTORIA
+          if await PrivateAssistantProbe.runIfRequested() { return }
+        #endif
         if core == nil { await open() }
       }
     }
@@ -82,9 +85,17 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
   @State private var refreshID = 0
   @State private var scanner: ScanModel
   @State private var voice: VoiceModel
+  @State private var conversationWake = ConversationWakeState()
   @State private var openError: String?
   @State private var linkedEvent: CalendarEvent?
   @State private var linkRequests: AgendaLinkRequests<OwnedEventResolution>
+  private var conversationActive: Bool {
+    voice.isSessionRunning || voice.busy || SpeechOutput.shared.speaking
+  }
+  private func updateConversationWake(active: Bool) {
+    UIApplication.shared.isIdleTimerDisabled = conversationWake.update(
+      active: active, current: UIApplication.shared.isIdleTimerDisabled)
+  }
   init(core: NativeApplication) {
     self.core = core
     _preferences = State(initialValue: PreferencesStore(core: core))
@@ -157,7 +168,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
         linkRequests.invalidate()
         linkedEvent = nil
         openError = nil
-        voice.cancelSession(reason: "erase")
+        voice.cancelSession(reason: .erase)
         SpeechOutput.shared.eraseSession()
       }
     }
@@ -173,7 +184,7 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       EventEditorView(core: core, original: event, changed: refresh)
     }
     .onChange(of: tab) { old, _ in
-      if old == .voice { voice.cancelSession(reason: "tab") }
+      if old == .voice { voice.cancelSession(reason: .tab) }
       refreshID += 1
     }
     .overlay {
@@ -189,7 +200,13 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       guard !scanner.isErasing, let link = AgendaLink(url) else { return }
       linkRequests.open(link, deliver: showLink, failed: linkFailed)
     }
-    .onDisappear { linkRequests.invalidate() }
+    .onDisappear {
+      linkRequests.invalidate()
+      updateConversationWake(active: false)
+    }
+    .onChange(of: conversationActive) { _, active in
+      updateConversationWake(active: active && scenePhase == .active)
+    }
     .onChange(of: scanner.presentedID) { _, id in
       if let id {
         linkRequests.invalidate()
@@ -219,7 +236,8 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       refreshID += 1
     }
     .onChange(of: scenePhase) { _, phase in
-      if phase == .background { voice.cancelSession(reason: "background") }
+      updateConversationWake(active: phase == .active && conversationActive)
+      if phase == .background { voice.cancelSession(reason: .background) }
       if phase == .background {
         linkRequests.invalidate()
         scanner.suspend()
@@ -239,22 +257,22 @@ enum AppTab: Hashable { case appointments, voice, archive, more }
       if let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
         type == AVAudioSession.InterruptionType.began.rawValue
       {
-        voice.cancelSession(reason: "interruption")
+        voice.cancelSession(reason: .systemInterruption)
       }
     }
     .onReceive(
       NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereResetNotification)
-    ) { _ in voice.cancelSession(reason: "media-services-reset") }
+    ) { _ in voice.cancelSession(reason: .mediaReset) }
     .onReceive(
       NotificationCenter.default.publisher(for: AVAudioSession.mediaServicesWereLostNotification)
-    ) { _ in voice.cancelSession(reason: "media-services-lost") }
+    ) { _ in voice.cancelSession(reason: .mediaLost) }
     .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) {
       notification in
       if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
         reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue
           || reason == AVAudioSession.RouteChangeReason.newDeviceAvailable.rawValue
       {
-        voice.cancelSession(reason: "route-\(reason)")
+        voice.cancelSession(reason: .routeChange)
       }
     }
     .task {

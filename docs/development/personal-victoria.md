@@ -56,3 +56,23 @@ Portable checks cover setup/cancellation, incomplete recognition rejection, PCM
 validation, and public/private package separation. Actual speech reliability and
 the restored voice must be checked on the phone; simulator playback alone does
 not qualify microphone-to-answer conversation.
+
+## Cancellation and assistant diagnosis
+
+Foreground conversation now owns a temporary idle-timer override while listening,
+thinking or speaking. Stopping, pausing or leaving the foreground restores the
+previous setting. Explicit locking/backgrounding still ends capture. This avoids
+the app's own background cancellation being triggered by hands-free Auto-Lock.
+
+`VoiceTrace` carries typed interruption and cancellation reasons. Routine `tools`
+events now record completion/action or a fixed error category, without arbitrary
+error strings or conversation content. Codes are defined in `VoiceDependencies`
+and `InterpretationDiagnostics`; uncategorized errors are 99.
+
+The personal build supports the explicitly requested launch argument
+`--diagnose-assistant <new-UUID>` for runtime diagnosis. This bypasses the normal
+app/database initialization and microphone, runs fixed synthetic greetings and a
+calendar question through plain, guided and app-provider generation, and writes
+an exclusive per-run report under Documents/assistant-diagnostics. Model errors
+and generated replies in that report belong only to these synthetic requests.
+Normal app launches never run this check. Relaunch normally after collecting it.

@@ -28,8 +28,9 @@ extension VoiceModel {
           switch event {
           case .playbackCompleted(let session):
             LocalDiagnostics.shared.record(.playback, .completed, correlation: session)
-          case .interrupted(let session):
-            LocalDiagnostics.shared.record(.interruption, .completed, correlation: session)
+          case .interrupted(let session, let reason):
+            LocalDiagnostics.shared.record(
+              .interruption, .completed, correlation: session, count: reason.rawValue)
           case .recognitionStarted(let session):
             LocalDiagnostics.shared.record(.speechRecognition, .started, correlation: session)
           case .recognitionCompleted(let session, let count):
@@ -37,11 +38,16 @@ extension VoiceModel {
               .speechRecognition, .completed, correlation: session, count: count)
           case .interpretationStarted(let session):
             LocalDiagnostics.shared.record(.tools, .started, correlation: session)
+          case .interpretationCompleted(let session, let action):
+            LocalDiagnostics.shared.record(.tools, .completed, correlation: session, count: action)
+          case .interpretationFailed(let session, let reason):
+            LocalDiagnostics.shared.record(.tools, .failed, correlation: session, count: reason)
           case .calendarRead(let session, let completed):
             LocalDiagnostics.shared.record(
               .calendarRead, completed ? .completed : .started, correlation: session)
-          case .cancelled(let session):
-            LocalDiagnostics.shared.record(.speechSession, .cancelled, correlation: session)
+          case .cancelled(let session, let reason):
+            LocalDiagnostics.shared.record(
+              .speechSession, .cancelled, correlation: session, count: reason.rawValue)
           }
         }, errorMessage: userMessage,
         planEvidence: PlanEvidenceAccess(

@@ -1,5 +1,19 @@
 import Foundation
 
+/// A foreground conversation relies on the visible confirmation and word display.
+/// Restore the pre-existing idle policy as soon as its active use ends.
+struct ConversationWakeState {
+  private var previous: Bool?
+  mutating func update(active: Bool, current: Bool) -> Bool {
+    if active {
+      if previous == nil { previous = current }
+      return true
+    }
+    defer { previous = nil }
+    return previous ?? current
+  }
+}
+
 struct HeardSpeech {
   private var order: [UUID] = []
   private var passages: [UUID: String] = [:]

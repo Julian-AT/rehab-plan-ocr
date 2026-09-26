@@ -1,6 +1,48 @@
 import Foundation
 import FoundationModels
 
+enum InterpretationDiagnostics {
+  static func action(_ value: ConversationInterpretation) -> Int {
+    switch value.action {
+    case .calendar: 1
+    case .create: 2
+    case .update: 3
+    case .remove: 4
+    case .cancel: 5
+    case .help: 6
+    case .conversation: 7
+    case .clarify: 8
+    case .plan: 9
+    }
+  }
+  static func failure(_ error: any Error) -> Int {
+    if let error = error as? InterpretationError {
+      switch error {
+      case .invalidRequest: return 1
+      case .unavailable: return 2
+      case .deadlineExceeded: return 3
+      case .contextTooLarge: return 4
+      }
+    }
+    if error is CalendarUnderstandingError { return 5 }
+    if let error = error as? LanguageModelSession.GenerationError {
+      switch error {
+      case .exceededContextWindowSize: return 20
+      case .assetsUnavailable: return 21
+      case .guardrailViolation: return 22
+      case .unsupportedGuide: return 23
+      case .unsupportedLanguageOrLocale: return 24
+      case .decodingFailure: return 25
+      case .rateLimited: return 26
+      case .concurrentRequests: return 27
+      case .refusal: return 28
+      @unknown default: return 29
+      }
+    }
+    return error is CancellationError ? 30 : 99
+  }
+}
+
 @Generable struct CalendarUnderstanding {
   @Generable enum Action { case calendar, create, update, remove, conversation, clarify, plan }
   @Generable struct PlanQuery {

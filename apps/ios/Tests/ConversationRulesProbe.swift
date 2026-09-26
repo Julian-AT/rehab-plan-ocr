@@ -2,6 +2,14 @@ import Foundation
 
 @main struct ConversationRulesProbe {
   static func main() {
+    var wake = ConversationWakeState()
+    precondition(!wake.update(active: false, current: false))
+    precondition(wake.update(active: true, current: false))
+    for _ in 0..<100 { precondition(wake.update(active: true, current: true)) }
+    precondition(!wake.update(active: false, current: true), "Stopping must restore Auto-Lock")
+    precondition(!wake.update(active: false, current: false))
+    precondition(wake.update(active: true, current: true))
+    precondition(wake.update(active: false, current: true), "Preserve an existing wake request")
     var heard = HeardSpeech()
     let firstPlayback = UUID()
     heard.capture(playback: firstPlayback, completedWords: "Frühstück eins")

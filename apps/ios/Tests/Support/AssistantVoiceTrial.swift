@@ -217,7 +217,7 @@
         ])
         return
       }
-      guard case .cancelled(let reason) = event else { return }
+      guard case .cancelled(let reason, _) = event else { return }
       cancelled += 1
       events.append([
         "kind": "cancel", "session": reason, "confirmations": confirmations.count, "phase": phase,
