@@ -7,29 +7,6 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use tauri::State;
 
-fn approved_events(
-    run: &PipelineRun,
-    timezone: &str,
-    reminder: Option<u32>,
-) -> Response<Vec<(String, EventValues)>> {
-    if !run.review_confirmed {
-        return Err("Zuerst mit dem Papier vergleichen und die Prüfung bestätigen.".into());
-    }
-    let events = run
-        .appointments
-        .iter()
-        .filter(|a| a.included)
-        .map(|a| {
-            calendar::event_values(a, timezone, reminder)
-                .map(|v| (a.id.clone(), v))
-                .map_err(failure)
-        })
-        .collect::<Response<Vec<_>>>()?;
-    if events.is_empty() {
-        return Err("Mindestens einen Termin auswählen.".into());
-    }
-    Ok(events)
-}
 fn schedule_runs(store: &Store, id: &str) -> Response<Vec<PipelineRun>> {
     let ids: Vec<String> = store
         .setting(&format!("pages:{id}"))
@@ -44,14 +21,18 @@ fn schedule_runs(store: &Store, id: &str) -> Response<Vec<PipelineRun>> {
 }
 fn schedule_events(
     runs: &[PipelineRun],
+    selection: Option<&[String]>,
     timezone: &str,
     reminder: Option<u32>,
 ) -> Response<Vec<(String, EventValues)>> {
-    let mut events = vec![];
-    for run in runs {
-        events.extend(approved_events(run, timezone, reminder)?);
-    }
-    Ok(events)
+    let ids = selection.map(|ids| ids.to_vec()).unwrap_or_else(|| {
+        runs.iter()
+            .flat_map(|r| &r.appointments)
+            .filter(|a| a.included)
+            .map(|a| a.id.clone())
+            .collect()
+    });
+    calendar::selected_events(runs, &ids, timezone, reminder).map_err(failure)
 }
 #[tauri::command]
 pub(crate) fn set_page_group(
@@ -111,23 +92,32 @@ pub(crate) fn export_ics(
     id: String,
     timezone: String,
     reminder: Option<u32>,
+    selection: Option<Vec<String>>,
 ) -> Response<String> {
     let store = state.store.lock().map_err(failure)?;
     let runs = schedule_runs(&store, &id)?;
-    let mut events = schedule_events(&runs, &timezone, reminder)?;
+    let selected: Vec<_> = selection.unwrap_or_else(|| {
+        runs.iter()
+            .flat_map(|r| &r.appointments)
+            .filter(|a| a.included)
+            .map(|a| a.id.clone())
+            .collect()
+    });
+    let initial =
+        calendar::selected_events(&runs, &selected, &timezone, reminder).map_err(failure)?;
     let fingerprint =
-        calendar::schedule_fingerprint(&events.iter().map(|(_, v)| v.clone()).collect::<Vec<_>>());
+        calendar::schedule_fingerprint(&initial.iter().map(|(_, v)| v.clone()).collect::<Vec<_>>());
     let key = format!("export:{fingerprint}");
-    if let Some(saved) = store.setting(&key).map_err(failure)? {
-        let ids: Vec<String> = serde_json::from_str(&saved).map_err(failure)?;
-        let mut indices: Vec<_> = (0..events.len()).collect();
-        indices.sort_by_key(|&i| serde_json::to_string(&events[i].1).unwrap());
-        if ids.len() == indices.len() {
-            for (i, id) in indices.into_iter().zip(ids) {
-                events[i].0 = id;
-            }
-        }
-    } else {
+    let saved = store
+        .setting(&key)
+        .map_err(failure)?
+        .map(|s| serde_json::from_str::<Vec<String>>(&s))
+        .transpose()
+        .map_err(failure)?;
+    let events =
+        calendar::selected_ics_events(&runs, &selected, &timezone, reminder, saved.as_deref())
+            .map_err(failure)?;
+    if saved.is_none() {
         let mut sorted = events.clone();
         sorted.sort_by_key(|(_, v)| serde_json::to_string(v).unwrap());
         store
@@ -138,7 +128,22 @@ pub(crate) fn export_ics(
             )
             .map_err(failure)?;
     }
-    calendar::ics(&events, chrono::Utc::now()).map_err(failure)
+    let identities: BTreeMap<_, _> = selected
+        .iter()
+        .zip(&events)
+        .map(|(id, (uid, _))| (id.clone(), uid.clone()))
+        .collect();
+    let text = calendar::ics(&events, chrono::Utc::now()).map_err(failure)?;
+    for mut run in runs {
+        for a in &mut run.appointments {
+            if let Some(uid) = identities.get(&a.id) {
+                a.ics_event_id = Some(uid.clone());
+                a.ics_exported_hash = Some(reha_core::review::values_hash(a));
+            }
+        }
+        store.save_run(&run).map_err(failure)?;
+    }
+    Ok(text)
 }
 #[tauri::command]
 pub(crate) async fn calendars(app: tauri::AppHandle, dedicated: Option<bool>) -> Response<Value> {
@@ -169,6 +174,7 @@ pub(crate) async fn share_export(
     .map_err(failure)?
 }
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Preserve existing Tauri wire arguments during migration.
 pub(crate) async fn prepare_calendar(
     app: tauri::AppHandle,
     state: State<'_, Arc<AppState>>,
@@ -177,6 +183,8 @@ pub(crate) async fn prepare_calendar(
     previous: Option<String>,
     timezone: String,
     reminder: Option<u32>,
+    selection: Option<Vec<String>>,
+    replacement: Option<bool>,
 ) -> Response<Proposal> {
     let (runs, events, records, schedule_id, fingerprint) = {
         let store = state.store.lock().map_err(failure)?;
@@ -184,7 +192,7 @@ pub(crate) async fn prepare_calendar(
             return Err("Unklare Schreibvorgänge zuerst im Verlauf abgleichen. Keine neue Erstellung bis zur Auflösung.".into());
         }
         let runs = schedule_runs(&store, &id)?;
-        let events = schedule_events(&runs, &timezone, reminder)?;
+        let events = schedule_events(&runs, selection.as_deref(), &timezone, reminder)?;
         let fingerprint = calendar::schedule_fingerprint(
             &events.iter().map(|(_, v)| v.clone()).collect::<Vec<_>>(),
         );
@@ -196,8 +204,8 @@ pub(crate) async fn prepare_calendar(
             .find(|s| s.id == id)
             .and_then(|s| s.schedule_id);
         let schedule_id = previous
-            .or(equivalent)
             .or(bound)
+            .or(equivalent)
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let records = store.records(Some(&schedule_id)).map_err(failure)?;
         if records
@@ -216,13 +224,37 @@ pub(crate) async fn prepare_calendar(
     .map_err(failure)??;
     let current: BTreeMap<String, EventValues> =
         serde_json::from_value(live["current"].clone()).map_err(failure)?;
-    let operations = calendar::propose(
+    let identity_bound = records.iter().any(|record| {
+        runs.iter()
+            .flat_map(|r| &r.appointments)
+            .any(|a| a.id == record.id || a.calendar_event_id.as_ref() == Some(&record.id))
+    });
+    let operations = calendar::propose_with_identity(
         &records,
         &events,
         &current,
         &calendar_id,
-        runs[0].complete_page_confirmed,
+        replacement.unwrap_or(false)
+            && runs.iter().all(|r| r.complete_page_confirmed)
+            && runs
+                .iter()
+                .flat_map(|r| &r.appointments)
+                .filter(|a| a.included)
+                .all(|a| selection.as_ref().is_none_or(|ids| ids.contains(&a.id))),
+        identity_bound,
     );
+    let selected_ids: Vec<_> = runs
+        .iter()
+        .flat_map(|r| &r.appointments)
+        .filter(|a| a.included && selection.as_ref().is_none_or(|ids| ids.contains(&a.id)))
+        .map(|a| a.id.clone())
+        .collect();
+    let selected_ids = selection.clone().unwrap_or(selected_ids);
+    let bindings = selected_ids
+        .iter()
+        .zip(operations.iter())
+        .map(|(id, op)| (id.clone(), op.id.clone()))
+        .collect();
     let proposal = Proposal {
         token: uuid::Uuid::new_v4().to_string(),
         document_id: id,
@@ -231,6 +263,7 @@ pub(crate) async fn prepare_calendar(
         schedule_id,
         fingerprint,
         operations,
+        bindings,
     };
     let mut proposals = state.proposals.lock().map_err(failure)?;
     proposals.clear();
@@ -272,6 +305,11 @@ pub(crate) fn resolve_proposal(
         matched.requires_resolution = false;
         matched.reason =
             "Vorherigen App-Termin ausdrücklich diesem Papiertermin zugeordnet.".into();
+        for bound in proposal.bindings.values_mut() {
+            if *bound == event_id {
+                *bound = previous_id.into();
+            }
+        }
         proposal.operations[new_index] = matched;
         proposal.operations.remove(old_index);
         return Ok(proposal.clone());
@@ -333,6 +371,14 @@ pub(crate) async fn approve_calendar(
         if reha_core::hash(&serde_json::to_vec(&runs).map_err(failure)?) != proposal.run_hash {
             return Err("Prüfdaten wurden geändert. Kalender-Vorschau neu erstellen.".into());
         }
+        for mut run in runs {
+            for a in &mut run.appointments {
+                if let Some(id) = proposal.bindings.get(&a.id) {
+                    a.calendar_event_id = Some(id.clone());
+                }
+            }
+            store.save_run(&run).map_err(failure)?;
+        }
         for page in &proposal.document_ids {
             store
                 .bind_schedule(page, &proposal.schedule_id, &proposal.fingerprint)
@@ -382,6 +428,25 @@ pub(crate) async fn approve_calendar(
             .finish_operation(&operation_id, &outcome)
             .map_err(failure)?;
         results.push(outcome);
+    }
+    {
+        let store = state.store.lock().map_err(failure)?;
+        for mut run in schedule_runs(&store, &proposal.document_id)? {
+            for a in &mut run.appointments {
+                let event_id = a.calendar_event_id.as_ref().unwrap_or(&a.id);
+                if results
+                    .iter()
+                    .any(|r| &r.id == event_id && r.status == "saved")
+                    || proposal
+                        .operations
+                        .iter()
+                        .any(|o| &o.id == event_id && o.kind == "unchanged")
+                {
+                    a.calendar_saved_hash = Some(reha_core::review::values_hash(a));
+                }
+            }
+            store.save_run(&run).map_err(failure)?;
+        }
     }
     state.proposals.lock().map_err(failure)?.remove(&token);
     Ok(results)

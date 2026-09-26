@@ -54,6 +54,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             scan::import_image,
+            scan::retry_scan,
             scan::cancel_processing,
             scan::history,
             scan::load_scan,

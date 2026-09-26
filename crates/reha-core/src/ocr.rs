@@ -74,8 +74,30 @@ impl OnnxEngine {
         cancel: &AtomicBool,
         artifacts: &Path,
     ) -> Result<(Vec<Region>, Vec<Observation>, Vec<Stage>)> {
+        self.recognize_until(page, config, cancel, artifacts, None)
+    }
+    pub fn recognize_until(
+        &mut self,
+        page: &RgbImage,
+        config: &PipelineConfig,
+        cancel: &AtomicBool,
+        artifacts: &Path,
+        deadline: Option<Instant>,
+    ) -> Result<(Vec<Region>, Vec<Observation>, Vec<Stage>)> {
         let start = Instant::now();
-        check_cancel(cancel)?;
+        if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
+            return Ok((
+                vec![],
+                vec![],
+                vec![Stage {
+                    name: "recognition".into(),
+                    status: "budget_exhausted".into(),
+                    duration_ms: 0,
+                    detail: "No inference scheduled after deadline/cancellation.".into(),
+                    artifacts: vec![],
+                }],
+            ));
+        }
         let (w, h) = page.dimensions();
         let ratio = (config.detector_side as f64 / w.max(h) as f64).min(1.);
         let dw = ((w as f64 * ratio / 32.).round() as u32 * 32).max(32);
@@ -145,7 +167,9 @@ impl OnnxEngine {
         let start = Instant::now();
         let mut observations = vec![];
         for region in &regions {
-            check_cancel(cancel)?;
+            if cancel.load(Ordering::Relaxed) || deadline.is_some_and(|d| Instant::now() >= d) {
+                break;
+            }
             let (x, y, r, b) = geometry::bounds(&region.polygon);
             let x = x.floor().max(0.) as u32;
             let y = y.floor().max(0.) as u32;
@@ -185,7 +209,7 @@ impl OnnxEngine {
                 alternatives: vec![],
             });
         }
-        stages.push(Stage{name:"recognition".into(),status:"complete".into(),duration_ms:start.elapsed().as_millis() as u64,detail:"CTC greedy decoding. Mean token scores are engine signals, not appointment-correctness probabilities. Alternatives unavailable.".into(),artifacts:if config.detailed_debug{regions.iter().map(|r|format!("{}.png",r.id)).collect()}else{vec![]}});
+        stages.push(Stage{name:"recognition".into(),status:if observations.len() == regions.len() { "complete" } else { "partial" }.into(),duration_ms:start.elapsed().as_millis() as u64,detail:"CTC greedy decoding. Mean token scores are engine signals, not appointment-correctness probabilities. Alternatives unavailable.".into(),artifacts:if config.detailed_debug{regions.iter().map(|r|format!("{}.png",r.id)).collect()}else{vec![]}});
         Ok((regions, observations, stages))
     }
 }

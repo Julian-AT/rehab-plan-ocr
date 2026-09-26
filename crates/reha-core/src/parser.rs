@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 2;
+pub const EXTRACTION_VERSION: u32 = 3;
 
 static DATE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b|\b(\d{4})-(\d{2})-(\d{2})\b").unwrap()
@@ -41,7 +41,7 @@ fn row_text(row: &Row<'_>) -> String {
 fn metadata(text: &str) -> bool {
     static HEADER: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-        r"(?i)^\s*(?:gedruckt|ausdruck|druck(?:datum|zeit)?|print(?:ed)?|aufnahme(?:datum)?|eintritt(?:sdatum)?|geburt(?:sdatum)?|admission)\b"
+        r"(?i)^\s*(?:gedruckt|ausdruck|druck(?:datum|zeit)?|print(?:ed)?|aufnahme(?:datum)?|eintritt(?:sdatum)?|geburt(?:sdatum)?|admission|patient(?:en)?(?:name|nummer|nr)?|versicher(?:ungsnummer)?|geb\.?|diagnose|kostenträger|fallnummer|fallnr)\b"
     ).unwrap()
     });
     HEADER.is_match(text)
@@ -134,6 +134,8 @@ impl Columns {
                     "ort" | "raum" | "zimmer" | "location" | "room" => "location",
                     "therapeut" | "therapeutin" | "therapeut/in" | "therapist" => "therapist",
                     "hinweis" | "hinweise" | "bemerkung" | "bemerkungen" | "notes" => "notes",
+                    "vorbereitung" => "preparation",
+                    "code" | "leistung" => "treatment_code",
                     _ => continue,
                 };
                 if !columns.iter().any(|(f, _)| *f == field) {
@@ -236,6 +238,8 @@ fn assign(a: &mut Appointment, field: &str, observations: &[&Observation]) {
         "location" => &mut a.location,
         "therapist" => &mut a.therapist,
         "notes" => &mut a.notes,
+        "preparation" => &mut a.metadata.preparation,
+        "treatment_code" => &mut a.metadata.treatment_code,
         _ => return,
     };
     if !value.is_empty() {
@@ -250,7 +254,7 @@ fn assign(a: &mut Appointment, field: &str, observations: &[&Observation]) {
         .extend(observations.iter().map(|o| o.id.clone()));
 }
 
-pub fn extract(
+fn extract_section(
     document_id: &str,
     observations: &[Observation],
     regions: &[Region],
@@ -307,7 +311,14 @@ pub fn extract(
             }
             let a = appointments.last_mut().unwrap();
             if columns.has("title") {
-                for field in ["title", "location", "therapist", "notes"] {
+                for field in [
+                    "title",
+                    "location",
+                    "therapist",
+                    "notes",
+                    "preparation",
+                    "treatment_code",
+                ] {
                     let field_obs: Vec<_> = row
                         .observations
                         .iter()
@@ -355,7 +366,7 @@ pub fn extract(
         a.start = Some(time(&times[0]));
         if times.len() >= 2 {
             let between =
-                text[times[0].get(0).unwrap().end()..times[1].get(0).unwrap().start()].trim();
+                time_text[times[0].get(0).unwrap().end()..times[1].get(0).unwrap().start()].trim();
             if between.is_empty() || ["-", "–", "—", "bis"].contains(&between) {
                 a.end = Some(time(&times[1]));
             }
@@ -382,7 +393,14 @@ pub fn extract(
         }
         a.provenance.insert("date".into(), date_sources.clone());
         if columns.has("title") {
-            for field in ["title", "location", "therapist", "notes"] {
+            for field in [
+                "title",
+                "location",
+                "therapist",
+                "notes",
+                "preparation",
+                "treatment_code",
+            ] {
                 let field_obs: Vec<_> = row
                     .observations
                     .iter()
@@ -475,6 +493,302 @@ pub fn extract(
             true,
         ));
     }
+    (appointments, issues, unassigned)
+}
+
+fn observation_bounds(o: &Observation, regions: &[Region]) -> (f64, f64, f64, f64) {
+    let points: Vec<_> = regions
+        .iter()
+        .filter(|r| o.region_ids.contains(&r.id))
+        .flat_map(|r| r.polygon.clone())
+        .collect();
+    bounds(&points)
+}
+fn printed_metadata(observations: &[Observation]) -> Metadata {
+    let mut result = Metadata::default();
+    for o in observations {
+        let Some((label, text)) = o.text.split_once(':') else {
+            continue;
+        };
+        let target = match label.trim().to_lowercase().as_str() {
+            "klinik" | "einrichtung" => &mut result.clinic,
+            "abteilung" => &mut result.department,
+            "adresse" | "anschrift" => &mut result.address,
+            "kontakt" | "telefon" | "e-mail" => &mut result.contact,
+            // Preparation and document references require appointment-level association.
+            _ => continue,
+        };
+        if target.is_empty() {
+            *target = clean(text);
+        } else if *target != clean(text) {
+            target.clear();
+        } // competing scope is not guessed
+    }
+    result
+}
+
+/// Spatial sections prevent a second day's heading from changing the first day's rows.
+/// Adjacent headings without intervening appointments remain competing evidence.
+pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<ScheduleSection> {
+    struct Heading {
+        ids: Vec<String>,
+        x: f64,
+        y: f64,
+        height: f64,
+    }
+    let grouped = rows(observations, regions);
+    let mut headings = vec![];
+    for row in &grouped {
+        let individual: Vec<_> = row
+            .observations
+            .iter()
+            .filter(|o| {
+                let single = Row {
+                    observations: vec![**o],
+                    y: row.y,
+                    bottom: row.bottom,
+                    height: row.height,
+                };
+                !treatment_date(&[single]).1.is_empty()
+            })
+            .collect();
+        if !individual.is_empty() {
+            for o in individual {
+                headings.push(Heading {
+                    ids: vec![o.id.clone()],
+                    x: observation_bounds(o, regions).0,
+                    y: row.y,
+                    height: row.height,
+                });
+            }
+        } else if !treatment_date(&[Row {
+            observations: row.observations.clone(),
+            y: row.y,
+            bottom: row.bottom,
+            height: row.height,
+        }])
+        .1
+        .is_empty()
+        {
+            headings.push(Heading {
+                ids: row.observations.iter().map(|o| o.id.clone()).collect(),
+                x: observation_bounds(row.observations[0], regions).0,
+                y: row.y,
+                height: row.height,
+            });
+        }
+    }
+    if headings.is_empty() {
+        return vec![];
+    }
+    let page_right = regions
+        .iter()
+        .flat_map(|r| &r.polygon)
+        .map(|p| p.x)
+        .fold(0., f64::max);
+    let page_bottom = regions
+        .iter()
+        .flat_map(|r| &r.polygon)
+        .map(|p| p.y)
+        .fold(0., f64::max)
+        + 1.;
+    let first_y = headings[0].y;
+    let preamble: Vec<_> = observations
+        .iter()
+        .filter(|o| observation_bounds(o, regions).1 < first_y)
+        .cloned()
+        .collect();
+    let mut result: Vec<ScheduleSection> = vec![];
+    for h in &headings {
+        let left = headings
+            .iter()
+            .filter(|other| (other.y - h.y).abs() < h.height && other.x < h.x - h.height * 2.)
+            .map(|_| h.x - h.height)
+            .next()
+            .unwrap_or(0.);
+        let right = headings
+            .iter()
+            .filter(|other| (other.y - h.y).abs() < h.height && other.x > h.x + h.height * 2.)
+            .map(|other| other.x - h.height)
+            .min_by(f64::total_cmp)
+            .unwrap_or(page_right + 1.);
+        let timed_between = |top: f64, bottom: f64| {
+            observations.iter().any(|o| {
+                let (x, y, _, _) = observation_bounds(o, regions);
+                x >= left
+                    && x < right
+                    && y > top
+                    && y < bottom
+                    && TIME.is_match(&o.text)
+                    && !DATE.is_match(&o.text)
+                    && !metadata(&o.text)
+            })
+        };
+        if let Some(previous) = result.iter_mut().rev().find(|s| {
+            let (l, t, r, _) = bounds(&s.polygon);
+            (l - left).abs() < h.height
+                && (r - right).abs() < h.height
+                && t < h.y
+                && !timed_between(t, h.y)
+        }) {
+            previous.heading_ids.extend(h.ids.clone());
+            continue;
+        }
+        result.push(ScheduleSection {
+            id: format!("section-{}", h.ids.join("-")),
+            date: None,
+            polygon: crate::geometry::rect(left, h.y, right - left, page_bottom - h.y),
+            heading_ids: h.ids.clone(),
+            observation_ids: vec![],
+            columns: Default::default(),
+            metadata: Metadata::default(),
+        });
+    }
+    for i in 0..result.len() {
+        let (left, top, right, _) = bounds(&result[i].polygon);
+        let bottom = result
+            .iter()
+            .skip(i + 1)
+            .filter_map(|s| {
+                let (l, t, r, _) = bounds(&s.polygon);
+                (t > top && l < right && r > left).then_some(t)
+            })
+            .min_by(f64::total_cmp)
+            .unwrap_or(page_bottom);
+        result[i].polygon = crate::geometry::rect(left, top, right - left, bottom - top);
+        let obs: Vec<_> = observations
+            .iter()
+            .filter(|o| {
+                let (x, y, _, _) = observation_bounds(o, regions);
+                x >= left && x < right && ((y >= top && y < bottom) || y < first_y)
+            })
+            .cloned()
+            .collect();
+        let heading_obs: Vec<_> = observations
+            .iter()
+            .filter(|o| result[i].heading_ids.contains(&o.id))
+            .cloned()
+            .collect();
+        result[i].date = treatment_date(&rows(&heading_obs, regions)).0;
+        result[i].observation_ids = obs.iter().map(|o| o.id.clone()).collect();
+        result[i].columns =
+            Columns::from_rows(&rows(&obs, regions), &|o| observation_bounds(o, regions).0)
+                .0
+                .into_iter()
+                .map(|(k, v)| (k.into(), v))
+                .collect();
+        // A heading over the left column must not describe a different clinic's
+        // schedule in the right column. Ambiguous global scope stays unassigned.
+        let scoped_preamble: Vec<_> = preamble
+            .iter()
+            .filter(|o| {
+                let (x, _, _, _) = observation_bounds(o, regions);
+                x >= left && x < right
+            })
+            .cloned()
+            .collect();
+        result[i].metadata = printed_metadata(&scoped_preamble);
+        let first_appointment = obs
+            .iter()
+            .filter(|o| TIME.is_match(&o.text) && !DATE.is_match(&o.text) && !metadata(&o.text))
+            .map(|o| observation_bounds(o, regions).1)
+            .min_by(f64::total_cmp)
+            .unwrap_or(bottom);
+        let local: Vec<_> = obs
+            .iter()
+            .filter(|o| {
+                let y = observation_bounds(o, regions).1;
+                y >= top && y < first_appointment
+            })
+            .cloned()
+            .collect();
+        let local = printed_metadata(&local);
+        let m = &mut result[i].metadata;
+        for (target, value) in [
+            (&mut m.clinic, local.clinic),
+            (&mut m.department, local.department),
+            (&mut m.address, local.address),
+            (&mut m.contact, local.contact),
+        ] {
+            if !value.is_empty() {
+                *target = value;
+            }
+        }
+    }
+    result
+}
+pub fn extract(
+    document_id: &str,
+    observations: &[Observation],
+    regions: &[Region],
+) -> (Vec<Appointment>, Vec<Issue>, Vec<String>) {
+    let sections = sections(observations, regions);
+    let mut appointments = vec![];
+    let mut issues = vec![];
+    let mut used = HashSet::new();
+    if sections.is_empty() {
+        return extract_section(document_id, observations, regions);
+    }
+    for section in sections {
+        let obs: Vec<_> = observations
+            .iter()
+            .filter(|o| section.observation_ids.contains(&o.id))
+            .cloned()
+            .collect();
+        let (mut found, problems, unassigned) = extract_section(document_id, &obs, regions);
+        used.extend(
+            obs.iter()
+                .filter(|o| !unassigned.contains(&o.id))
+                .map(|o| o.id.clone()),
+        );
+        for a in &mut found {
+            a.section_id = Some(section.id.clone());
+            a.date = section.date.clone();
+            a.provenance
+                .insert("date".into(), section.heading_ids.clone());
+            a.metadata.clinic = section.metadata.clinic.clone();
+            a.metadata.department = section.metadata.department.clone();
+            a.metadata.address = section.metadata.address.clone();
+            a.metadata.contact = section.metadata.contact.clone();
+            for field in crate::review::FIELDS {
+                if !crate::review::empty(&crate::review::value(a, field)) {
+                    a.origins.insert(
+                        (*field).into(),
+                        FieldOrigin {
+                            kind: "printed".into(),
+                            evidence: a
+                                .provenance
+                                .get(*field)
+                                .cloned()
+                                .unwrap_or_else(|| section.observation_ids.clone()),
+                            source: "Foto".into(),
+                        },
+                    );
+                }
+            }
+            a.issues.retain(|i| {
+                ![
+                    "missing_date",
+                    "missing_start",
+                    "missing_end",
+                    "invalid_end",
+                    "overnight_confirmation",
+                    "missing_title",
+                ]
+                .contains(&i.code.as_str())
+            });
+            a.issues.extend(validate(a));
+        }
+        appointments.extend(found);
+        issues.extend(problems);
+    }
+    issues.sort_by(|a, b| a.code.cmp(&b.code));
+    issues.dedup();
+    let unassigned = observations
+        .iter()
+        .filter(|o| !used.contains(&o.id))
+        .map(|o| o.id.clone())
+        .collect();
     (appointments, issues, unassigned)
 }
 

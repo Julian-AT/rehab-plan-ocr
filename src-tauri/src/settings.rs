@@ -46,6 +46,19 @@ pub(crate) fn settings(state: State<'_, Arc<AppState>>, value: Option<Value>) ->
         timezone
             .parse::<chrono_tz::Tz>()
             .map_err(|_| "Unbekannte Zeitzone.")?;
+        if value["reminder"].as_u64().is_some_and(|m| m > 10080) {
+            return Err("Erinnerung maximal sieben Tage vorher.".into());
+        }
+        if let Some(defaults) = value.get("completion_defaults") {
+            let defaults: Vec<reha_core::contracts::CompletionDefault> =
+                serde_json::from_value(defaults.clone()).map_err(failure)?;
+            if defaults.len() > 100 {
+                return Err("Maximal 100 Vorgaben.".into());
+            }
+            for d in &defaults {
+                reha_core::review::validate_default(d).map_err(failure)?;
+            }
+        }
         store
             .set_setting("preferences", &value.to_string())
             .map_err(failure)?;

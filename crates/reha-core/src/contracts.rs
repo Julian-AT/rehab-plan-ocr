@@ -1,7 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RefinementReading {
+    pub appointment_id: String,
+    pub field: String,
+    pub value: serde_json::Value,
+    pub evidence: Vec<String>,
+    pub attempt: String,
+}
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Point {
     pub x: f64,
@@ -42,9 +50,92 @@ impl Issue {
         }
     }
 }
+/// Calendar-safe metadata. Administrative/patient details remain in document observations.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct Metadata {
+    pub clinic: String,
+    pub department: String,
+    pub address: String,
+    pub contact: String,
+    pub treatment_code: String,
+    pub preparation: String,
+    pub document_reference: String,
+    pub appointment_notes: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct FieldOrigin {
+    pub kind: String,
+    pub evidence: Vec<String>,
+    pub source: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct CompletionSuggestion {
+    pub id: String,
+    pub field: String,
+    pub value: serde_json::Value,
+    pub source: String,
+    pub status: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ApprovalSnapshot {
+    pub values_hash: String,
+    pub approved_at: i64,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ScheduleSection {
+    pub id: String,
+    pub date: Option<String>,
+    pub polygon: Vec<Point>,
+    pub heading_ids: Vec<String>,
+    pub observation_ids: Vec<String>,
+    pub columns: BTreeMap<String, f64>,
+    pub metadata: Metadata,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RefinementAttempt {
+    pub id: String,
+    pub target_ids: Vec<String>,
+    pub reason: String,
+    pub variant: String,
+    pub crop_to_original: [f64; 9],
+    pub crop_to_page: [f64; 9],
+    pub width: u32,
+    pub height: u32,
+    pub duration_ms: u64,
+    pub status: String,
+    pub observation_ids: Vec<String>,
+    pub detail: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct CompletionDefault {
+    pub id: String,
+    pub clinic: String,
+    pub treatment: String,
+    pub field: String,
+    pub value: serde_json::Value,
+}
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Appointment {
     pub id: String,
+    #[serde(default)]
+    pub section_id: Option<String>,
+    #[serde(default)]
+    pub metadata: Metadata,
+    #[serde(default)]
+    pub origins: BTreeMap<String, FieldOrigin>,
+    #[serde(default)]
+    pub suggestions: Vec<CompletionSuggestion>,
+    #[serde(default)]
+    pub approval: Option<ApprovalSnapshot>,
+    #[serde(default)]
+    pub calendar_event_id: Option<String>,
+    #[serde(default)]
+    pub ics_event_id: Option<String>,
+    #[serde(default)]
+    pub calendar_saved_hash: Option<String>,
+    #[serde(default)]
+    pub ics_exported_hash: Option<String>,
     pub date: Option<String>,
     pub start: Option<String>,
     pub end: Option<String>,
@@ -65,6 +156,15 @@ impl Appointment {
     pub fn empty(id: String) -> Self {
         Self {
             id,
+            section_id: None,
+            metadata: Metadata::default(),
+            origins: BTreeMap::new(),
+            suggestions: vec![],
+            approval: None,
+            calendar_event_id: None,
+            ics_event_id: None,
+            calendar_saved_hash: None,
+            ics_exported_hash: None,
             date: None,
             start: None,
             end: None,
@@ -132,6 +232,12 @@ impl Default for PipelineConfig {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PipelineRun {
     pub schema_version: u32,
+    #[serde(default)]
+    pub sections: Vec<ScheduleSection>,
+    #[serde(default)]
+    pub refinement_attempts: Vec<RefinementAttempt>,
+    #[serde(default)]
+    pub refinement_readings: Vec<RefinementReading>,
     #[serde(default)]
     pub extraction_version: u32,
     pub id: String,

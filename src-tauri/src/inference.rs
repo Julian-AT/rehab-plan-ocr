@@ -22,6 +22,7 @@ pub(crate) fn process(
     request: ImportRequest,
     bytes: Vec<u8>,
     cancel: Arc<AtomicBool>,
+    started: std::time::Instant,
 ) -> Response<Value> {
     use crate::state::failure;
     use base64::{engine::general_purpose::STANDARD, Engine};
@@ -30,9 +31,8 @@ pub(crate) fn process(
         pipeline::{self, RecognitionOutput, ScanInput},
     };
     use serde_json::json;
-    use std::{sync::atomic::Ordering, time::Instant};
+    use std::time::Instant;
 
-    let started = Instant::now();
     let directory = state
         .store
         .lock()
@@ -139,6 +139,7 @@ pub(crate) fn process(
                     now: chrono::Utc::now().timestamp(),
                     config: request.config,
                     dir: &directory,
+                    deadline: started + std::time::Duration::from_secs(30),
                 },
                 &cancel,
                 cached,
@@ -148,6 +149,17 @@ pub(crate) fn process(
         if bytes != decoded {
             std::fs::write(directory.join("source.bin"), &bytes).map_err(failure)?;
             run.document.source_hash = reha_core::hash(&bytes);
+        }
+        {
+            let store = state.store.lock().map_err(failure)?;
+            if let Some(id) = store
+                .identical(&run.document.source_hash)
+                .map_err(failure)?
+            {
+                if let Ok(previous) = store.load_run(&id) {
+                    reha_core::refinement::preserve_review(&previous, &mut run).map_err(failure)?;
+                }
+            }
         }
         let vision = run.engine == "Apple Vision";
         run.stages.insert(
@@ -168,8 +180,18 @@ pub(crate) fn process(
             },
         );
         run.total_ms = started.elapsed().as_millis() as u64;
-        if cancel.load(Ordering::Relaxed) {
-            return Err("Processing cancelled.".into());
+        {
+            let store = state.store.lock().map_err(failure)?;
+            let prefs: Value = store
+                .setting("preferences")
+                .map_err(failure)?
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default();
+            let defaults = serde_json::from_value::<Vec<CompletionDefault>>(
+                prefs["completion_defaults"].clone(),
+            )
+            .unwrap_or_default();
+            reha_core::review::suggest(&mut run, &defaults, &store.records(None).map_err(failure)?);
         }
         state
             .store
@@ -192,6 +214,7 @@ pub(crate) fn process(
     _: ImportRequest,
     _: Vec<u8>,
     _: Arc<AtomicBool>,
+    _: std::time::Instant,
 ) -> Response<Value> {
     Err("This build has no portable inference runtime.".into())
 }

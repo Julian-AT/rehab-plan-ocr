@@ -74,21 +74,108 @@ pub fn event_values(a: &Appointment, timezone: &str, reminder: Option<u32>) -> R
         start_utc: start.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         end_utc: end.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         timezone: timezone.into(),
-        location: a.location.trim().into(),
-        notes: if a.therapist.trim().is_empty() {
-            a.notes.trim().into()
-        } else {
-            [
-                format!("Therapeut: {}", a.therapist.trim()),
-                a.notes.trim().into(),
-            ]
+        location: [a.location.trim(), a.metadata.address.trim()]
             .into_iter()
-            .filter(|part| !part.is_empty())
+            .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
-            .join("\n")
-        },
+            .join(", "),
+        notes: calendar_notes(a),
         reminder_minutes: reminder,
     })
+}
+
+fn calendar_notes(a: &Appointment) -> String {
+    [
+        ("Raum", a.location.as_str()),
+        ("Klinik", a.metadata.clinic.as_str()),
+        ("Abteilung", a.metadata.department.as_str()),
+        ("Kontakt", a.metadata.contact.as_str()),
+        ("Therapeut", a.therapist.as_str()),
+        ("Behandlungscode", a.metadata.treatment_code.as_str()),
+        ("Vorbereitung", a.metadata.preparation.as_str()),
+        ("Dokument", a.metadata.document_reference.as_str()),
+        ("Terminnotiz", a.metadata.appointment_notes.as_str()),
+        ("Hinweise", a.notes.as_str()),
+    ]
+    .into_iter()
+    .filter(|(_, v)| !v.trim().is_empty())
+    .map(|(label, v)| {
+        format!(
+            "{label}: {}",
+            v.trim().replace('\r', "").replace('\n', "\n  ")
+        )
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+/// Explicit selections are validated here, independently of frontend state.
+pub fn selected_events(
+    runs: &[PipelineRun],
+    selection: &[String],
+    timezone: &str,
+    reminder: Option<u32>,
+) -> Result<Vec<(String, EventValues)>> {
+    let mut unique = HashSet::new();
+    if selection.is_empty() {
+        return Err(Error::Invalid("Mindestens einen Termin auswählen.".into()));
+    }
+    selection
+        .iter()
+        .map(|id| {
+            if !unique.insert(id) {
+                return Err(Error::Invalid("Doppelte Auswahl.".into()));
+            }
+            let a = runs
+                .iter()
+                .flat_map(|r| &r.appointments)
+                .find(|a| &a.id == id)
+                .ok_or_else(|| Error::Invalid("Ausgewählter Termin fehlt.".into()))?;
+            if !crate::review::approved(a) {
+                return Err(Error::Invalid(
+                    "Ausgewählten Termin zuerst prüfen und bestätigen.".into(),
+                ));
+            }
+            Ok((
+                a.calendar_event_id.clone().unwrap_or_else(|| a.id.clone()),
+                event_values(a, timezone, reminder)?,
+            ))
+        })
+        .collect()
+}
+
+/// Reuse cross-photograph export UIDs only for a fresh draft. Once any appointment
+/// has an identity, later identical siblings must keep their own UIDs.
+pub fn selected_ics_events(
+    runs: &[PipelineRun],
+    selection: &[String],
+    timezone: &str,
+    reminder: Option<u32>,
+    previous: Option<&[String]>,
+) -> Result<Vec<(String, EventValues)>> {
+    let mut events = selected_events(runs, selection, timezone, reminder)?;
+    for (event, id) in events.iter_mut().zip(selection) {
+        let a = runs
+            .iter()
+            .flat_map(|r| &r.appointments)
+            .find(|a| &a.id == id)
+            .unwrap();
+        if let Some(uid) = &a.ics_event_id {
+            event.0 = uid.clone();
+        }
+    }
+    let known = runs.iter().flat_map(|r| &r.appointments).any(|a| {
+        a.ics_event_id.is_some() || a.ics_exported_hash.is_some() || a.calendar_event_id.is_some()
+    });
+    if !known {
+        if let Some(ids) = previous.filter(|ids| ids.len() == events.len()) {
+            let mut indices: Vec<_> = (0..events.len()).collect();
+            indices.sort_by_key(|&i| serde_json::to_string(&events[i].1).unwrap());
+            for (index, id) in indices.into_iter().zip(ids) {
+                events[index].0 = id.clone();
+            }
+        }
+    }
+    Ok(events)
 }
 
 pub fn schedule_fingerprint(events: &[EventValues]) -> String {
@@ -154,10 +241,30 @@ pub fn propose(
     calendar_id: &str,
     complete: bool,
 ) -> Vec<CalendarOperation> {
+    propose_with_identity(old, new, current, calendar_id, complete, false)
+}
+pub fn propose_with_identity(
+    old: &[ImportRecord],
+    new: &[(String, EventValues)],
+    current: &BTreeMap<String, EventValues>,
+    calendar_id: &str,
+    complete: bool,
+    identity_bound: bool,
+) -> Vec<CalendarOperation> {
     let mut matches = vec![None; new.len()];
     let mut used = HashSet::new();
-    // Exact values first; consume one old event per new row to preserve multiplicity.
+    // Stable identity takes precedence, even when all event values have changed.
+    for (i, (id, _)) in new.iter().enumerate() {
+        if let Some((j, _)) = old.iter().enumerate().find(|(_, o)| &o.id == id) {
+            matches[i] = Some(j);
+            used.insert(j);
+        }
+    }
+    // Exact values consume one old event per new row to preserve multiplicity.
     for (i, (_, value)) in new.iter().enumerate() {
+        if matches[i].is_some() || identity_bound {
+            continue;
+        }
         if let Some((j, _)) = old
             .iter()
             .enumerate()
@@ -174,7 +281,7 @@ pub fn propose(
     for (i, (_, value)) in new
         .iter()
         .enumerate()
-        .filter(|(i, _)| matches[*i].is_none())
+        .filter(|(i, _)| matches[*i].is_none() && !identity_bound)
         .collect::<Vec<_>>()
     {
         let candidates: Vec<_> = old
@@ -229,10 +336,11 @@ pub fn propose(
                 .into(),
             });
         } else {
-            let ambiguous = old
-                .iter()
-                .enumerate()
-                .any(|(j, o)| !used.contains(&j) && candidate(&o.approved, value));
+            let ambiguous = !identity_bound
+                && old
+                    .iter()
+                    .enumerate()
+                    .any(|(j, o)| !used.contains(&j) && candidate(&o.approved, value));
             operations.push(CalendarOperation {
                 kind: if ambiguous { "ambiguous" } else { "create" }.into(),
                 id: id.clone(),
@@ -251,10 +359,11 @@ pub fn propose(
         }
     }
     for (j, record) in old.iter().enumerate().filter(|(j, _)| !used.contains(j)) {
-        let ambiguous = new
-            .iter()
-            .enumerate()
-            .any(|(i, (_, n))| matches[i].is_none() && candidate(&old[j].approved, n));
+        let ambiguous = !identity_bound
+            && new
+                .iter()
+                .enumerate()
+                .any(|(i, (_, n))| matches[i].is_none() && candidate(&old[j].approved, n));
         let live = current.get(&record.id);
         let conflict = live != Some(&record.approved);
         operations.push(CalendarOperation {
@@ -361,7 +470,10 @@ mod tests {
         a.therapist = "Alex Beispiel MSc".into();
         a.notes = "Bring towel".into();
         let values = event_values(&a, "Europe/Vienna", None).unwrap();
-        assert_eq!(values.notes, "Therapeut: Alex Beispiel MSc\nBring towel");
+        assert_eq!(
+            values.notes,
+            "Therapeut: Alex Beispiel MSc\nHinweise: Bring towel"
+        );
         let mut legacy = serde_json::to_value(&a).unwrap();
         legacy.as_object_mut().unwrap().remove("therapist");
         let decoded: Appointment = serde_json::from_value(legacy).unwrap();

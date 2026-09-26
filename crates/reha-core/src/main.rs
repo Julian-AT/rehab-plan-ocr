@@ -12,6 +12,11 @@ fn execute() -> Result<()> {
     match args.get(1).map(String::as_str) {
         #[cfg(feature = "onnx")]
         Some("scan") if (5..=6).contains(&args.len()) => scan(&args)?,
+        Some("experiment-crop") if args.len() == 4 => {
+            let path=std::path::Path::new(&args[2]);
+            let run:PipelineRun=serde_json::from_slice(&std::fs::read(path)?)?;
+            reha_core::refinement::experiment_crop(&run,path.parent().unwrap_or(std::path::Path::new(".")),std::path::Path::new(&args[3]))?;
+        }
         Some("extract") if args.len() == 4 => {
             let run: PipelineRun = serde_json::from_slice(&std::fs::read(&args[2])?)?;
             let (appointments, issues, unassigned) = reha_core::parser::extract(&run.document.id, &run.observations, &run.regions);
@@ -30,18 +35,15 @@ fn execute() -> Result<()> {
             std::fs::write(&args[4], serde_json::to_vec_pretty(&metrics)?)?;
             println!("Reference {}, predictions {}, fully correct {}.", metrics.reference_count, metrics.predicted_count, metrics.fully_correct_count);
         }
-        Some("ics") if args.len() == 4 => {
-            let run: PipelineRun = serde_json::from_slice(&std::fs::read(&args[2])?)?;
-            if !run.review_confirmed {
-                return Err(Error::Invalid("Approve the reviewed draft before exporting.".into()));
-            }
-            let events = run.appointments.iter().filter(|a| a.included).map(|a| {
-                Ok((a.id.clone(), reha_core::calendar::event_values(a, &run.config.timezone, None)?))
-            }).collect::<Result<Vec<_>>>()?;
+        Some("ics") if (4..=5).contains(&args.len()) => {
+            let mut run: PipelineRun = serde_json::from_slice(&std::fs::read(&args[2])?)?;
+            reha_core::review::migrate(&mut run)?;
+            let selection:Vec<String> = if let Some(path) = args.get(4) { serde_json::from_slice(&std::fs::read(path)?)? } else { run.appointments.iter().filter(|a| a.included).map(|a| a.id.clone()).collect() };
+            let events = reha_core::calendar::selected_events(std::slice::from_ref(&run), &selection, &run.config.timezone, None)?;
             std::fs::write(&args[3], reha_core::calendar::ics(&events, chrono::Utc::now())?)?;
             println!("ICS created locally.");
         }
-        _ => return Err(Error::Invalid("Usage: reha scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics\nDesktop inference requires --features onnx-download.".into())),
+        _ => return Err(Error::Invalid("Usage: reha scan INPUT OUTPUT_DIRECTORY MODEL_DIRECTORY [CONFIG.json] | extract RUN_JSON OUTPUT_JSON | evaluate LABEL RUN REPORT | ics APPROVED_RUN OUTPUT.ics [SELECTION.json]\nDesktop inference requires --features onnx-download.".into())),
     }
     Ok(())
 }
@@ -81,6 +83,7 @@ fn scan(args: &[String]) -> Result<()> {
             now: chrono::Utc::now().timestamp(),
             config,
             dir: output,
+            deadline: started + std::time::Duration::from_secs(30),
         },
         &AtomicBool::new(false),
         false,

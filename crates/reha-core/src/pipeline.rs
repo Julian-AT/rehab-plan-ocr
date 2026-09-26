@@ -1,11 +1,6 @@
 use crate::{contracts::*, geometry, Error, Result};
 use image::{DynamicImage, ImageReader, RgbImage};
-use std::{
-    io::Cursor,
-    path::Path,
-    sync::atomic::{AtomicBool, Ordering},
-    time::Instant,
-};
+use std::{io::Cursor, path::Path, sync::atomic::AtomicBool, time::Instant};
 
 pub struct Prepared {
     pub config: PipelineConfig,
@@ -197,7 +192,7 @@ pub struct RecognitionOutput {
 pub fn assemble(
     prepared: Prepared,
     output: RecognitionOutput,
-    cancel: &AtomicBool,
+    _cancel: &AtomicBool,
 ) -> Result<PipelineRun> {
     let RecognitionOutput {
         engine,
@@ -208,9 +203,6 @@ pub fn assemble(
         cache_used,
     } = output;
     let config = prepared.config.clone();
-    if cancel.load(Ordering::Relaxed) {
-        return Err(Error::Invalid("Verarbeitung abgebrochen.".into()));
-    }
     let start = Instant::now();
     let (appointments, mut issues, unassigned) =
         crate::parser::extract(&prepared.document.id, &observations, &regions);
@@ -247,16 +239,12 @@ pub fn assemble(
         ),
         artifacts: vec![],
     });
-    all_stages.push(Stage {
-        name: "selective_reread".into(),
-        status: "unavailable".into(),
-        duration_ms: 0,
-        detail: "No retry adapter configured; difficult fields require review.".into(),
-        artifacts: vec![],
-    });
     let total_ms = all_stages.iter().map(|s| s.duration_ms).sum();
     Ok(PipelineRun {
         schema_version: SCHEMA_VERSION,
+        sections: crate::parser::sections(&observations, &regions),
+        refinement_attempts: vec![],
+        refinement_readings: vec![],
         extraction_version: crate::parser::EXTRACTION_VERSION,
         id: uuid::Uuid::new_v4().to_string(),
         document: prepared.document,
@@ -289,6 +277,7 @@ pub struct ScanInput<'a> {
     pub now: i64,
     pub config: PipelineConfig,
     pub dir: &'a Path,
+    pub deadline: Instant,
 }
 #[cfg(feature = "onnx")]
 pub fn run(
@@ -304,11 +293,13 @@ pub fn run(
         now,
         config,
         dir,
+        deadline,
     } = input;
     let start = Instant::now();
     crate::ocr::check_cancel(cancel)?;
     let prepared = prepare(bytes, filename, id, now, &config, dir)?;
-    let (regions, observations, stages) = engine.recognize(&prepared.page, &config, cancel, dir)?;
+    let (regions, observations, stages) =
+        engine.recognize_until(&prepared.page, &config, cancel, dir, Some(deadline))?;
     let mut run = assemble(
         prepared,
         RecognitionOutput {
@@ -321,6 +312,15 @@ pub fn run(
         },
         cancel,
     )?;
+    if let Err(error) = crate::refinement::refine(engine, &mut run, dir, cancel, deadline) {
+        run.stages.push(Stage {
+            name: "selective_reread".into(),
+            status: "failed".into(),
+            duration_ms: 0,
+            detail: error.to_string(),
+            artifacts: vec![],
+        });
+    }
     run.total_ms = start.elapsed().as_millis() as u64;
     Ok(run)
 }

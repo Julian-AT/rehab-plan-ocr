@@ -13,6 +13,8 @@ pub struct ScanSummary {
     pub imported_at: i64,
     pub retained: bool,
     pub item_count: usize,
+    pub pending_count: usize,
+    pub dates: Vec<String>,
     pub schedule_id: Option<String>,
 }
 impl Store {
@@ -27,7 +29,7 @@ impl Store {
         CREATE TABLE IF NOT EXISTS schedules(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS failures(id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL, record TEXT NOT NULL);
-        PRAGMA user_version=1;")?;
+        PRAGMA user_version=2;")?;
         Ok(Self {
             connection,
             root: root.into(),
@@ -52,7 +54,7 @@ impl Store {
         rows.map(|row| Ok(serde_json::from_str(&row?)?)).collect()
     }
     pub fn save_run(&self, run: &PipelineRun) -> Result<()> {
-        if run.schema_version != SCHEMA_VERSION {
+        if run.schema_version > SCHEMA_VERSION {
             return Err(Error::Invalid("Unsupported run schema".into()));
         }
         self.connection.execute("INSERT INTO scans(id,source_hash,imported_at,run,schedule_id) VALUES(?1,?2,?3,?4,(SELECT schedule_id FROM scans WHERE source_hash=?2 AND schedule_id IS NOT NULL ORDER BY imported_at DESC LIMIT 1)) ON CONFLICT(id) DO UPDATE SET run=excluded.run",params![run.document.id,run.document.source_hash,run.document.imported_at,serde_json::to_string(run)?])?;
@@ -64,10 +66,11 @@ impl Store {
             .query_row("SELECT run FROM scans WHERE id=?1", [id], |r| r.get(0))
             .optional()?
             .flatten();
-        serde_json::from_str(&json.ok_or_else(|| {
+        let mut run: PipelineRun = serde_json::from_str(&json.ok_or_else(|| {
             Error::Invalid("Scan wurde gelöscht oder nach 30 Tagen bereinigt.".into())
-        })?)
-        .map_err(Into::into)
+        })?)?;
+        crate::review::migrate(&mut run)?;
+        Ok(run)
     }
     pub fn identical(&self, source_hash: &str) -> Result<Option<String>> {
         Ok(self
@@ -99,11 +102,36 @@ impl Store {
                 .and_then(|s| serde_json::from_str::<PipelineRun>(s).ok())
                 .map(|r| r.appointments.len())
                 .unwrap_or(0);
+            let run = json
+                .as_ref()
+                .and_then(|s| serde_json::from_str::<PipelineRun>(s).ok());
+            let pending_count = run
+                .as_ref()
+                .map(|r| {
+                    r.appointments
+                        .iter()
+                        .filter(|a| a.included && !crate::review::approved(a))
+                        .count()
+                })
+                .unwrap_or(0);
+            let mut dates = run
+                .as_ref()
+                .map(|r| {
+                    r.appointments
+                        .iter()
+                        .filter_map(|a| a.date.clone())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            dates.sort();
+            dates.dedup();
             result.push(ScanSummary {
                 id,
                 imported_at,
                 retained: json.is_some(),
                 item_count,
+                pending_count,
+                dates,
                 schedule_id,
             });
         }
@@ -131,6 +159,11 @@ impl Store {
         for id in &ids {
             self.delete_scan(id)?;
         }
+        // Only calendar reconciliation identities may survive expiry.
+        self.connection.execute(
+            "DELETE FROM scans WHERE imported_at<=?1 AND schedule_id IS NULL",
+            [cutoff],
+        )?;
         // Also purge orphan files left by interrupted decoding/inference.
         for entry in std::fs::read_dir(self.root.join("scans"))? {
             let entry = entry?;

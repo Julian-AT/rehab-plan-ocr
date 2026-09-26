@@ -28,4 +28,5 @@ pub(crate) struct Proposal {
     pub(crate) schedule_id: String,
     pub(crate) fingerprint: String,
     pub(crate) operations: Vec<CalendarOperation>,
+    pub(crate) bindings: std::collections::BTreeMap<String, String>,
 }

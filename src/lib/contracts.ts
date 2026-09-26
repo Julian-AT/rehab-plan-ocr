@@ -24,8 +24,86 @@ export interface Issue {
   field: string | null;
   blocking: boolean;
 }
+export interface AppointmentMetadata {
+  clinic: string;
+  department: string;
+  address: string;
+  contact: string;
+  treatment_code: string;
+  preparation: string;
+  document_reference: string;
+  appointment_notes: string;
+}
+export interface FieldOrigin {
+  kind: "printed" | "derived" | "suggested" | "manual";
+  evidence: string[];
+  source: string;
+}
+export interface CompletionSuggestion {
+  id: string;
+  field: string;
+  value: string | number;
+  source: string;
+  status: "pending" | "accepted" | "rejected";
+}
+export interface CompletionDefault {
+  id: string;
+  clinic: string;
+  treatment: string;
+  field: string;
+  value: string | number;
+}
+export interface ScheduleSection {
+  id: string;
+  date: string | null;
+  polygon: Point[];
+  heading_ids: string[];
+  observation_ids: string[];
+  columns: Record<string, number>;
+  metadata: AppointmentMetadata;
+}
+export interface RefinementAttempt {
+  id: string;
+  target_ids: string[];
+  reason: string;
+  variant: string;
+  crop_to_original: number[];
+  crop_to_page: number[];
+  width: number;
+  height: number;
+  duration_ms: number;
+  status: string;
+  observation_ids: string[];
+  detail: string;
+}
+export interface RefinementReading {
+  appointment_id: string;
+  field: string;
+  value: string | number;
+  evidence: string[];
+  attempt: string;
+}
+export const emptyMetadata: AppointmentMetadata = {
+  clinic: "",
+  department: "",
+  address: "",
+  contact: "",
+  treatment_code: "",
+  preparation: "",
+  document_reference: "",
+  appointment_notes: "",
+};
 export interface Appointment {
   id: string;
+  section_id?: string | null;
+  metadata?: AppointmentMetadata;
+  origins?: Record<string, FieldOrigin>;
+  suggestions?: CompletionSuggestion[];
+  approval?: { values_hash: string; approved_at: number } | null;
+  calendar_event_id?: string | null;
+  ics_event_id?: string | null;
+  calendar_saved_hash?: string | null;
+  ics_exported_hash?: string | null;
   date: string | null;
   start: string | null;
   end: string | null;
@@ -58,6 +136,9 @@ export interface Stage {
 }
 export interface Run {
   schema_version: number;
+  sections?: ScheduleSection[];
+  refinement_attempts?: RefinementAttempt[];
+  refinement_readings?: RefinementReading[];
   extraction_version?: number;
   id: string;
   document: {
@@ -121,6 +202,9 @@ export interface WriteResult {
   error: string | null;
 }
 export interface Preferences {
+  appearance?: "system" | "light" | "dark";
+  calendar_id?: string;
+  completion_defaults?: CompletionDefault[];
   timezone: string;
   reminder: number | null;
   detailed_debug: boolean;
@@ -140,6 +224,8 @@ export interface History {
     imported_at: number;
     retained: boolean;
     item_count: number;
+    pending_count?: number;
+    dates?: string[];
     schedule_id: string | null;
   }[];
   imports: {
@@ -184,6 +270,9 @@ export const defaultConfig: Config = {
   page_corners: null,
 };
 export const defaultPreferences: Preferences = {
+  appearance: "system",
+  calendar_id: "",
+  completion_defaults: [],
   timezone: "Europe/Vienna",
   reminder: null,
   detailed_debug: false,
