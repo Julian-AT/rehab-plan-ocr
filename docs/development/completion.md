@@ -173,6 +173,23 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
 - Menschliche Referenzprüfung: `4f50580`; privates Paket mit 20 Originalen,
   188 Zeilenvorkommen und getrennten Feld-/Geometrie-/Datenschutzabschnitten.
   Arbeitsnotizen vergeben keine Freigaben; aktuelle Referenz-/Cropfreigaben bleiben null.
+- Durchgängige typisierte Kalenderänderungen: `026430a`; 224 Core-/FFI-Tests,
+  Clippy, offizieller Bindingsvergleich sowie echter nativer und Gesprächs-Rundweg.
+  Bestätigungsregeln, Metadaten und Journale bleiben erhalten.
+- Vollständiger isolierter Offline-Appbuild an `026430a`: `62cef2c`; Erstaufbau
+  und Wiederholung bestehen, die beiden Simulatorpakete sind byte-/modus-/linkgleich.
+  Wiederholung 3,17 Sekunden, beobachtete Mindestreserve 96,49 GiB. Alle zwölf
+  Mach-O-Dateien sowie Modelle, Notices und Datenschutzmanifeste bestehen die
+  tatsächliche Paketprüfung ohne Kokoro/eSpeak-Reste. Vollständige Quellen,
+  Apps und auch die vorangegangenen Sandboxfehler bleiben unter
+  `.local/runs/fresh-offline-app-20260926-s18-001/` erhalten. Spätere Änderungen,
+  Simulatorverhalten und signierte Gerätepakete benötigen eigene Nachweise.
+- Typisierte Berechtigungen, Erinnerungszustände und Einzelmitteilungsbelege:
+  `662f84f`; 71 Agenda-/Vertragsprüfungen sowie vollständige native iOS-26-
+  Typprüfung mit Swift 6, strenger Nebenläufigkeit und Warnungen als Fehlern.
+  Eine Berechtigungsanfrage aktiviert keine Erinnerungen und erstellt keinen
+  Kalender. Legacyantworten und dauerhafte Journale behalten ihr Format.
+  Simulatorausführung der Konkurrenzfälle und gemeinsamer Appbuild folgen separat.
 - Zwei [moderierte Bedienungsrunden](../product/research/usability-rounds.md):
   `f7b8aa7`; Aufgaben und lokales Protokoll vorbereitet, vier Dokumentationsprüfungen
   bestanden. Tatsächliche Teilnehmende, Durchführung und Ergebnisse stehen aus.

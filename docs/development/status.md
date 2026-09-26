@@ -21,18 +21,31 @@ Current verified implementation slices:
 - Tools, the shared Python environment, Cargo and Xcode products now live under
   `.local`. A resumable hash/mode/link-checked migration preserved every inventoried
   entry and compatibility symlinks. The relocated environment passes `make doctor`.
-  A clean-checkout/offline build is being checked separately.
+  Candidate `026430a` now passes the full isolated app build and an offline repeat;
+  the two simulator bundles are byte/mode/link-identical. The repeat took 3.17 s,
+  with at least 96.49 GiB observed free. Full evidence is retained under
+  `.local/runs/fresh-offline-app-20260926-s18-001/`; later changes need their own build.
 - Typed native calendar reads preserve scope, occurrence identity and selection
   revision through the real Swift–Rust–Swift boundary (`b0e804e`). Recognition
   attempts now have registered, independently revocable lifetimes (`f8a3191`);
   early errors, cancellation before start, dropped callers and worker cleanup
   pass fourteen FFI tests and the native bindings probe.
+- Calendar mutation requests/results now remain typed from the visible confirmation
+  through the native write (`026430a`), with unchanged journal/metadata contracts:
+  224 core/FFI tests, Clippy, generated bindings and actual native/voice-flow probes pass.
+- Permission, reminder status and one-off notification receipts now cross Swift
+  queues as typed values (`662f84f`). Seventy-one agenda/contract checks and the
+  full iOS 26 native-service/integration-source typecheck pass under Swift 6 strict
+  concurrency with warnings as errors. The existing race scenarios now exercise
+  the typed result; their simulator execution and the integrated app rebuild are pending.
 - Shared receipt publication has a visible cancellation action, a provider
   deadline and an atomic publication fence (`eadde06`). Interrupted new copies
   cannot reappear through recovery; complete receipts and originals remain intact.
   Swift scan attempts now have bounded producer/worker leases (`c9412b4`);
   2,000 controlled cycles leave no retained registrations. A timed-out native
-  worker keeps its lease until actual completion. The integrated app check is pending.
+  worker keeps its lease until actual completion. Its integrated app compilation,
+  and that of the cancellation-aware image/PDF preview, pass at `026430a`;
+  complete device/UI behavior remains separate.
 - Typed native errors distinguish read timeouts from uncertain calendar writes.
   Binary photo decoding covers all eight orientations and the primary HEIF image.
   Request completion, stale settings replies, temporary-file erasure and partial
@@ -42,7 +55,9 @@ Current verified implementation slices:
   without repeating calendar effects. Eight new recovery tests and thirteen
   event-mutation tests pass on the recorded slice.
 - The public build no longer enables or packages the experimental Kokoro/eSpeak
-  path. Installed German system voices now render through the app's shared audio
+  path. Both actual simulator bundles at `026430a` pass runtime/notice/privacy
+  checks across all twelve embedded Mach-O files, with no Kokoro/eSpeak remnants.
+  Installed German system voices now render through the app's shared audio
   graph. Host rendering, word progress, cancellation and restart pass; human
   voice selection and physical offline/audio-route qualification remain open.
 - The current interpretation boundary preserves requested dates, time bounds,
@@ -60,7 +75,7 @@ Current verified implementation slices:
   offline without depending on a Homebrew installation (`150edc9`).
 - Xcode product generations preserve previous files before changing a resource
   contract (`d16dacb`); twelve controlled rotation/recovery tests pass. The first
-  actual rotation/build remains pending. Bundle policy checks embedded Mach-O
+  root-workspace rotation remains pending; the isolated fresh build passes. Bundle policy checks embedded Mach-O
   files and static archives as well as the four main executables (`619dbe5`);
   ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
@@ -68,10 +83,11 @@ The complete local baseline at `9b5eef3` passed 178 Rust tests, 232 tool tests,
 native probes and bindings. A later combined working-tree tool run passes 303
 tests in 56 groups (`/tmp/reha-tools-combined-20260926-s18-002.log`); subsequent source
 changes still need final combined verification. Later slices have their own evidence; these counts
-are not a final combined-candidate pass. The first updated simulator app compiled
-and linked, but its enclosing Make invocation failed after a concurrent script
-edit. A stable complete build, UI/visual checks and package verification must pass
-on the combined candidate.
+are not a final combined-candidate pass. The stable isolated build at `026430a`
+and its offline repeat now pass, including the real simulator bundle checks.
+Earlier failed script/sandbox runs remain preserved. Subsequent implementation
+changes, UI/visual behavior and a signed device package still need final-candidate
+verification.
 
 See [inventory decisions](inventory.md), [cleanup evidence](artifact-retention.md),
 [workspace/build evidence](build-reproducibility.md) and
@@ -128,7 +144,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
 | Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
-| Packaging | Signed private archive/IPA at `21ff054` passes four-component signature/profile, model, notice and privacy checks. Earliest profile expiry is September 26, 2026 at 11:56:33 UTC. See the [package record](../releases/history/2026-09-26-s18-signed-package.md); recheck signing before any approved update. |
+| Packaging | Signed private archive/IPA at `21ff054` passes four-component signature/profile, model, notice and privacy checks. The earliest profile expired on September 26, 2026 at 11:56:33 UTC; this is historical package evidence, not current installation eligibility. See the [package record](../releases/history/2026-09-26-s18-signed-package.md); recheck signing before any approved update. |
 
 ## Data, models and speech
 
