@@ -26,6 +26,7 @@ auch ohne direkten Textverweis erreichbar.
 | `docs/device/2026-09-26-s12/mehr.png` | Echtes Gerät, referenziert von `kokoro-device-update.md`; Hash unterscheidet sich von allen 22 gewählten Simulatorreferenzen. | Historischen Nachweis unverändert behalten; kein doppelter Simulatorfall. |
 | Vorschau-/Bildvergleichswerkzeuge | Paarweiser Pixelvergleich, Mehransichtenvergleich und XCTest-Triage prüfen unterschiedliche Verträge. | Behalten; Vergleichsregeln und offene Abweichungen nicht durch neue Baselines überdecken. |
 | Acht alte Rust-Servicewrapper | `agenda::{enable_reminders, reminder_status, pending_event_open}`, `calendar::share_export`, `scan::{cancel_processing, source_bytes, scan_image}` und `settings::engine_status` haben keine Rust-Aufrufer, UniFFI-Exporte oder generierte Registrierung. Der Buildgenerator erzeugt ausschließlich Linkereinstellungen. | Entfernt; aktive Ersatzverbraucher unten überprüft. |
+| `NativeBridge.request` | Interne Swift-Hilfsmethode ohne `@objc`, dynamische Registrierung, UniFFI-Export oder verbleibenden Aufrufer; Appansichten verwenden die typisierten Kalender-/Erinnerungsbrücken. Die protokollgebundene synchrone Erkennungs-/Kompatibilitätsbrücke ist separat. | Entfernt; der gemeinsame native Appbuild prüft die tatsächliche Einbindung. |
 
 Die entfernten Rust-Wrapper werden durch tatsächlich eingebundene native Pfade
 ersetzt: `SettingsView` verwendet `requestReminderPermission` und `reminderStatus`,

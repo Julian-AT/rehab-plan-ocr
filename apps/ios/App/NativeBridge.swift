@@ -19,14 +19,6 @@ final class NativeBridge: AppleHost, Sendable {
     }
     return .Storage(message: error.localizedDescription)
   }
-  @MainActor static func request(_ command: String, _ arguments: [String: Any] = [:]) async throws
-    -> Data
-  {
-    let data = try JSONSerialization.data(withJSONObject: arguments)
-    return try await withCheckedThrowingContinuation { continuation in
-      NativeServices.shared.perform(command, arguments: data) { continuation.resume(with: $0) }
-    }
-  }
   private func blocking(_ command: String, _ arguments: [String: Any] = [:]) throws -> [String: Any]
   {
     do {
