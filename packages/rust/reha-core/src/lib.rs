@@ -1,5 +1,6 @@
 pub mod calendar;
 pub mod contracts;
+pub mod conversation;
 pub mod evaluation;
 pub mod geometry;
 #[cfg(feature = "onnx")]

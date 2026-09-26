@@ -582,6 +582,11 @@ RustBuffer uniffi_reha_ffi_fn_func_new_appointment(RustBuffer date, RustCallStat
 uint64_t uniffi_reha_ffi_fn_func_open_application(RustBuffer root, RustBuffer models, uint64_t host
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_DECODE_ASSISTANT_REQUEST
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_DECODE_ASSISTANT_REQUEST
+RustBuffer uniffi_reha_ffi_fn_func_decode_assistant_request(RustBuffer json, RustBuffer visible_references, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_NORMALIZE_SPEECH
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_FUNC_NORMALIZE_SPEECH
 RustBuffer uniffi_reha_ffi_fn_func_normalize_speech(RustBuffer text, RustCallStatus *_Nonnull out_status
@@ -874,6 +879,12 @@ uint16_t uniffi_reha_ffi_checksum_func_new_appointment(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_OPEN_APPLICATION
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_OPEN_APPLICATION
 uint16_t uniffi_reha_ffi_checksum_func_open_application(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_DECODE_ASSISTANT_REQUEST
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_FUNC_DECODE_ASSISTANT_REQUEST
+uint16_t uniffi_reha_ffi_checksum_func_decode_assistant_request(void
     
 );
 #endif

@@ -375,9 +375,7 @@ private struct HelpView: View {
   var body: some View {
     Form {
       Section("Erfassen") {
-        Text(
-          "Mit Plus einen Plan fotografieren oder Fotos beziehungsweise PDF-Dateien importieren. Mehrseitige Pläne können gemeinsam geprüft werden. Die Erkennung erfolgt lokal auf dem iPhone."
-        )
+        Text(AppHelpContent.capture)
       }
       Section("Prüfen und speichern") {
         Text(
@@ -390,9 +388,7 @@ private struct HelpView: View {
         )
       }
       Section("Kalender bedienen") {
-        Text(
-          "Die Wochenleiste wählt den Tag. Horizontal wischen blättert zwischen Tagen, vertikal wischen verschiebt die Uhrzeit. Heute springt zum aktuellen Tag. Ganztägige Termine und Zeiten außerhalb von 06:00–18:00 sind gesondert zugänglich. Vorbei bestätigt keine Teilnahme."
-        )
+        Text(AppHelpContent.calendars)
       }
       Section("Erinnerungen") {
         Text(
@@ -400,14 +396,10 @@ private struct HelpView: View {
         )
       }
       Section("Sprachgespräch") {
-        Text(
-          "Gespräch starten beginnt die lokale Spracherkennung. Sprechpausen beenden eine Äußerung; während der Antwort kann hineingesprochen werden. Gespräch beenden, Tabwechsel und Audio-Unterbrechungen stoppen die Sitzung. Kalenderänderungen erfordern weiterhin eine Bestätigung am Bildschirm."
-        )
+        Text(AppHelpContent.voice)
       }
       Section("Daten verwalten") {
-        Text(
-          "Originale bleiben im Archiv bis zur gewählten Aufbewahrungsfrist oder zum Löschen. Originale löschen entfernt keine Kalendertermine. Kalenderstatus zeigt Zugriffsrechte, Auswahl und ungeklärte Schreibvorgänge. Technische Diagnose bleibt lokal und enthält standardmäßig keine Termininhalte oder Gespräche."
-        )
+        Text(AppHelpContent.data)
       }
 
     }.pageTitle("Hilfe")

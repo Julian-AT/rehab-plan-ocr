@@ -47,13 +47,26 @@ import Foundation
       generated.identity == provider.identity && generated.value.query?.excluding == "Gymnastik")
     precondition(provider.calls == 1)
 
+    provider.operation = { _ in ConversationInterpretation(action: .help, helpTopic: .capture) }
+    do {
+      _ = try await router.interpret(request("Wie fotografiere ich einen Plan?"))
+      preconditionFailure("Help capability was not checked")
+    } catch InterpretationError.invalidRequest {}
+    provider.capabilities.insert(.appHelp)
+    let help = try await router.interpret(request("Wie fotografiere ich einen Plan?"))
+    precondition(help.value.helpTopic == .capture && help.value.reply == nil)
+    provider.operation = { _ in ConversationInterpretation(action: .cancel) }
+    let canceledIntent = try await router.interpret(request("Ich möchte doch nichts ändern"))
+    precondition(canceledIntent.value.action == .cancel && canceledIntent.value.change == nil)
+    let callsBeforeInvalidRequests = provider.calls
+
     for input in [request(""), request("Termine morgen", seconds: -1)] {
       do {
         _ = try await router.interpret(input)
         preconditionFailure("Invalid admission")
       } catch InterpretationError.invalidRequest {} catch InterpretationError.deadlineExceeded {}
     }
-    precondition(provider.calls == 1)
+    precondition(provider.calls == callsBeforeInvalidRequests)
     provider.capabilities = [.calendar]
     provider.operation = { _ in ConversationInterpretation(action: .create) }
     do {

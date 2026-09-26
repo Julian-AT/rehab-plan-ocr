@@ -1,4 +1,5 @@
 import Foundation
+import RehaCore
 
 struct InterpretationIdentity: Equatable, Sendable {
   let provider: String
@@ -7,7 +8,7 @@ struct InterpretationIdentity: Equatable, Sendable {
 }
 
 enum InterpretationCapability: Hashable, Sendable {
-  case calendar, mutation, conversation
+  case calendar, mutation, conversation, appHelp
 }
 
 enum InterpretationAvailability: Equatable, Sendable {
@@ -33,13 +34,20 @@ struct InterpretationRequest: Sendable {
 
 /// Provider-neutral interpretation. Calendar facts and mutation execution stay downstream.
 struct ConversationInterpretation: Sendable {
-  enum Action: Sendable { case calendar, create, update, remove, conversation, clarify }
+  enum Action: Sendable {
+    case calendar, create, update, remove, cancel, help, conversation, clarify
+  }
   var action: Action
   var query: CalendarQuestion?
   var change: VoiceIntent?
   var reply: String?
+  var helpTopic: AssistantHelpTopic?
+  var problem: AssistantProblem?
 
   func validate() throws {
+    guard action == .help || helpTopic == nil, action == .clarify || problem == nil else {
+      throw InterpretationError.invalidRequest
+    }
     if let query {
       guard query.validTimeBounds, (1...90).contains(query.days),
         (0...5).contains(query.ordinal), (0...500).contains(query.offset),
@@ -66,6 +74,8 @@ struct ConversationInterpretation: Sendable {
             !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 4_096
           }) ?? false)
       case .clarify: query == nil && change == nil && reply == nil
+      case .cancel: query == nil && change == nil && reply == nil
+      case .help: query == nil && change == nil && reply == nil && helpTopic != nil
       }
     guard valid else { throw InterpretationError.invalidRequest }
   }
@@ -138,7 +148,8 @@ enum InterpretationError: Error {
       case .calendar: .calendar
       case .create, .update, .remove: .mutation
       case .conversation: .conversation
-      case .clarify: nil
+      case .help: .appHelp
+      case .clarify, .cancel: nil
       }
     guard required.map(provider.capabilities.contains) ?? true else {
       throw InterpretationError.invalidRequest

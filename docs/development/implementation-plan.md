@@ -106,6 +106,25 @@ is executed and the candidate remains unqualified/unregistered in the app.
 The [native experiment](../../ml/experiments/2026-09-26-s17-assistant-native.md) records
 identities, the fixed sub-millisecond timeout defect and remaining integration gates.
 
+### Typed custom-assistant requests
+
+The compact model schema now crosses a strict Rust decoder and typed UniFFI enum
+into `ConversationInterpretation`. Thirty-three shared Rust/Python/Swift cases
+cover canonical dates/times, missing versus explicit null fields, duplicate and
+unknown keys, visible references and minimal changes. An initial regression found
+that Serde's unit cancellation variant accepted extra fields; the empty struct
+variant now rejects them. No parser operation accesses or changes calendars.
+
+The common provider distinguishes cancellation and fixed app help. Help text is
+the unchanged existing German screen content; invalid-date clarification retains
+its reason. Capability validation and canceled/late-result isolation pass. The
+full workspace passes 175 Rust tests and warning-free Clippy; 127 tool tests pass.
+The actual typed Swift boundary, provider/state probes and native persistence/FFI
+integration pass, and the simulator app builds. Calendar write confirmation and
+snapshot revalidation remain downstream. A semantically wrong known reference can
+still satisfy the schema; the model remains unqualified and app trial selection
+is a separate integration step.
+
 ### Bundled runtime dependencies
 
 The selected iOS normal/build closure now has a reproducible inventory: 136 Rust

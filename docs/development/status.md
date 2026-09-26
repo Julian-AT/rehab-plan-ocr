@@ -48,7 +48,7 @@ establish current device behavior or authorize an update.
   packaging verifies the actual bundled inventory and license texts. Public
   distribution still needs the eSpeak-NG and publisher/rights decisions.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
-  broad Rust evidence is 173 tests; native EventKit evidence is 17 tests with one
+  broad Rust evidence is 175 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
   exactly below the system status bar. These are not a whole-app visual pass.
 
@@ -77,6 +77,11 @@ The separate `LocalAssistant` package now executes the custom GGUF on macOS and
 the iOS simulator, with native cancellation/limits and isolation checks passing.
 Two complete answers match the desktop; both remain wrong and one is an unsafe
 mutation proposal. This verifies runtime compatibility without qualifying the model.
+The custom-output adapter now decodes through Rust and typed UniFFI records;
+33 shared cases reject malformed fields/dates and unknown references. Cancellation
+and fixed app-help topics have explicit common-provider actions. Generated help
+text cannot replace the unchanged existing help passages. Actual custom-provider
+selection in the app remains pending.
 All four privacy manifests pass built-bundle verification. Privacy/support drafts
 are prepared; publisher/contact information and public distribution review remain open.
 

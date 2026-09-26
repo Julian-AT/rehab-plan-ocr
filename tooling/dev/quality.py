@@ -220,6 +220,7 @@ def tests(portable):
             "conversation-replies",
             "calendar-answers",
             "interpretation-provider",
+            "assistant-request",
             "input-audio",
             "output-audio",
             "capture-preparation",

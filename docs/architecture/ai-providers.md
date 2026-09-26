@@ -10,7 +10,7 @@ Calendar queries, event selection and mutation confirmation remain downstream.
 | Contract | Meaning |
 |---|---|
 | Identity | Provider name, observable model identity and output schema version |
-| Capabilities | Calendar interpretation, mutation proposals, general conversation |
+| Capabilities | Calendar interpretation, mutation proposals, general conversation, fixed app help |
 | Availability | Available or a concrete local capability/setup reason |
 | Request | Current text, calendar context, up to six historical turns, reference time and monotonic deadline |
 | Result | Typed action/query/change/reply, provider identity and generation duration |
@@ -29,6 +29,19 @@ assets that are not ready. Its observable identity includes the OS version becau
 Apple does not expose a weight checksum here; this must not be reported as an
 exact model revision. The system provider still uses local `SystemLanguageModel`.
 
+The compact custom-model schema now has a strict portable Rust decoder and a typed
+UniFFI result. Its 33 shared Rust/Python/Swift cases cover duplicate/unknown keys,
+null versus missing values, canonical dates/times, visible reference membership,
+bounded fields and minimal title/duration changes. Parsing never writes a calendar.
+The app adapter preserves timezone and temporal bounds; existing live event and
+snapshot checks still run downstream. A known but semantically wrong reference can
+pass structural validation, so this boundary does not qualify the model's intent.
+
+Cancellation is an explicit action with no attached query/change. App help selects
+a topic from the existing help content, without model-generated explanation text.
+The screen and spoken path share the same unchanged German passages. Clarification
+retains a typed reason; invalid dates receive a specific correction prompt.
+
 The 30-second generation deadline begins after speech finalization. It does not
 shorten microphone endpoint thresholds or natural pauses. The deadline wrapper
 returns even if a native implementation has not yet honored cancellation; a late
@@ -43,6 +56,6 @@ Prewarming is still an explicit measurement trial, not a default optimization.
 The provider probe verifies exact-rule fallback, single-provider selection, invalid
 output rejection, capability limits, deadline/cancellation with an uncooperative
 fake provider and isolation of later answers. Actual Apple generation, shipping
-custom GGUF inference and paired provider quality/resource comparisons remain
+custom GGUF inference through the app router and paired provider quality/resource comparisons remain
 separate acceptance gates. The trained Qwen candidates currently fail quality;
 they are not registered as production providers.

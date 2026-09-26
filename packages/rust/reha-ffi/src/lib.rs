@@ -7,6 +7,8 @@ mod speech;
 pub use speech::*;
 mod application;
 pub use application::*;
+mod assistant;
+pub use assistant::*;
 
 fn runtime() -> &'static tokio::runtime::Runtime {
     static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();

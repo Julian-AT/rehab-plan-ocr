@@ -1,0 +1,266 @@
+[
+  {
+    "id": "next",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"next\",\"date\":\"2031-05-17\"}}",
+    "valid": true
+  },
+  {
+    "id": "after-reference",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"next\",\"reference\":\"r1\",\"after\":\"12:00\",\"before\":\"18:00\"}}",
+    "valid": true
+  },
+  {
+    "id": "leap-day",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2032-02-29\"}}",
+    "valid": true
+  },
+  {
+    "id": "create",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"create\",\"change\":{\"title\":\"Bewegung\",\"date\":\"2031-05-17\",\"time\":\"10:00\"}}",
+    "valid": true
+  },
+  {
+    "id": "title-only",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"title\":\"Entspannung\"}}",
+    "valid": true
+  },
+  {
+    "id": "duration-only",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"duration\":20}}",
+    "valid": true
+  },
+  {
+    "id": "remove",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"remove\",\"query\":{\"reference\":\"r1\"}}",
+    "valid": true
+  },
+  {
+    "id": "cancel",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"cancel\"}",
+    "valid": true
+  },
+  {
+    "id": "help",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"help\",\"topic\":\"capture\"}",
+    "valid": true
+  },
+  {
+    "id": "clarify",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"clarify\",\"problem\":\"missing_event\"}",
+    "valid": true
+  },
+  {
+    "id": "invented-id",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"invented\"},\"change\":{\"duration\":20}}",
+    "valid": false
+  },
+  {
+    "id": "invalid-day",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-02-29\"}}",
+    "valid": false
+  },
+  {
+    "id": "partial-date",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-5-1\"}}",
+    "valid": false
+  },
+  {
+    "id": "year-zero",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"0000-01-01\"}}",
+    "valid": false
+  },
+  {
+    "id": "missing-scope",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\"}}",
+    "valid": false
+  },
+  {
+    "id": "null-scope",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":null}}",
+    "valid": false
+  },
+  {
+    "id": "empty-change",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{}}",
+    "valid": false
+  },
+  {
+    "id": "null-duration",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"duration\":null}}",
+    "valid": false
+  },
+  {
+    "id": "float-duration",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"duration\":20.0}}",
+    "valid": false
+  },
+  {
+    "id": "bool-duration",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"duration\":true}}",
+    "valid": false
+  },
+  {
+    "id": "invalid-time",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"create\",\"change\":{\"title\":\"Bewegung\",\"date\":\"2031-05-17\",\"time\":\"24:00\"}}",
+    "valid": false
+  },
+  {
+    "id": "partial-create",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"create\",\"change\":{\"title\":\"Bewegung\"}}",
+    "valid": false
+  },
+  {
+    "id": "contradictory-bounds",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-05-17\",\"after\":\"18:00\",\"before\":\"12:00\"}}",
+    "valid": false
+  },
+  {
+    "id": "invented-fact",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"room\",\"reference\":\"r1\"},\"reply\":\"Raum 23\"}",
+    "valid": false
+  },
+  {
+    "id": "unknown-topic",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"help\",\"topic\":\"medical-advice\"}",
+    "valid": false
+  },
+  {
+    "id": "cancel-extra",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"cancel\",\"change\":{\"title\":\"Still save\"}}",
+    "valid": false
+  },
+  {
+    "id": "remove-extra",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"remove\",\"query\":{\"reference\":\"r1\"},\"change\":{\"date\":\"2031-05-17\"}}",
+    "valid": false
+  },
+  {
+    "id": "query-extra",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"calendar\",\"query\":{\"detail\":\"list\",\"date\":\"2031-05-17\",\"unknown\":1}}",
+    "valid": false
+  },
+  {
+    "id": "duplicate-action",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"cancel\",\"action\":\"remove\",\"query\":{\"reference\":\"r1\"}}",
+    "valid": false
+  },
+  {
+    "id": "duplicate-reference",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"remove\",\"query\":{\"reference\":\"r1\",\"reference\":\"invented\"}}",
+    "valid": false
+  },
+  {
+    "id": "escaped-duplicate",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"title\":\"A\",\"ti\\u0074le\":\"B\"}}",
+    "valid": false
+  },
+  {
+    "id": "duplicate-null",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"update\",\"query\":{\"reference\":\"r1\"},\"change\":{\"duration\":null,\"duration\":20}}",
+    "valid": false
+  },
+  {
+    "id": "trailing-object",
+    "references": [
+      "r1"
+    ],
+    "json": "{\"action\":\"cancel\"}{\"action\":\"remove\",\"query\":{\"reference\":\"r1\"}}",
+    "valid": false
+  }
+]

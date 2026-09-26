@@ -487,6 +487,22 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -2044,6 +2060,134 @@ public func FfiConverterTypeArchivePage_lift(_ buf: RustBuffer) throws -> Archiv
 #endif
 public func FfiConverterTypeArchivePage_lower(_ value: ArchivePage) -> RustBuffer {
     return FfiConverterTypeArchivePage.lower(value)
+}
+
+
+public struct AssistantChange: Equatable, Hashable {
+    public var title: String?
+    public var date: String?
+    public var timeMinutes: UInt16?
+    public var duration: UInt16?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(title: String?, date: String?, timeMinutes: UInt16?, duration: UInt16?) {
+        self.title = title
+        self.date = date
+        self.timeMinutes = timeMinutes
+        self.duration = duration
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AssistantChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantChange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantChange {
+        return
+            try AssistantChange(
+                title: FfiConverterOptionString.read(from: &buf), 
+                date: FfiConverterOptionString.read(from: &buf), 
+                timeMinutes: FfiConverterOptionUInt16.read(from: &buf), 
+                duration: FfiConverterOptionUInt16.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AssistantChange, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.title, into: &buf)
+        FfiConverterOptionString.write(value.date, into: &buf)
+        FfiConverterOptionUInt16.write(value.timeMinutes, into: &buf)
+        FfiConverterOptionUInt16.write(value.duration, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantChange_lift(_ buf: RustBuffer) throws -> AssistantChange {
+    return try FfiConverterTypeAssistantChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantChange_lower(_ value: AssistantChange) -> RustBuffer {
+    return FfiConverterTypeAssistantChange.lower(value)
+}
+
+
+public struct AssistantQuery: Equatable, Hashable {
+    public var detail: AssistantDetail
+    public var date: String?
+    public var reference: String?
+    public var afterMinutes: UInt16?
+    public var beforeMinutes: UInt16?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(detail: AssistantDetail, date: String?, reference: String?, afterMinutes: UInt16?, beforeMinutes: UInt16?) {
+        self.detail = detail
+        self.date = date
+        self.reference = reference
+        self.afterMinutes = afterMinutes
+        self.beforeMinutes = beforeMinutes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AssistantQuery: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantQuery: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantQuery {
+        return
+            try AssistantQuery(
+                detail: FfiConverterTypeAssistantDetail.read(from: &buf), 
+                date: FfiConverterOptionString.read(from: &buf), 
+                reference: FfiConverterOptionString.read(from: &buf), 
+                afterMinutes: FfiConverterOptionUInt16.read(from: &buf), 
+                beforeMinutes: FfiConverterOptionUInt16.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AssistantQuery, into buf: inout [UInt8]) {
+        FfiConverterTypeAssistantDetail.write(value.detail, into: &buf)
+        FfiConverterOptionString.write(value.date, into: &buf)
+        FfiConverterOptionString.write(value.reference, into: &buf)
+        FfiConverterOptionUInt16.write(value.afterMinutes, into: &buf)
+        FfiConverterOptionUInt16.write(value.beforeMinutes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantQuery_lift(_ buf: RustBuffer) throws -> AssistantQuery {
+    return try FfiConverterTypeAssistantQuery.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantQuery_lower(_ value: AssistantQuery) -> RustBuffer {
+    return FfiConverterTypeAssistantQuery.lower(value)
 }
 
 
@@ -4949,6 +5093,422 @@ public func FfiConverterTypeArchiveStatus_lower(_ value: ArchiveStatus) -> RustB
 
 
 
+public enum AssistantDetail: Equatable, Hashable {
+    
+    case next
+    case list
+    case count
+    case room
+    case therapist
+    case start
+    case end
+    case duration
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AssistantDetail: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantDetail: FfiConverterRustBuffer {
+    typealias SwiftType = AssistantDetail
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantDetail {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .next
+        
+        case 2: return .list
+        
+        case 3: return .count
+        
+        case 4: return .room
+        
+        case 5: return .therapist
+        
+        case 6: return .start
+        
+        case 7: return .end
+        
+        case 8: return .duration
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AssistantDetail, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .next:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .list:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .count:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .room:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .therapist:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .start:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .end:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .duration:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantDetail_lift(_ buf: RustBuffer) throws -> AssistantDetail {
+    return try FfiConverterTypeAssistantDetail.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantDetail_lower(_ value: AssistantDetail) -> RustBuffer {
+    return FfiConverterTypeAssistantDetail.lower(value)
+}
+
+
+
+
+public enum AssistantHelpTopic: Equatable, Hashable {
+    
+    case capture
+    case calendars
+    case archive
+    case voice
+    case privacy
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AssistantHelpTopic: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantHelpTopic: FfiConverterRustBuffer {
+    typealias SwiftType = AssistantHelpTopic
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantHelpTopic {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .capture
+        
+        case 2: return .calendars
+        
+        case 3: return .archive
+        
+        case 4: return .voice
+        
+        case 5: return .privacy
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AssistantHelpTopic, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .capture:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .calendars:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .archive:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .voice:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .privacy:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantHelpTopic_lift(_ buf: RustBuffer) throws -> AssistantHelpTopic {
+    return try FfiConverterTypeAssistantHelpTopic.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantHelpTopic_lower(_ value: AssistantHelpTopic) -> RustBuffer {
+    return FfiConverterTypeAssistantHelpTopic.lower(value)
+}
+
+
+
+
+public enum AssistantProblem: Equatable, Hashable {
+    
+    case invalidDate
+    case ambiguous
+    case missingDate
+    case missingTime
+    case missingTitle
+    case missingEvent
+    case unsupported
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AssistantProblem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantProblem: FfiConverterRustBuffer {
+    typealias SwiftType = AssistantProblem
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantProblem {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .invalidDate
+        
+        case 2: return .ambiguous
+        
+        case 3: return .missingDate
+        
+        case 4: return .missingTime
+        
+        case 5: return .missingTitle
+        
+        case 6: return .missingEvent
+        
+        case 7: return .unsupported
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AssistantProblem, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .invalidDate:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .ambiguous:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .missingDate:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .missingTime:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .missingTitle:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .missingEvent:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .unsupported:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantProblem_lift(_ buf: RustBuffer) throws -> AssistantProblem {
+    return try FfiConverterTypeAssistantProblem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantProblem_lower(_ value: AssistantProblem) -> RustBuffer {
+    return FfiConverterTypeAssistantProblem.lower(value)
+}
+
+
+
+
+public enum AssistantRequest: Equatable, Hashable {
+    
+    case calendar(query: AssistantQuery
+    )
+    case create(change: AssistantChange
+    )
+    case update(reference: String, change: AssistantChange
+    )
+    case remove(reference: String
+    )
+    case cancel
+    case help(topic: AssistantHelpTopic
+    )
+    case clarify(problem: AssistantProblem
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AssistantRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAssistantRequest: FfiConverterRustBuffer {
+    typealias SwiftType = AssistantRequest
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AssistantRequest {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .calendar(query: try FfiConverterTypeAssistantQuery.read(from: &buf)
+        )
+        
+        case 2: return .create(change: try FfiConverterTypeAssistantChange.read(from: &buf)
+        )
+        
+        case 3: return .update(reference: try FfiConverterString.read(from: &buf), change: try FfiConverterTypeAssistantChange.read(from: &buf)
+        )
+        
+        case 4: return .remove(reference: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .cancel
+        
+        case 6: return .help(topic: try FfiConverterTypeAssistantHelpTopic.read(from: &buf)
+        )
+        
+        case 7: return .clarify(problem: try FfiConverterTypeAssistantProblem.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AssistantRequest, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .calendar(query):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeAssistantQuery.write(query, into: &buf)
+            
+        
+        case let .create(change):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeAssistantChange.write(change, into: &buf)
+            
+        
+        case let .update(reference,change):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(reference, into: &buf)
+            FfiConverterTypeAssistantChange.write(change, into: &buf)
+            
+        
+        case let .remove(reference):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(reference, into: &buf)
+            
+        
+        case .cancel:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .help(topic):
+            writeInt(&buf, Int32(6))
+            FfiConverterTypeAssistantHelpTopic.write(topic, into: &buf)
+            
+        
+        case let .clarify(problem):
+            writeInt(&buf, Int32(7))
+            FfiConverterTypeAssistantProblem.write(problem, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantRequest_lift(_ buf: RustBuffer) throws -> AssistantRequest {
+    return try FfiConverterTypeAssistantRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAssistantRequest_lower(_ value: AssistantRequest) -> RustBuffer {
+    return FfiConverterTypeAssistantRequest.lower(value)
+}
+
+
+
+
 public enum FieldValue: Equatable, Hashable {
     
     case empty
@@ -5793,6 +6353,30 @@ public func FfiConverterCallbackInterfaceAppleHost_lift(_ handle: UInt64) throws
 #endif
 public func FfiConverterCallbackInterfaceAppleHost_lower(_ v: AppleHost) -> UInt64 {
     return FfiConverterCallbackInterfaceAppleHost.lower(v)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionUInt16: FfiConverterRustBuffer {
+    typealias SwiftType = UInt16?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt16.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt16.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
 }
 
 #if swift(>=5.8)
@@ -6834,6 +7418,15 @@ public func openApplication(root: String, models: String, host: AppleHost)async 
             errorHandler: FfiConverterTypeAppError_lift
         )
 }
+public func decodeAssistantRequest(json: String, visibleReferences: [String])throws  -> AssistantRequest  {
+    return try  FfiConverterTypeAssistantRequest_lift(try rustCallWithError(FfiConverterTypeAppError_lift) {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_func_decode_assistant_request(
+        FfiConverterString.lower(json),
+        FfiConverterSequenceString.lower(visibleReferences),uniffiCallStatus
+    )
+})
+}
 /**
  * Same preparation as the renderer, without loading model weights.
  */
@@ -6874,6 +7467,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_func_open_application() != 49466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_func_decode_assistant_request() != 22203) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_func_normalize_speech() != 54361) {

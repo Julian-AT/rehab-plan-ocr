@@ -429,9 +429,13 @@ struct VoiceSnapshot {
         await answerCalendar(query, token: token)
       case .clarify:
         say(
-          VoiceAddress.saved().choose(
-            "Welchen Zeitraum oder welchen Termin meinst du?",
-            "Welchen Zeitraum oder welchen Termin meinen Sie?"), question: .action)
+          AssistantInterpretation.clarification(result.problem, address: VoiceAddress.saved()),
+          question: .action)
+      case .cancel:
+        say("Es wird nichts geändert.", question: .action)
+      case .help:
+        guard let topic = result.helpTopic else { throw InterpretationError.invalidRequest }
+        say(AppHelpContent.text(for: topic), question: .action)
       case .conversation:
         // A calendar utterance must not escape the factual answer builder.
         if CalendarQuestion.concernsCalendar(text)
