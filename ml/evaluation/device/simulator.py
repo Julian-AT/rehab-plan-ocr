@@ -25,27 +25,39 @@ def install(app, identifier, run):
     disposable(identifier, run)
     with tempfile.TemporaryDirectory(prefix="reha-evaluation-") as temporary:
         staged = Path(temporary) / app.name
-        run(["cp", "-cRp", str(app), str(staged)])
-        run(["xattr", "-cr", str(staged)])
-        for product, entitlements in [
-            ("PlugIns/RehaWidgets.appex", "Extensions/Widgets/Widgets.entitlements"),
-            (
-                "PlugIns/RehaNotificationContent.appex",
-                "Extensions/NotificationContent/Notification.entitlements",
-            ),
-            ("PlugIns/RehaShare.appex", "Extensions/Share/Share.entitlements"),
-            ("", "App/Termine.entitlements"),
-        ]:
-            run(
-                [
-                    "codesign",
-                    "--force",
-                    "--sign",
-                    "-",
-                    "--entitlements",
-                    str(ROOT / "apps/ios" / entitlements),
-                    str(staged / product),
-                ]
-            )
+        signed_copy(app, staged, run)
         run(["xcrun", "simctl", "install", identifier, str(staged)], timeout=120)
     return Path(run(["xcrun", "simctl", "get_app_container", identifier, BUNDLE, "data"]))
+
+
+def signed_copy(app, destination, run):
+    """Sign a new caller-owned copy; its lifetime is owned by the caller."""
+    app, destination = Path(app), Path(destination)
+    if (
+        destination.exists()
+        or destination.is_symlink()
+        or destination.resolve().is_relative_to(app.resolve())
+    ):
+        raise ValueError("Signed staging destination must be new and outside the source app")
+    run(["cp", "-cRp", str(app), str(destination)])
+    run(["xattr", "-cr", str(destination)])
+    for product, entitlements in [
+        ("PlugIns/RehaWidgets.appex", "Extensions/Widgets/Widgets.entitlements"),
+        (
+            "PlugIns/RehaNotificationContent.appex",
+            "Extensions/NotificationContent/Notification.entitlements",
+        ),
+        ("PlugIns/RehaShare.appex", "Extensions/Share/Share.entitlements"),
+        ("", "App/Termine.entitlements"),
+    ]:
+        run(
+            [
+                "codesign",
+                "--force",
+                "--sign",
+                "-",
+                "--entitlements",
+                str(ROOT / "apps/ios" / entitlements),
+                str(destination / product),
+            ]
+        )

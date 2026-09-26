@@ -2,11 +2,12 @@
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from ml.evaluation.device.simulator import disposable, install  # noqa: E402
+from ml.evaluation.device.simulator import disposable, install, signed_copy  # noqa: E402
 
 
 class SimulatorTests(unittest.TestCase):
@@ -42,6 +43,41 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(all("reha-evaluation-" in call[-1] for call in signs))
         self.assertTrue(all("--entitlements" in call for call in signs))
         self.assertFalse(any(call[-1].startswith(str(app)) for call in signs))
+
+    def test_retained_copy_uses_same_signatures_without_installing(self):
+        source = Path("/synthetic/built/Example.app")
+        destination = Path("/synthetic/retained/Example.app")
+        signed_copy(source, destination, self.fake_run)
+        self.assertEqual(self.calls[0], ["cp", "-cRp", str(source), str(destination)])
+        self.assertEqual(len([c for c in self.calls if c[0] == "codesign"]), 4)
+        self.assertFalse(any(c[0] == "xcrun" for c in self.calls))
+
+    def test_existing_or_nested_staging_fails_before_mutation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Example.app"
+            source.mkdir()
+            for destination in [source, source / "nested.app", Path(temporary)]:
+                with self.subTest(destination=destination), self.assertRaises(ValueError):
+                    signed_copy(source, destination, self.fake_run)
+        self.assertEqual(self.calls, [])
+
+    def test_install_cleans_only_its_temporary_copy_after_sign_failure(self):
+        staged = None
+
+        def failing(command, **kwargs):
+            nonlocal staged
+            if command[0] == "cp":
+                staged = Path(command[-1])
+                staged.mkdir()
+            if command[0] == "codesign":
+                raise RuntimeError("synthetic signing failure")
+            return self.fake_run(command, **kwargs)
+
+        with self.assertRaisesRegex(RuntimeError, "synthetic signing"):
+            install(Path("/synthetic/source.app"), "disposable", failing)
+        self.assertIsNotNone(staged)
+        self.assertFalse(staged.parent.exists())
+        self.assertFalse(any(c[:3] == ["xcrun", "simctl", "install"] for c in self.calls))
 
 
 if __name__ == "__main__":
