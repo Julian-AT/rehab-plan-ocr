@@ -80,7 +80,7 @@ impl Store {
         now: i64,
     ) -> Result<Intake> {
         let dir = self.scan_dir(id)?;
-        if bytes.is_empty() || bytes.len() > 40 * 1024 * 1024 {
+        if bytes.is_empty() || bytes.len() > crate::photo_source::MAX_BYTES {
             return Err(Error::Invalid(
                 "Foto ist leer oder größer als 40 MB.".into(),
             ));

@@ -9,6 +9,7 @@ pub mod parser;
 mod photo;
 #[cfg(target_os = "macos")]
 mod photo_macos;
+pub mod photo_source;
 pub mod pipeline;
 pub mod store;
 

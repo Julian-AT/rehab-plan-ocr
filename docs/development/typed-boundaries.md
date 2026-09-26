@@ -519,6 +519,22 @@ kompatibel. Native Callback-Fehler dürfen diesen Adapter nicht benutzen. Die
 noch vorhandene textbasierte Zuordnung von Domain-Fehlern ist gesondert zu
 migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
 
+## Begrenztes Einlesen von Originalen
+
+`photo_source::read` öffnet das Original einmal und begrenzt auch den tatsächlichen
+Datenstrom auf 40 MiB plus ein Prüfbyte. Eine zwischen Größenprüfung und Lesen
+wachsende Datei kann damit keine unbegrenzte Leseoperation auslösen. Bekannte
+Überschreitungen werden vor dem Einlesen abgewiesen. Ein- und Ausgabe sowie
+Erkennungsgrenzen bleiben getrennt: Die größere Grenze für vorbereitete native
+Erkennungsbilder gilt nicht für Originaldateien.
+
+Direkter Import, dauerhaftes Vormerken, beide Wiederaufnahmewege und die lokale
+Referenzanzeige verwenden denselben Leser. Vormerken und Bildvorbereitung teilen
+seine Größenkonstante. Überschreitungen bleiben am nativen Eingang Eingabefehler,
+Lesefehler Speicherfehler; eine abgewiesene Wiederaufnahme behält Original,
+Aufnahmezustand und ursprünglichen Herkunftshash. Base64 bleibt vorerst am
+bestehenden Core-Importvertrag bestehen.
+
 ## Binäre native Texterkennung
 
 `Platform.recognize_text`, `AppleHost.recognize_text` und

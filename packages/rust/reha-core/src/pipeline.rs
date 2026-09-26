@@ -20,7 +20,7 @@ pub fn prepare(
     dir: &Path,
 ) -> Result<Prepared> {
     uuid::Uuid::parse_str(id).map_err(|_| Error::Invalid("Invalid document ID".into()))?;
-    if bytes.len() > 40 * 1024 * 1024 {
+    if bytes.len() > crate::photo_source::MAX_BYTES {
         return Err(Error::Invalid("Foto größer als 40 MB.".into()));
     }
     if !(1..=8).contains(&config.recognition_batch_size)

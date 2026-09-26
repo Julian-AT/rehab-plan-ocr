@@ -305,11 +305,11 @@ fn dataset_image(state: &ReferenceLibrary, hash: String) -> Response<Value> {
     .canonicalize()
     .map_err(failure)?;
     if path.parent() != Some(raw.as_path())
-        || path.metadata().map_err(failure)?.len() > 40 * 1024 * 1024
+        || path.metadata().map_err(failure)?.len() > crate::photo_source::MAX_BYTES as u64
     {
         return Err("Bildpfad oder Größe ungültig.".into());
     }
-    let bytes = std::fs::read(path).map_err(failure)?;
+    let bytes = crate::photo_source::read(path).map_err(failure)?;
     if reha_core::hash(&bytes) != hash {
         return Err("Quellbild stimmt nicht mit der inventarisierten Prüfsumme überein.".into());
     }

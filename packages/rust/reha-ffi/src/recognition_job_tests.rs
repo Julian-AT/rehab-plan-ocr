@@ -100,6 +100,61 @@ async fn early_photo_errors_and_prestart_cancel_release_every_registration() {
     assert_eq!(app.bridge.jobs.len(), 0);
 }
 #[tokio::test]
+async fn staging_and_retry_enforce_original_size_before_acknowledgement() {
+    let (dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let path = dir.path().join("sparse-original");
+    let maximum = reha_core::photo_source::MAX_BYTES as u64;
+    std::fs::File::create(&path)
+        .unwrap()
+        .set_len(maximum + 1)
+        .unwrap();
+    assert!(matches!(
+        app.stage_photo(id.clone(), path.to_string_lossy().into())
+            .await,
+        Err(AppError::Validation { .. })
+    ));
+    assert!(app
+        .state
+        .store
+        .lock()
+        .unwrap()
+        .intakes()
+        .unwrap()
+        .is_empty());
+
+    std::fs::write(&path, b"controlled original").unwrap();
+    app.stage_photo(id.clone(), path.to_string_lossy().into())
+        .await
+        .unwrap();
+    let retained = app.state.store.lock().unwrap().source_path(&id).unwrap();
+    // Corrupt only this test's disposable retained copy, never a real original.
+    std::fs::File::options()
+        .write(true)
+        .open(&retained)
+        .unwrap()
+        .set_len(maximum + 1)
+        .unwrap();
+    let job = app.register_job(id.clone()).unwrap();
+    assert!(matches!(
+        app.retry_capture(id.clone(), job).await,
+        Err(AppError::Validation { .. })
+    ));
+    assert!(!app.recognition_busy());
+    assert_eq!(app.bridge.jobs.len(), 0);
+    assert_eq!(std::fs::metadata(retained).unwrap().len(), maximum + 1);
+    let store = app.state.store.lock().unwrap();
+    let intakes = store.intakes().unwrap();
+    assert_eq!(intakes.len(), 1);
+    assert_eq!(intakes[0].id, id);
+    assert_eq!(intakes[0].status, "stored");
+    assert_eq!(
+        intakes[0].source_hash,
+        reha_core::hash(b"controlled original")
+    );
+}
+
+#[tokio::test]
 async fn retry_uses_a_new_attempt_and_observes_cancellation_before_reading_store() {
     let (_dir, app) = application().await;
     let id = uuid::Uuid::new_v4().to_string();
