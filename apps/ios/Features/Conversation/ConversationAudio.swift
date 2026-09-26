@@ -173,6 +173,9 @@ import Foundation
         @Sendable [weak self] _ in
         Task { @MainActor in
           guard let self, self.playbackID == id else { return }
+          // Playback is finished even when the microphone keeps the graph alive.
+          // Preserve duration/timing until SpeechOutput accounts for the final words.
+          self.pcm = nil
           self.completion?.resume(returning: true)
           self.completion = nil
         }
