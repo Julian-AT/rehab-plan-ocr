@@ -4,8 +4,8 @@
 # ///
 """Convert pinned Victoria weights locally; no model code or pickle code is loaded.
 
-Run through make convert after make restore. This step never downloads model
-assets. All products remain under .local/models/runtime.
+Run through make convert-experimental-speech after make restore-experimental-speech.
+This step never downloads model assets. All products remain under .local/models/runtime.
 """
 
 import hashlib
@@ -27,7 +27,9 @@ REVISION = source_manifest["revision"]
 for name, entry in source_manifest["files"].items():
     path = SOURCE / name
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
-        raise RuntimeError(f"Missing pinned speech source {name}; run make restore.")
+        raise RuntimeError(
+            f"Missing pinned speech source {name}; run make restore-experimental-speech."
+        )
 TARGET.mkdir(parents=True, exist_ok=True)
 
 config = json.loads((SOURCE / "config.json").read_text())

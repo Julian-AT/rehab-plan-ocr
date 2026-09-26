@@ -161,7 +161,10 @@ def main():
     source = BASE / f"espeak-ng-{VERSION}"
     if args.verify:
         if not source.is_dir():
-            raise RuntimeError("Phonemizer source missing; run make restore and make convert.")
+            raise RuntimeError(
+                "Phonemizer source missing; run make restore-experimental-speech "
+                "and make convert-experimental-speech."
+            )
     else:
         source = prepare_source(args.offline)
     if args.source_only:
@@ -186,7 +189,8 @@ def main():
             continue
         if args.verify:
             raise RuntimeError(
-                f"Phonemizer cache missing or stale for {variant}; run make convert."
+                f"Phonemizer cache missing or stale for {variant}; "
+                "run make convert-experimental-speech."
             )
         subprocess.run(cmake + ["-S", str(source), "-B", str(build)] + options, check=True)
         subprocess.run(
