@@ -93,6 +93,11 @@ source hashes: replay requires those recorded sources and the recorded environme
 Changing validation code does not update or relax an existing run's identity;
 historical reports and weights remain unchanged.
 
+Epoch selection orders completed directories numerically, including epochs above
+9999. This reader change does not migrate existing run identities: retained runs
+such as the 2026-09-26 candidates 001/002 must use their unchanged archived training
+sources and recorded environment for replay. New sources require a new run.
+
 `verify_resume.py` compares every adapter/optimizer/random tensor, validation
 outputs and restored random draws against uninterrupted training. `export.py`
 fuses the selected checkpoint, preserves the pinned tokenizer, converts both base

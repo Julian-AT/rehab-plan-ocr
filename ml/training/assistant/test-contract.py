@@ -189,6 +189,58 @@ class AssistantContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 export.selected_checkpoint(self.root)
 
+    def test_latest_checkpoint_orders_five_digit_epochs_numerically_without_fallback(self):
+        (self.root / "identity.json").write_text("{}")
+        (self.root / "baseline.json").write_text("{}")
+        for epoch in [9999, 10000]:
+            path = self.root / "checkpoints" / f"epoch-{epoch:04d}"
+            path.mkdir(parents=True)
+            files = {}
+            for name in [
+                "adapters.safetensors",
+                "optimizer.safetensors",
+                "random.safetensors",
+                "adapter_config.json",
+                "metrics.json",
+            ]:
+                (path / name).write_bytes(b"synthetic fixture")
+                files[name] = contract.sha(path / name)
+            contract.write(
+                path / "checkpoint.json",
+                {
+                    "epoch": epoch,
+                    "state": {"epoch": epoch},
+                    "files": files,
+                    "run_identity": contract.sha(self.root / "identity.json"),
+                    "baseline_sha256": contract.sha(self.root / "baseline.json"),
+                },
+            )
+        self.assertEqual(train.latest_checkpoint(self.root)[1]["epoch"], 10000)
+        (path / "optimizer.safetensors").write_bytes(b"corrupt latest checkpoint")
+        with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+            train.latest_checkpoint(self.root)
+
+    def test_source_revision_change_still_rejects_historical_identity(self):
+        contract.write(self.root / "settings.json", {"dataset": str(self.path)})
+        contract.write(
+            self.root / "identity.json",
+            {
+                "settings_sha256": contract.sha(self.root / "settings.json"),
+                "lineage": {"sources_sha256": {"train.py": "recorded old source"}},
+            },
+        )
+        before = (self.root / "identity.json").read_bytes()
+        with (
+            patch.object(
+                train, "lineage", return_value={"sources_sha256": {"train.py": "changed source"}}
+            ),
+            patch.object(train, "verify") as verify,
+            self.assertRaisesRegex(ValueError, "source.*changed"),
+        ):
+            train.current_identity(self.root)
+        verify.assert_not_called()
+        self.assertEqual((self.root / "identity.json").read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

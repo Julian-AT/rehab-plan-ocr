@@ -99,10 +99,12 @@ def verify_checkpoint(run, path):
 
 
 def latest_checkpoint(run):
-    directories = sorted((run / "checkpoints").glob("epoch-*"))
+    directories = list((run / "checkpoints").glob("epoch-*"))
     if not directories:
         return None, None
-    path = directories[-1]
+    if any(not path.name.removeprefix("epoch-").isdigit() for path in directories):
+        raise ValueError("Invalid completed checkpoint directory")
+    path = max(directories, key=lambda item: int(item.name.removeprefix("epoch-")))
     receipt = verify_checkpoint(run, path)
     return path, receipt
 
