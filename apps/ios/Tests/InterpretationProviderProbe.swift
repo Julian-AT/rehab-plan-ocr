@@ -174,8 +174,48 @@ import Foundation
     }
     let fresh = try await router.interpret(request("Neues Thema"))
     precondition(fresh.value.reply == "Neue Antwort")
+
+    // Cancellation while context is being prepared must precede provider admission.
+    // Let a newer request complete before the old, uncooperative context arrives.
+    var pendingContext: CheckedContinuation<Void, Never>?
+    let contextStarted = AsyncStream<Void>.makeStream()
+    let beforePreparation = provider.calls
+    let preparing = Task {
+      try await router.interpret(preparing: {
+        await withCheckedContinuation { continuation in
+          pendingContext = continuation
+          contextStarted.continuation.yield(())
+        }
+        return request("Veraltete Frage")
+      })
+    }
+    var contextIterator = contextStarted.stream.makeAsyncIterator()
+    await contextIterator.next()
+    preparing.cancel()
+    let replacement = try await router.interpret(request("Aktuelle Frage"))
+    precondition(replacement.value.reply == "Neue Antwort")
+    pendingContext?.resume()
+    do {
+      _ = try await preparing.value
+      preconditionFailure("Cancelled context admitted a provider")
+    } catch is CancellationError {}
+    precondition(provider.calls == beforePreparation + 1)
+
+    var preparedWhenCancelled = false
+    let cancelledBeforePreparation = Task {
+      withUnsafeCurrentTask { $0?.cancel() }
+      return try await router.interpret(preparing: {
+        preparedWhenCancelled = true
+        return request("Nicht mehr vorbereiten")
+      })
+    }
+    do {
+      _ = try await cancelledBeforePreparation.value
+      preconditionFailure("Cancelled task prepared another context")
+    } catch is CancellationError {}
+    precondition(!preparedWhenCancelled && provider.calls == beforePreparation + 1)
     print(
-      "Interpretation providers passed: complete rules, one selected model, capability fallback, deadlines, cancellation and late-result isolation."
+      "Interpretation providers passed: complete rules, one selected model, capability fallback, deadlines, cancellation during context preparation and late-result isolation."
     )
   }
 }

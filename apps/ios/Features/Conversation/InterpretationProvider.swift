@@ -149,6 +149,17 @@ extension InterpretationProvider {
 
   var availability: InterpretationAvailability { generation.availability }
 
+  /// Context preparation belongs to the same cancellable task as generation.
+  /// A late context response must never start a provider for an ended turn.
+  func interpret(preparing request: @MainActor () async throws -> InterpretationRequest)
+    async throws -> InterpretationResult
+  {
+    try Task.checkCancellation()
+    let prepared = try await request()
+    try Task.checkCancellation()
+    return try await interpret(prepared)
+  }
+
   func interpret(_ request: InterpretationRequest) async throws -> InterpretationResult {
     try request.validate()
     try Task.checkCancellation()

@@ -390,7 +390,7 @@ struct VoiceSnapshot {
       selected = candidates.count == 1 ? candidates.first : nil
       say(result.text, question: .action)
     } catch {
-      guard current == session, !Task.isCancelled else { return }
+      guard current == session, modelToken == token, !Task.isCancelled else { return }
       say(
         "Die Kalenderdaten konnten gerade nicht gelesen werden. Bitte erneut versuchen.",
         question: .action)
@@ -411,18 +411,19 @@ struct VoiceSnapshot {
     await calendarConversation.begin(token)
     guard session == current, modelToken == token, !Task.isCancelled else { return }
     do {
-      let context = try await calendarConversation.context(now: now, calendar: calendar)
       let history = rounds.dropLast().suffix(6).map {
         [
           "user": $0.user,
           $0.textual ? "displayed_answer" : "spoken_answer": $0.textual ? $0.answer : $0.spoken,
         ]
       }
-      let request = InterpretationRequest(
-        text: text, context: context, history: history, now: now, calendar: calendar,
-        deadline: ContinuousClock.now.advanced(by: .seconds(30)))
-      let task = Task { @MainActor [interpretation] in
-        try await interpretation.interpret(request)
+      let task = Task { @MainActor [interpretation, calendarConversation] in
+        try await interpretation.interpret(preparing: {
+          let context = try await calendarConversation.context(now: now, calendar: calendar)
+          return InterpretationRequest(
+            text: text, context: context, history: history, now: now, calendar: calendar,
+            deadline: ContinuousClock.now.advanced(by: .seconds(30)))
+        })
       }
       responseTask = task
       let result = try await task.value.value
