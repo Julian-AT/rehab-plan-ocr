@@ -112,5 +112,22 @@ interruption/repeat behavior, first audible response, energy/thermal measurement
 and distribution suitability remain required before promotion. Host synthesis
 times exclude audio startup and must not be used for the ≤3/≤5-second voice targets.
 
+### Product-renderer evidence, 18 September 2026
+
+`make prepare-listening RUN=.local/runs/listening-system-renderer-20260926-s18-001`
+completed on source revision `70a254947079cff9c48ee40128ffc0e05da34617`.
+All nine locally enumerated German voices completed all ten shared prepared texts:
+90 checked PCM16 files, 1,782 ordered word-progress marks, no failed voices.
+Independent verification rechecked the audio format, prepared-text coverage,
+anonymous-copy hashes and unchanged renderer/tool/binary sources. The local
+`validation.json` records that check; `listening.html` is the current anonymous
+host preview. The audio manifest SHA-256 is
+`2d763ff8c285b4ae64fc791f2696e63616a4da6584649758aabf4bb7a2422b08`.
+
+This run excludes experimental Victoria. Its denominator is ten shared synthetic
+prompt families and zero human listeners. It establishes neither a preferred voice
+nor iPhone comprehension, offline availability, playback timing or device-update
+approval. Previous listening runs remain unchanged.
+
 API references: [available voices](https://developer.apple.com/documentation/avfaudio/avspeechsynthesisvoice/speechvoices()),
 [buffer synthesis](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer/write(_:tobuffercallback:)).
