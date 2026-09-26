@@ -124,7 +124,7 @@ extension InterpretationProvider {
 
 @MainActor final class CalendarRulesProvider: InterpretationProvider {
   let identity = InterpretationIdentity(
-    provider: "complete-rules", model: "calendar-4", schemaVersion: 1)
+    provider: "complete-rules", model: "calendar-5", schemaVersion: 1)
   let capabilities: Set<InterpretationCapability> = [.calendar, .mutation]
   let availability = InterpretationAvailability.available
 

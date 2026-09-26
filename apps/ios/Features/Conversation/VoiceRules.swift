@@ -380,6 +380,124 @@ enum VoiceRules {
     // A compound request cannot silently become just its first mutation.
     return actions.count > 1 ? .unsupported : actions.first
   }
+
+  /// Complete local commands, separate from `parse`'s partial field evidence.
+  /// Every word must belong to the command, one target, or a supported field.
+  /// Free phrasing and extra qualifiers remain the interpretation provider's job.
+  static func completeMutation(
+    _ input: String, now: Date = .now, calendar: Calendar = .current
+  ) -> VoiceIntent? {
+    var intent = parse(input, now: now, calendar: calendar)
+    guard [.create, .update, .remove].contains(intent.action), !intent.negatedChange,
+      !intent.corrected, !hasInvalidDate(input, now: now, calendar: calendar)
+    else { return nil }
+    let text = replacing("\\s+", in: input, with: " ").trimmingCharacters(
+      in: .whitespacesAndNewlines)
+    var remainder = replacing("[.!]$", in: text, with: "")
+    func take(_ pattern: String) -> [String]? {
+      guard let match = matches("(?i)^(?:" + pattern + ")(?= |$)", remainder).first else {
+        return nil
+      }
+      remainder = String(remainder.dropFirst(match[0].count)).trimmingCharacters(in: .whitespaces)
+      return match
+    }
+    _ = take("bitte")
+    if intent.action == .create {
+      guard
+        take(
+          #"erstell(?:e|en sie)? (?:einen )?(?:neuen )?termin|(?:einen )?neuen termin (?:erstellen|eintragen|hinzufügen)|neuer termin"#
+        ) != nil
+      else {
+        return nil
+      }
+      if let title = take(
+        #"(?:namens|mit (?:dem )?titel) (?:"([^"]+)"|„([^“]+)“|([\p{L}\p{M}-]+(?: [\p{L}\p{M}-]+)*?))(?= (?:am|um|für|heute|morgen|übermorgen|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\b|$)"#
+      )?.dropFirst().first(where: { !$0.isEmpty }) {
+        guard completeMutationTitle(title) else { return nil }
+        intent.title = title
+        intent.origins["title"] = .spoken
+      }
+      guard completeMutationFields(remainder, now: now, calendar: calendar),
+        intent.newDate == date(remainder, now: now, calendar: calendar),
+        intent.newTime == time(remainder), intent.duration == duration(remainder)
+      else { return nil }
+      return intent
+    }
+    guard
+      take(
+        intent.action == .remove
+          ? #"lösch(?:e|en sie)?|entfern(?:e|en sie)?"#
+          : #"verschieb(?:e|en sie)?|änder(?:e|n sie)?"#) != nil
+    else {
+      return nil
+    }
+    let pieces = remainder.components(separatedBy: " auf ")
+    guard pieces.count <= 2, intent.action == .update || pieces.count == 1 else { return nil }
+    let reference = pieces[0]
+    // Generic singular targets enter visible candidate selection. Ordinals keep
+    // the discussed page; a named target must contain only a literal title.
+    remainder = reference
+    if take("(?:den |die |meinen |meine )?\(eventOrdinalWord) (?:termin|behandlung)") == nil,
+      take(#"(?:den |meinen )?termin"#) == nil
+    {
+      _ = take(#"den|die|meinen|meine"#)
+      guard
+        let title = take(
+          #"([\p{L}\p{M}-]+(?: [\p{L}\p{M}-]+)*?)(?= (?:am|um|heute|morgen|übermorgen|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\b|$)"#
+        )?[1], completeMutationTitle(title),
+        referenceWords(title)
+          == normalized(title).split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init)
+      else { return nil }
+    }
+    guard completeMutationFields(remainder, now: now, calendar: calendar, allowsDuration: false)
+    else { return nil }
+    if pieces.count == 2 {
+      var target = pieces[1]
+      if date(target, now: now, calendar: calendar) == nil,
+        !normalized(target).hasPrefix("um ")
+      {
+        target = "um " + target
+      }
+      guard !pieces[1].isEmpty,
+        completeMutationFields(target, now: now, calendar: calendar),
+        intent.newDate != nil || intent.newTime != nil
+      else { return nil }
+    }
+    intent.referenceText = normalized(reference)
+    return intent
+  }
+
+  private static func completeMutationTitle(_ title: String) -> Bool {
+    title.count <= 160 && title.split(separator: " ").count <= 8
+      && !matches(#"^[\p{L}\p{M}]+(?:[ -][\p{L}\p{M}]+)*$"#, title).isEmpty
+      && matches(
+        #"\b(?:nicht|nein|kein\w*|doch|oder|und|sondern|statt\w*|auch|nur|zusätzlich|danach|dann|stopp?|abbrechen|beenden|verwerfen|vergiss|irgend\w*|ander\w*|alle\w*|beide\w*|etwas|bitte|beliebig\w*|so|neu|titel|name|namen|bezeichnung|termin\w*|behandlung\w*|heute|morgen|übermorgen|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|um|am|auf|im|in|aus|vom|für|mit|ohne|uhr|minut\w*|kalender|raum|lösch\w*|entfern\w*|änder\w*|verschieb\w*|erstell\w*|eintrag\w*|hinzufüg\w*|absag\w*|streich\w*|kürz\w*|verlänger\w*)\b"#,
+        normalized(title)
+      ).isEmpty
+  }
+
+  private static func completeMutationFields(
+    _ input: String, now: Date, calendar: Calendar, allowsDuration: Bool = true
+  ) -> Bool {
+    let number = "(?:\\d{1,2}|\(timeWords.keys.sorted().joined(separator: "|")))"
+    let clock =
+      "(?:\\d{1,2}:\\d{2}|\(number)(?: uhr(?: \(number))?)?|(?:halb|viertel|dreiviertel) \(number))(?: (?:nachmittags|abends))?"
+    let day =
+      "(?:heute|morgen|übermorgen|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|\(civilDatePattern))"
+    let length = "(?:\\d{1,3}|\(durationWords.keys.sorted().joined(separator: "|")))"
+    guard
+      let fields = matches(
+        "^(?: (?:am )?(\(day)))?(?: um (\(clock)))?(?: (?:für )?(\(length)) minuten)?$",
+        input.isEmpty ? "" : " " + normalized(input)
+      ).first
+    else { return false }
+    return (fields[1].isEmpty || date(fields[1], now: now, calendar: calendar) != nil)
+      && (fields[2].isEmpty || time(fields[2]) != nil)
+      && (fields[3].isEmpty || (allowsDuration && duration(fields[3] + " minuten") != nil))
+  }
+
+  /// Partial action/field evidence for safety checks and targeted slot entry.
+  /// Recognizing a verb here does not mean the whole request was understood.
   static func parse(_ input: String, now: Date = .now, calendar: Calendar = .current) -> VoiceIntent
   {
     let text = normalized(input)

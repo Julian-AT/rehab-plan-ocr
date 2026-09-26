@@ -189,7 +189,7 @@ import Foundation
         references: ["r1"], selected: "r1")
       let direct = try await router.interpret(sample.request())
       precondition(
-        direct.identity.provider == "complete-rules" && direct.identity.model == "calendar-4")
+        direct.identity.provider == "complete-rules" && direct.identity.model == "calendar-5")
       let operation = try InterpretationEvaluation.operation(direct.value, sample: sample)
       precondition(operation["action"] as? String == "update")
       precondition(operation["query"] as? [String: String] == ["reference": "r1"])

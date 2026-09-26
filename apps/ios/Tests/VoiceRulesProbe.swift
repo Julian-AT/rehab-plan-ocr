@@ -24,6 +24,59 @@ import Foundation
       correction.corrected && calendar.component(.weekday, from: correction.newDate!) == 4)
     precondition(correction.newTime == 570 && correction.duration == nil)
     precondition(parse("Lösche den Termin nicht").negatedChange)
+    func complete(_ text: String) -> VoiceIntent? {
+      VoiceRules.completeMutation(text, now: now, calendar: calendar)
+    }
+    for text in [
+      "Erstelle einen neuen Termin", "Bitte erstellen Sie einen Termin",
+      "Bitte einen neuen Termin eintragen", "Neuer Termin",
+      "Erstelle einen Termin namens Sanfte Gymnastik morgen um zehn Uhr für 30 Minuten.",
+      "Erstelle einen Termin mit dem Titel „Sanfte Bewegung“ am 17.05.2031 um 8 Uhr.",
+    ] {
+      precondition(complete(text)?.action == .create, text)
+    }
+    let named = complete(
+      "Erstelle einen Termin namens Sanfte Gymnastik morgen um zehn Uhr für 30 Minuten.")!
+    precondition(named.title == "Sanfte Gymnastik" && named.newTime == 600 && named.duration == 30)
+    precondition(named.newDate == VoiceRules.date("morgen", now: now, calendar: calendar))
+    for text in [
+      "Verschiebe den zweiten Termin auf morgen um zehn Uhr",
+      "Bitte verschieben Sie den Termin um neun Uhr auf zehn",
+      "Ändere den Termin", "Verschiebe Physiotherapie heute auf morgen um halb zehn",
+      "Verschiebe meine Ergotherapie auf am 17.05.2031 um 8 Uhr für 45 Minuten",
+    ] {
+      precondition(complete(text)?.action == .update, text)
+    }
+    for text in [
+      "Lösche den zweiten Termin", "Bitte entfernen Sie den Termin heute um 10:00.",
+      "Lösche meine Physiotherapie morgen", "Lösche den Termin",
+    ] {
+      precondition(complete(text)?.action == .remove, text)
+    }
+    // Partial parse evidence must never claim these whole requests are covered.
+    for text in [
+      "Bitte Gymnastik am 17.05.2031 um 8 Uhr eintragen.",
+      "Erstelle einen Termin namens Gymnastik morgen um acht Uhr im Kalender Privat",
+      "Erstelle einen Termin namens Gymnastik morgen um acht Uhr ohne Erinnerung",
+      "Erstelle einen Termin namens Gymnastik morgen um acht Uhr und Ergotherapie um zehn Uhr",
+      "Erstelle einen Termin namens Gymnastik morgen um acht Uhr nein um neun Uhr",
+      "Erstelle einen Termin namens Gymnastik morgen um 25:00",
+      "Erstelle einen Termin namens Gymnastik morgen für null Minuten",
+      "Erstelle einen Termin namens „Halb zehn“", "Erstelle einen Termin namens „Dienstag“",
+      "Erstelle einen Termin namens Gymnastik?", "Erstelle keinen Termin morgen",
+      "Verschiebe den ersten oder den zweiten Termin auf morgen um zehn Uhr",
+      "Verschiebe den zweiten Termin Physiotherapie auf morgen um zehn Uhr",
+      "Verschiebe den Termin auf morgen und lösche den anderen",
+      "Verschiebe den Termin auf morgen um zehn Uhr ohne die Dauer zu ändern",
+      "Verschiebe den Termin auf morgen und übermorgen",
+      "Verschiebe den Termin im Kalender Privat auf morgen",
+      "Lösche den Termin für 30 Minuten", "Lösche den anderen Termin", "Lösche beide Termine",
+      "Lösche Physiotherapie vor morgen", "Lösche Physiotherapie nach morgen",
+      "Lösche Physiotherapie bis morgen", "Lösche Physiotherapie von morgen",
+      "Lösche den Termin nicht", "Wie lösche ich den Termin?", "Stopp, lösche den Termin",
+    ] {
+      precondition(complete(text) == nil, text)
+    }
     for (input, title) in [
       ("Nicht löschen. Ändere nur den Namen dieses Termins in Gymnastik.", "Gymnastik"),
       (

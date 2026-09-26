@@ -35,6 +35,7 @@ import RehaCore
   }
 
   @MainActor static func main() async throws {
+    await mutationRouting()
     let rules = Flow()
     rules.provider.availability = .unavailable("No model assets")
     await rules.model.submitText("Nächster Termin")
@@ -137,6 +138,7 @@ import RehaCore
     }
 
     let creation = Flow()
+    creation.provider.availability = .unavailable("No model assets")
     await creation.model.submitText("Erstelle einen neuen Termin")
     precondition(creation.model.question == .title)
     await creation.model.submitText("Gymnastik")
@@ -152,6 +154,7 @@ import RehaCore
     precondition(proposal.after?.title == "Gymnastik")
     precondition(proposal.after?.start_utc == "2031-05-16T08:00:00Z")
     precondition(creation.calendar.confirmed.isEmpty)
+    precondition(creation.provider.requests.isEmpty)
     creation.input.transcript = "Ja, speichern"
     await creation.model.endTurn()
     precondition(creation.model.response.contains("Schaltfläche"))
@@ -339,5 +342,209 @@ import RehaCore
     print(
       "Voice flow passed: actual rules/router/state, live calendar facts, multi-turn creation, visible confirmation, selected target, topic change, cancellation, late results, heard history, repeat and maintenance warning"
     )
+  }
+
+  /// These are deterministic typed provider fakes, not model-quality evidence.
+  @MainActor private static func mutationRouting() async {
+    let knownCreate = "Bitte Gymnastik am 17.05.2031 um 8 Uhr eintragen."
+    for (text, title, date, minutes) in [
+      (knownCreate, "Gymnastik", "2031-05-17", 480),
+      (
+        "Kannst du bitte Ergotherapie morgen um halb zehn eintragen?", "Ergotherapie", "2031-05-16",
+        570
+      ),
+      ("Ich möchte Atemübung am 18.05.2031 um 09:15 hinzufügen.", "Atemübung", "2031-05-18", 555),
+    ] {
+      let flow = Flow()
+      let day = CalendarConversation.civilDate(date, calendar: flow.calendar.calendar)!
+      flow.provider.reply = { _ in
+        ConversationInterpretation(
+          action: .create,
+          change: VoiceIntent(
+            action: .create, newDate: day, newTime: minutes, title: title,
+            timezone: "Europe/Vienna"))
+      }
+      await flow.model.submitText(text)
+      precondition(flow.provider.requests.count == 1 && flow.provider.requests[0].text == text)
+      precondition(flow.model.intent.title == title && flow.model.intent.newDate == day)
+      precondition(flow.model.intent.newTime == minutes && flow.model.intent.duration == nil)
+      precondition(flow.model.question == .duration && flow.calendar.previews.isEmpty)
+      await flow.model.submitText("30 Minuten")
+      let proposal = flow.model.edits.proposal!
+      precondition(proposal.kind == "create" && proposal.after?.title == title)
+      let start = proposal.after!.start
+      precondition(flow.calendar.calendar.startOfDay(for: start) == day)
+      precondition(
+        flow.calendar.calendar.component(.hour, from: start) * 60
+          + flow.calendar.calendar.component(.minute, from: start) == minutes)
+      precondition(proposal.after!.end.timeIntervalSince(start) == 1800)
+      precondition(flow.provider.requests.count == 1 && flow.calendar.confirmed.isEmpty)
+      precondition(flow.model.question == .confirmation)
+      flow.input.transcript = "Ja, speichern"
+      await flow.model.endTurn()
+      precondition(flow.calendar.confirmed.isEmpty && flow.model.edits.proposal != nil)
+      await flow.model.confirmProposal()
+      precondition(flow.calendar.confirmed.count == 1)
+    }
+
+    for (text, removal) in [
+      ("Bitte verschiebe diesen Termin auf morgen um elf Uhr.", false),
+      ("Bitte diesen Termin löschen.", true),
+    ] {
+      let flow = Flow()
+      await flow.model.submitText("Nächster Termin")
+      let day = CalendarConversation.civilDate("2031-05-16", calendar: flow.calendar.calendar)!
+      flow.provider.reply = { _ in
+        ConversationInterpretation(
+          action: removal ? .remove : .update,
+          query: CalendarQuestion(usesLastPage: true, timezone: "Europe/Vienna"),
+          change: removal
+            ? nil
+            : VoiceIntent(
+              action: .update, newDate: day, newTime: 660,
+              timezone: "Europe/Vienna"))
+      }
+      let reads = flow.calendar.reads
+      await flow.model.submitText(text)
+      let proposal = flow.model.edits.proposal!
+      precondition(flow.provider.requests.count == 1 && flow.calendar.reads > reads)
+      precondition(proposal.before?.id == "physio" && flow.model.question == .confirmation)
+      precondition(proposal.patch.keys.sorted() == (removal ? [] : ["end_utc", "start_utc"]))
+      if !removal {
+        precondition(proposal.after?.start_utc == "2031-05-16T09:00:00Z")
+        precondition(proposal.after?.end_utc == "2031-05-16T09:30:00Z")
+        precondition(proposal.after?.title == proposal.before?.values.title)
+        precondition(proposal.after?.location == proposal.before?.values.location)
+        precondition(proposal.after?.reminder_minutes == proposal.before?.values.reminder_minutes)
+      }
+      precondition(flow.calendar.confirmed.isEmpty)
+      flow.model.cancelSession()
+      await flow.model.confirmProposal()
+      precondition(flow.model.edits.proposal == nil && flow.calendar.confirmed.isEmpty)
+    }
+
+    for field in ["title", "duration", "time"] {
+      let flow = Flow()
+      await flow.model.submitText("Nächster Termin")
+      let day = CalendarConversation.civilDate("2031-05-16", calendar: flow.calendar.calendar)!
+      flow.provider.reply = { _ in
+        ConversationInterpretation(
+          action: .update,
+          query: CalendarQuestion(usesLastPage: true, timezone: "Europe/Vienna"),
+          change: VoiceIntent(
+            action: .update, newDate: day,
+            newTime: field == "time" ? 720 : 660,
+            duration: field == "duration" ? 60 : nil,
+            title: field == "title" ? "Termin" : nil, timezone: "Europe/Vienna"))
+      }
+      await flow.model.submitText("Bitte verschiebe diesen Termin auf morgen um elf Uhr.")
+      precondition(flow.provider.requests.count == 1 && flow.model.question == .action, field)
+      precondition(flow.calendar.previews.isEmpty && flow.calendar.confirmed.isEmpty)
+    }
+
+    // Invalid typed model fields cannot fall back to the old partial parser.
+    for wrongField in ["title", "date", "time", "duration"] {
+      let flow = Flow()
+      let day = CalendarConversation.civilDate(
+        wrongField == "date" ? "2031-05-18" : "2031-05-17",
+        calendar: flow.calendar.calendar)!
+      flow.provider.reply = { _ in
+        ConversationInterpretation(
+          action: .create,
+          change: VoiceIntent(
+            action: .create,
+            newDate: day, newTime: wrongField == "time" ? 600 : 480,
+            duration: wrongField == "duration" ? 30 : nil,
+            title: wrongField == "title" ? "Ergotherapie" : "Gymnastik", timezone: "Europe/Vienna"))
+      }
+      await flow.model.submitText(knownCreate)
+      precondition(flow.provider.requests.count == 1 && flow.model.question == .action, wrongField)
+      precondition(flow.model.intent.action == .unsupported && flow.calendar.previews.isEmpty)
+      precondition(flow.calendar.confirmed.isEmpty)
+    }
+    for text in [
+      "Bitte diesen Termin nicht löschen.",
+      "Bitte den ersten oder den zweiten Termin löschen.",
+      "Bitte den anderen Termin löschen.",
+      "Bitte diesen Termin löschen und einen neuen Termin erstellen.",
+      "Stopp, bitte diesen Termin löschen.",
+    ] {
+      let flow = Flow()
+      await flow.model.submitText("Termine heute")
+      flow.provider.reply = { _ in
+        ConversationInterpretation(
+          action: .remove,
+          query: CalendarQuestion(reference: "r1", timezone: "Europe/Vienna"))
+      }
+      await flow.model.submitText(text)
+      precondition(flow.calendar.previews.isEmpty && flow.calendar.confirmed.isEmpty, text)
+      precondition(flow.provider.requests.count <= 1)
+    }
+    let stale = Flow()
+    await stale.model.submitText("Nächster Termin")
+    stale.calendar.events.removeFirst()
+    stale.provider.reply = { _ in
+      ConversationInterpretation(
+        action: .remove,
+        query: CalendarQuestion(usesLastPage: true, timezone: "Europe/Vienna"))
+    }
+    await stale.model.submitText("Bitte diesen Termin löschen.")
+    precondition(stale.provider.requests.count == 1 && stale.calendar.previews.isEmpty)
+
+    // Complete commands and targeted slots keep working with no model installed.
+    for text in [
+      "Erstelle einen Termin namens Sanfte Gymnastik morgen um zehn Uhr für 30 Minuten.",
+      "Verschiebe meine Physiotherapie heute auf morgen um elf Uhr",
+      "Lösche meine Physiotherapie heute",
+    ] {
+      let flow = Flow()
+      flow.provider.availability = .unavailable("No model assets")
+      await flow.model.submitText(text)
+      precondition(flow.model.question == .confirmation && flow.model.edits.proposal != nil, text)
+      precondition(flow.provider.requests.isEmpty && flow.calendar.confirmed.isEmpty)
+    }
+    for text in [
+      knownCreate, "Bitte verschiebe diesen Termin auf morgen um elf Uhr.",
+      "Bitte diesen Termin löschen.",
+    ] {
+      let unavailable = Flow()
+      unavailable.provider.availability = .unavailable("No model assets")
+      await unavailable.model.submitText(text)
+      precondition(unavailable.model.rounds.last?.user == text)
+      precondition(unavailable.model.response.contains("No model assets"))
+      precondition(unavailable.model.question == .action && unavailable.provider.requests.isEmpty)
+      precondition(unavailable.calendar.previews.isEmpty && unavailable.calendar.confirmed.isEmpty)
+    }
+    let failure = Flow()
+    failure.provider.reply = { _ in throw InterpretationError.invalidRequest }
+    await failure.model.submitText(knownCreate)
+    precondition(failure.provider.requests.count == 1 && failure.model.question == .action)
+    precondition(failure.calendar.previews.isEmpty && failure.calendar.confirmed.isEmpty)
+
+    let late = Flow()
+    var pending: CheckedContinuation<ConversationInterpretation, Never>?
+    var returned = false
+    late.provider.reply = { _ in
+      let result = await withCheckedContinuation { pending = $0 }
+      returned = true
+      return result
+    }
+    let task = Task { await late.model.submitText(knownCreate) }
+    await until { pending != nil }
+    late.model.cancelSession()
+    await late.model.submitText("Termine heute")
+    let response = late.model.response
+    pending!.resume(
+      returning: ConversationInterpretation(
+        action: .create,
+        change: VoiceIntent(
+          action: .create,
+          newDate: CalendarConversation.civilDate("2031-05-17", calendar: late.calendar.calendar),
+          newTime: 480, title: "Gymnastik", timezone: "Europe/Vienna")))
+    await until { returned }
+    await task.value
+    precondition(late.provider.requests.count == 1 && late.model.response == response)
+    precondition(late.model.question == .action && late.model.intent.action == .unsupported)
+    precondition(late.calendar.previews.isEmpty && late.calendar.confirmed.isEmpty)
   }
 }

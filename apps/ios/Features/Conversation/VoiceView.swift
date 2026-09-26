@@ -322,17 +322,13 @@ import RehaCore
     case .confirmation:
       say("Zum Speichern bitte die große Schaltfläche antippen.")
     case .action:
-      guard ![.unsupported, .next, .list].contains(parsed.action) else {
+      guard let complete = VoiceRules.completeMutation(text, now: now, calendar: calendar) else {
         await converse(text, now: now, calendar: calendar)
         return
       }
-      intent = parsed
+      intent = complete
       failures = 0
       if intent.action == .create {
-        let extracted = VoiceRules.matches(
-          "(?:namens|mit titel) (.+?)(?: am | um | morgen| heute|$)", text
-        ).first
-        intent.title = extracted?[1]
         title = intent.title ?? ""
         await advanceCreation()
       } else {
