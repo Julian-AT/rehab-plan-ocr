@@ -108,6 +108,58 @@ def reference(i):
     return r
 
 
+def approve_privacy(root, references, masks=None):
+    """Invented attestations for isolated tests only; never opens real receipts."""
+    receipt = {
+        "schema_version": 1,
+        "status": "awaiting_privacy_and_reference_review",
+        "consents": [
+            {
+                "id": "invented_consent",
+                "status": "active",
+                "purposes": ["ocr_training"],
+                "reviewer_id": "invented_operator",
+                "reviewed_at": "2000-01-01T00:00:00+00:00",
+                "retain_until": "2099-01-01",
+                "evidence_sha256": refs.digest("invented receipt"),
+            }
+        ],
+        "entries": [
+            {
+                "id": f"entry_{i}",
+                "kind": "schedule",
+                "copy_verified": True,
+                "source_sha256": ref["sources"][0]["original_hash"],
+                "purposes": ["ocr_training"],
+                "consent_id": "invented_consent",
+                "related_ids": ["page_" + ref["sources"][0]["logical_page"]],
+            }
+            for i, ref in enumerate(references)
+        ],
+    }
+    refs.write(root / "invented-intake.json", receipt)
+    reviews = {}
+    for i, ref in enumerate(references):
+        source = ref["sources"][0]["source_hash"]
+        review = {
+            "reference_hash": refs.reference_hash(ref),
+            "table_privacy_reviewed": True,
+            "reviewer_id": "invented_operator",
+            "reviewed_at": "2000-01-01T00:00:00+00:00",
+            "redactions": (masks or {}).get(source, []),
+            "authorization": {
+                "intake_manifest": "invented-intake.json",
+                "intake_sha256": refs.file_hash(root / "invented-intake.json"),
+                "entry_id": f"entry_{i}",
+            },
+        }
+        review["approval_hash"] = refs.privacy.approval_hash(review)
+        reviews[source] = review
+    result = {"schema_version": 1, "sources": reviews}
+    refs.write(root / "privacy-review.json", result)
+    return result
+
+
 class ReferenceDataTests(unittest.TestCase):
     def test_materialization_rejects_old_or_altered_generator_before_loading_sources(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -205,6 +257,7 @@ class ReferenceDataTests(unittest.TestCase):
                 {"entries": [{"sha256": r["document_hashes"][0]} for r in data]},
             )
             refs.write(root / "split.json", split)
+            approve_privacy(root, data)
             self.assertEqual(refs.export(root, root / "export", 0, 1), 160)
             records = json.loads((root / "export/manifest.json").read_text())["records"]
             by_source = {}

@@ -22,6 +22,8 @@ from PIL import Image
 from PIL import __version__ as PILLOW_VERSION
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "augmentation"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import privacy  # noqa: E402
 from variants import (  # noqa: E402
     AUGMENTATION_VERSION,
     field_label,
@@ -139,7 +141,10 @@ def reviewed_crops(root, references):
     if not path.exists():
         return set()
     review = json.loads(path.read_text())
-    lines = {line["id"]: line for ref in references for line in ref["lines"]}
+    all_lines = [line for ref in references for line in ref["lines"]]
+    lines = {line["id"]: line for line in all_lines}
+    if len(lines) != len(all_lines):
+        raise ValueError("Training crop identifiers must be unique across all originals")
     approved = review.get("lines", {})
     if approved and (review.get("schema_version") != 1 or not review.get("reviewed_at")):
         raise ValueError("Training crop review needs a version and review timestamp.")
@@ -309,7 +314,11 @@ def bound_cache(cache, budget):
         path.with_suffix(".json").unlink(missing_ok=True)
 
 
-def recipes(root):
+def validate_privacy(root, references):
+    return privacy.validate(root, references, reference_hash)[1]
+
+
+def recipes(root, privacy_review=None):
     split = json.loads((root / "split.json").read_text())
     if split.get("schema_version") != 3 or not split.get("grouping_verified"):
         raise ValueError("Freeze confirmed development groups before augmentation.")
@@ -321,6 +330,7 @@ def recipes(root):
         "split_hash": digest(split),
         "recipes": [],
         "final_holdout": False,
+        "privacy_review": privacy_review,
     }
     for group_id, group in split["days"].items():
         for source in group["document_hashes"]:
@@ -355,6 +365,7 @@ def augmentation_identity():
         {
             "exporter": file_hash(Path(__file__)),
             "variants": file_hash(Path(variant.__code__.co_filename)),
+            "privacy": file_hash(Path(privacy.__file__)),
             "python": platform.python_version(),
             "pillow": PILLOW_VERSION,
         }
@@ -362,7 +373,6 @@ def augmentation_identity():
 
 
 def export(root, output, fold, cache_mb):
-    manifest = recipes(root)
     inventory = {
         e["sha256"]: e for e in json.loads((root / "inventory.json").read_text())["entries"]
     }
@@ -374,13 +384,15 @@ def export(root, output, fold, cache_mb):
     checked_crops = reviewed_crops(root, refs.values())
     if grouping(list(refs.values())) != json.loads((root / "split.json").read_text()):
         raise ValueError("Frozen source relationships changed.")
+    privacy_reviews, privacy_review = privacy.validate(root, refs.values(), reference_hash)
+    manifest = recipes(root, privacy_review)
     output.mkdir(parents=True, exist_ok=False)
     cache = root / "variants/cache"
     cache.mkdir(parents=True, exist_ok=True)
     records, detection, recognition, tables, orientation = [], [], [], [], []
     for entry in manifest["recipes"]:
         h = entry["source_hash"]
-        ref = refs[h]
+        ref = privacy.sanitized(refs[h], privacy_reviews[h])
         source = ref["sources"][0]
         lines, m, size = variant_labels(ref, entry["recipe"])
         provenance = {
@@ -388,7 +400,8 @@ def export(root, output, fold, cache_mb):
             "augmentation_version": manifest["augmentation_version"],
             "generator_sha256": manifest["generator_sha256"],
             "partition": "validation" if entry["fold"] == fold else "train",
-            "reference_hash": reference_hash(ref),
+            "reference_hash": reference_hash(refs[h]),
+            "privacy_review_sha256": privacy_review["review_file_sha256"],
             "original_hash": source["original_hash"],
             "original_to_variant": m,
             "variant_to_original": inverse(m),
@@ -484,6 +497,7 @@ def export(root, output, fold, cache_mb):
             "validation_fold": fold,
             "recipe_hash": digest(manifest),
             "reference_hashes": {h: reference_hash(r) for h, r in refs.items()},
+            "privacy_review": privacy_review,
             "records": records,
             "cache_bytes": cache_mb * 1024 * 1024,
             "training_started": False,
@@ -537,6 +551,11 @@ def materialize(root, identifier, cache_mb):
     ]
     if grouping(references) != split:
         raise ValueError("Frozen source relationships changed.")
+    privacy_reviews, privacy_review = privacy.validate(root, references, reference_hash)
+    if manifest.get("privacy_review") != privacy_review:
+        raise ValueError(
+            "Privacy review changed; create a new reviewed export before materialization"
+        )
     source = next(
         e
         for e in json.loads((root / "inventory.json").read_text())["entries"]
@@ -546,10 +565,12 @@ def materialize(root, identifier, cache_mb):
     if file_hash(path) != entry["source_hash"]:
         raise ValueError("Original checksum mismatch.")
     with Image.open(path) as original:
-        raster, lines, m = variant(original.convert("RGB"), ref, entry["recipe"])
+        review = privacy_reviews[entry["source_hash"]]
+        redacted = privacy.mask_image(original.convert("RGB"), ref, review)
+        raster, lines, m = variant(redacted, privacy.sanitized(ref, review), entry["recipe"])
     if augmentation_identity() != manifest["generator_sha256"]:
         raise ValueError("Augmentation generator changed during rendering")
-    key = digest([identifier, reference_hash(ref)])
+    key = digest([identifier, reference_hash(ref), privacy_review])
     cache = root / "variants/cache"
     cache.mkdir(parents=True, exist_ok=True)
     raster.save(cache / f"{key}.jpg", quality=entry["recipe"].get("quality", 92))
@@ -558,6 +579,7 @@ def materialize(root, identifier, cache_mb):
         {
             **entry,
             "reference_hash": reference_hash(ref),
+            "privacy_review_sha256": privacy_review["review_file_sha256"],
             "original_to_variant": m,
             "lines": lines,
         },
@@ -637,7 +659,16 @@ def materialize_line(root, identifier, line_id, cache_mb):
         raise ValueError("Unreadable and cropped text cannot receive a full recognition label.")
     with Image.open(page) as image:
         crop, to_variant = line_crop(image, line["polygon"])
-    key = digest([VERSION, identifier, metadata["reference_hash"], line_id, "recognition"])
+    key = digest(
+        [
+            VERSION,
+            identifier,
+            metadata["reference_hash"],
+            metadata["privacy_review_sha256"],
+            line_id,
+            "recognition",
+        ]
+    )
     target = page.parent / f"{key}.jpg"
     crop.save(target, quality=95)
     write(
@@ -694,6 +725,10 @@ def main():
     sub.add_parser("freeze")
     sub.add_parser("recipes")
     sub.add_parser("readiness")
+    sub.add_parser("privacy-draft")
+    privacy_approve = sub.add_parser("privacy-approve")
+    privacy_approve.add_argument("source_hash")
+    privacy_approve.add_argument("--reviewer", required=True)
     e = sub.add_parser("export")
     e.add_argument("output", type=Path)
     e.add_argument("--fold", type=int, choices=range(4), required=True)
@@ -713,7 +748,28 @@ def main():
 
 
 def execute(a):
-    if a.command == "readiness":
+    if a.command == "privacy-draft":
+        destination = a.root / "privacy-review.json"
+        if destination.exists():
+            raise ValueError("Existing privacy review preserved; edit it explicitly")
+        references = [
+            json.loads(path.read_text())
+            for path in sorted((a.root / "labels/provisional").glob("*.json"))
+        ]
+        if not references or any(ref.get("schema_version") != VERSION for ref in references):
+            raise ValueError("Version-2 references are required before privacy review")
+        write(destination, privacy.draft(references, reference_hash))
+        print(json.dumps({"drafts": len(references), "approved": False}))
+    elif a.command == "privacy-approve":
+        if not privacy.hash_value(a.source_hash):
+            raise ValueError("Expected an original SHA256 identifier")
+        ref = json.loads((a.root / "labels/provisional" / f"{a.source_hash}.json").read_text())
+        approved(ref)
+        write(
+            a.root / "privacy-review.json", privacy.confirm(a.root, ref, a.reviewer, reference_hash)
+        )
+        print(json.dumps({"privacy_review_confirmed": a.source_hash}))
+    elif a.command == "readiness":
         print(json.dumps(readiness(a.root), indent=2))
     elif a.command == "freeze":
         print(json.dumps({"groups": len(freeze(a.root)["days"]), "holdout": False}))
