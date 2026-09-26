@@ -56,3 +56,19 @@ results are recorded separately from historical reports. Hosted Actions remain
 subject to the account billing restriction; local verification and remote clone
 integrity are independent checks. This migration does not authorize or perform
 device installation.
+
+Local migration checks passed: historical graph/tree verification, Git integrity,
+documentation checks, `make lint`, `make test`, `make test-ci-monitor`, native asset
+verification, runtime inventory verification and the simulator build. The six
+selected simulator tests passed for calendar links and error dismissal, persisted
+calendar presentation, conversation without asset setup, and persisted/cancellable
+navigation. The original XCTest result bundle was preserved and independently
+checked for execution of every requested test.
+
+The full simulator suite was not run: its declared 36-GiB free-space requirement
+exceeded available storage. The selected run kept at least 21 GiB free, above the
+20-GiB reserve. An earlier attempt was stopped by the reserve monitor. The second
+run completed its tests but exposed a metadata-copy defect in result verification;
+that defect was fixed, covered by the 16 APFS clone tests, and the retained result
+then verified successfully. The nine result-verifier tests also passed. These
+checks do not claim full simulator-suite or hosted Actions qualification.
