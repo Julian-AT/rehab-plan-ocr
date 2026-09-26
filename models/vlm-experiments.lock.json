@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "runtime": {
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "revision": "41fc7584f0c1d72d9cc1ac46ccae8defc1587f0f",
+    "build": {
+      "cpu_only": true,
+      "threads": 2,
+      "mtmd": true,
+      "network": false,
+      "subprocess": false,
+      "video": false
+    },
+    "apple_build": "build-xcframework.sh (not packaged until qualification)"
+  },
+  "inference": {
+    "context": 4096,
+    "output_tokens": 256,
+    "image_min_tokens": 64,
+    "image_max_tokens": 1024,
+    "sampling": "greedy",
+    "max_ms": 60000,
+    "crop": "original RGB; row bounds plus 20% context; no external enrichment"
+  },
+  "candidates": [
+    {
+      "id": "glm-ocr",
+      "repository": "ggml-org/GLM-OCR-GGUF",
+      "revision": "65a42de1148dbed2297e922b5dbc7d9b70c36578",
+      "files": [
+        {
+          "path": "GLM-OCR-Q8_0.gguf",
+          "bytes": 950433408,
+          "sha256": "45bc244a6446aff850521dc41f18bc8d7105ad5f0c2c8c28af04e7cc4f4d50b1"
+        },
+        {
+          "path": "mmproj-GLM-OCR-Q8_0.gguf",
+          "bytes": 484403648,
+          "sha256": "9c4b58e33e316ed142eb5dcb41abec3844d3e6e5dc361ffb782c3fa9d175141f"
+        }
+      ],
+      "prompt": "Text Recognition:",
+      "quantization": "Q8_0 text/projector",
+      "compatibility": "requires local load and image smoke test",
+      "eligible_for_packaging": false
+    },
+    {
+      "id": "paddleocr-vl-1.6",
+      "repository": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 11376,
+          "sha256": null
+        },
+        {
+          "path": "added_tokens.json",
+          "bytes": 25381,
+          "sha256": null
+        },
+        {
+          "path": "chat_template.jinja",
+          "bytes": 1474,
+          "sha256": null
+        },
+        {
+          "path": "config.json",
+          "bytes": 2059,
+          "sha256": null
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 133,
+          "sha256": null
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 1917255968,
+          "sha256": "85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 641,
+          "sha256": null
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 137,
+          "sha256": null
+        },
+        {
+          "path": "special_tokens_map.json",
+          "bytes": 1151,
+          "sha256": null
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 11189060,
+          "sha256": "c8a215a59183d0d0781adc33bacd3ce6162716f7fd568fb30234a74d69803a7d"
+        },
+        {
+          "path": "tokenizer.model",
+          "bytes": 1614363,
+          "sha256": "34ef7db83df785924fb83d7b887b6e822a031c56e15cff40aaf9b982988180df"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 186947,
+          "sha256": null
+        }
+      ],
+      "prompt": "OCR:",
+      "quantization": "locally converted F16 text/projector",
+      "compatibility": "requires local load and image smoke test",
+      "eligible_for_packaging": false
+    }
+  ]
+}

@@ -40,6 +40,8 @@ def main():
     args = parser.parse_args()
     split_path = PRIVATE / "split.json"
     split = json.loads(split_path.read_text())
+    if split.get("grouping_verified") is False:
+        raise ValueError("Verify page/capture relationships before comparing grouped references.")
     if split.get("schema_version") != 2:
         raise ValueError(
             "Use a frozen split with explicit complete captures and page identities (schema 2)."

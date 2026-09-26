@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Workbench, ImageInput } from "@/features/workbench/use-workbench";
 import type { Run } from "@/lib/contracts";
 import { command, exportFile } from "@/lib/native";
+import { JsonView } from "@/components/json-view";
 import { AnnotationPanel } from "./annotation-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ export function DatasetPanel({ workbench: w }: { workbench: Workbench }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [engines, setEngines] = useState(["portable-small"]);
   const [runs, setRuns] = useState<BatchRun[]>([]);
+  const [comparison, setComparison] = useState<unknown>(null);
 
   async function load() {
     await w.execute("Loading inventory", async () => {
@@ -189,6 +191,33 @@ export function DatasetPanel({ workbench: w }: { workbench: Workbench }) {
             </EmptyHeader>
           </Empty>
         )}
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="outline"
+            disabled={!w.native || !w.run || !!w.busy}
+            onClick={() =>
+              w.execute(
+                "Comparing local difficult-region readings",
+                async () => {
+                  await w.flush();
+                  setComparison(
+                    await command("compare_regions", {
+                      id: w.run!.document.id,
+                    }),
+                  );
+                },
+              )
+            }
+          >
+            Compare portable / GLM-OCR / PaddleOCR-VL-1.6
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Active image · source-linked crop readings only. Verified grouped
+            references and physical-device acceptance are required before
+            packaging a model.
+          </p>
+          {comparison !== null && <JsonView value={comparison} />}
+        </div>
         <FieldGroup>
           <Field>
             <FieldLabel>Batch engines</FieldLabel>

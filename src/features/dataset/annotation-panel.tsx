@@ -108,6 +108,22 @@ export function AnnotationPanel({ workbench: w }: { workbench: Workbench }) {
           Draft from active run
         </Button>
       </FieldGroup>
+      <Button
+        variant="outline"
+        disabled={!w.native || !w.run || !!w.busy}
+        onClick={() =>
+          w.execute("Loading provisional reference", async () => {
+            const value = await command<Annotation>("provisional_reference", {
+              hash: w.run!.document.source_hash,
+            });
+            setReference(value);
+            setSaved(false);
+            setReport(null);
+          })
+        }
+      >
+        Load provisional reference for active image
+      </Button>
       {reference && (
         <>
           <FieldGroup className="sm:flex-row">

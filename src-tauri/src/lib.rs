@@ -1,5 +1,6 @@
 mod calendar;
 mod dataset;
+mod experiments;
 mod inference;
 mod scan;
 mod settings;
@@ -77,7 +78,9 @@ pub fn run() {
             settings::maintenance,
             settings::settings,
             settings::engine_status,
+            experiments::compare_regions,
             dataset::save_annotation,
+            dataset::provisional_reference,
             dataset::evaluate_annotation,
             dataset::dataset,
             dataset::dataset_image,

@@ -50,12 +50,23 @@ pub(crate) fn save_annotation(
         guard_reference(&state, &annotation, false)?;
         let dir = root(&state)?.join("labels");
         std::fs::create_dir_all(&dir).map_err(failure)?;
-        let path = dir.join(format!("{}.json", annotation.day_id));
+        let mut path = dir.join(format!("{}.json", annotation.day_id));
         // Frozen day grouping must not be silently changed by the annotation editor.
         let split = dir.parent().unwrap().join("split.json");
         if split.exists() {
             let value: Value =
                 serde_json::from_slice(&std::fs::read(split).map_err(failure)?).map_err(failure)?;
+            if value["grouping_verified"] == false && annotation.document_hashes.len() == 1 {
+                let hash = &annotation.document_hashes[0];
+                if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Err("Ungültiger Quellhash.".into());
+                }
+                // Related pages have the same provisional day ID. Keep their
+                // individual corrections instead of overwriting a sibling.
+                let provisional = dir.join("provisional");
+                std::fs::create_dir_all(&provisional).map_err(failure)?;
+                path = provisional.join(format!("{hash}.json"));
+            }
             if let Some(expected) = value["days"][&annotation.day_id]["split"].as_str() {
                 if expected != annotation.split {
                     return Err("Datensatzgruppe ist bereits eingefroren.".into());
@@ -98,6 +109,9 @@ pub(crate) fn guard_reference(
     if split.exists() {
         let frozen: Value =
             serde_json::from_slice(&std::fs::read(split).map_err(failure)?).map_err(failure)?;
+        if evaluation && frozen["grouping_verified"] == false {
+            return Err("Seitengruppen zuerst verifizieren; vorläufige Referenzen sind kein Genauigkeitsbenchmark.".into());
+        }
         for (day, group) in frozen["days"]
             .as_object()
             .ok_or("Ungültige Datensatzgruppen.")?
@@ -226,4 +240,27 @@ pub(crate) fn save_lab_run(
     )
     .map_err(failure)?;
     Ok(destination.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub(crate) fn provisional_reference(
+    state: State<'_, Arc<AppState>>,
+    hash: String,
+) -> Response<Value> {
+    if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err("Ungültige Quellkennung.".into());
+    }
+    let directory = root(&state)?;
+    let path = directory
+        .join("labels/provisional")
+        .join(format!("{hash}.json"));
+    let value: Value =
+        serde_json::from_slice(&std::fs::read(path).map_err(failure)?).map_err(failure)?;
+    if !value["document_hashes"]
+        .as_array()
+        .is_some_and(|hashes| hashes.contains(&json!(hash)))
+    {
+        return Err("Quelle und Referenz stimmen nicht überein.".into());
+    }
+    Ok(value)
 }
