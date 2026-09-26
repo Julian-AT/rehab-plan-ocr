@@ -93,6 +93,27 @@ older low-disk-space report. `make test` was started against the baseline; subse
 entries must distinguish portable/native tests, simulator builds, physical evidence
 and unperformed validation. No device update is authorized by this ledger.
 
+## Runtime dependency inventory — 2026-09-26
+
+The selected iOS normal/build closure now has a reproducible inventory: 136 Rust
+packages, with 109 normal target dependencies and 27 build-only packages. Two are
+workspace packages; 134 external packages have pinned source checksums and retained
+notice references. Metadata-only optional dependencies are excluded. Shared license
+texts are bundled once, including SQLite's separate amalgamation declaration.
+Model/native source locks and vendored VAD inputs are also recorded. These counts
+describe dependency edges and do not establish installed binary size.
+
+Normal builds and lint verify committed input/notice hashes without regeneration.
+Explicit offline regeneration reproduces the inventory exactly. Packaging compares
+the actual bundled inventory and complete notice set against reviewed source. Eight
+synthetic regressions cover selection, deduplication, stale/missing/altered notices,
+path confinement, read-only verification and old bundles. All tool tests and the
+simulator build pass. The built app contains the matching inventory
+`5b0fa8caba0f3e4ceca6f892c0dd321b4e831e35235eb7b9969cf564b5874825`,
+all 15 verified notice files and four verified privacy manifests. No signed archive
+or physical installation was produced. The eSpeak-NG redistribution decision and
+publisher-approved first-party rights/license notice remain open.
+
 ## Verified implementation slices — 2026-09-26
 
 Calendar queries now carry immutable selected IDs, timezone and a monotonically

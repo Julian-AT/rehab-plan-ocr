@@ -11,6 +11,7 @@ import tempfile
 import tomllib
 
 from privacy import verify_bundle
+from runtime_inventory import verify as verify_runtime_inventory
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ARCHIVE_ROOT = ROOT / "apps/ios/build/Laßnitzhöhe.xcarchive"
@@ -40,6 +41,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
     run("xattr", "-cr", str(app))
     run("codesign", "--verify", "--deep", "--strict", str(app))
     privacy_manifests = verify_bundle(app)
+    runtime_inventory = verify_runtime_inventory(ROOT, bundle=app)
     profiles = []
     common_devices = None
     build_version = None
@@ -112,7 +114,9 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
             hashlib.sha256((app / "kokoro-german" / entry["path"]).read_bytes()).hexdigest()
             == entry["sha256"]
         )
-    for name, digest in json.loads((ROOT / "docs/third-party/licenses/manifest.json").read_text()).items():
+    for name, digest in json.loads(
+        (ROOT / "docs/third-party/licenses/manifest.json").read_text()
+    ).items():
         assert hashlib.sha256((app / "licenses" / name).read_bytes()).hexdigest() == digest
     output = ROOT / "apps/ios/build/Laßnitzhöhe.ipa"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(payload), str(output))
@@ -126,6 +130,7 @@ with tempfile.TemporaryDirectory(prefix="termine-signed-") as temp:
         "speech_model_files_verified": len(speech_manifest["files"]),
         "signatures_verified": True,
         "privacy_manifests_verified": privacy_manifests,
+        "runtime_inventory": runtime_inventory,
         "commonly_authorized_devices": len(common_devices),
         "physical_acceptance": "pending",
     }

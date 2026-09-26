@@ -178,6 +178,7 @@ def style(write, portable):
     run("uv", "run", "--locked", "ruff", "check", *(["--fix"] if write else []), *files(".py"))
     run("shfmt", "-i", "2", "-ci", "-sr", "-w" if write else "-d", *files(".sh"))
     if not write:
+        run("python3", "tooling/release/runtime_inventory.py", "verify")
         run("shellcheck", "--severity=style", *files(".sh"))
         run("cargo", "clippy", "--locked", "--workspace", "--all-targets", "--", "-D", "warnings")
     if APPLE and not portable:

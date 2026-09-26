@@ -3,8 +3,34 @@
 # Runtime notices and dependency inventory
 
 `licenses/manifest.json` pins every notice bundled by `apps/ios/project.yml`.
-Native packaging verifies those hashes. Source-adjacent notices in the isolated
+Native packaging verifies those hashes and the bundled runtime inventory. Source-adjacent notices in the isolated
 VoiceActivity package remain required for its copied C implementation.
+
+`runtime-inventory.json` records the actual `reha-ffi` iOS dependency selection with
+the `onnx` feature: 136 normal/build packages, including 109 packages reachable by
+normal edges without procedural macros. Two are first-party workspace packages.
+These are dependency-graph counts, not measurements of linked code or installed
+size. Inactive optional Cargo metadata entries are excluded. Versions, archive
+checksums, selected features, declared licenses, notice sources and target/build
+scope are recorded per package. Shared texts are deduplicated in the bundled
+`licenses/rust-dependencies.txt`; SQLite's amalgamation declaration is retained
+separately from its Rust wrapper's MIT license.
+
+`make inventory-runtime` explicitly regenerates the inventory offline using the
+restored Cargo registry. `make check-runtime-inventory` recomputes it and rejects
+any difference. `make verify-runtime-inventory` only reads committed source and
+notice hashes; lint and normal native builds use this inexpensive check. Add
+`APP_BUNDLE=<built-app>` to verify the actual copied inventory and complete notice
+set. Packaging rejects a stale inventory, missing/extra/altered notices or a bundle
+that differs from the reviewed sources. Generation is never part of a normal build.
+
+The inventory pins runtime model locks, native source identities, vendored VAD
+files and build declarations. Apple system models are recorded as OS-provided;
+their weights are not exposed. Training environments and experimental checkpoints
+are outside this app inventory. License expressions reflect upstream declarations,
+and a checksum check does not decide redistribution compatibility. The workspace
+declares MIT but does not yet have a publisher-approved root license notice;
+publisher/rights review and the eSpeak-NG decision remain explicit release gates.
 
 | Runtime component | Source of version/identity | Bundled notices |
 |---|---|---|

@@ -21,6 +21,7 @@ bindings() {
   rm -rf "$generated"
 }
 framework() {
+  python3 tooling/release/runtime_inventory.py verify
   python3 tooling/dev/quality.py space 2
   bindings
   case "$mode" in

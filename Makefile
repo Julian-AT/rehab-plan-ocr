@@ -9,6 +9,7 @@ help:
 	@echo 'Audio isolation: make test-audio-runtime TEST_ARGS="--run .local/runs/<new-run>" (serial simulator use)'
 	@echo 'Listening samples: make prepare-listening RUN=.local/runs/<new-run> (host previews, human assessment pending)'
 	@echo 'Packaging: make verify-privacy APP_BUNDLE=<built-app>; make package'
+	@echo 'Dependencies: make inventory-runtime (explicit update); make verify-runtime-inventory; make check-runtime-inventory'
 	@echo 'Model development: make restore-ocr-training restore-assistant-training restore-assistant-export'
 	@echo 'Assistant smoke: make restore-assistant-assets build-assistant-runtime; make assistant-smoke RUN=<new-directory>'
 
@@ -65,6 +66,16 @@ verify-assets:
 
 package:
 	python3 tooling/release/package-native.py
+
+.PHONY: inventory-runtime verify-runtime-inventory check-runtime-inventory
+inventory-runtime:
+	python3 tooling/release/runtime_inventory.py generate
+
+verify-runtime-inventory:
+	python3 tooling/release/runtime_inventory.py verify $(if $(APP_BUNDLE),--bundle "$(APP_BUNDLE)")
+
+check-runtime-inventory:
+	python3 tooling/release/runtime_inventory.py check
 
 .PHONY: verify-privacy
 verify-privacy:

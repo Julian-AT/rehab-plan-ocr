@@ -41,6 +41,8 @@ targets:
       - path: ../../docs/third-party/licenses
         type: folder
         buildPhase: resources
+      - path: ../../docs/third-party/runtime-inventory.json
+        buildPhase: resources
     dependencies:
       - package: RehaCore
       - package: AppleServices

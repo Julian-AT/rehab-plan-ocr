@@ -43,6 +43,10 @@ establish current device behavior or authorize an update.
   38,570 project-managed private files passed relocation hash checks. Normal builds
   verify pinned assets; archive/XCFramework caches verify complete input/output
   identities. Locked training environments remain separate from app dependencies.
+- The runtime inventory records the selected iOS dependency graph and retained
+  notices. Normal builds check its committed inputs without regeneration; native
+  packaging verifies the actual bundled inventory and license texts. Public
+  distribution still needs the eSpeak-NG and publisher/rights decisions.
 - Targeted Rust/native/probe/UI checks pass as recorded in the ledger. The latest
   broad Rust evidence is 173 tests; native EventKit evidence is 17 tests with one
   simulator-only skip. The archive screenshot matches its pre-change fixture
