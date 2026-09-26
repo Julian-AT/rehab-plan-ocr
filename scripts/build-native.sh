@@ -24,6 +24,7 @@ framework() {
   bindings
   uv run scripts/fetch-models.py --tier small
   uv run scripts/fetch-ios-runtime.py
+  python3 scripts/build-phonemizer.py
   python3 scripts/fetch-speech-model.py
   mkdir -p apple/build/ffi/device apple/build/ffi/simulator
   for variant in device simulator; do

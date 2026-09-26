@@ -6,7 +6,8 @@ license.workspace = true
 
 [features]
 default = []
-onnx = ["dep:ort", "dep:ort-sys", "dep:unicode-normalization", "dep:rand", "dep:rand_distr"]
+onnx = ["dep:ort", "dep:ort-sys"]
+kokoro = ["onnx"]
 onnx-download = ["onnx", "ort/download-binaries", "ort/copy-dylibs"]
 
 [dependencies]
@@ -19,9 +20,6 @@ chrono-tz = "0.10"
 uuid = { version = "1", features = ["v4", "v5", "serde"] }
 sha2 = "0.10"
 regex = "1"
-unicode-normalization = { version = "0.1", optional = true }
-rand = { version = "0.8", optional = true }
-rand_distr = { version = "0.4", optional = true }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 imageproc = { version = "0.25", default-features = false }
 kamadak-exif = "0.6"

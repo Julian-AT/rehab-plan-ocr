@@ -1,0 +1,84 @@
+{
+  "model": "Godelaune/Kokoro-82M-ONNX-German-Martin",
+  "revision": "a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804",
+  "sample_rate": 24000,
+  "voice": "martin",
+  "espeak_version": "1.52.0",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "MODEL_CARD.md",
+      "sha256": "4beed07717aaaef3625984f6fc952c207ac3fd7b3d57b69dffdccc80412a1f6d",
+      "bytes": 12162
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "107d0eaf20562b0d93a12b37ec391e4cf7750ab4c7f418b3e90f544c22b89ad6",
+      "bytes": 1917
+    },
+    {
+      "path": "espeak-ng-data/de_dict",
+      "sha256": "755d9cab00305b04c074141990ef0339191835de746dfa074936e194f3a5ad54",
+      "bytes": 69277
+    },
+    {
+      "path": "espeak-ng-data/en_dict",
+      "sha256": "1053f74a34af38abb6fbd64b7838dacbc655a687c48ce1bb663d364a127b05de",
+      "bytes": 168204
+    },
+    {
+      "path": "espeak-ng-data/intonations",
+      "sha256": "031a105bf6bb2ebcd73a2c579ccfb42469b27266db0078af65ae298fd3588b21",
+      "bytes": 2312
+    },
+    {
+      "path": "espeak-ng-data/lang/gmw/de",
+      "sha256": "f3cca92f94b70f8c25a29ee0a4c9ce4c7f1022241532e0647fa2b7f698bf104e",
+      "bytes": 42
+    },
+    {
+      "path": "espeak-ng-data/lang/gmw/en",
+      "sha256": "4605d5330801de3641c6e366d15f129ea1f5ffbce8722642aba01ace07ab9c83",
+      "bytes": 140
+    },
+    {
+      "path": "espeak-ng-data/phondata",
+      "sha256": "a0b643b155cb6b12628d9e7865b57d9fca0d35844614f2594a5e009c80c80bb4",
+      "bytes": 554740
+    },
+    {
+      "path": "espeak-ng-data/phonindex",
+      "sha256": "384e5fa6f714ba5356c58008249b78699c31c1ad044b243068d263fb806b7d73",
+      "bytes": 43316
+    },
+    {
+      "path": "espeak-ng-data/phontab",
+      "sha256": "1b40690667e1e9aa1ba5e5234773c799e7e72ea751426e5150423d53c3f24fa2",
+      "bytes": 58652
+    },
+    {
+      "path": "kokoro-martin.onnx",
+      "sha256": "c302f1d8bc7adf40a842cb550e18c39a5026bdb1afdd29dbb700b501cb49276b",
+      "bytes": 325512630
+    },
+    {
+      "path": "martin.f32",
+      "sha256": "85a6335d4f8c589a7522a52893efa3aca45c8fa2881ab1bb3f9b9f16924ef847",
+      "bytes": 522240
+    },
+    {
+      "path": "vocab.json",
+      "sha256": "02762226a6edbbfb28295d0617b333484bf821a3785a59f3cc4b8d1f32a6f2cf",
+      "bytes": 1375
+    },
+    {
+      "path": "voices-martin.npz",
+      "sha256": "5b9c8553398d7abf67498ce500c186cefaa7b68fed3e3d415da5380670105acd",
+      "bytes": 522506
+    }
+  ]
+}

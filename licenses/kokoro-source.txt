@@ -1,0 +1,29 @@
+Kokoro-82M German Martin ONNX model and voice parameters
+Model revision: a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804
+https://huggingface.co/Godelaune/Kokoro-82M-ONNX-German-Martin/tree/a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804
+Original German fine-tune: kikiri-tts/kikiri-german-martin; architecture: hexgrad/Kokoro-82M.
+The pinned model card declares Apache-2.0. A copy is bundled as MODEL_CARD.md.
+The model renders audible speech. No sample recording is used as a fallback.
+
+Tokenizer vocabulary: kokoro-onnx 0.4.9, config.json (vocab), MIT.
+https://pypi.org/project/kokoro-onnx/0.4.9/
+https://github.com/thewh1teagle/kokoro-onnx
+The vocabulary is preserved in models/kokoro-vocab.json; scripts/fetch-speech-model.py verifies its digest.
+
+Local phonemization: eSpeak-NG 1.52.0 (GPL-3.0-or-later).
+https://github.com/espeak-ng/espeak-ng/tree/1.52.0
+Source archive SHA-256: bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23
+https://codeload.github.com/espeak-ng/espeak-ng/tar.gz/refs/tags/1.52.0
+The complete source archive remains reproducibly downloadable. Build instructions
+and the two source patches are in scripts/build-phonemizer.py. The executable
+statically links eSpeak-NG for IPA phonemes only; audio output is disabled.
+Compiled German/English dictionaries, language definitions, and common phoneme
+and intonation tables are bundled and checksum-verified. eSpeak does not generate
+any of the audible output.
+
+The combined native application includes GPL-covered code. If redistributing it,
+provide the corresponding application and dependency source, build scripts and
+license texts under GPL-compatible terms, including this eSpeak source and patch.
+Individual original MIT-licensed project files retain their notices. The complete
+build recipe is scripts/build-native.sh and apple/project.yml. These notices do
+not replace corresponding-source delivery obligations for a distributed binary.

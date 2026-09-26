@@ -8,16 +8,18 @@ import RehaCore
     var phase: Phase = .idle
     var status = "Bereit zum Vorlesen"
     var lastText = ""
+    private(set) var level = 0.0
+    private var meterTask: Task<Void, Never>?
     var speaking: Bool { phase == .playing || phase == .preparing }
     var voiceID: String {
-        get { UserDefaults.standard.string(forKey: "voice.neural.id") ?? "F1" }
-        set { UserDefaults.standard.set(newValue, forKey: "voice.neural.id") }
+        get { "martin" }
+        set { UserDefaults.standard.set("martin", forKey: "voice.neural.id") }
     }
     var rate: Double {
         get { let v = UserDefaults.standard.double(forKey: "voice.neural.rate"); return v == 0 ? 0.95 : min(1.25, max(0.75, v)) }
         set { UserDefaults.standard.set(newValue, forKey: "voice.neural.rate") }
     }
-    private let renderer = NativeSpeech(modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("supertonic-3").path)
+    private let renderer = NativeSpeech(modelDirectory: Bundle.main.resourceURL!.appendingPathComponent("kokoro-martin").path)
     private var player: AVAudioPlayer?
     private var generation: UInt64 = 0
     private var task: Task<Void, Never>?
@@ -26,6 +28,7 @@ import RehaCore
     private var cachedAudio: [Data] = []
     func speak(_ text: String) {
         stop(); lastText = text
+        voiceID = "martin"
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { status = "Kein Text zum Vorlesen"; return }
         if UIAccessibility.isVoiceOverRunning {
             status = "VoiceOver liest den Text vor"
@@ -47,6 +50,7 @@ import RehaCore
                 defer { pending?.cancel() }
                 for (index, phrase) in phrases.enumerated() {
                     try Task.checkCancellation()
+                    phase = .preparing; level = 0
                     let data: Data
                     if index < cached.count { data = cached[index] }
                     else if let prepared = pending { data = try await prepared.value; pending = nil }
@@ -54,7 +58,7 @@ import RehaCore
                     guard generation == id else { return }
                     try Task.checkCancellation()
                     let player = try AVAudioPlayer(data: data)
-                    self.player = player; player.delegate = self
+                    self.player = player; player.delegate = self; player.isMeteringEnabled = true
                     player.prepareToPlay()
                     // Prepare the next phrase while this one plays, without saving audio.
                     if index + 1 < phrases.count && cached.isEmpty {
@@ -62,10 +66,12 @@ import RehaCore
                         pending = Task { Data(try await renderer.render(text: next, voice: voice, speed: speed, request: id)) }
                     }
                     phase = .playing; status = "Wird vorgelesen"
+                    startMetering(player, generation: id)
                     let finished = await withCheckedContinuation { continuation in
                         playback = continuation
                         if !player.play() { playback = nil; continuation.resume(returning: false) }
                     }
+                    meterTask?.cancel(); meterTask = nil; level = 0
                     guard generation == id else { return }
                     guard finished else { throw LocalSpeechError.message("Audio konnte nicht abgespielt werden. Bitte erneut versuchen.") }
                     rendered.append(data)
@@ -76,13 +82,27 @@ import RehaCore
                 try? session.setActive(false, options: .notifyOthersOnDeactivation)
             } catch {
                 guard generation == id, !Task.isCancelled else { return }
+                meterTask?.cancel(); meterTask = nil; level = 0
                 player?.stop(); player = nil; phase = .failed
-                status = "Vorlesen fehlgeschlagen: \(error.localizedDescription)"
+                status = "Vorlesen fehlgeschlagen: \(userMessage(error))"
                 try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             }
         }
     }
+    private func startMetering(_ player: AVAudioPlayer, generation id: UInt64) {
+        meterTask?.cancel()
+        meterTask = Task { [weak self, weak player] in
+            while !Task.isCancelled {
+                guard let self, let player, self.generation == id else { return }
+                player.updateMeters()
+                let measured = player.isPlaying ? pow(10, Double(player.averagePower(forChannel: 0)) / 30) : 0
+                self.level += (min(1, measured) - self.level) * 0.4
+                try? await Task.sleep(for: .milliseconds(40))
+            }
+        }
+    }
     func stop() {
+        meterTask?.cancel(); meterTask = nil; level = 0
         generation &+= 1; renderer.setRequest(request: generation)
         task?.cancel(); task = nil; player?.stop(); player = nil
         playback?.resume(returning: false); playback = nil
@@ -127,7 +147,7 @@ struct SpeechControls: View {
                 VStack(alignment: .leading, spacing: 0) { buttons }
             }
             if output.lastText == text {
-                Text(output.status).font(.caption).foregroundStyle(output.phase == .failed ? .red : .secondary)
+                Text(output.status).font(.subheadline).foregroundStyle(output.phase == .failed ? .red : .secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("speech-status").accessibilityValue(output.phase.rawValue)
             }

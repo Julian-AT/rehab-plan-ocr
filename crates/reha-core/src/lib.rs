@@ -38,5 +38,8 @@ pub mod review;
 pub mod refinement;
 
 pub mod service;
-#[cfg(feature = "onnx")]
+#[cfg(feature = "kokoro")]
 pub mod speech;
+#[cfg(any(feature = "kokoro", test))]
+#[path = "speech/text.rs"]
+pub mod speech_text;

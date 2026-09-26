@@ -19,7 +19,9 @@
   "zod-license.txt": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
   "uniffi-mpl-2.0.txt": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
   "uniffi-source.txt": "adb66737a1dcc220969b25f438c4cc03108d8d2291dd6998a35a5683baabcfea",
-  "supertonic-code-mit.txt": "0dfe0d0ba84416fe3879d9a34f4909d8d0137c78d1e95834177b0414ac096fa2",
-  "supertonic-model-openrail.txt": "0d944a9110fed9a9602d60e0423a272903e7bd21ab060490774efc77c2275e9f",
+  "kokoro-source.txt": "107d0eaf20562b0d93a12b37ec391e4cf7750ab4c7f418b3e90f544c22b89ad6",
+  "kokoro-apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "kokoro-onnx-mit.txt": "807ef3768c755f1d4ab609bc73cd833a88f304717ac9116bfe9c052cd90f4f74",
+  "espeak-ng-gpl-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
   "unicode-normalization-mit.txt": "1c3bd7d8969a7b098176fd44ef75e805752c35e6310ef105fa9031890aea410a"
 }
