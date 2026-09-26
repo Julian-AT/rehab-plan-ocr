@@ -16,6 +16,11 @@ python3 tooling/dev/quality.py build check-bindings
 python3 tooling/dev/quality.py build device
 ```
 
+Die App verwendet UniFFI ohne die standardmäßig aktivierte Cargo-Metadatensuche.
+`make bindings` und `make check-bindings` aktivieren CLI und Metadatensuche explizit
+über das Feature `bindgen`. Die Swift-Schnittstelle bleibt identisch; Hilfsprogramme
+für die Paketauflösung gehören damit nur zum Generator-Build.
+
 `build-native.sh framework` erzeugt getrennte arm64-iOS- und Simulatorvarianten des
 XCFrameworks. Die Rust-Bibliothek wird mit ONNX Runtime 1.22.0 verbunden. `check-bindings`
 vergleicht generierte UniFFI-Bindings mit den versionierten Dateien. `test-native-bindings.sh`

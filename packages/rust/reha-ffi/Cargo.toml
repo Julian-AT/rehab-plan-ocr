@@ -10,12 +10,12 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [features]
 default = []
 onnx = ["reha-core/kokoro"]
-bindgen = ["uniffi/cli"]
+bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
 
 [dependencies]
 base64 = "0.22"
 reha-core = { path = "../reha-core" }
-uniffi = { version = "=0.32.1" }
+uniffi = { version = "=0.32.1", default-features = false }
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }

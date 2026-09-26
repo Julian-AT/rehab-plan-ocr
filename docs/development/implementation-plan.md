@@ -172,6 +172,14 @@ has been claimed. Milestones 1–4 remain open until their complete exit gates p
 
 ## Verified implementation slices — 2026-09-26
 
+UniFFI Cargo-metadata discovery is now enabled only by the explicit `bindgen`
+feature. The actual iOS normal/build dependency closure falls from 139 to 136
+packages; the target normal closure excluding procedural macros falls from 113
+to 109. These counts use `cargo tree`, not the broader metadata resolver graph.
+Committed Swift/header/module-map bindings remain byte-identical. The native
+Swift/Rust integration probe, all 173 Rust tests and simulator app build pass.
+No device latency or installed-size improvement is inferred from dependency counts.
+
 The German listening pipeline exports ten invented cases through the shared
 Victoria SpeechEngine and every available German Mac system voice. Ten voices
 produce 100 complete non-silent PCM16 samples with identical prepared text, hashes
