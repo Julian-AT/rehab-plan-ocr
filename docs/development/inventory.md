@@ -36,7 +36,8 @@ bei 237.420 Bytes. Die zentrale aktive Referenzsammlung bleibt
 | Bestand | Zweck/Verbraucher | Aufbewahrung |
 |---|---|---|
 | `.local/datasets` | Originale, Einwilligungen, Annotationen und erzeugte Trainingsdaten; Datenwerkzeuge und Trainer | Geschützt; keine automatische Freigabe oder Löschung |
-| `.local/models` | Gepinnte Laufzeit-/Trainingsmodelle und bisherige Experimente; Build, Export, Training | Geschützt; Modellobjektspeicher noch offen |
+| `.local/models` | Gepinnte Laufzeit-/Trainingsmodelle und bisherige Experimente; Build, Export, Training | Geschützt |
+| `.local/objects` | Hashadressierte unveränderliche Basis-GGUFs; identische APFS-Kopien an bisherigen Versuchspfaden | Geschützt; Checkpoints ausgeschlossen |
 | `.local/runs` | Trainingszustände, Bewertungen, CI, Vorschauen und frühere Gerätesicherungen | Geschützt; keine pauschale Altersregel |
 | `.local/migrations` | Hashinventare und Wiederanlaufjournale der früheren Umzüge | Geschützt |
 | `.local/upstream` | Gepinnte Fremdquellen und verknüpfter llama.cpp-Worktree | Geschützt, Quellidentitäten für Exporte erforderlich |

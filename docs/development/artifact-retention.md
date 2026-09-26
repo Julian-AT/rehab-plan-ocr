@@ -47,9 +47,31 @@ Spitzenbudgets sind konservative Planwerte (3/4/8 GiB), noch keine gemessenen
 Höchststände. Direkte historische Trainingsskripte behalten ihre quellidentischen
 Wiederaufnahmeverträge; sie sind kein alternativer Einstieg zur Speicherumgehung.
 
-Noch offen: zentrale unveränderliche Modellobjekte, checkpointbewusste Begrenzung
-aktiver Trainings und bereinigte alte Exportduplikate. Diese erste geprüfte Regel
-erlaubt deren Entfernung ausdrücklich noch nicht.
+## Identische unveränderliche Basisgewichte
+
+`make inventory-model-objects MODEL_OBJECT_MANIFEST=.local/maintenance/<neu>.json`
+prüft die unveränderlichen `baseline.gguf`-Exporte der Assistentenversuche gegen
+`ml/registry/assistant-untuned-001.json`. Andere Modellidentitäten, Checkpoints,
+Optimizer, Sicherungen, App-Pakete und trainierte Kandidaten sind nicht zulässig.
+`make coalesce-model-objects MODEL_OBJECT_MANIFEST=<derselbe-pfad>` legt das
+verifizierte Objekt unter `.local/objects/sha256/<hash>.gguf` ab und ersetzt die
+identischen Kopien atomar durch APFS-Klone mit eigenen Inodes. Alle bisherigen
+Pfade und Bytes bleiben erhalten. Historische Berichte werden nicht verändert.
+
+Die Modellobjekte und ihre Kopien sind schreibgeschützt; selbst ein späteres
+absichtliches Überschreiben einer Kopie verändert wegen Copy-on-write keine
+anderen Kopien. Es gibt weder gemeinsam beschreibbare Hardlinks noch Symlinks.
+Die direkte `clonefile`-Funktion scheitert auf ungeeigneten Dateisystemen, ohne
+unbemerkt eine weitere vollständige Modellkopie anzulegen. Geänderte Eingaben
+stoppen die Ausführung. Ein unterbrochener Vorgang darf mit demselben Plan erneut
+starten; bereits ersetzte Dateien haben weiterhin exakt dieselben Inhalte.
+Dateiidentitäten, Registryhash, Neustartzustand und gemessene Volume-Differenz
+bleiben im privaten Bestandsindex. Trainings- und Exportprogramme schreiben
+weiterhin neue Laufverzeichnisse; bestehende Basisobjekte werden nicht verändert.
+
+Noch offen: Ausweitung auf weitere einzeln geprüfte Modellidentitäten,
+checkpointbewusste Begrenzung aktiver Trainings und überholte Exporte. Unbekannte
+Bestände werden durch diese Regel nicht zu Entfernungskandidaten.
 
 ## Ausgeführt am 26. September 2026
 
@@ -62,3 +84,15 @@ nach Ausführung identisch:
 `85fd462bf4fc718859b00f389b9bb2833cba84d2216dbd35aa1463108557f39a`.
 Journal und Abschlussbeleg liegen neben der Vorschau. Eine abgeschlossene
 Wiederholung wird geprüft; zusätzlicher Systemverbrauch bleibt separat sichtbar.
+
+Die anschließende Modellobjekt-Vorschau
+`.local/maintenance/model-objects-20260926-s18-002.json` (SHA-256
+`d21949a976783894618d0e6d38999ac75f8d0b670df4420edba1b1e5e79789e8`)
+führte fünf Basis-GGUF-Pfade mit jeweils 1.509.347.584 identischen Bytes auf ein
+Objekt zurück. Alle fünf Inhalte wurden vor/nach Ersatz geprüft, die getrennten
+Inodes bleiben erhalten. Gemessene Volume-Differenz **−8.208.384 Bytes**:
+es ist kein Speichergewinn belegt. Bereits geteilte APFS-Extents, Snapshots und
+gleichzeitige Systemaktivität können aus Dateigrößen nicht unterschieden werden.
+Die vorhandenen Pfade und Modellkarten bleiben gültig; kein Checkpoint wurde
+verändert. Die synthetischen Tests decken Abbruch/Wiederanlauf, geänderte Gewichte,
+unzulässige Pfade, fehlende Clone-Unterstützung und unabhängige Schreibzugriffe ab.

@@ -10,6 +10,14 @@ inventory-repository:
 	python3 tooling/dev/repository_inventory.py $(if $(INVENTORY),--output "$(INVENTORY)")
 
 CLEANUP_MANIFEST ?= .local/maintenance/cleanup.json
+MODEL_OBJECT_MANIFEST ?= .local/maintenance/model-objects.json
+.PHONY: inventory-model-objects coalesce-model-objects
+inventory-model-objects:
+	python3 tooling/dev/model_objects.py plan --manifest "$(MODEL_OBJECT_MANIFEST)"
+
+coalesce-model-objects:
+	python3 tooling/dev/model_objects.py apply --manifest "$(MODEL_OBJECT_MANIFEST)"
+
 PEAK_GIB ?= 0
 .PHONY: probe-document probe-speech-availability benchmark-voice-rules
 PROBE_MODE ?= text
