@@ -11,6 +11,7 @@ struct Calendar {
     calendars: Mutex<Value>,
     uncertain: Mutex<bool>,
     interrupted: Mutex<bool>,
+    session: String,
     maintenance_failure: Mutex<bool>,
     change_selection_during_query: Mutex<bool>,
 }
@@ -45,10 +46,10 @@ impl Platform for Calendar {
             "getEvent" => {
                 if *self.interrupted.lock().unwrap() {
                     self.state
-                        .invalid_event_sessions
+                        .event_sessions
                         .lock()
                         .unwrap()
-                        .insert("session".into());
+                        .revoke(&self.session);
                 }
                 Ok(json!({"event":self.event.lock().unwrap().clone()}))
             }
@@ -112,6 +113,7 @@ fn fixture() -> (tempfile::TempDir, Arc<Application>, Arc<Calendar>) {
         ),
         uncertain: Mutex::new(false),
         interrupted: Mutex::new(false),
+        session: state.event_sessions.lock().unwrap().register().unwrap(),
         maintenance_failure: Mutex::new(false),
         change_selection_during_query: Mutex::new(false),
     });
@@ -209,7 +211,7 @@ async fn calendar_query_scope_rejects_stale_revisions_and_empty_means_none() {
     assert_eq!(empty["scope"]["calendar_ids"], json!([]));
 }
 async fn preview(state: &Application, calendar: Arc<Calendar>, kind: &str, patch: Value) -> Value {
-    events::dispatch(calendar,state,"previewEventMutation",json!({"kind":kind,"patch":patch,"calendar_id":"selected","event":fixture_event(),"session":"session","revision":1})).await.unwrap()["proposal"].clone()
+    events::dispatch(calendar.clone(),state,"previewEventMutation",json!({"kind":kind,"patch":patch,"calendar_id":"selected","event":fixture_event(),"session":calendar.session,"revision":1})).await.unwrap()["proposal"].clone()
 }
 async fn confirm(
     state: &Application,
@@ -220,7 +222,7 @@ async fn confirm(
         calendar,
         state,
         "confirmProposal",
-        json!({"token":p["token"],"session":"session","revision":1,"confirmation":"button"}),
+        json!({"token":p["token"],"session":p["session"],"revision":1,"confirmation":"button"}),
     )
     .await
 }
@@ -266,7 +268,7 @@ async fn explicit_patch_confirm_replay_and_undo_preserve_external_metadata() {
         calendar.clone(),
         &state,
         "previewEventUndo",
-        json!({"id":p["token"],"session":"session","revision":1}),
+        json!({"id":p["token"],"session":calendar.session,"revision":1}),
     )
     .await
     .unwrap()["proposal"]
@@ -281,10 +283,10 @@ async fn explicit_patch_confirm_replay_and_undo_preserve_external_metadata() {
         "Raum 1"
     );
     assert!(events::dispatch(
-        calendar,
+        calendar.clone(),
         &state,
         "previewEventUndo",
-        json!({"id":p["token"],"session":"session","revision":1})
+        json!({"id":p["token"],"session":calendar.session,"revision":1})
     )
     .await
     .is_err());
@@ -312,7 +314,7 @@ async fn speech_cannot_confirm_and_background_invalidates_awaiting_confirmation(
         calendar.clone(),
         &state,
         "confirmProposal",
-        json!({"token":p["token"],"session":"session","revision":1,"confirmation":"spoken"})
+        json!({"token":p["token"],"session":p["session"],"revision":1,"confirmation":"spoken"})
     )
     .await
     .is_err());
@@ -320,6 +322,93 @@ async fn speech_cannot_confirm_and_background_invalidates_awaiting_confirmation(
     *calendar.interrupted.lock().unwrap() = true;
     assert!(confirm(&state, calendar.clone(), &p).await.is_err());
     assert_eq!(*calendar.calls.lock().unwrap(), 0);
+}
+
+#[tokio::test]
+async fn server_sessions_reject_unknown_revoked_and_inflight_previews() {
+    let (_root, state, calendar) = fixture();
+    let registered = events::dispatch(calendar.clone(), &state, "registerEventSession", json!({}))
+        .await
+        .unwrap()["session"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_ne!(registered, calendar.session);
+    let request = |session: &str| json!({"kind":"remove","patch":{},"calendar_id":"selected","event":fixture_event(),"session":session,"revision":1});
+    assert!(events::dispatch(
+        calendar.clone(),
+        &state,
+        "previewEventMutation",
+        request("not-registered")
+    )
+    .await
+    .is_err());
+    events::dispatch(
+        calendar.clone(),
+        &state,
+        "invalidateEventSession",
+        json!({"session":registered}),
+    )
+    .await
+    .unwrap();
+    assert!(events::dispatch(
+        calendar.clone(),
+        &state,
+        "previewEventMutation",
+        request(&registered)
+    )
+    .await
+    .is_err());
+    *calendar.interrupted.lock().unwrap() = true;
+    assert!(events::dispatch(
+        calendar.clone(),
+        &state,
+        "previewEventMutation",
+        request(&calendar.session)
+    )
+    .await
+    .is_err());
+    assert!(state.event_proposals.lock().unwrap().is_empty());
+    assert_eq!(*calendar.calls.lock().unwrap(), 0);
+    assert!(state
+        .store
+        .lock()
+        .unwrap()
+        .event_history()
+        .unwrap()
+        .is_empty());
+}
+
+#[tokio::test]
+async fn revocation_removes_proposals_but_preserves_committed_replay() {
+    let (_root, state, calendar) = fixture();
+    let saved = preview(
+        &state,
+        calendar.clone(),
+        "update",
+        json!({"location":"Raum 2"}),
+    )
+    .await;
+    assert_eq!(
+        confirm(&state, calendar.clone(), &saved).await.unwrap()["status"],
+        "saved"
+    );
+    let pending = preview(&state, calendar.clone(), "remove", json!({})).await;
+    events::dispatch(
+        calendar.clone(),
+        &state,
+        "invalidateEventSession",
+        json!({"session":calendar.session}),
+    )
+    .await
+    .unwrap();
+    assert!(state.event_proposals.lock().unwrap().is_empty());
+    assert!(confirm(&state, calendar.clone(), &pending).await.is_err());
+    assert_eq!(
+        confirm(&state, calendar.clone(), &saved).await.unwrap()["status"],
+        "saved"
+    );
+    assert_eq!(*calendar.calls.lock().unwrap(), 1);
 }
 #[tokio::test]
 async fn uncertain_is_durable_and_never_replayed() {
@@ -418,7 +507,7 @@ async fn query_is_bounded_and_excludes_unselected_calendar() {
 async fn invitation_handoff_and_external_changes_protect_undo() {
     let (_root, state, calendar) = fixture();
     calendar.event.lock().unwrap()["system_only"] = json!(true);
-    let handoff=events::dispatch(calendar.clone(),&state,"previewEventMutation",json!({"kind":"remove","patch":{},"calendar_id":"selected","event":fixture_event(),"session":"session"})).await.unwrap();
+    let handoff=events::dispatch(calendar.clone(),&state,"previewEventMutation",json!({"kind":"remove","patch":{},"calendar_id":"selected","event":fixture_event(),"session":calendar.session})).await.unwrap();
     assert!(handoff.get("proposal").is_none());
     assert!(handoff.get("system_editor").is_some());
     calendar.event.lock().unwrap()["system_only"] = json!(false);
@@ -432,10 +521,10 @@ async fn invitation_handoff_and_external_changes_protect_undo() {
     confirm(&state, calendar.clone(), &p).await.unwrap();
     calendar.event.lock().unwrap()["metadata"]["notes"] = json!("Later external note");
     assert!(events::dispatch(
-        calendar,
+        calendar.clone(),
         &state,
         "previewEventUndo",
-        json!({"id":p["token"],"session":"session","revision":1})
+        json!({"id":p["token"],"session":calendar.session,"revision":1})
     )
     .await
     .is_err());
@@ -449,7 +538,7 @@ async fn create_delete_restore_do_not_create_import_provenance() {
         calendar.clone(),
         &state,
         "previewEventUndo",
-        json!({"id":p["token"],"session":"session","revision":1}),
+        json!({"id":p["token"],"session":calendar.session,"revision":1}),
     )
     .await
     .unwrap()["proposal"]
@@ -553,7 +642,7 @@ async fn owned_create_delete_undo_preserve_identity_without_import_baselines() {
         id
     );
     let live = calendar.event.lock().unwrap().clone();
-    let remove = events::dispatch(calendar.clone(), &state, "previewEventMutation", json!({"kind":"remove","calendar_id":"selected","event":live,"patch":{},"session":"session","revision":1})).await.unwrap()["proposal"].clone();
+    let remove = events::dispatch(calendar.clone(), &state, "previewEventMutation", json!({"kind":"remove","calendar_id":"selected","event":live,"patch":{},"session":calendar.session,"revision":1})).await.unwrap()["proposal"].clone();
     assert_eq!(
         confirm(&state, calendar.clone(), &remove).await.unwrap()["status"],
         "saved"
@@ -569,7 +658,7 @@ async fn owned_create_delete_undo_preserve_identity_without_import_baselines() {
         calendar.clone(),
         &state,
         "previewEventUndo",
-        json!({"id":remove["token"],"session":"session","revision":1}),
+        json!({"id":remove["token"],"session":calendar.session,"revision":1}),
     )
     .await
     .unwrap()["proposal"]

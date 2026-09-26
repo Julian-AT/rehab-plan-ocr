@@ -231,7 +231,14 @@ async fn preview(
     args: Value,
     undo_of: Option<String>,
 ) -> Response<Value> {
+    let session = required(&args, "session")?.to_string();
+    let lease = state
+        .event_sessions
+        .lock()
+        .map_err(failure)?
+        .lease(&session)?;
     let _guard = state.calendar_lock.lock().await;
+    lease.check()?;
     let kind = required(&args, "kind")?.to_string();
     let calendar = required(&args, "calendar_id")?.to_string();
     let title = check_calendar(&platform, state, &calendar, kind == "create").await?;
@@ -252,12 +259,12 @@ async fn preview(
         }
         require_selected_event(state, &calendar, &event)?;
         if event["system_only"] == true {
+            lease.check()?;
             return Ok(json!({"system_editor":event}));
         }
         Some(event)
     };
     check_patch(&kind, &args["patch"], before.as_ref())?;
-    let session = required(&args, "session")?.to_string();
     let owned_id = if let Some(id) = &undo_of {
         let old = state
             .store
@@ -309,10 +316,10 @@ async fn preview(
         patch: args["patch"].clone(),
         undo_of,
     };
-    let revoked = state.invalid_event_sessions.lock().map_err(failure)?;
-    if revoked.contains(&session) {
-        return Err("Sitzung unterbrochen. Neu beginnen.".into());
-    }
+    // Serialize this final check/publication with revocation; the lease remains
+    // revoked even after its registry entry has been removed.
+    let _sessions = state.event_sessions.lock().map_err(failure)?;
+    lease.check()?;
     let mut proposals = state.event_proposals.lock().map_err(failure)?;
     proposals.retain(|_, p| p.session != session && p.expires_at > chrono::Utc::now().timestamp());
     proposals.insert(proposal.token.clone(), proposal.clone());
@@ -347,6 +354,11 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
     {
         return Err("Freigabe abgelaufen. Erneut prüfen und Schaltfläche betätigen.".into());
     }
+    let lease = state
+        .event_sessions
+        .lock()
+        .map_err(failure)?
+        .lease(&proposal.session)?;
     check_calendar(
         &platform,
         state,
@@ -364,10 +376,8 @@ async fn confirm(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> 
         }
     }
     {
-        let revoked = state.invalid_event_sessions.lock().map_err(failure)?;
-        if revoked.contains(&proposal.session) {
-            return Err("Freigabe durch Unterbrechung verfallen.".into());
-        }
+        let _sessions = state.event_sessions.lock().map_err(failure)?;
+        lease.check()?;
         let store = state.store.lock().map_err(failure)?;
         if !store.pending().map_err(failure)?.is_empty()
             || store.event_history().map_err(failure)?.iter().any(|h| {
@@ -592,13 +602,14 @@ pub async fn dispatch(
         "eventHistory" => Ok(
             json!({"history":state.store.lock().map_err(failure)?.event_history().map_err(failure)?}),
         ),
+        "registerEventSession" => {
+            let session = state.event_sessions.lock().map_err(failure)?.register()?;
+            Ok(json!({"session":session}))
+        }
         "invalidateEventSession" => {
             let session = required(&args, "session")?;
-            state
-                .invalid_event_sessions
-                .lock()
-                .map_err(failure)?
-                .insert(session.into());
+            let mut sessions = state.event_sessions.lock().map_err(failure)?;
+            sessions.revoke(session);
             state
                 .event_proposals
                 .lock()

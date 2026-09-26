@@ -2,27 +2,6 @@ import AppleServices
 import RehaCore
 import SwiftUI
 
-struct EventResponse: Decodable {
-  var proposal: EventProposalView?
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  var system_editor: CalendarEvent?
-  var status: String?
-  var message: String?
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  var maintenance_warnings: [String]?
-}
-struct EventHistoryItem: Decodable, Identifiable {
-  let id: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let created_at: Double
-  let proposal: EventProposalView
-  let status: String
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  let undone_by: String?
-}
-@MainActor func jsonObject<T: Encodable>(_ value: T) throws -> Any {
-  try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
-}
 extension NativeApplication {
   @MainActor func eventRequest<T: Decodable>(
     _ command: String, _ args: [String: Any] = [:], as type: T.Type = T.self
@@ -33,123 +12,23 @@ extension NativeApplication {
     return try JSONDecoder().decode(type, from: Data(result.utf8))
   }
 }
-@MainActor @Observable final class EventSession {
-  let core: NativeApplication
-  let origin: String
-  private(set) var session = UUID().uuidString
-  private(set) var revision: UInt64 = 0
-  var proposal: EventProposalView?
-  var systemEvent: CalendarEvent?
-  var busy = false
-  var error: String?
-  var conversationResult: String?
-  var result: String?
-  init(core: NativeApplication, origin: String = "manual") {
-    self.core = core
-    self.origin = origin
-  }
-  func preview(kind: String, calendar: String, event: CalendarEvent?, patch: [String: JSONValue])
-    async
-  {
-    guard !busy else { return }
-    busy = true
-    revision += 1
-    let revision = revision
-    let session = session
-    proposal = nil
-    result = nil
-    conversationResult = nil
-    defer { if self.session == session { busy = false } }
-    do {
-      let response: EventResponse = try await core.eventRequest(
-        "previewEventMutation",
-        [
-          "origin": origin, "kind": kind, "calendar_id": calendar,
-          "event": try event.map(jsonObject) ?? NSNull(), "patch": try jsonObject(patch),
-          "session": session, "revision": revision,
-        ])
-      guard self.session == session, self.revision == revision else { return }
-      proposal = response.proposal
-      systemEvent = response.system_editor
-      error = nil
-    } catch { if self.session == session { self.error = userMessage(error) } }
-  }
-  func confirm() async {
-    guard let proposal, !busy else { return }
-    busy = true
-    self.proposal = nil
-    conversationResult = nil
-    let current = session
-    LocalDiagnostics.shared.record(.confirmation, .started, correlation: proposal.token)
-    defer { if session == current { busy = false } }
-    do {
-      let response: EventResponse = try await core.eventRequest(
-        "confirmProposal",
-        [
-          "token": proposal.token, "session": session, "revision": revision,
-          "confirmation": "button",
-        ])
-      guard session == current else { return }
-      conversationResult =
-        response.status == "saved"
-        ? (proposal.kind == "remove"
-          ? "Der Kalendereintrag ist gelöscht." : "Der Termin ist gespeichert.")
-        : response.message ?? "Der Schreibstatus ist unklar. Bitte den Kalender abgleichen."
-      result =
-        response.status == "saved"
-        ? "\(proposal.kind == "remove" ? "Kalendereintrag gelöscht" : "Gespeichert") in \(proposal.calendar_title)."
-        : response.message ?? "Schreibstatus unklar. Kalender abgleichen."
-      if response.maintenance_warnings?.isEmpty == false {
-        let warning = " Erinnerungen und Widgets konnten noch nicht aktualisiert werden."
-        result = (result ?? "") + warning
-        conversationResult = (conversationResult ?? "") + warning
-      }
-      error = nil
-    } catch { if session == current { self.error = userMessage(error) } }
-  }
-  func undo(_ id: String) async {
-    guard !busy else { return }
-    busy = true
-    revision += 1
-    let current = session
-    defer { if session == current { busy = false } }
-    do {
-      let response: EventResponse = try await core.eventRequest(
-        "previewEventUndo", ["id": id, "session": session, "revision": revision])
-      guard session == current else { return }
-      proposal = response.proposal
-      error = nil
-    } catch { if session == current { self.error = userMessage(error) } }
-  }
-  func interrupt() {
-    let old = session
-    session = UUID().uuidString
-    revision += 1
-    proposal = nil
-    systemEvent = nil
-    busy = false
-    error = nil
-    result = nil
-    conversationResult = nil
-    Task {
-      let _: [String: JSONValue]? = try? await core.eventRequest(
-        "invalidateEventSession", ["session": old])
-    }
-  }
-  func openSystem(_ event: CalendarEvent) async {
-    interrupt()
-    let current = session
-    do {
-      _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)])
-      guard session == current else { return }
-      result =
-        "Kalenderbearbeitung beendet. Termine neu laden. Diese Änderung steht nicht im App-Rückgängig zur Verfügung."
-    } catch {
-      if session == current {
-        self.error =
-          "\(userMessage(error)) Im Kalender suchen: \(event.values.title), \(eventDate(event.values.start))."
-      }
-    }
+extension EventSession {
+  convenience init(core: NativeApplication, origin: String = "manual") {
+    self.init(
+      origin: origin,
+      request: { command, args in
+        let data = try JSONSerialization.data(withJSONObject: args)
+        let result = try await core.calendarRequest(
+          command: command, arguments: String(decoding: data, as: UTF8.self))
+        return Data(result.utf8)
+      },
+      openSystem: { event in
+        _ = try await NativeBridge.request("editSystemEvent", ["event": try jsonObject(event)])
+      },
+      confirmationStarted: { token in
+        LocalDiagnostics.shared.record(.confirmation, .started, correlation: token)
+      },
+      describe: userMessage)
   }
 }
 struct ProposalCard: View {

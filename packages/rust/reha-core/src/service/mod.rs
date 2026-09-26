@@ -8,6 +8,8 @@ use std::{
 
 mod error;
 pub use error::ServiceError;
+mod event_sessions;
+pub use event_sessions::EventSessions;
 pub type Response<T> = std::result::Result<T, ServiceError>;
 pub fn failure(e: impl std::fmt::Display) -> ServiceError {
     ServiceError::Legacy(e.to_string())
@@ -20,7 +22,7 @@ pub struct Application {
     pub cancel: Mutex<HashMap<String, Arc<AtomicBool>>>,
     pub proposals: Mutex<HashMap<String, Proposal>>,
     pub event_proposals: Mutex<HashMap<String, events::EventProposal>>,
-    pub invalid_event_sessions: Mutex<std::collections::HashSet<String>>,
+    pub event_sessions: Mutex<EventSessions>,
     pub calendar_lock: tokio::sync::Mutex<()>,
     /// Serializes job admission with deletion; never held during inference.
     pub lifecycle_lock: tokio::sync::Mutex<()>,
@@ -87,7 +89,7 @@ impl Application {
             cancel: Mutex::new(HashMap::new()),
             proposals: Mutex::new(HashMap::new()),
             event_proposals: Mutex::new(HashMap::new()),
-            invalid_event_sessions: Mutex::new(std::collections::HashSet::new()),
+            event_sessions: Mutex::new(EventSessions::default()),
             calendar_lock: tokio::sync::Mutex::new(()),
             lifecycle_lock: tokio::sync::Mutex::new(()),
         }

@@ -11,6 +11,7 @@ pub async fn erase_all(app: Arc<dyn super::Platform>, state: &Arc<AppState>) -> 
     }
     state.proposals.lock().map_err(failure)?.clear();
     state.event_proposals.lock().map_err(failure)?.clear();
+    state.event_sessions.lock().map_err(failure)?.revoke_all();
     #[cfg(target_os = "ios")]
     tokio::task::spawn_blocking(move || app.call("forgetCalendar", json!({})))
         .await
