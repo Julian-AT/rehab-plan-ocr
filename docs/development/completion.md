@@ -55,3 +55,20 @@ Nachweise. Kein eigenes Modell ist derzeit zur Auslieferung qualifiziert.
 659 versionierte Dateien; `.local` etwa 86 GiB, freie Kapazität etwa 2,8 GiB.
 Große Builds/Trainings warten auf eine ausreichende Arbeitsreserve. Die im alten
 Protokoll erwähnten 61 GiB waren ein früherer Messstand.
+
+## Geprüfte Fortsetzung
+
+| Schritt | Status und Beleg |
+|---|---|
+| Verbraucherzuordnung und erste Kandidaten | **verifiziert** für Zuordnung und dokumentierte Entscheidungen; **offen** für vollständige Inhaltsprüfung. [Bestand](inventory.md), Commit `364e166`. |
+| Wiederaufnehmbare Bereinigung | **verifiziert** für geprüfte Compilerzwischenprodukte und Schutzprüfung. `78048f6`, `344b658`, `fe42f17`; insgesamt 5.102 Dateien entfernt. Neuer Probe-Lauf räumt seinen Modulcache wieder auf; [Bestands-/Löschbelege](artifact-retention.md). |
+| Modellobjekte | **verifiziert** für die identische registrierte Basis-GGUF; `a1c115a`. Bisherige Pfade/Hashes und eigener Inode je Kopie erhalten; nativer Wiederanlauf bestanden. Keine messbare Speicherersparnis. |
+| Große Arbeitsläufe | **implementiert/verifiziert**: Vorabprüfung stoppt bei weniger als Reserve plus Spitzenbudget. **extern blockiert**: 20 GiB Arbeitsreserve weiterhin nicht vorhanden. |
+| Native Rückmeldungen | **verifiziert**: atomarer einmaliger Abschluss ohne eigenes unchecked Sendable; `3500baa`. Konkurrenz, Wiedereintritt, Fehler sowie Paket-Typprüfung bestanden. Vollständige Produktabnahme bleibt offen. |
+| Gemeinsamer Werkzeugstand | **verifiziert**: 232 Werkzeugtests, 16 Monitorfälle, aktuelle Verweise/Referenzhashes und Laufzeitinventar. Kein vollständiger App-/UI-/CI-Nachweis. |
+
+Die obigen Ergebnisse schließen A–K nicht pauschal. Insbesondere bleiben die
+vollständig typisierten Plattformgrenzen, Pfadmigration aller Entwicklungsprodukte,
+visuelle und assistive Abnahme, Datenprüfung, Modellverbesserung, Stimmenauswahl,
+eSpeak-freier Releasepfad und Geräte-/Pilotqualifizierung offen. Große Änderungen
+werden bei fehlender Buildreserve nicht als ungetesteter Kandidat ausgegeben.

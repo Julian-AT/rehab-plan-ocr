@@ -14,7 +14,7 @@ summarizes remaining work without replacing the evidence.
 | Listening preparation | [Local German comparison samples](../ml/evaluation/speech/README.md) |
 | Privacy and support | [Privacy draft](product/privacy.md), [Support draft](product/support.md), [Manifest audit](releases/privacy-manifest-audit.md) |
 | Architecture | [Native architecture](architecture/overview.md), [iOS ownership](architecture/ios-layout.md), [AI providers](architecture/ai-providers.md), [Calendar protection](architecture/calendar-protection.md) |
-| Development | [Reference review](development/reference-cli.md), [dataset](development/dataset.md), [private storage](development/private-storage.md) |
+| Development | [Inventory](development/inventory.md), [artifact retention](development/artifact-retention.md), [reference review](development/reference-cli.md), [dataset](development/dataset.md), [private storage](development/private-storage.md) |
 | Releases | [Device update procedure](releases/ios-installation.md) |
 | Dependencies | [Third-party inventory](third-party/README.md) |
 | Historical evidence | [Original build reports and recovery](releases/history/README.md) |

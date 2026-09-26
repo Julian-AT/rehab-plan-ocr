@@ -2,6 +2,39 @@
 
 # Development status — 2026-09-26
 
+## Continuation from 8d81c4c
+
+The [completion ledger](completion.md) now tracks the full remaining user plan.
+This continuation is **not complete product acceptance**. Current slices:
+
+- All 668 current files have an explicit consumer/ownership group; a complete
+  content audit remains open. The stale container recipe and duplicate speech
+  availability probe are removed. Vision/rule experiments have executed Make entries.
+- Guarded cleanup removed 4,518 compiler intermediates. Hashes of 116,748 protected
+  files/links agreed before and after; observed volume gain was 129.1 MiB.
+  A second run removed 584 probe cache files while preserving all 116,779 protected
+  entries, including the new model object. Probe module caches now expire with
+  their compiler invocation. The host still has only about 2 GiB free.
+- Five identical baseline GGUF paths retain their bytes in separate APFS clones
+  of one hash-addressed object. Actual clone/write independence and native model
+  reload passed. This step showed **no measured disk-space gain**.
+- Native request completion now has compiler-checked Sendable state. Its race,
+  re-entry and invalid-input probe passes; all AppleServices sources typecheck
+  with Swift 6/complete concurrency for their existing iOS 17 package minimum.
+  The application still targets iOS 26.0.
+- 232 tool tests in 46 suites and 16 CI-monitor tests pass. Runtime inventory and
+  current documentation/reference checks pass. These are local checks, not a
+  full application build, UI acceptance or hosted-CI pass.
+- Heavy supported Make workflows now require 20 GiB reserve plus their expected
+  peak. This host remains below that reserve. Full builds, clean-checkout/offline
+  rebuild and model training/export are blocked on storage; the gates are not bypassed.
+
+See [inventory decisions](inventory.md) and [cleanup evidence](artifact-retention.md).
+Human reference/listening/usability reviews, unseen consented data, CI billing,
+publisher details, physical-device checks and approval of new previews/samples
+remain outstanding. eSpeak removal/system-voice selection and both model
+qualification gates remain open; no device update or public distribution occurred.
+
 All four milestones in the [implementation ledger](implementation-plan.md) remain
 open. Completed implementation and experimental artifacts are recorded separately
 from human, physical-device and release acceptance. Important verified slices are
@@ -43,7 +76,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded candidates. The latest local tool suite passes 219 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledger. |
+| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The current local tool suite passes 232 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | Run 35306312405 at `404f68e` is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. Exact annotations are retained; the user was asked to check account billing. No retry, payment or limit change was made. |
