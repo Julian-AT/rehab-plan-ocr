@@ -91,16 +91,7 @@ pub fn process(
         let decoded = if directly_decodable {
             std::borrow::Cow::Borrowed(bytes.as_slice())
         } else {
-            let response = app.call("decodePhoto", json!({ "base64": request.base64 }))?;
-            std::borrow::Cow::Owned(
-                STANDARD
-                    .decode(
-                        response["base64"]
-                            .as_str()
-                            .ok_or("Unsupported image format.")?,
-                    )
-                    .map_err(failure)?,
-            )
+            std::borrow::Cow::Owned(app.decode_photo(&bytes)?)
         };
         let mut load_ms = 0;
         let mut cached = false;
@@ -317,7 +308,7 @@ pub(super) fn refine_vision(
             let response = app.call("recognize", serde_json::json!({
                 "base64": STANDARD.encode(png.into_inner()),
                 "budget_ms": deadline.saturating_duration_since(std::time::Instant::now()).as_millis() as u64
-            })).map_err(crate::Error::Invalid)?;
+            })).map_err(|error| crate::Error::Invalid(error.to_string()))?;
             Ok((
                 serde_json::from_value(response["regions"].clone())?,
                 serde_json::from_value(response["observations"].clone())?,

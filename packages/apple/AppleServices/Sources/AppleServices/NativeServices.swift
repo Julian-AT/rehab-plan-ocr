@@ -452,24 +452,10 @@ public final class NativeServices: @unchecked Sendable {
   }
   func decodePhoto(_ invoke: ServiceRequest) throws {
     let args = try invoke.parseArgs(PhotoArgs.self)
-    guard let data = Data(base64Encoded: args.base64), data.count <= 40 * 1024 * 1024,
-      let image = UIImage(data: data),
-      image.size.width * image.scale * image.size.height * image.scale <= 50_000_000
-    else {
-      invoke.reject("Foto nicht lesbar oder zu groß.")
-      return
-    }
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = image.scale
-    format.opaque = true
-    let upright = UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
-      image.draw(at: .zero)
-    }
-    guard let png = upright.pngData() else {
-      invoke.reject("Foto konnte nicht dekodiert werden.")
-      return
-    }
-    invoke.resolve(["base64": png.base64EncodedString()])
+    guard args.base64.utf8.count <= ((NativePhoto.maximumBytes + 2) / 3) * 4,
+      let data = Data(base64Encoded: args.base64)
+    else { throw NativeServiceError.invalidInput("Foto nicht lesbar oder zu groß.") }
+    invoke.resolve(["base64": try NativePhoto.decode(data).base64EncodedString()])
   }
   func recognize(_ invoke: ServiceRequest) throws {
     struct Args: Decodable {

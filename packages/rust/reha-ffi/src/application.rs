@@ -305,6 +305,11 @@ struct HostBridge {
     cancelled: Mutex<HashSet<String>>,
 }
 impl Platform for HostBridge {
+    fn decode_photo(&self, bytes: &[u8]) -> service::Response<Vec<u8>> {
+        self.host
+            .decode_photo(bytes.to_vec())
+            .map_err(platform_failure)
+    }
     fn overlaps(
         &self,
         events: std::collections::BTreeMap<String, domain::EventValues>,
@@ -1281,8 +1286,8 @@ mod host_routing_tests {
         fn apply(&self, _: CalendarOperation, _: bool) -> Result<CalendarResult> {
             unreachable!()
         }
-        fn decode_photo(&self, _: Vec<u8>) -> Result<Vec<u8>> {
-            unreachable!()
+        fn decode_photo(&self, bytes: Vec<u8>) -> Result<Vec<u8>> {
+            Ok(bytes.into_iter().rev().collect())
         }
         fn sync_agenda(&self, _: Vec<ImportRecord>, _: Preferences) -> Result<()> {
             unreachable!()
@@ -1344,6 +1349,22 @@ mod host_routing_tests {
                 json!(expected.to_string())
             );
         }
+    }
+    #[test]
+    fn native_photo_uses_binary_callback_without_json_effect() {
+        let bridge = HostBridge {
+            // Any JSON effect would fail; only the binary photo callback succeeds.
+            host: Box::new(Host {
+                failure: Some(service::ServiceError::Cancelled),
+            }),
+            progress: Mutex::new(HashMap::new()),
+            cancelled: Mutex::new(HashSet::new()),
+        };
+        let bytes = [0, 255, 128, b'{', b'"', 0];
+        assert_eq!(
+            bridge.decode_photo(&bytes).unwrap(),
+            bytes.into_iter().rev().collect::<Vec<_>>()
+        );
     }
 }
 

@@ -470,7 +470,7 @@ pub async fn retry_scan(
                         name: "selective_reread".into(),
                         status: "failed".into(),
                         duration_ms: started.elapsed().as_millis() as u64,
-                        detail: error,
+                        detail: error.to_string(),
                         artifacts: vec![],
                     });
                 }

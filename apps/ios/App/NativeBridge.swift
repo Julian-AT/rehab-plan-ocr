@@ -111,10 +111,8 @@ final class NativeBridge: AppleHost, Sendable {
       maintenanceWarnings: response["maintenance_warnings"] as? [String] ?? [])
   }
   func decodePhoto(bytes: Data) throws -> Data {
-    let result = try blocking("decodePhoto", ["base64": bytes.base64EncodedString()])
-    guard let encoded = result["base64"] as? String, let decoded = Data(base64Encoded: encoded)
-    else { throw AppError.Validation(message: "Foto konnte nicht gelesen werden.") }
-    return decoded
+    precondition(!Thread.isMainThread, "Photo decoding belongs to the Rust worker")
+    do { return try NativePhoto.decode(bytes) } catch { throw Self.appError(error) }
   }
   func syncAgenda(records: [ImportRecord], preferences: Preferences) throws {
     _ = try blocking(

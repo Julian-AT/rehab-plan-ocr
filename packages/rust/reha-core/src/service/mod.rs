@@ -48,6 +48,22 @@ pub struct Proposal {
 /// Tauri adapter preserves its existing wire payloads.
 pub trait Platform: Send + Sync {
     fn call(&self, command: &str, arguments: serde_json::Value) -> Response<serde_json::Value>;
+    /// Native adapters override this binary boundary. The default only preserves
+    /// compatibility for JSON platform adapters and existing test hosts.
+    fn decode_photo(&self, bytes: &[u8]) -> Response<Vec<u8>> {
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let response = self.call(
+            "decodePhoto",
+            serde_json::json!({"base64": STANDARD.encode(bytes)}),
+        )?;
+        STANDARD
+            .decode(
+                response["base64"]
+                    .as_str()
+                    .ok_or("Unsupported image format.")?,
+            )
+            .map_err(failure)
+    }
     fn progress(&self, value: serde_json::Value);
     fn cancelled(&self, _id: &str) -> bool {
         false
