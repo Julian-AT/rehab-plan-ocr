@@ -462,13 +462,15 @@ pub fn compare(
             } else {
                 *m.printed_fields.entry(field.into()).or_default() += 1;
                 *m.correct_printed_fields.entry(field.into()).or_default() += usize::from(correct);
-                let t = tv
-                    .as_str()
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| tv.to_string());
-                let p = pv.as_ref().and_then(|v| v.as_str()).unwrap_or("");
+                let text = |value: &serde_json::Value| match value {
+                    serde_json::Value::Null => String::new(),
+                    serde_json::Value::String(text) => text.clone(),
+                    _ => value.to_string(),
+                };
+                let t = text(&tv);
+                let p = pv.as_ref().map(text).unwrap_or_default();
                 m.reference_characters += t.chars().count();
-                m.character_errors += edit_distance(&t, p);
+                m.character_errors += edit_distance(&t, &p);
             }
             if !correct {
                 m.field_corrections_needed += 1;
@@ -831,6 +833,23 @@ mod tests {
         let metrics = compare(&r, &r.appointments, false).unwrap();
         assert_eq!(metrics.critical_field_accuracy, Some(1.));
         assert!(metrics.schedule_without_correction);
+        assert_eq!(metrics.character_errors, 0);
+        assert_eq!(metrics.character_error_rate, Some(0.));
+        let mut numeric_predictions = r.appointments.clone();
+        numeric_predictions[0].duration_minutes = Some(31);
+        assert_eq!(
+            compare(&r, &numeric_predictions, false)
+                .unwrap()
+                .character_errors,
+            1
+        );
+        numeric_predictions[0].duration_minutes = None;
+        assert_eq!(
+            compare(&r, &numeric_predictions, false)
+                .unwrap()
+                .character_errors,
+            2
+        );
         let mut predicted = r.appointments.clone();
         predicted[0].duration_minutes = Some(45);
         predicted[1].end_date = Some("2026-09-11".into());
