@@ -87,6 +87,24 @@ Löschlatenz bei blockiertem Dateisystem.
 
 ## Unstrukturierte Tasks, Streams und Schleifen
 
+Die zusätzliche Lebensdauerprüfung vom 26.09.2026 wies in `NotificationDeadline`
+eine verzögerte Freigabe nach: Ein bereits erfolgreich abgeschlossener Auftrag
+hielt über den gecancelten, aber noch eingereihten Timer seine Completion und
+damit deren Besitzer weiter fest. Der Timer hält nun nur eine schwache Referenz
+auf die Deadline-Verwaltung und die Auftrags-ID; der aktive Auftrag besitzt die
+Ablauf-Completion. Beim Entfernen eines abgeschlossenen Auftrags wird auch diese
+Bindung freigegeben. Das gilt für Erfolg und unmittelbaren Fehler.
+
+Die neue native Regression scheitert am alten Produktcode und besteht nach der
+Korrektur: Die tatsächliche Objektfreigabe wird vor einer 60-Sekunden-Deadline
+beobachtet, mit zwei Sekunden äußerem Testbudget. Auch die vorhandenen Fälle für
+100 abgewiesene Wiederholungen, zwei unkooperative Aufträge, Timeout, verspätete
+Bereinigung und erneute Zulassung bestehen. Belege liegen unter
+`.local/runs/notification-owner-lifetime-20260926-s19-001`. Dies belegt die konkrete
+Besitzbindung, noch nicht die Ursache sämtlicher EventKit-Meldungen oder eine
+gemessene Verbesserung des Gerätespeichers. Die gemeinsame EventKit-Abnahme auf
+diesem geänderten Stand folgt separat.
+
 - **Gespräch:** `VoiceModel` besitzt Turn- und Antworttask; Gesprächs-, Anfrage-
   und EventSession-Generationen verwerfen verspätete Antworten. Stop/Interrupt
   beendet Interpretation, Recorder und Wiedergabe. Bestätigte Kalenderaufträge

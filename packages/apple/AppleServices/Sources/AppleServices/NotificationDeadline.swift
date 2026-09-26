@@ -7,6 +7,7 @@ final class NotificationDeadline: @unchecked Sendable {
   private struct Job {
     let task: Task<Void, Never>
     let timeout: DispatchWorkItem
+    let expire: @Sendable () -> Void
     var expired = false
   }
   private let queue: DispatchQueue
@@ -39,6 +40,11 @@ final class NotificationDeadline: @unchecked Sendable {
       job.expired = true
       self.jobs[id] = job
       job.task.cancel()
+      job.expire()
+    }
+    // A cancelled queued work item can live until its deadline. Keep the client
+    // callback in the active job so removing a completed job releases its owner.
+    let expire: @Sendable () -> Void = {
       completion(
         .failure(
           AgendaError.message(
@@ -58,7 +64,7 @@ final class NotificationDeadline: @unchecked Sendable {
         completion(result)
       }
     }
-    jobs[id] = Job(task: task, timeout: timeout)
+    jobs[id] = Job(task: task, timeout: timeout, expire: expire)
     queue.asyncAfter(deadline: .now() + seconds, execute: timeout)
   }
 }
