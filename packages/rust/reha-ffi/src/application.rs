@@ -456,9 +456,16 @@ impl Platform for HostBridge {
         events: std::collections::BTreeMap<String, domain::EventValues>,
         exclude: Vec<String>,
     ) -> service::Response<Option<Vec<domain::CalendarOverlap>>> {
-        let result =
-            (|| -> Result<_> { convert(self.host.overlaps(convert(events)?, exclude)?) })();
-        result.map(Some).map_err(platform_failure)
+        self.host
+            .overlaps(
+                events
+                    .into_iter()
+                    .map(|(id, values)| (id, values.into()))
+                    .collect(),
+                exclude,
+            )
+            .map(|overlaps| Some(overlaps.into_iter().map(Into::into).collect()))
+            .map_err(platform_failure)
     }
     fn cancellation_flag(&self, id: &str) -> Option<Arc<AtomicBool>> {
         self.jobs.flag(id)
@@ -1456,6 +1463,7 @@ mod host_routing_tests {
         calls: Option<HostCalls>,
         response: Option<Value>,
         recognition: Option<TextRecognitionResult>,
+        overlap_response: Vec<CalendarOverlap>,
     }
     impl AppleHost for Host {
         fn recognize_text(&self, request: TextRecognitionRequest) -> Result<TextRecognitionResult> {
@@ -1631,11 +1639,104 @@ mod host_routing_tests {
         }
         fn overlaps(
             &self,
-            _: HashMap<String, EventValues>,
-            _: Vec<String>,
+            events: HashMap<String, EventValues>,
+            exclude: Vec<String>,
         ) -> Result<Vec<CalendarOverlap>> {
-            unreachable!()
+            if let Some(calls) = &self.calls {
+                calls.lock().unwrap().push((
+                    "typedOverlaps".into(),
+                    json!({"events":events,"exclude":exclude}),
+                ));
+            }
+            if let Some(error) = &self.failure {
+                return Err(failure(error.clone()));
+            }
+            Ok(self.overlap_response.clone())
         }
+    }
+    #[test]
+    fn typed_overlap_effect_preserves_values_exclusions_and_response_order() {
+        let calls = Arc::new(Mutex::new(vec![]));
+        let bridge = HostBridge {
+            host: Box::new(Host {
+                calls: Some(calls.clone()),
+                overlap_response: vec![
+                    CalendarOverlap {
+                        appointment_id: "later".into(),
+                        external_id: "native-later".into(),
+                        title: "Spätere Überschneidung".into(),
+                        start_utc: "2031-05-17T09:00:00Z".into(),
+                        end_utc: "2031-05-17T09:30:00Z".into(),
+                    },
+                    CalendarOverlap {
+                        appointment_id: "earlier".into(),
+                        external_id: "native-earlier".into(),
+                        title: "Frühere Überschneidung".into(),
+                        start_utc: "2031-05-17T08:00:00Z".into(),
+                        end_utc: "2031-05-17T08:30:00Z".into(),
+                    },
+                ],
+                ..Host::default()
+            }),
+            progress: Mutex::new(HashMap::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
+        };
+        let values = domain::EventValues {
+            title: "Erfundene Therapie".into(),
+            start_utc: "2031-05-17T08:00:00Z".into(),
+            end_utc: "2031-05-17T08:30:00Z".into(),
+            timezone: "Europe/Vienna".into(),
+            location: "Raum 204".into(),
+            notes: "Bestätigte Notiz\nmit zweiter Zeile".into(),
+            reminder_minutes: Some(u32::MAX),
+        };
+        let events = std::collections::BTreeMap::from([
+            ("with-reminder".into(), values.clone()),
+            (
+                "without-reminder".into(),
+                domain::EventValues {
+                    reminder_minutes: None,
+                    ..values
+                },
+            ),
+        ]);
+        let exclusions = vec!["second".into(), "first".into(), "second".into()];
+        let result = bridge.overlaps(events.clone(), exclusions.clone()).unwrap();
+        assert_eq!(
+            result,
+            Some(vec![
+                domain::CalendarOverlap {
+                    appointment_id: "later".into(),
+                    external_id: "native-later".into(),
+                    title: "Spätere Überschneidung".into(),
+                    start_utc: "2031-05-17T09:00:00Z".into(),
+                    end_utc: "2031-05-17T09:30:00Z".into(),
+                },
+                domain::CalendarOverlap {
+                    appointment_id: "earlier".into(),
+                    external_id: "native-earlier".into(),
+                    title: "Frühere Überschneidung".into(),
+                    start_utc: "2031-05-17T08:00:00Z".into(),
+                    end_utc: "2031-05-17T08:30:00Z".into(),
+                },
+            ])
+        );
+        assert_eq!(
+            calls.lock().unwrap().as_slice(),
+            [(
+                "typedOverlaps".into(),
+                json!({"events":events,"exclude":exclusions}),
+            )]
+        );
+        let empty = HostBridge {
+            host: Box::new(Host::default()),
+            progress: Mutex::new(HashMap::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
+        };
+        assert_eq!(
+            empty.overlaps(Default::default(), vec![]).unwrap(),
+            Some(vec![])
+        );
     }
     #[test]
     fn typed_import_effects_preserve_identity_recovery_and_maintenance_warnings() {
@@ -1885,6 +1986,10 @@ mod host_routing_tests {
             assert_eq!(bridge.event_calendars().unwrap_err(), expected);
             assert_eq!(bridge.calendar_status().unwrap_err(), expected);
             assert_eq!(
+                bridge.overlaps(Default::default(), vec![]).unwrap_err(),
+                expected
+            );
+            assert_eq!(
                 bridge
                     .recognize_text(service::text_recognition::Request {
                         image: vec![1],
@@ -1943,6 +2048,7 @@ mod host_routing_tests {
                     calls: Some(calls.clone()),
                     response: Some(response),
                     recognition: None,
+                    ..Host::default()
                 }),
             )
             .await

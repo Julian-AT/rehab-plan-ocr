@@ -1,5 +1,5 @@
 //! Field-preserving native import projections; no intermediate JSON payloads.
-use crate::{records::*, AppError};
+use crate::{records::*, AppError, CalendarOverlap};
 use reha_core::contracts as domain;
 
 impl From<domain::EventValues> for EventValues {
@@ -25,6 +25,17 @@ impl From<EventValues> for domain::EventValues {
             location: value.location,
             notes: value.notes,
             reminder_minutes: value.reminder_minutes,
+        }
+    }
+}
+impl From<CalendarOverlap> for domain::CalendarOverlap {
+    fn from(value: CalendarOverlap) -> Self {
+        Self {
+            appointment_id: value.appointment_id,
+            external_id: value.external_id,
+            title: value.title,
+            start_utc: value.start_utc,
+            end_utc: value.end_utc,
         }
     }
 }
