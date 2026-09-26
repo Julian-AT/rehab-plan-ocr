@@ -155,6 +155,12 @@ export interface Calendar {
   id: string;
   title: string;
   is_default: boolean;
+  source?: string;
+}
+export interface CalendarConnection {
+  calendars: Calendar[];
+  dedicated_id?: string;
+  setup_error?: string;
 }
 export interface Annotation {
   schema_version: number;

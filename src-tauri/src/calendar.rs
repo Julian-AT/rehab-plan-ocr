@@ -141,9 +141,13 @@ pub(crate) fn export_ics(
     calendar::ics(&events, chrono::Utc::now()).map_err(failure)
 }
 #[tauri::command]
-pub(crate) async fn calendars(app: tauri::AppHandle) -> Response<Value> {
+pub(crate) async fn calendars(app: tauri::AppHandle, dedicated: Option<bool>) -> Response<Value> {
     tauri::async_runtime::spawn_blocking(move || {
-        tauri_plugin_reha_calendar::call(&app, "calendars", json!({}))
+        tauri_plugin_reha_calendar::call(
+            &app,
+            "calendars",
+            json!({"dedicated": dedicated.unwrap_or(false)}),
+        )
     })
     .await
     .map_err(failure)?

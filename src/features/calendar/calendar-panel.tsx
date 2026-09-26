@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Calendar, Proposal, Run, WriteResult } from "@/lib/contracts";
+import type {
+  Calendar,
+  CalendarConnection,
+  Proposal,
+  Run,
+  WriteResult,
+} from "@/lib/contracts";
 import type { Workbench } from "@/features/workbench/use-workbench";
 import { command, exportFile } from "@/lib/native";
 import { problems } from "@/lib/validation";
@@ -43,6 +49,7 @@ export function CalendarPanel({
 }) {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [calendarId, setCalendarId] = useState("");
+  const [dedicatedId, setDedicatedId] = useState<string | null>(null);
   const [previous, setPrevious] = useState("auto");
   const [pages, setPages] = useState<string[]>([]);
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -79,14 +86,28 @@ export function CalendarPanel({
   }, [w.native, run.document.id, w.report]);
 
   async function connect() {
-    await w.execute("Requesting EventKit access", async () => {
-      const value = await command<{ calendars: Calendar[] }>("calendars");
+    await w.execute("Setting up Reha Calendar", async () => {
+      const value = await command<CalendarConnection>("calendars", {
+        dedicated: true,
+      });
       setCalendars(value.calendars);
+      setDedicatedId(value.dedicated_id ?? null);
+      // Revisions must keep their recorded destination; new imports use the
+      // dedicated calendar. A setup failure never falls back to the default.
+      const scheduleId = w.history.scans.find(
+        (scan) => scan.id === run.document.id,
+      )?.schedule_id;
+      const previousCalendar = scheduleId
+        ? w.history.imports.find((record) => record.schedule_id === scheduleId)
+            ?.calendar_id
+        : undefined;
       setCalendarId(
-        value.calendars.find((c) => c.is_default)?.id ??
-          value.calendars[0]?.id ??
-          "",
+        previousCalendar &&
+          value.calendars.some((calendar) => calendar.id === previousCalendar)
+          ? previousCalendar
+          : (value.dedicated_id ?? ""),
       );
+      if (value.setup_error) w.report(value.setup_error);
     });
   }
   async function prepare() {
@@ -147,13 +168,20 @@ export function CalendarPanel({
           disabled={w.runtime?.platform !== "ios" || !!w.busy}
           onClick={connect}
         >
-          Connect EventKit
+          Set up Reha Calendar
         </Button>
         <p className="text-xs text-muted-foreground">
           {w.preferences.timezone} ·{" "}
           {run.review_confirmed ? "review confirmed" : "review required"}
         </p>
       </div>
+      {w.runtime?.platform === "ios" && (
+        <FieldDescription>
+          New imports use a separate Reha Calendar. In Apple Calendar, open
+          Calendars and select or deselect it to show or hide these
+          appointments. Existing imports keep their recorded calendar.
+        </FieldDescription>
+      )}
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="calendar">Calendar</FieldLabel>
@@ -163,13 +191,21 @@ export function CalendarPanel({
             disabled={!calendars.length || !!w.busy}
           >
             <SelectTrigger id="calendar">
-              <SelectValue placeholder="EventKit unavailable" />
+              <SelectValue
+                placeholder={
+                  calendars.length
+                    ? "Select a destination calendar"
+                    : "Set up calendar access"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 {calendars.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.title}
+                    {c.source ? ` · ${c.source}` : ""}
+                    {c.id === dedicatedId ? " (Reha imports)" : ""}
                     {c.is_default ? " (default)" : ""}
                   </SelectItem>
                 ))}

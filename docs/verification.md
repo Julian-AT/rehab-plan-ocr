@@ -39,7 +39,7 @@ Committed synthetic tests cover split weekday headings, conflicting dates and we
 - Successful XCTest result: `native-next-fixed.xcresult`; log: `native-next-fixed.log`.
 - Desktop build log: `macos-build.log`.
 - Device archive/export log: `ios-device-build.log`.
-- Signed private IPA: `artifacts/private/builds/rehab-plan-ocr-lab.ipa`; `codesign --verify --deep --strict` passed after extraction outside the synced workspace. Profile expires **2026-09-26 10:57 UTC**. Verification: `signing-check.json`.
+- Original signed private IPA: `artifacts/private/builds/rehab-plan-ocr-lab-0.1.0.ipa`; `codesign --verify --deep --strict` passed after extraction outside the synced workspace. Profile expires **2026-09-26 10:57 UTC**. Verification: `signing-check.json`.
 
 Build environment: Apple M4 Pro / 24 GiB, Rust 1.98.1, Node 22.22.3, npm 11, Xcode 26.4 (17E192), Swift 6.3, ONNX Runtime 1.22.0, `ort` 2.0.0-rc.10. Deployment minimum is iOS 17. Native models use the portable CPU adapter; no Apple recognition is required.
 
@@ -52,3 +52,16 @@ After the workbench refactor, the user authorized exploratory processing of the 
 No verified development benchmark, final holdout, training, or VLM qualification has been performed. Physical camera/HEIC and calendar flows, full accessibility testing, native revision/failure fault injection, Apple/Google `.ics` imports, and device-level content-network inspection remain open. Earlier synthetic robustness probes are retained privately but have not been rerun as a fresh accuracy benchmark for this refactor.
 
 Original targets remain unchanged: ≥99% critical date/time accuracy, ≥99% appointment precision/recall, ≥90% schedules without correction, and physical iPhone p95 ≤30 seconds.
+
+## Version 0.1.1 — dedicated iOS calendar
+
+The iOS app now creates or reuses **Reha Calendar** for new imports, with its account shown in the destination selector. A saved calendar is reused after renaming; unavailable or ambiguous calendars require resolution instead of creating duplicates. Existing imports keep their recorded destination. Clearing app data also clears the local calendar reference without deleting calendar events.
+
+Fresh checks on September 26, 2026:
+
+- Next.js production export and both iOS builds passed. ESLint, eight frontend unit tests, and eight Chromium/WebKit browser tests passed.
+- Core/Tauri Clippy with warnings denied passed. Swift formatting passed; the new helper and native tests also passed strict Swift lint. The existing bridge retains snake-case wire-contract property names, which the default Swift naming lint flags.
+- **Three iPhone 17 / iOS 26.4 simulator tests passed, zero skipped.** Tests exercised native OCR/persistence; creation of a separate calendar; seven sample events saved there rather than in the system default; repeated import without duplicates; calendar reuse after relaunch and rename; unchanged system default; and failure without calendar creation when a saved destination is unavailable. Test-created events and calendars were removed afterward.
+- Signed `artifacts/private/builds/rehab-plan-ocr-lab-0.1.1.ipa`: 37,343,104 bytes; SHA256 `8534ce72bd0ef87739ba7586b65bcaa1d0f15bd453d96c437fd42df4088284da`. Bundle version 0.1.1 and identifier `at.rehakalender.personal` verified. `codesign --verify --deep --strict` passed. The profile covers the paired iPhone 17 and expires **September 26, 2026, 10:57 UTC**. The unversioned IPA alias now points to this build.
+
+Evidence is under `artifacts/private/dedicated-calendar/`: `ios-simulator-build.log`, `ios-device-build.log`, `native-tests.log`, `native-tests.xcresult`, and `signing-check.json`. The physical phone remains unavailable; no installation or physical-device acceptance is claimed. See [installation and calendar visibility instructions](ios-installation.md).

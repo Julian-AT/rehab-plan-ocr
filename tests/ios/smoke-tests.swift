@@ -52,22 +52,31 @@ final class SmokeTests: XCTestCase {
         throw XCTSkip("Simulator test runner requires full calendar access.")
       }
       let store = EKEventStore()
-      guard let calendar = store.defaultCalendarForNewEvents, calendar.allowsContentModifications
+      guard let defaultCalendar = store.defaultCalendarForNewEvents,
+        defaultCalendar.allowsContentModifications
       else {
         throw XCTSkip("Simulator has no writable default calendar.")
       }
       let start = ISO8601DateFormatter().date(from: "2026-09-09T00:00:00Z")!
       let end = ISO8601DateFormatter().date(from: "2026-09-12T00:00:00Z")!
+      let originalCalendarIDs = Set(store.calendars(for: .event).map(\.calendarIdentifier))
+      let defaultID = defaultCalendar.calendarIdentifier
+      var dedicatedID: String?
       func owned() -> [EKEvent] {
         store.reset()
         return store.events(
-          matching: store.predicateForEvents(withStart: start, end: end, calendars: [calendar])
+          matching: store.predicateForEvents(withStart: start, end: end, calendars: nil)
         ).filter { $0.url?.scheme == "reha-calendar" }
       }
       let baseline = Set(owned().compactMap(\.eventIdentifier))
       defer {
         for event in owned() where !baseline.contains(event.eventIdentifier) {
           try? store.remove(event, span: .thisEvent, commit: true)
+        }
+        if let dedicatedID, !originalCalendarIDs.contains(dedicatedID),
+          let calendar = store.calendar(withIdentifier: dedicatedID)
+        {
+          try? store.removeCalendar(calendar, commit: true)
         }
       }
       let app = XCUIApplication(bundleIdentifier: bundle)
@@ -85,7 +94,18 @@ final class SmokeTests: XCTestCase {
       scrollTo(reviewed, in: app)
       reviewed.tap()
       tap("Calendar", in: app)
-      tap("Connect EventKit", in: app)
+      tap("Set up Reha Calendar", in: app)
+      let setup = XCTNSPredicateExpectation(
+        predicate: NSPredicate { _, _ in
+          store.reset()
+          return store.calendars(for: .event).contains { $0.title == "Reha Calendar" }
+        }, object: nil)
+      XCTAssertEqual(XCTWaiter.wait(for: [setup], timeout: 15), .completed)
+      let calendar = try XCTUnwrap(
+        store.calendars(for: .event).first { $0.title == "Reha Calendar" })
+      dedicatedID = calendar.calendarIdentifier
+      XCTAssertNotEqual(dedicatedID, defaultID)
+      let calendarCount = store.calendars(for: .event).count
       for _ in 0..<2 {
         tap("Prepare calendar operations", in: app)
         tap("Approve and apply", in: app)
@@ -95,7 +115,38 @@ final class SmokeTests: XCTestCase {
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 15), .completed)
         XCTAssertEqual(owned().filter { !baseline.contains($0.eventIdentifier) }.count, 7)
+        XCTAssertTrue(
+          owned().filter { !baseline.contains($0.eventIdentifier) }.allSatisfy {
+            $0.calendar.calendarIdentifier == dedicatedID
+          })
       }
+
+      // Reconnect after a relaunch and a user rename: the same calendar is reused.
+      app.terminate()
+      let renamed = try XCTUnwrap(store.calendar(withIdentifier: try XCTUnwrap(dedicatedID)))
+      let originalTitle = renamed.title
+      renamed.title = "Reha Calendar renamed"
+      try store.saveCalendar(renamed, commit: true)
+      defer {
+        if let calendar = store.calendar(withIdentifier: renamed.calendarIdentifier) {
+          calendar.title = originalTitle
+          try? store.saveCalendar(calendar, commit: true)
+        }
+      }
+      app.launch()
+      tap("History", in: app)
+      tap("Open", in: app)
+      tap("Calendar", in: app)
+      tap("Set up Reha Calendar", in: app)
+      let prepare = app.buttons["Prepare calendar operations"]
+      let ready = XCTNSPredicateExpectation(
+        predicate: NSPredicate { _, _ in prepare.isEnabled }, object: nil)
+      XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed)
+      store.reset()
+      XCTAssertEqual(store.calendars(for: .event).count, calendarCount)
+      XCTAssertEqual(
+        store.calendar(withIdentifier: try XCTUnwrap(dedicatedID))?.title, "Reha Calendar renamed")
+      XCTAssertEqual(store.defaultCalendarForNewEvents?.calendarIdentifier, defaultID)
     #else
       throw XCTSkip("Calendar writes are restricted to simulator tests.")
     #endif

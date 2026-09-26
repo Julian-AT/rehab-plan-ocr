@@ -11,6 +11,7 @@ The current interface is a technical workbench, following the September 26, 2026
 - Editable appointments, explicit review, source overlays, trace inspection, rotation/crop controls, batch image import, and retained history.
 - Dataset inventory, annotation editing, local batch execution, saved experiment manifests, comparison, and evaluation. Held-out data stays locked in interactive scoring.
 - EventKit proposals and approvals, three-way reconciliation, duplicate multiplicity, uncertain-write recovery, and UTC iCalendar export. Therapist values are included in exported notes.
+- iOS setup creates or reuses a separate Reha Calendar, remembers it across reconnects and renames, and selects it for new imports. Visibility is controlled in Apple Calendar's calendar list; existing imports retain their recorded destination.
 - SQLite retention and import ledger, launch/resume cleanup, separate research storage, and native storage protection.
 
 Native commands are split into scan, calendar, dataset, settings, state, and inference modules. Frontend workflows live under `src/features/`; shared domain components and shadcn primitives live under `src/components/`.

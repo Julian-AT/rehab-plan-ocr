@@ -24,6 +24,8 @@ The workbench contains:
 
 Review confirmation is required before export or calendar writes. Edits invalidate approval. iOS uses full EventKit access; desktop supports `.ics`. Therapist values are stored separately and included as `Therapeut: …` in calendar notes.
 
+On iOS, **Calendar → Set up Reha Calendar** creates or reuses a separate calendar and selects it for new imports. Its events can be shown or hidden together in Apple Calendar's calendar list. Existing imports retain their recorded destination. See [iPhone installation and calendar setup](docs/ios-installation.md).
+
 ## Layout
 
 ```text
@@ -61,7 +63,7 @@ APPLE_DEVELOPMENT_TEAM=<team-id> IPHONEOS_DEPLOYMENT_TARGET=17.0 \
   --features ios-onnx -- --no-default-features
 ```
 
-The current signed development package is `artifacts/private/builds/rehab-plan-ocr-lab.ipa`; its profile expires September 26, 2026. Re-sign after expiration.
+Signed development packages are stored under `artifacts/private/builds/`. See [iPhone installation](docs/ios-installation.md) for the current version and signing expiry.
 
 Edit native source in `plugins/calendar/ios/Sources/`, not generated Xcode files. If regenerating an existing iOS project, remove or relocate `src-tauri/gen/apple/` first: XcodeGen can otherwise include old static libraries as duplicate resources. The app identifier stays `at.rehakalender.personal`, preserving local storage and calendar ownership.
 

@@ -4,7 +4,10 @@ use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
-pub(crate) async fn erase_all(state: State<'_, Arc<AppState>>) -> Response<()> {
+pub(crate) async fn erase_all(
+    app: tauri::AppHandle,
+    state: State<'_, Arc<AppState>>,
+) -> Response<()> {
     let _guard = state.calendar_lock.lock().await;
     if !state.cancel.lock().map_err(failure)?.is_empty() {
         return Err("Laufende Erkennung zuerst abbrechen.".into());
@@ -15,7 +18,16 @@ pub(crate) async fn erase_all(state: State<'_, Arc<AppState>>) -> Response<()> {
         .lock()
         .map_err(failure)?
         .erase_all()
-        .map_err(failure)
+        .map_err(failure)?;
+    #[cfg(target_os = "ios")]
+    tauri::async_runtime::spawn_blocking(move || {
+        tauri_plugin_reha_calendar::call(&app, "forgetCalendar", json!({}))
+    })
+    .await
+    .map_err(failure)??;
+    #[cfg(not(target_os = "ios"))]
+    let _ = app;
+    Ok(())
 }
 #[tauri::command]
 pub(crate) fn maintenance(state: State<'_, Arc<AppState>>) -> Response<usize> {

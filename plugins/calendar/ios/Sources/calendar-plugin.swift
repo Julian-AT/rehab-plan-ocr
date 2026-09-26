@@ -21,6 +21,7 @@ struct OwnedRecord: Decodable {
   let approved: Values
 }
 struct SnapshotArgs: Decodable { let records: [OwnedRecord] }
+struct CalendarArgs: Decodable { let dedicated: Bool? }
 struct Operation: Decodable {
   let kind: String
   let id: String
@@ -45,6 +46,7 @@ final class CalendarPlugin: Plugin, UIImagePickerControllerDelegate, UINavigatio
   PHPickerViewControllerDelegate
 {
   private let store = EKEventStore()
+  private let dedicatedCalendar = DedicatedCalendar()
   private let calendarQueue = DispatchQueue(label: "at.rehakalender.calendar")
   private weak var controller: UIViewController?
   private var captureInvoke: Invoke?
@@ -90,7 +92,8 @@ final class CalendarPlugin: Plugin, UIImagePickerControllerDelegate, UINavigatio
     }
     return true
   }
-  @objc func calendars(_ invoke: Invoke) {
+  @objc func calendars(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(CalendarArgs.self)
     store.requestFullAccessToEvents { granted, error in
       guard granted else {
         invoke.reject(
@@ -98,15 +101,28 @@ final class CalendarPlugin: Plugin, UIImagePickerControllerDelegate, UINavigatio
         return
       }
       self.calendarQueue.async {
+        var dedicatedID: String?
+        var setupError: String?
+        if args.dedicated == true {
+          do {
+            dedicatedID = try self.dedicatedCalendar.resolve(in: self.store).calendarIdentifier
+          } catch {
+            setupError = error.localizedDescription
+          }
+        }
         let calendars = self.store.calendars(for: .event).filter(\.allowsContentModifications).map {
           calendar in
           [
             "id": calendar.calendarIdentifier, "title": calendar.title,
+            "source": calendar.source.title ?? "",
             "is_default": calendar.calendarIdentifier
               == self.store.defaultCalendarForNewEvents?.calendarIdentifier,
           ] as [String: Any]
         }
-        invoke.resolve(["calendars": calendars])
+        var result: [String: Any] = ["calendars": calendars]
+        if let dedicatedID { result["dedicated_id"] = dedicatedID }
+        if let setupError { result["setup_error"] = setupError }
+        invoke.resolve(result)
       }
     }
   }
@@ -124,6 +140,12 @@ final class CalendarPlugin: Plugin, UIImagePickerControllerDelegate, UINavigatio
         }
       }
       invoke.resolve(["current": current])
+    }
+  }
+  @objc func forgetCalendar(_ invoke: Invoke) {
+    calendarQueue.async {
+      self.dedicatedCalendar.forget()
+      invoke.resolve()
     }
   }
   @objc func apply(_ invoke: Invoke) throws {
