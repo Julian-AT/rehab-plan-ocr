@@ -9,12 +9,13 @@ import XCTest
     app.descendants(matching: .any).matching(identifier: "microphone-waveform").firstMatch
   }
   private func launch(
-    dark: Bool = false, large: Bool = false, input: Bool = false, silent: Bool = false
+    dark: Bool = false, large: Bool = false, input: Bool = false, silent: Bool = false,
+    fixture: String = "one"
   ) {
     continueAfterFailure = false
     app = XCUIApplication(bundleIdentifier: "at.rehakalender.personal")
     app.launchArguments =
-      ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", "one"]
+      ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT", "--agenda-fixture", fixture]
       + (dark ? ["--preview-dark"] : [])
       + (large
         ? ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] : [])
@@ -40,6 +41,40 @@ import XCTest
   }
   private func edgeTap(_ button: XCUIElement) {
     button.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+  }
+  func testTypedCalendarFactsAndRepeatWithoutModel() {
+    launch(fixture: "voice-answers")
+    app.buttons["voice-details"].tap()
+    let response = app.staticTexts["voice-response-details"]
+    func ask(_ text: String, containing expected: String) {
+      let input =
+        app.textViews["voice-message"].exists
+        ? app.textViews["voice-message"] : app.textFields["voice-message"]
+      XCTAssertTrue(input.waitForExistence(timeout: 5))
+      input.tap()
+      input.typeText(text)
+      app.buttons["voice-send"].tap()
+      expectation(for: NSPredicate(format: "label CONTAINS %@", expected), evaluatedWith: response)
+      waitForExpectations(timeout: 15)
+    }
+    ask("Wie viele Termine habe ich morgen?", containing: "3 passende Termine")
+    capture("calendar-answer-count")
+    ask("Was ist mein nächster Termin?", containing: "Physiotherapie")
+    ask("Welcher Raum?", containing: "kein Raum bekannt")
+    let previous = response.label
+    ask("Bitte wiederholen", containing: "kein Raum bekannt")
+    XCTAssertEqual(response.label, previous)
+    capture("calendar-answer-unknown-room")
+    ask("Weitere Termine", containing: "Übung 1")
+    XCTAssertFalse(response.label.contains("Physiotherapie"))
+    ask("Weitere Termine", containing: "keine weiteren passenden Termine")
+    ask("Termine heute", containing: "keine passenden lesbaren Termine")
+  }
+  func testCalendarPaginationIntegration() {
+    // Fixture startup executes native queries and fails before the tabs appear
+    // if pagination, expiry, visibility or read-only interpretation is wrong.
+    launch(fixture: "tool-probe")
+    XCTAssertTrue(app.buttons["speak"].exists)
   }
   func testMicrophoneLevelsDriveWaveformAndStopEndsSession() {
     for (dark, large) in [(false, false), (true, false), (true, true)] {

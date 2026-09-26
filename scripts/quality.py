@@ -211,6 +211,7 @@ def tests(portable):
             "voice-rules",
             "conversation-rules",
             "conversation-replies",
+            "calendar-answers",
             "input-audio",
             "ordered-settings",
             "diagnostics",

@@ -126,8 +126,10 @@ impl SpeechEngine {
             return Err(err("Stimmeninformationen sind beschädigt"));
         }
         let voice = raw
-            .chunks_exact(4)
-            .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|v| f32::from_le_bytes(*v))
             .collect::<Vec<_>>();
         if voice.iter().any(|v| !v.is_finite()) {
             return Err(err("Stimmeninformationen sind ungültig"));

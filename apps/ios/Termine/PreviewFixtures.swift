@@ -106,6 +106,16 @@ import Foundation
         }
         try await CalendarToolProbe.run(core, day: day)
       }
+      if mode == "voice-answers" {
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        for index in 0..<3 {
+          try add(
+            index == 0 ? "Physiotherapie" : "Übung \(index)",
+            start: tomorrow.addingTimeInterval(Double(9 + index) * 3600),
+            end: tomorrow.addingTimeInterval(Double(9 + index) * 3600 + 1800),
+            room: index == 0 ? "" : "Raum 105")
+        }
+      }
       if mode == "colors" {
         let next = Calendar.current.date(byAdding: .day, value: 1, to: day)!
         for (index, title) in [

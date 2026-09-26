@@ -1,6 +1,6 @@
 import Foundation
 
-struct CalendarQueryResponse: Decodable {
+struct CalendarQueryResponse: Decodable, Sendable {
   let events: [CalendarEvent]
   let unavailableCalendarIDs: [String]?
   var unavailableEvents: [UnavailableCalendarEvent]? = nil
@@ -15,7 +15,7 @@ struct CalendarQueryResponse: Decodable {
   }
 }
 
-struct UnavailableCalendarEvent: Decodable {
+struct UnavailableCalendarEvent: Decodable, Sendable {
   let id: String
   let start: String
   let end: String

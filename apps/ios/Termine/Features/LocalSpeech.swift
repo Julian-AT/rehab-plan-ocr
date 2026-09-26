@@ -94,6 +94,7 @@ private final class SpeechInput: @unchecked Sendable {
   private var receivedBuffer = false
   private var lastLevelLog = 0.0
   private var configurationRecovery = AudioConfigurationRecovery()
+  var contextualTitles: [String] = []
   #if DEBUG && targetEnvironment(simulator)
     private var previewInputTask: Task<Void, Never>?
   #endif
@@ -342,6 +343,10 @@ private final class SpeechInput: @unchecked Sendable {
     request.shouldReportPartialResults = true
     request.taskHint = .dictation
     request.addsPunctuation = true
+    // Compare with real recordings before enabling vocabulary bias by default.
+    if ProcessInfo.processInfo.arguments.contains("--speech-vocabulary-trial") {
+      request.contextualStrings = CalendarVocabulary.phrases(titles: contextualTitles)
+    }
     finished = false
     recognitionFailed = false
     input?.replace(request, preRoll: preRoll)

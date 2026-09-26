@@ -4,73 +4,75 @@
 
   @MainActor enum CalendarToolProbe {
     static func run(_ core: NativeApplication, day: Date) async throws {
-      let store = CalendarConversation(core: core)
+      let store = CalendarConversation(fetch: { start, end in
+        let iso = ISO8601DateFormatter()
+        return try await core.eventRequest(
+          "queryCalendarEvents",
+          ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
+          as: CalendarQueryResponse.self)
+      })
       let token = UUID()
       await store.begin(token)
-      func object(_ text: String) throws -> [String: Any] {
-        try JSONSerialization.jsonObject(with: Data(text.utf8)) as! [String: Any]
-      }
       func require(_ test: Bool, _ name: String) throws {
         guard test else {
-          throw LocalSpeechError.message("Werkzeugprüfung fehlgeschlagen: " + name)
+          throw LocalSpeechError.message("Kalenderprüfung fehlgeschlagen: " + name)
         }
       }
-      let first = try object(
-        await store.query(date: CalendarConversation.day(day), days: 1, offset: 0, token: token))
-      try require(first["total"] as? Int == 12 && first["has_more"] as? Bool == true, "pagination")
-      let events = first["events"] as! [[String: Any]]
-      try require(events.count == 10 && events[1]["title"] as? String == "Prüftermin 2", "order")
-      let detail = try object(await store.detail(reference: "", ordinal: 2, token: token))
+      let first = try await store.resolve(CalendarQuestion(date: day), token: token)
+      try require(first.total == 12 && first.events.count == 5, "pagination")
+      try require(first.events[1].values.title == "Prüftermin 2", "order")
+      let detail = try await store.resolve(
+        CalendarQuestion(detail: .therapist, ordinal: 2, usesLastPage: true), token: token)
+      try require(detail.text.contains("Anna Beispiel"), "verified therapist")
+      try require(!detail.text.contains(first.events[1].calendar_title), "calendar names omitted")
+      do {
+        _ = try await store.resolve(CalendarQuestion(ordinal: Int.min), token: token)
+        throw LocalSpeechError.message("Invalid ordinal accepted")
+      } catch CalendarUnderstandingError.invalidRequest {}
+      try require(CalendarConversation.civilDate("2026-02-31") == nil, "invalid date")
+      let second = try await store.resolve(
+        CalendarQuestion(offset: 5, usesLastPage: true), token: token)
+      try require(second.events.count == 5 && second.offset == 5, "second page")
+      let third = try await store.resolve(
+        CalendarQuestion(offset: 5, usesLastPage: true), token: token)
+      try require(third.events.count == 2 && third.offset == 10, "last page")
+      for _ in 0..<2 {
+        let exhausted = try await store.resolve(
+          CalendarQuestion(offset: 5, usesLastPage: true), token: token)
+        try require(exhausted.events.isEmpty && exhausted.offset == 12, "stable exhausted page")
+      }
+      let next = try await store.resolve(
+        CalendarQuestion(detail: .next, date: day), token: token, now: day)
+      try require(next.events.first?.values.title == "Prüftermin 1", "next event")
+      let following = try await store.resolve(
+        CalendarQuestion(offset: 5, usesLastPage: true), token: token, now: day)
       try require(
-        detail["therapist"] as? String == "Anna Beispiel"
-          && detail["location"] as? String != nil, "verified detail")
-      try require(
-        detail["calendar_title"] == nil && detail["source"] == nil,
-        "no calendar names in conversational data")
-      let badOrdinal = try object(await store.detail(reference: "", ordinal: Int.min, token: token))
-      try require(badOrdinal["error"] != nil, "invalid ordinal")
-      let invalid = try object(
-        await store.query(date: "2026-02-31", days: 1, offset: 0, token: token))
-      try require(invalid["error"] != nil, "invalid date")
-      let second = try object(
-        await store.query(date: CalendarConversation.day(day), days: 1, offset: 10, token: token))
-      try require(
-        (second["events"] as? [[String: Any]])?.count == 2 && second["has_more"] as? Bool == false,
-        "last page")
-      let reference = events[1]["reference"] as! String
-      let proposal = CalendarProposalTool.Arguments(
-        action: "remove", reference: reference, title: nil, date: nil, time: nil, duration: nil)
-      _ = try await store.propose(proposal, token: token)
-      let draft = await store.takeDraft(token)
-      try require(draft?.event?.values.title == "Prüftermin 2", "proposal reference")
-      let unchanged = try object(
-        await store.query(date: CalendarConversation.day(day), days: 1, offset: 0, token: token))
-      try require(unchanged["total"] as? Int == 12, "no writes without form confirmation")
+        following.offset == 1 && following.events.first?.values.title == "Prüftermin 2",
+        "more after next skips no events")
+      let change = CalendarUnderstanding.Change(title: "Test", date: nil, time: nil, duration: nil)
+      let intent = try change.validated(action: .create)
+      try require(intent.newDate == nil && intent.newTime == nil, "missing values stay missing")
+      let unchanged = try await store.resolve(
+        CalendarQuestion(detail: .count, date: day), token: token)
+      try require(unchanged.total == 12, "no writes while interpreting")
       await store.invalidate()
       do {
-        _ = try await store.query(
-          date: CalendarConversation.day(day), days: 1, offset: 0, token: token)
-        throw LocalSpeechError.message("Stale tool request accepted")
+        _ = try await store.resolve(CalendarQuestion(date: day), token: token)
+        throw LocalSpeechError.message("Stale request accepted")
       } catch is CancellationError {}
       let fresh = UUID()
       await store.begin(fresh)
       await store.invalidate(token)
       await store.clear(token)  // Late cleanup must not stop a newer turn.
       let emptyDay = Calendar.current.date(byAdding: .day, value: 3, to: day)!
-      let empty = try object(
-        await store.query(
-          date: CalendarConversation.day(emptyDay), days: 1, offset: 0, token: fresh))
-      try require(empty["total"] as? Int == 0, "empty day")
-      let forged = CalendarProposalTool.Arguments(
-        action: "remove", reference: "forged", title: nil, date: nil, time: nil, duration: nil)
+      let empty = try await store.resolve(CalendarQuestion(date: emptyDay), token: fresh)
+      try require(empty.total == 0, "empty day")
+      let forged = try await store.resolve(CalendarQuestion(reference: "forged"), token: fresh)
       try require(
-        try object(await store.propose(forged, token: fresh))["error"] != nil, "forged reference")
-      let missing = CalendarProposalTool.Arguments(
-        action: "create", reference: nil, title: "Test", date: nil, time: nil, duration: nil)
-      try require(
-        try object(await store.propose(missing, token: fresh))["missing"] != nil, "missing fields")
+        forged.events.isEmpty && forged.text.contains("Welchen Termin"), "forged reference")
       try Data(
-        "Calendar tools: integration checks passed; no calendar writes from proposals.\n".utf8
+        "Calendar answers: integration checks passed; interpretation never writes calendar events.\n"
+          .utf8
       ).write(to: URL.documentsDirectory.appendingPathComponent("preview-calendar-tools.txt"))
     }
   }
