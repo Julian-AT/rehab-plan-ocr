@@ -3,6 +3,7 @@
 import ast
 import fcntl
 import json
+import math
 import os
 import shutil
 import sys
@@ -55,6 +56,8 @@ class CheckpointRetentionTests(unittest.TestCase):
         environment.write_text("synthetic pinned environment")
         settings = {
             "dataset": str(dataset),
+            "max_epochs": 5,
+            "patience": 5,
             **({"fine_tune_type": "lora"} if kind == "assistant" else {"mode": "full"}),
         }
         self.save(self.run / "settings.json", settings)
@@ -77,7 +80,15 @@ class CheckpointRetentionTests(unittest.TestCase):
             directory.mkdir(parents=True)
             for name in c.FORMATS[kind]["payloads"]:
                 (directory / name).write_bytes(f"invented {name} epoch {epoch}".encode())
-            state = {"epoch": epoch, "best_epoch": min(epoch, 2), "steps": epoch * 10}
+            best_epoch = min(epoch, 2)
+            state = {
+                "epoch": epoch,
+                "best_epoch": best_epoch,
+                "steps": epoch * 10,
+                "best_score": [1, 0.1, 1] if epoch == 1 else [0, 0.0, 0],
+                "stale_epochs": epoch - best_epoch,
+                "stopped": False,
+            }
             record = {
                 "epoch": epoch,
                 "state": state,
@@ -86,7 +97,14 @@ class CheckpointRetentionTests(unittest.TestCase):
             }
             if kind == "ocr":
                 record.update(
-                    training_sha256=artifacts.sha(directory / "training.pdstate"), metrics={}
+                    training_sha256=artifacts.sha(directory / "training.pdstate"),
+                    metrics={
+                        "overall": {
+                            "critical_errors": 0 if epoch == 2 else 1,
+                            "group_mean_error": 0.0 if epoch == 2 else 0.1,
+                            "character_errors": 0 if epoch == 2 else 1,
+                        }
+                    },
                 )
             else:
                 self.save(directory / "adapter_config.json", {"rank": 8})
@@ -104,16 +122,22 @@ class CheckpointRetentionTests(unittest.TestCase):
         return c.plan(self.root, [self.run_name], self.destination)
 
     def actual_resume_reader(self, kind):
-        # Execute the actual reader definition without importing Paddle/MLX or
+        # Execute the actual reader and its validators without importing Paddle/MLX or
         # changing either training implementation's immutable lineage.
         source = c.ROOT / c.FORMATS[kind]["producers"][0]
-        function = next(
-            n
-            for n in ast.parse(source.read_text()).body
-            if isinstance(n, ast.FunctionDef) and n.name == "latest_checkpoint"
-        )
-        namespace = {"json": json, "sha": artifacts.sha}
-        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), "exec"), namespace)
+        sources = {source: {"verify_checkpoint", "latest_checkpoint"}}
+        if kind == "ocr":
+            sources[source].add("best_checkpoint")
+            sources[source.with_name("contract.py")] = {"selection"}
+        namespace = {"json": json, "math": math, "sha": artifacts.sha}
+        for path, names in sources.items():
+            functions = [
+                node
+                for node in ast.parse(path.read_text()).body
+                if isinstance(node, ast.FunctionDef) and node.name in names
+            ]
+            self.assertEqual({node.name for node in functions}, names)
+            exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), "exec"), namespace)
         return namespace["latest_checkpoint"](self.run)
 
     def test_ocr_pruning_preserves_best_latest_receipts_and_actual_resume_reader(self):
