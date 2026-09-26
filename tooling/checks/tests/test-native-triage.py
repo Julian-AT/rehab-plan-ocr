@@ -23,6 +23,10 @@ class TriageTests(unittest.TestCase):
 
             def run(args):
                 calls.append(args)
+                # A fresh downloaded xcresult gets an index even on a read request.
+                working = Path(args[args.index("--path") + 1])
+                self.assertNotEqual(working, bundle)
+                (working / "database.sqlite3").write_bytes(b"derived index")
                 if args[:2] == ["export", "attachments"]:
                     destination = Path(args[-1])
                     (destination / "crash.ips").write_text("synthetic crash")

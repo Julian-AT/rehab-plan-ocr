@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -30,6 +31,56 @@ def command(arguments):
         text=True,
         timeout=120,
     ).stdout
+
+
+def extract(bundle, output, receipt, run):
+    summary = None
+    for kind in ["summary", "tests"]:
+        result = json.loads(run(["get", "test-results", kind, "--path", str(bundle)]))
+        (output / f"{kind}.json").write_text(json.dumps(result, indent=2) + "\n")
+        if kind == "summary":
+            summary = result
+    identifiers = sorted({failure["testIdentifierString"] for failure in summary["testFailures"]})
+    receipt["failed_test_identifiers"] = identifiers
+    for index, identifier in enumerate(identifiers):
+        destination = output / f"failure-{index + 1:03d}"
+        destination.mkdir()
+        result = json.loads(
+            run(
+                [
+                    "get",
+                    "test-results",
+                    "activities",
+                    "--path",
+                    str(bundle),
+                    "--test-id",
+                    identifier,
+                ]
+            )
+        )
+        (destination / "activities.json").write_text(json.dumps(result, indent=2) + "\n")
+        with tempfile.TemporaryDirectory(prefix="reha-triage-") as temporary:
+            exported = Path(temporary)
+            run(
+                [
+                    "export",
+                    "attachments",
+                    "--path",
+                    str(bundle),
+                    "--test-id",
+                    identifier,
+                    "--output-path",
+                    str(exported),
+                ]
+            )
+            for name, identity in inventory(exported).items():
+                source = exported / name
+                if source.suffix.lower() in {".mp4", ".mov"}:
+                    receipt["omitted_videos"][f"{destination.name}/{name}"] = identity
+                    continue
+                target = destination / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
 
 
 def collect(bundle, output, commit, run=command):
@@ -60,55 +111,17 @@ def collect(bundle, output, commit, run=command):
         receipt["source_files"] = inventory(bundle)
         if not receipt["source_files"]:
             raise ValueError("Source result bundle is empty")
-        summary = None
-        for kind in ["summary", "tests"]:
-            result = json.loads(run(["get", "test-results", kind, "--path", str(bundle)]))
-            (output / f"{kind}.json").write_text(json.dumps(result, indent=2) + "\n")
-            if kind == "summary":
-                summary = result
-        identifiers = sorted(
-            {failure["testIdentifierString"] for failure in summary["testFailures"]}
-        )
-        receipt["failed_test_identifiers"] = identifiers
-        for index, identifier in enumerate(identifiers):
-            destination = output / f"failure-{index + 1:03d}"
-            destination.mkdir()
-            result = json.loads(
-                run(
-                    [
-                        "get",
-                        "test-results",
-                        "activities",
-                        "--path",
-                        str(bundle),
-                        "--test-id",
-                        identifier,
-                    ]
-                )
-            )
-            (destination / "activities.json").write_text(json.dumps(result, indent=2) + "\n")
-            with tempfile.TemporaryDirectory(prefix="reha-triage-") as temporary:
-                exported = Path(temporary)
-                run(
-                    [
-                        "export",
-                        "attachments",
-                        "--path",
-                        str(bundle),
-                        "--test-id",
-                        identifier,
-                        "--output-path",
-                        str(exported),
-                    ]
-                )
-                for name, identity in inventory(exported).items():
-                    source = exported / name
-                    if source.suffix.lower() in {".mp4", ".mov"}:
-                        receipt["omitted_videos"][f"{destination.name}/{name}"] = identity
-                        continue
-                    target = destination / name
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(source, target)
+        # xcresulttool may create a database.sqlite3 index even for read commands.
+        # Read a disposable copy; the downloaded bundle remains byte-for-byte intact.
+        with tempfile.TemporaryDirectory(prefix="reha-xcresult-") as temporary:
+            working = Path(temporary) / "result.xcresult"
+            if sys.platform == "darwin":
+                subprocess.run(["cp", "-cRp", str(bundle), str(working)], check=True, timeout=120)
+            else:
+                shutil.copytree(bundle, working)
+            if inventory(working) != receipt["source_files"]:
+                raise ValueError("Result working copy does not match the source")
+            extract(working, output, receipt, run)
         if inventory(bundle) != receipt["source_files"]:
             raise ValueError("Source result bundle changed while collecting evidence")
         receipt["status"] = "collected"
