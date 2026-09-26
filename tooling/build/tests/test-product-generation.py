@@ -191,6 +191,7 @@ class ProductGenerationTests(unittest.TestCase):
             "tooling/checks/test-native-ui.sh",
             "tooling/dev/workspace.py",
             "tooling/dev/artifacts.py",
+            "tooling/dev/llvm_references.py",
             "config/storage/workspace.json",
         ]:
             destination = self.root / name
