@@ -3,6 +3,9 @@ import UniformTypeIdentifiers
 
 @MainActor final class ShareController: UIViewController {
   private let message = UILabel()
+  private let done = UIButton(type: .system)
+  private var transfer: Task<Void, Never>?
+  private var generation = UUID()
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .systemBackground
@@ -11,12 +14,12 @@ import UniformTypeIdentifiers
     message.font = .preferredFont(forTextStyle: .body)
     message.adjustsFontForContentSizeCategory = true
     message.text = "Dateien werden gesichert …"
-    let done = UIButton(type: .system)
     done.configuration = .filled()
     done.configuration?.buttonSize = .large
     done.configuration?.baseForegroundColor = .label
     done.configuration?.baseBackgroundColor = .secondarySystemFill
-    done.setTitle("Fertig", for: .normal)
+    done.setTitle("Abbrechen", for: .normal)
+    done.accessibilityIdentifier = "share-finish"
     done.addTarget(self, action: #selector(finish), for: .touchUpInside)
     let stack = UIStackView(arrangedSubviews: [message, done])
     stack.axis = .vertical
@@ -30,8 +33,9 @@ import UniformTypeIdentifiers
       stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
       done.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
     ])
-    done.isEnabled = false
-    Task {
+    let current = generation
+    transfer = Task { [weak self] in
+      guard let self else { return }
       let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap {
         $0.attachments ?? []
       }
@@ -40,36 +44,57 @@ import UniformTypeIdentifiers
         let generation = try IntakeStaging.gate().ticket()
         var count = 0
         for provider in providers {
+          try Task.checkCancellation()
+          message.text = "Datei \(count + 1) von \(providers.count) wird gesichert …"
           let type =
             provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier)
             ? UTType.pdf.identifier
             : provider.hasItemConformingToTypeIdentifier(UTType.image.identifier)
               ? UTType.image.identifier : UTType.data.identifier
-          _ = try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<IntakeReceipt, Error>) in
-            provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
-              guard let url else {
-                continuation.resume(throwing: error ?? CocoaError(.fileNoSuchFile))
-                return
-              }
-              // Copy inside the provider callback: its URL expires on return.
-              do {
-                continuation.resume(returning: try IntakeStaging.stage(url, generation: generation))
-              } catch { continuation.resume(throwing: error) }
-            }
-          }
+          _ = try await IntakeProviderRequest.receive(
+            start: { callback in
+              provider.loadFileRepresentation(forTypeIdentifier: type, completionHandler: callback)
+            },
+            stage: { url, permit in
+              // Copy before returning: the provider owns and expires this URL.
+              try IntakeStaging.stage(url, generation: generation, permit: permit)
+            })
+          try Task.checkCancellation()
           count += 1
         }
+        guard self.generation == current else { return }
         message.text =
           "\(count) \(count == 1 ? "Datei" : "Dateien") gesichert. Die Erkennung kann in Laßnitzhöhe gestartet werden."
+      } catch is CancellationError {
+        guard self.generation == current else { return }
+        message.text =
+          "Übernahme abgebrochen. Bereits gesicherte Dateien bleiben für Laßnitzhöhe verfügbar."
       } catch {
+        guard self.generation == current else { return }
         message.text =
           "\(error.localizedDescription) Bereits gesicherte Dateien bleiben für Laßnitzhöhe verfügbar."
       }
-      done.isEnabled = true
+      guard self.generation == current else { return }
+      transfer = nil
+      done.setTitle("Fertig", for: .normal)
     }
   }
+  override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    generation = UUID()
+    transfer?.cancel()
+    transfer = nil
+  }
   @objc private func finish() {
+    if let transfer {
+      generation = UUID()
+      self.transfer = nil
+      transfer.cancel()
+      message.text =
+        "Übernahme abgebrochen. Bereits gesicherte Dateien bleiben für Laßnitzhöhe verfügbar."
+      done.setTitle("Fertig", for: .normal)
+      return
+    }
     extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
   }
 }

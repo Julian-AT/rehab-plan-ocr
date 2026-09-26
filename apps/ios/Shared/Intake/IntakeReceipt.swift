@@ -18,6 +18,7 @@ enum IntakeStaging {
     }
   }
   static let group = "group.at.rehakalender.personal.intake"
+  private static let providerMarker = "awaiting-provider-commit"
   static func gate() throws -> IntakeGate {
     guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
     else {
@@ -32,15 +33,22 @@ enum IntakeStaging {
       size.uint64Value <= 40 * 1024 * 1024
     else { throw CocoaError(.fileReadTooLarge) }
   }
-  static func stage(_ url: URL, generation: UUID) throws -> IntakeReceipt {
-    try stage(url, generation: generation, gate: gate())
+  static func stage(_ url: URL, generation: UUID, permit: IntakeWritePermit? = nil) throws
+    -> IntakeReceipt
+  {
+    try stage(url, generation: generation, gate: gate(), permit: permit)
   }
-  static func stage(_ url: URL, generation: UUID, gate: IntakeGate) throws -> IntakeReceipt {
+  static func stage(
+    _ url: URL, generation: UUID, gate: IntakeGate, permit: IntakeWritePermit? = nil
+  ) throws -> IntakeReceipt {
     try gate.write(generation: generation) {
-      try writeReceipt(url, root: gate.root.appendingPathComponent("receipts", isDirectory: true))
+      try writeReceipt(
+        url, root: gate.root.appendingPathComponent("receipts", isDirectory: true), permit: permit)
     }
   }
-  private static func read(_ url: URL, limit: Int) throws -> Data {
+  private static func read(_ url: URL, limit: Int, permit: IntakeWritePermit? = nil) throws -> Data
+  {
+    try permit?.check()
     let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
     guard attributes[.type] as? FileAttributeType == .typeRegular,
       let size = attributes[.size] as? NSNumber, size.uint64Value <= UInt64(limit)
@@ -51,35 +59,57 @@ enum IntakeStaging {
     while let chunk = try file.read(upToCount: min(64 * 1024, limit + 1 - bytes.count)),
       !chunk.isEmpty
     {
+      try permit?.check()
       bytes.append(chunk)
       guard bytes.count <= limit else { throw CocoaError(.fileReadTooLarge) }
     }
     return bytes
   }
-  private static func writeReceipt(_ url: URL, root: URL) throws -> IntakeReceipt {
+  private static func writeReceipt(_ url: URL, root: URL, permit: IntakeWritePermit?) throws
+    -> IntakeReceipt
+  {
     let files = FileManager.default
-    let bytes = try read(url, limit: 40 * 1024 * 1024)
+    let bytes = try read(url, limit: 40 * 1024 * 1024, permit: permit)
     guard !bytes.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
     let receipt = IntakeReceipt(
       id: UUID().uuidString, filename: url.lastPathComponent,
       sha256: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(),
       receivedAt: Date())
+    try permit?.check()
     try files.createDirectory(
       at: root, withIntermediateDirectories: true,
       attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
     var folder = root.appendingPathComponent(receipt.id + ".partial", isDirectory: true)
     try files.createDirectory(at: folder, withIntermediateDirectories: true)
-    var resources = URLResourceValues()
-    resources.isExcludedFromBackup = true
-    try folder.setResourceValues(resources)
-    try JSONEncoder().encode(receipt).write(
-      to: folder.appendingPathComponent("receipt.json"), options: .atomic)
-    let original = folder.appendingPathComponent("original")
-    try bytes.write(to: original, options: .atomic)
-    let file = try FileHandle(forWritingTo: original)
-    try file.synchronize()
-    try file.close()
-    try files.moveItem(at: folder, to: root.appendingPathComponent(receipt.id, isDirectory: true))
+    do {
+      // A process may exit after cancellation but before its worker cleans up.
+      // Such a copy must not be republished by legacy partial-receipt recovery.
+      let marker = folder.appendingPathComponent(providerMarker)
+      if permit != nil { try Data().write(to: marker, options: .atomic) }
+      var resources = URLResourceValues()
+      resources.isExcludedFromBackup = true
+      try folder.setResourceValues(resources)
+      try permit?.check()
+      try JSONEncoder().encode(receipt).write(
+        to: folder.appendingPathComponent("receipt.json"), options: .atomic)
+      let original = folder.appendingPathComponent("original")
+      try bytes.write(to: original, options: .atomic)
+      let file = try FileHandle(forWritingTo: original)
+      try file.synchronize()
+      try file.close()
+      let publish: @Sendable () throws -> Void = { [folder] in
+        let files = FileManager()
+        if permit != nil { try files.removeItem(at: marker) }
+        try files.moveItem(
+          at: folder, to: root.appendingPathComponent(receipt.id, isDirectory: true))
+      }
+      if let permit { try permit.publish(publish) } else { try publish() }
+    } catch {
+      // Cancel removes only this unpublished transfer. Other storage failures
+      // retain their partial receipt for the existing recovery path.
+      if permit?.discardsUnpublishedFiles == true { try? files.removeItem(at: folder) }
+      throw error
+    }
     return receipt
   }
   static func pending() throws -> Pending { try pending(gate: gate()) }
@@ -103,7 +133,8 @@ enum IntakeStaging {
         do {
           guard UUID(uuidString: id) != nil,
             (try files.attributesOfItem(atPath: source.path))[.type] as? FileAttributeType
-              == .typeDirectory
+              == .typeDirectory,
+            !files.fileExists(atPath: source.appendingPathComponent(providerMarker).path)
           else { throw CocoaError(.fileReadCorruptFile) }
           let receipt = try JSONDecoder().decode(
             IntakeReceipt.self,

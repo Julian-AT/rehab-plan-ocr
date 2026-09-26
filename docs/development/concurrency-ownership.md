@@ -140,9 +140,18 @@ Löschlatenz bei blockiertem Dateisystem.
 - **Share-Erweiterung:** Ein MainActor-Task übernimmt höchstens zwölf Provider
   nacheinander. Kopieren findet innerhalb des Dateiprovidercallbacks statt,
   bevor dessen URL ungültig wird; das gemeinsame Erasureticket bleibt wirksam.
-  Ein nie antwortender fremder Provider hat noch keine eigene Appdeadline
-  oder erreichbare Abbruchtaste. Das ist als Robustheitsgrenze zu prüfen;
-  eine Verletzung des Erasurevertrags wurde dadurch nicht festgestellt.
+  Die sichtbare Abbruchtaste und eine 30-Sekunden-Frist je Provider beenden
+  die eigene Continuation unabhängig vom Anbieter. `IntakeProviderRequest`
+  besitzt einen abbrechbaren Timer-Task und nimmt höchstens einen Callback an.
+  Beide neuen Zustände sind compilergeprüft Sendable; Locks schützen Resultat
+  und Schreibzulassung. `IntakeWritePermit` serialisiert Widerruf und finale
+  Veröffentlichung. Progress-Cancel läuft außerhalb der UI, da sein fremder
+  Handler ebenfalls hängen kann. Alte Ansichtsantworten haben eine abgelaufene
+  Generation. Abgebrochene Kopien entfernen nur ihren eigenen unveröffentlichten
+  Ordner; veröffentlichte Receipts bleiben erhalten. Neue Providerkopien tragen
+  bis zum Commit einen Marker, damit Recovery nach Prozessende keine abgebrochene
+  Kopie veröffentlicht. Markierte Reste bleiben als offener Nachweis erhalten.
+  Laufende Systemdateioperationen sind weiterhin nicht hart unterbrechbar.
 
 ## Synchrone Übergänge und native Lebensdauer
 
@@ -182,7 +191,7 @@ featuregesteuert und gehört nicht zum öffentlichen App-Release.
 | P2 | Ein altes `PlanModel.load` wartet in `planCalendar`, während ein neueres Laden einschließlich Vorschlag fertig wird. | Behoben: nach jedem Await Generationsprüfung und vollständige lokale Snapshotbildung. Die Probe prüft zusätzlich alte Fehler, Cancel und Inhaltserhalt. |
 | P2 | In der geprüften FFI-Version wird ein Import vor der ersten oder zweiten Cancelprüfung abgebrochen oder scheitert vor der abschließenden Cleanupzeile. | `application.rs::cancel_job` trägt die ID in `HostBridge.cancelled` ein; frühe Returns aus `import_photo_with_debug` erreichen `remove` nicht. Wiederholt neue IDs lassen diese Menge wachsen. Zur separaten Lifecycle-Korrektur gemeldet; kein TTL als Ersatz für Widerruf. |
 | Offen, kein zusätzlicher bestätigter Fehler | Ein Interpretationsanbieter ignoriert Cancel auch nach Ablauf. | Ergebnislieferung ist gesperrt; der Router besitzt keine globale Zulassungsgrenze für solche Restarbeit. LocalAssistant prüft nativ Deadline/Cancel. Apples tatsächlicher Arbeitsstopp und Ressourcenverbrauch benötigen Gerätemessung. |
-| Offen, Robustheitsnachweis | Fremder Share-Dateiprovider antwortet dauerhaft nicht. | Erasureticket schützt spätere Dateiannahme; UI-Abbruch und Frist dieses Providers sind noch nicht nachgewiesen. |
+| P2 | Fremder Share-Dateiprovider antwortet dauerhaft nicht; zuvor blieb die einzige Schaltfläche deaktiviert. | Behoben durch sichtbaren Abbruch und eigene Deadline. Kontrollierte Probe prüft fehlende, späte, doppelte und synchrone Antworten, blockierte fremde Cancelhandler, atomaren Widerruf/Commit, Copy-Abbruch, erhaltene Originale und Erasure. |
 
 Fokussierte Hostproben prüfen Zustandsautomaten und kontrollierte Rennen; sie
 ersetzen keine Gerätetests bei Audio-Routenwechsel, Hintergrund, Sperren,
@@ -196,3 +205,12 @@ Detail-Ladegrenzen, zwei Seitenlisten-Grenzen, verspätete Fehler, Abbruch und
 Erhalt des vorherigen Inhalts. Swift-Formatprüfung, ShellCheck, shfmt und
 Diffprüfung bestanden ebenfalls. Die Sitzungs-Lifecycle-Korrektur liegt in
 `6fd38ec`; die Gesamt-App- und Geräteabnahme erfolgt auf dem gemeinsamen Stand.
+
+Für den Share-Fix bestehen `test-intake-provider.sh`, `test-intake-erasure.sh`
+und `test-intake-size.sh` mit synthetischen temporären Dateien. Bestehende
+Legacy-Receipt-Wiederherstellung, Kollisionen, Größenlimits und geschützte
+beschädigte Zwischenstände bleiben durch die bisherigen Proben abgedeckt.
+Der tatsächliche ShareController samt Intakequellen besteht außerdem den
+Swift-6-Typecheck mit vollständiger Nebenläufigkeitsprüfung,
+`-application-extension` und iOS-26-Simulator-SDK. Ein Appbuild oder eine
+Geräteinstallation wurde für diesen Slice nicht vorgenommen.
