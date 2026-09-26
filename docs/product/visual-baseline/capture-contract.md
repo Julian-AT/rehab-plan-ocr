@@ -232,3 +232,22 @@ Der Katalog enthält die einzelnen Originalhashes, der alte Bericht die jeweilig
 Kandidatenhashes. Originalbilder, Berichte und Result-Bundles wurden für diese
 Diagnose ausschließlich gelesen. Vollständige aktuelle visuelle Abnahme und
 Gerätefreigabe bleiben offen.
+
+## Erneuter vollständiger Lauf am 26. September 2026
+
+Die Auswertung `visual-baseline-20260926-s20-001` verwendet das Ergebnisbundle
+`ui-complete-20260926-s20-001` an `a886a70`: alle 70 angeforderten Tests ausgeführt,
+66 bestanden, vier fehlgeschlagen. Die drei Aufnahmetests selbst bestehen.
+Der strenge Bildvergleich bleibt **fehlgeschlagen: 16/22**; sein übergeordneter
+Teststatus ist ebenfalls fehlgeschlagen.
+
+Die vier Indikatorabweichungen betreffen beide großen Index-2-Bilder mit je
+3.745 Pixeln und beide unteren Normallisten mit je 7.268 Pixeln. Alle anderen
+Pixel dieser Bilder unterhalb der Systemstatusleiste sind exakt. Beide großen
+Index-4-Bilder stimmen diesmal vollständig überein; diese Schwankung bestätigt
+die weiterhin unzureichende Reproduzierbarkeit des flüchtigen Systemindikators.
+Beide Tagesabschlüsse behalten 1.570/87 abweichende Pixel mit maximaler
+Kanalabweichung 4/1 und unverändertem Zentralinhalt. Referenzkatalog, Bilder und
+Vergleichsschwellen wurden nicht geändert. Der separate Nachprüfbeleg liegt unter
+`visual-final-suite-review-20260926-s20-001/comparison-verification.json`, SHA-256
+`b924c32b153139bd98262da02967eb81734319b72dd9acb4bace25ccdb28a410`.
