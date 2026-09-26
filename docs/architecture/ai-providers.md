@@ -13,7 +13,7 @@ Calendar queries, event selection and mutation confirmation remain downstream.
 | Identity | Provider name, observable model identity and output schema version |
 | Capabilities | Calendar interpretation, mutation proposals, general conversation, fixed app help |
 | Availability | Available or a concrete local capability/setup reason |
-| Request | Current text, calendar context, up to six historical turns, reference time and monotonic deadline |
+| Request | Current text, calendar context, up to six historical turns, captured civil calendar/reference time and monotonic deadline |
 | Result | Typed action/query/change/reply, provider identity and generation duration |
 | Cancellation | Task cancellation ends delivery; late native results are rejected |
 
@@ -23,6 +23,12 @@ event references; it carries no model-invented event facts. Typed changes contai
 only requested fields. Every provider's output passes structural and capability
 validation. Live calendar visibility/identity checks and visible confirmation are
 still mandatory before mutations.
+
+Context generation and interpretation share the same captured instant/timezone.
+Pending changes retain that timezone through slot collection, date pickers and
+confirmation preview construction. The custom prompt rejects context that claims
+a different current day or timezone; a later device-zone change cannot reinterpret
+an already captured civil date.
 
 Exact complete calendar patterns work when Apple Intelligence is unavailable.
 The Apple provider distinguishes ineligible hardware, disabled Intelligence and

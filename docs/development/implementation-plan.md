@@ -31,41 +31,49 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Aggregate retention including PDF originals; no expired-page resurrection.
 - [x] Correct Today deep links.
 - [x] Unreadable day boundaries and neighboring-column reread contamination.
-- [ ] Preserve field uncertainty, blanks, missing/cropped/contradictory evidence.
-- [ ] Invalid spoken dates, corrections, negations and partial changes.
-- [ ] Explicit conversation states and older-iOS current-request recovery.
+- [x] Preserve field uncertainty, blanks, missing/cropped/contradictory evidence in extraction v10.
+- [x] Invalid spoken dates, corrections, negations and partial-change regressions.
+- [x] Explicit conversation states and current-request-preserving recovery implementation.
+- [ ] Actual older-iOS inference and complete conversation/UI acceptance.
 - [ ] Regression tests, simulator appearance and persistent-data verification.
 
 ### 2. Clean platform and responsive interactions
 
 - [x] Mechanical moves to apps/packages/ml/tooling/config/docs/.github.
-- [ ] Consumer inventory, documentation consolidation and verified private migration.
+- [x] Consumer inventory, documentation consolidation and verified private migration.
 - [x] Separate make targets for restore/generate/convert/build/test/package.
-- [ ] Read-only normal-build manifest verification and identity-based caches.
+- [x] Read-only normal-build manifest verification and identity-based caches.
 - [x] Independent locked training and app-tooling environments.
-- [ ] Discoverable isolated tests and portable/native/simulator/policy/package CI.
+- [x] Discoverable isolated tests and portable/native/simulator/policy/package CI definitions.
+- [ ] Successful hosted execution of all required jobs on the candidate revision.
 - [x] First content independent of reminder reconciliation; coalesced refreshes.
 - [x] Typed timestamp projections, indexed archive summaries and pagination.
-- [ ] Background image/audio processing, bounded buffers and waveform updates.
+- [x] Background image/audio processing, bounded buffers and waveform updates.
 - [ ] Paired measurements for latency, memory, energy, thermal and session reuse.
 
 ### 3. Custom OCR
 
 - [ ] Verified references, reviewer provenance, crop approval and privacy masks.
 - [ ] Freeze source-related development groups before augmentation.
-- [ ] Collection/consent guide and local intake/label validation.
+- [x] Collection/consent drafts and local intake/label validation tooling.
+- [ ] Complete responsible-party details, consent review and unseen-data collection.
 - [x] Geometry-aware augmentation and pixel-checked reproducible synthetic plans.
-- [ ] Matching PP-OCRv6 Small training/export/runtime smoke test.
-- [ ] Frozen-backbone versus full fine-tuning, resumable lineage and validation stop.
-- [ ] Grouped critical-field/correction evaluation; ONNX parity before quantization.
-- [ ] Evaluated custom checkpoint, deployment artifact and model card.
+- [x] Matching PP-OCRv6 Small checkpoint, training/export/desktop-runtime smoke test.
+- [x] Frozen-backbone versus full fine-tuning, resumable lineage and validation stop.
+- [x] ONNX parity comparison before quantization (frozen passes; full adaptation rejected).
+- [x] Experimental custom OCR checkpoint, deployment artifact and model card.
+- [ ] Grouped real-photo critical-field/correction evaluation and shipping iOS route.
+- [ ] Qualified OCR improvement against the corrected pretrained baseline.
 
 ### 4. Assistant, voice and qualification
 
 - [x] Qwen3-0.6B LoRA/fusion/export desktop smoke test (quality gate failed).
 - [ ] Checked German structured-intent data and independent dialogue families.
-- [ ] Common provider contract; compare rules/Apple/untuned/tuned models.
-- [ ] Evaluated custom checkpoint and supported offline capability fallbacks.
+- [x] Common provider contract, typed output and isolated custom-model app integration.
+- [x] Evaluated custom assistant checkpoint/model card (quality and GGUF parity rejected).
+- [x] Offline complete-rule fallback with unavailable assets/providers.
+- [ ] Paired rules/Apple/untuned/tuned comparison through the shipping interface.
+- [ ] Qualified custom assistant and complete offline capability-tier acceptance.
 - [ ] Real German speech, natural-pause and local-voice listening comparisons.
 - [ ] Resolve eSpeak-NG distribution dependency before public packaging.
 - [ ] Device performance, permission/offline/Bluetooth/background/stability tests.
@@ -75,6 +83,10 @@ Both custom models must be trained and evaluated before the project is complete.
 - [ ] Internal acceptance and small TestFlight pilot before public submission.
 
 ## External prerequisites
+
+Checked implementation items above identify completed code/tooling evidence, not
+whole-milestone acceptance. Open quality, UI, physical and human-review gates are
+kept separate; experimental artifacts do not count as promoted models.
 
 Human approval of transcription/crops cannot be manufactured by training tools.
 The [German collection guide](../product/research/collection-guide.md) and a consent
