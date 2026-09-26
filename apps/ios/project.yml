@@ -27,8 +27,10 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: Termine
-      - path: SharedIntake
+      - path: App
+      - path: Features
+      - path: Shared
+      - path: Tests/Support
       - path: ../../models/private/small
         name: models
         type: folder
@@ -61,7 +63,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
-      path: Termine/Info.plist
+      path: App/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -87,15 +89,15 @@ targets:
         NSCameraUsageDescription: Terminpläne fotografieren und auf diesem Gerät erkennen.
         NSCalendarsFullAccessUsageDescription: Bestätigte Termine speichern und mit vorhandenen Kalendereinträgen abgleichen.
     entitlements:
-      path: Termine/Termine.entitlements
+      path: App/Termine.entitlements
       properties:
         com.apple.security.application-groups: [group.at.rehakalender.personal, group.at.rehakalender.personal.intake]
   RehaShare:
     type: app-extension
     platform: iOS
     sources:
-      - path: ShareExtension
-      - path: SharedIntake
+      - path: Extensions/Share
+      - path: Shared/Intake
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.rehakalender.personal.share
@@ -103,7 +105,7 @@ targets:
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:
-      path: ShareExtension/Info.plist
+      path: Extensions/Share/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -116,14 +118,14 @@ targets:
               NSExtensionActivationSupportsImageWithMaxCount: 12
               NSExtensionActivationSupportsFileWithMaxCount: 12
     entitlements:
-      path: ShareExtension/Share.entitlements
+      path: Extensions/Share/Share.entitlements
       properties:
         com.apple.security.application-groups: [group.at.rehakalender.personal.intake]
   RehaWidgets:
     type: app-extension
     platform: iOS
     sources:
-      - path: Widgets
+      - path: Extensions/Widgets
       - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     settings:
       base:
@@ -133,7 +135,7 @@ targets:
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:
-      path: Extensions/Widgets-Info.plist
+      path: Extensions/Widgets/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -141,14 +143,14 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
-      path: Extensions/Widgets.entitlements
+      path: Extensions/Widgets/Widgets.entitlements
       properties:
         com.apple.security.application-groups: [group.at.rehakalender.personal]
   RehaNotificationContent:
     type: app-extension
     platform: iOS
     sources:
-      - path: NotificationContent
+      - path: Extensions/NotificationContent
       - path: ../../packages/apple/AppleServices/Sources/AppleServices/AgendaShared
     dependencies:
       - sdk: UserNotificationsUI.framework
@@ -161,7 +163,7 @@ targets:
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:
-      path: Extensions/Notification-Info.plist
+      path: Extensions/NotificationContent/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -175,13 +177,13 @@ targets:
             UNNotificationExtensionInitialContentSizeRatio: 0.7
             UNNotificationExtensionDefaultContentHidden: true
     entitlements:
-      path: Extensions/Notification.entitlements
+      path: Extensions/NotificationContent/Notification.entitlements
       properties:
         com.apple.security.application-groups: [group.at.rehakalender.personal]
   TermineUITests:
     type: bundle.ui-testing
     platform: iOS
-    sources: [UITests]
+    sources: [Tests/UI]
     dependencies:
       - target: Termine
     settings:

@@ -12,7 +12,7 @@ omitted so the emblem remains legible at small sizes.
   actual transparent corners; the iOS catalog has fully opaque backgrounds.
 
 The native iPhone catalog is committed at
-`apps/ios/Termine/Resources/Assets.xcassets/AppIcon.appiconset`.
+`apps/ios/App/Resources/Assets.xcassets/AppIcon.appiconset`.
 The reviewed masters and their provenance remain here independently of build tooling.
 The macOS images are historical artwork; no desktop app is built.
 

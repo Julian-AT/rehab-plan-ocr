@@ -33,10 +33,10 @@ app="$staging/Laßnitzhöhe.app"
 # disposable local copy, as the private packaging verifier does.
 cp -cRp apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app" || ditto apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app "$app"
 xattr -cr "$app"
-codesign --force --sign - --entitlements apps/ios/Extensions/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
-codesign --force --sign - --entitlements apps/ios/Extensions/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
-codesign --force --sign - --entitlements apps/ios/ShareExtension/Share.entitlements "$app/PlugIns/RehaShare.appex"
-codesign --force --sign - --entitlements apps/ios/Termine/Termine.entitlements "$app"
+codesign --force --sign - --entitlements apps/ios/Extensions/Widgets/Widgets.entitlements "$app/PlugIns/RehaWidgets.appex"
+codesign --force --sign - --entitlements apps/ios/Extensions/NotificationContent/Notification.entitlements "$app/PlugIns/RehaNotificationContent.appex"
+codesign --force --sign - --entitlements apps/ios/Extensions/Share/Share.entitlements "$app/PlugIns/RehaShare.appex"
+codesign --force --sign - --entitlements apps/ios/App/Termine.entitlements "$app"
 if ! xcrun simctl install "$simulator" "$app"; then
   # A freshly booted simulator can still be initializing its icon services.
   sleep 3

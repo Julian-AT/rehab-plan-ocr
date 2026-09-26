@@ -59,7 +59,7 @@ sowie alle Einzelmessungen stehen in
 
 ```sh
 swiftc -swift-version 6 -strict-concurrency=complete -O \
-  apps/ios/Termine/Features/VoiceRules.swift \
+  apps/ios/Features/Conversation/VoiceRules.swift \
   experiments/voice-rules/RulesBenchmark.swift \
   -o /tmp/reha-voice-rules-benchmark
 /tmp/reha-voice-rules-benchmark > /tmp/reha-voice-rules-result.json

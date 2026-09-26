@@ -59,10 +59,10 @@ ein nicht zugänglicher Kalender verhindert diesen Löschvorgang.
 
 ## Native Ansichten und Projektneuerzeugung
 
-- `apps/ios/Widgets/AgendaWidget.swift`: kleine/mittlere Homescreen- und rechteckige
+- `apps/ios/Extensions/Widgets/AgendaWidget.swift`: kleine/mittlere Homescreen- und rechteckige
   Sperrbildschirmansicht. Kalenderarithmetik bestimmt Tageswechsel einschließlich
   Sommerzeit. Vorberechnete Einträge berücksichtigen Beginn, Ende und Veraltung.
-- `apps/ios/NotificationContent/NotificationViewController.swift`: gemeinsame SwiftUI-
+- `apps/ios/Extensions/NotificationContent/NotificationViewController.swift`: gemeinsame SwiftUI-
   Terminkarte in der aufgeklappten Systemmitteilung, mit Systemaktionen zum Öffnen
   und Schlummern. `UserNotificationsUI.framework` ist ausdrücklich im Target
   verlinkt; ein Swift-Protokollimport allein lädt den Erweiterungskontext nicht.
