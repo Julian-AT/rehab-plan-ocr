@@ -163,6 +163,14 @@ is pinned to its verified v7.0.1 commit. No app binaries, model assets or privat
 working storage are selected. Local checks parse the workflow and actual emitted
 bundle JSON; successful hosted artifact capture remains to be observed.
 
+The monitor also lists retained artifacts and downloads only the expected native
+evidence for a completed, explicitly identified commit/run/attempt. Expired,
+mismatched or ambiguous artifacts and existing destinations fail. A local receipt
+retains the remote metadata and hashes every extracted file; interrupted downloads
+stay marked incomplete. The service's archive digest is recorded but not claimed
+as independently verified. Eleven isolated monitor tests pass. Actual hosted
+evidence retrieval remains pending until a run reaches the artifact-upload step.
+
 The second [hosted run](archive:github/run-35284918453)
 at `4b765d0` again passes Linux and confirms the Apple restore fix. Apple then
 passes Rust, all tool tests, ICS and the first 21 Swift probes, stopping at a legacy

@@ -61,6 +61,10 @@ Das optionale CI-Werkzeug benötigt Node.js ab Version 22 und eine angemeldete
 GitHub CLI; `node tooling/dev/ci_monitor.cjs --help` beschreibt die Befehle.
 Ein manueller CI-Start erfordert einen ausdrücklich genannten Remote-Branch und
 dessen vollständigen Commit-Hash. Er lädt keine lokalen Änderungen hoch.
+`artifacts <Laufnummer>` zeigt aufbewahrte CI-Ergebnisse. `evidence <Laufnummer>
+--commit <vollständiger Hash> --output <neues Verzeichnis>` lädt die synthetischen
+nativen Prüfergebnisse des abgeschlossenen Laufversuchs und protokolliert die
+Dateiprüfsummen. Vorhandene Zielverzeichnisse werden nicht überschrieben.
 
 `make format` formatiert eigenen Swift-, Rust-, Python- und Shell-Code. Generierte UniFFI-Dateien
 und eingebundene Fremdquellen sind ausgenommen. Die CI verwendet dieselben Befehle aus
