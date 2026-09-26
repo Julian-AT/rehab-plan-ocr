@@ -12,9 +12,17 @@ import XCTest
         XCTAssertTrue(app.tabBars.buttons["Termine"].waitForExistence(timeout: 15))
     }
     private func openPlan(_ id: String) {
-        app.tabBars.buttons["Archiv"].tap()
+        let archive = app.tabBars.buttons["Archiv"]
+        if !archive.isSelected { archive.tap() }
+        if app.navigationBars["Plan"].exists {
+            app.navigationBars["Plan"].buttons["BackButton"].tap()
+        }
+        XCTAssertTrue(app.navigationBars["Archiv"].waitForExistence(timeout: 5))
         let plan = app.buttons[id]
-        for _ in 0..<8 where !plan.isHittable { app.swipeUp() }
+        for _ in 0..<8 {
+            if plan.exists && plan.isHittable { break }
+            app.swipeUp()
+        }
         XCTAssertTrue(plan.waitForExistence(timeout: 10)); plan.tap()
         XCTAssertTrue(app.navigationBars["Plan"].waitForExistence(timeout: 10))
     }

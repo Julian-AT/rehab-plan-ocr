@@ -134,6 +134,9 @@ import UIKit
         back("Speicherziel"); back("Kalender")
         app.swipeUp(); app.buttons["Diagnose"].tap()
         XCTAssertTrue(app.navigationBars["Diagnose"].waitForExistence(timeout: 5)); back("Diagnose")
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Version 0.3.0"].isHittable)
+        capture("30-mehr-version")
         app.terminate()
         app.launchArguments = ["-AppleLanguages", "(de)", "-AppleLocale", "de_AT"]
         app.launch()
