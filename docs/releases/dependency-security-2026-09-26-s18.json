@@ -1,0 +1,473 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-26T12:08:00Z",
+  "scope": "Point-in-time source/dependency review; not final binary/device or public-release clearance",
+  "inputs": {
+    "Cargo.lock": "d0713380817e7c094194b1605bc3b94960199f2752d4d22bd8eaaff03ef0d827",
+    "packages/rust/reha-core/Cargo.toml": "04bc871fcd873443e3a5197d0b779bab5fbda194f586559fe31a8cdfbd905f9e",
+    "packages/rust/reha-ffi/Cargo.toml": "56bc3fa650fa7dff6dfa47a0662a172ba8618595784c135de15bf49b9d81f53e",
+    "docs/third-party/runtime-inventory.json": "282febcf04b867c40786a1965b9a29f7c8b0fd454033336ed89ae267f5031ef0",
+    "apps/ios/project.yml": "43e8cebe6699b050d12ed202bc0ecf8db5ea933bd368fbb5cd3d794ea10f25bc",
+    "apps/ios/App/TermineApp.swift": "2743c2bcbb7ef06a39ab8c5558aa14e460745c6ed45cbb308c95433c29d4e94e",
+    "packages/rust/reha-core/src/ocr.rs": "a2ddc60e5bc09b339e6b61f11fd1f07b2648eb868d162a271a20aa6e32ebfdd0",
+    "packages/rust/reha-core/src/pipeline.rs": "295f8be0d29e827f7a819a3f66ea16bcd0259d618b011f1d6a7831c4d57e699a",
+    "packages/rust/reha-core/src/store/migrations.rs": "a5029ac1659b2f72d05d9edc1e79bc9e7bdce877dcaf814bb2843348aa33ccc1",
+    "apps/ios/Features/Conversation/InputAudio.swift": "3f530b5cf94da65bf5cb0e24b371f6ff761bd380937782d049ef93415daee5c2",
+    "packages/apple/VoiceActivity/README.md": "6c52eabfbf5715a4ef3cb26327d961f007a9e73a57f2201629dff011d1a687b5",
+    "packages/apple/AppleServices/Package.swift": "81a44f78661a223ee1b07ee6cc31146491d39fd91d1d39e05def57884d1f36d3",
+    "packages/apple/RehaCore/Package.swift": "4969e15b95d43aec6ef79d6c4943ff509d2a597f9aa52d4373028cb8201ff250",
+    "packages/apple/VoiceActivity/Package.swift": "e7c2c1eeb3dd7669cb6183f40972bc98e0499cbcb5d1a0fbc4686541d7182bfe",
+    "ml/registry/runtime/ios-runtime.lock.json": "6afb979e6d940c048fb1a93a48b17b45af7a21a97eb6cd50670ce53b70510c56",
+    "ml/registry/runtime/small.lock.json": "372a318a9c09a7bef55e8832dcd96359436317828acfefca0f407e7c5bf87ecd"
+  },
+  "original_inputs": {
+    "Cargo.lock": "d9c63ed15e9fdfb64a9873da9f4a0619ea78ed22b8dd59c96fd74a0ef71a8fc7",
+    "packages/rust/reha-core/Cargo.toml": "346b1be202d4f30b3c774b28444ce94151d99160ff7ec7742990d086b1799ccf",
+    "docs/third-party/runtime-inventory.json": "f4df040d4979e96528c91f3b6bb1b442fbb1ee0d82002b27bc92e79c670505ad"
+  },
+  "rustsec": {
+    "database_url": "https://github.com/RustSec/advisory-db",
+    "commit": "2b34578f89884736e0fcbd42f7ba8d6b10b4a0ce",
+    "commit_time": "2026-09-26T12:08:00Z",
+    "worktree_clean": true,
+    "tool_version": "cargo-audit 0.22.2",
+    "tool_sha256": "51821c337d0e7801ffee30234942276ddaa7c5fb66ad74b5765cc69a19597add",
+    "before": {
+      "dependency_count": 232,
+      "advisory_count": 1251,
+      "vulnerabilities": {
+        "found": false,
+        "count": 0,
+        "list": []
+      },
+      "warnings": [
+        {
+          "kind": "unmaintained",
+          "package": "paste",
+          "version": "1.0.15",
+          "advisory": "RUSTSEC-2024-0436",
+          "url": "https://github.com/dtolnay/paste"
+        },
+        {
+          "kind": "unmaintained",
+          "package": "ttf-parser",
+          "version": "0.25.1",
+          "advisory": "RUSTSEC-2026-0192",
+          "url": "https://github.com/harfbuzz/ttf-parser/issues/217"
+        }
+      ]
+    },
+    "after": {
+      "dependency_count": 231,
+      "advisory_count": 1251,
+      "vulnerabilities": {
+        "found": false,
+        "count": 0,
+        "list": []
+      },
+      "warnings": [
+        {
+          "kind": "unmaintained",
+          "package": "paste",
+          "version": "1.0.15",
+          "advisory": "RUSTSEC-2024-0436",
+          "url": "https://github.com/dtolnay/paste"
+        },
+        {
+          "kind": "unmaintained",
+          "package": "ttf-parser",
+          "version": "0.25.1",
+          "advisory": "RUSTSEC-2026-0192",
+          "url": "https://github.com/harfbuzz/ttf-parser/issues/217"
+        }
+      ]
+    },
+    "after_raw_sha256": "3c65f9e81f53dd88e6c5fb37a91272a80b5072c471f77c7a46bedb963dc98f3b",
+    "after_raw_file": "cargo-audit-after.json",
+    "target_scope": {
+      "target": "aarch64-apple-ios",
+      "root_package": "reha-ffi",
+      "features": [
+        "onnx"
+      ],
+      "target_dependencies": 108,
+      "build_dependencies": 27
+    }
+  },
+  "sqlite": {
+    "before": {
+      "rusqlite": "0.37.0",
+      "libsqlite3-sys": "0.35.0",
+      "sqlite": "3.50.2"
+    },
+    "after": {
+      "rusqlite": "0.40.1",
+      "libsqlite3-sys": "0.38.1",
+      "sqlite": "3.53.2",
+      "source_id": "2026-06-03 19:12:13 d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f99d8e2ee9cac695fd6fcdf1a24"
+    },
+    "amalgamation_sha256": "0a409f1633283fa31a9126b11fbfd64a1991c5d30defad07e5745d4667f5e23d",
+    "header_sha256": "9e69a1353a4288450b0d5239ede11fc7f1f4c8e5eb07491fc8317eacb5b7de7e",
+    "host_tests": {
+      "passed": 206,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "838861b73ed1b9ec1fcf8134339eb04c8b355e536fd113ab1fe53557386a5875"
+    },
+    "ios_check": {
+      "target": "aarch64-apple-ios",
+      "minimum_ios": "26.0",
+      "features": [
+        "onnx"
+      ],
+      "jobs": 1,
+      "exit_code": 0,
+      "log_sha256": "29045fbb55df178212b16043ce98d8c768c328dda52794bbb70afa6e316dfb68"
+    }
+  },
+  "retrievals": [
+    {
+      "name": "ort-advisories",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/security-advisories?per_page=100",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "bytes": 5,
+      "headers_sha256": "072254964cb9fc82b94ab1c7a56617d772776c7ad1fda286e7fd740168236145",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "vad-advisories",
+      "url": "https://api.github.com/repos/dpirch/libfvad/security-advisories?per_page=100",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "bytes": 5,
+      "headers_sha256": "1d257d634522087c5f8737953fc8616e0a538cce253f0eb8a1806bb8fb9e79b2",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "ort-release",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/releases/tags/v1.30.0",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "cc5a60b0f5254a5b7e27ddec3d98289d938c8b712e5425704ed35f074d7465a7",
+      "bytes": 50012,
+      "headers_sha256": "2954be15b3f09239e51d2f3b3a9e3813a36a1334af7532a824e30be2caa3af24",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "ort-deps",
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.22.0/cmake/deps.txt",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "468529b3ae2d75569da5002aa21d79f3e0a673ba12e5742ec77cd12fb7309510",
+      "bytes": 6961,
+      "headers_sha256": "c75f6c2d66d3a5f16fcacfe4e38e2c220ffa70b14ecce35eb2e6c31b0a48bf3e",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "vad-head",
+      "url": "https://api.github.com/repos/dpirch/libfvad/commits/master",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "759d5e0b0bad02cdd12b2f7a351a976c25e04ab33cd4af2a0882b95395f2b923",
+      "bytes": 5897,
+      "headers_sha256": "17a7a103f8c41b4844303c546af606a8948272c2047561aca7ec572d324656c0",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "sqlite-cves",
+      "url": "https://www.sqlite.org/cves.html",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "0ef51a811fdc3dcfcd86692736190db83ef78073892fbe2d89029cbc57ade3a5",
+      "bytes": 40802,
+      "headers_sha256": "227a9f5d0f98a8992598f7c0cb803d6548901a5ed7c6b73fadc487b0e386ebe6",
+      "response_status_lines": [
+        "HTTP/1.1 200 OK"
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "rusqlite-crates",
+      "url": "https://crates.io/api/v1/crates/rusqlite",
+      "error": "curl: (56) The requested URL returned error: 403\n",
+      "response_status_lines": [
+        "HTTP/2 403 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "sqlite-sys-crates",
+      "url": "https://crates.io/api/v1/crates/libsqlite3-sys",
+      "error": "curl: (56) The requested URL returned error: 403\n",
+      "response_status_lines": [
+        "HTTP/2 403 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "rusqlite-changelog",
+      "url": "https://raw.githubusercontent.com/rusqlite/rusqlite/master/Changelog.md",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "26ed9f08b369f67b6a482840367c4ec9ff9603ac4bdb077217efc4902f2faeec",
+      "bytes": 16086,
+      "headers_sha256": "01a9aa849955be6f1531d73ece6ca5fa366804617a0a83ddf0f40c67420352e2",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "protobuf-advisories",
+      "url": "https://api.github.com/repos/protocolbuffers/protobuf/security-advisories?per_page=100",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "f77fc688b29be3bcae8768f813edefdbdaf4aa9d98fdb8fd6b25c302658a85df",
+      "bytes": 33255,
+      "headers_sha256": "2588dc7a051b21c2f30a92a66ebcfc5be47ed72b981c2e3ec89f735c75c13610",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "onnx-advisories",
+      "url": "https://api.github.com/repos/onnx/onnx/security-advisories?per_page=100",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "03415ccd253725bd60dfb11c03feabb6860d3488ea6467fb9c2fb2b4a28c21ac",
+      "bytes": 62883,
+      "headers_sha256": "0db80048b849b4e74bc3d801c6399a219c19f91db6e9545d65b69de71876d9f7",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "flatbuffers-advisories",
+      "url": "https://api.github.com/repos/google/flatbuffers/security-advisories?per_page=100",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "bytes": 5,
+      "headers_sha256": "127c40bf6a0afa49a7fa5831ccba141593452c381f4dd4397e78fc63b3e57ed2",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "rusqlite-0.38.0",
+      "url": "https://api.github.com/repos/rusqlite/rusqlite/releases/tags/v0.38.0",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "3a16bda66bf5b5fcaefcddaf17a253ae15e8456516139ea3a6f3256c544ce2d7",
+      "bytes": 3200
+    },
+    {
+      "name": "rusqlite-0.39.0",
+      "url": "https://api.github.com/repos/rusqlite/rusqlite/releases/tags/v0.39.0",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "730fef0c45f7e5ce96a1ee3bf38c4b22b47fd11a36d37a9a58a998b54cdf7be8",
+      "bytes": 3084
+    },
+    {
+      "name": "rusqlite-0.40.0",
+      "url": "https://api.github.com/repos/rusqlite/rusqlite/releases/tags/v0.40.0",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "dd423b798a2e97f2dfdc7941cff6ee7ca5fb49f7ad178b76af4e2e143b75b8ca",
+      "bytes": 3209
+    },
+    {
+      "name": "rusqlite-0.40.1",
+      "url": "https://api.github.com/repos/rusqlite/rusqlite/releases/tags/v0.40.1",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "79ad9f0e07e5abbc9565711c56a1409af55648fbb10140e184b0de1ce0a20986",
+      "bytes": 2431
+    },
+    {
+      "name": "rusqlite-0.40.2",
+      "url": "https://api.github.com/repos/rusqlite/rusqlite/releases/tags/v0.40.2",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "5d1c7f19afdab71c3f752eef95e39173eff0483fdefb3ed397f184156b03d1f5",
+      "bytes": 2284
+    },
+    {
+      "name": "ort-128-release",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/releases/tags/v1.28.0",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "d86411ff66aa69367c5ab201a27c383c7f88cdad392c2e8abff4138f8e800495",
+      "bytes": 54033,
+      "headers_sha256": "a1cbf8e639511ab152c0ad56652f46fe54aa69943e0c0673bd394f8f8196e774",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "ort-conv-fix",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/pulls/29444",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "739da62cb4ed4ca46f747449a22ad3b64821fe18cebacb69ab94bf19d8c4f471",
+      "bytes": 25302,
+      "headers_sha256": "f05c9ad7f9a5cd2545a03bab0d1e0e7f96d27e459ce8a1fdd1b18384691dff0d",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "ort-resize-fix",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/pulls/28779",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "c3af24da1471d9d042cfc9aec53dc8193ec52bf1391fb4ce4887c56c511afb8e",
+      "bytes": 24261,
+      "headers_sha256": "ba6f0609dfec56c56a95ffadd2db6e90c23b3e16bd39ab07143a6a7adebd1a57",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "ort-depth-fix",
+      "url": "https://api.github.com/repos/microsoft/onnxruntime/pulls/32344",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "9213f0f415b78d15b05431203123f9a3f6b49cb65890ad38bff026034400a93f",
+      "bytes": 25743,
+      "headers_sha256": "90ec1175566958d5a9f647731a336c81220e725e96a0125e6a03e69324a65a54",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "onnx-conv-inference-fix",
+      "url": "https://api.github.com/repos/onnx/onnx/pulls/8051",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "52de866ac9a1b3c64d152331410f6115ddd23b64e280e56ff9aeb6cc30b067ec",
+      "bytes": 27564,
+      "headers_sha256": "dd6f02a8bcf041bbcb0de8f0a788346bff4f79d1e22e8dd4eef55ee511e40ec4",
+      "response_status_lines": [
+        "HTTP/2 200 "
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "sqlite-format",
+      "url": "https://www.sqlite.org/formatchng.html",
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "sha256": "7f639f5e8f5f1bbacc5c42475e50fc1001189ffa2c6ebffb20752f6cd7a8cdfa",
+      "bytes": 5404,
+      "headers_sha256": "218aae825b237b4c19e0b2bfdbd7af3f10dfb087c8636278288a243ca205c678",
+      "response_status_lines": [
+        "HTTP/1.1 200 OK"
+      ],
+      "pagination_link_headers": []
+    },
+    {
+      "name": "rusqlite-index",
+      "url": "https://index.crates.io/ru/sq/rusqlite",
+      "sha256": "d2748c074c13d4495f8a238ad9d56701cccc7390f47de1d7f2534df1e68d90ac",
+      "bytes": 211720,
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "timestamp_source": "retained response file mtime"
+    },
+    {
+      "name": "sqlite-sys-index",
+      "url": "https://index.crates.io/li/bs/libsqlite3-sys",
+      "sha256": "84ce25ebec0a34fad336098927f4ad219d226b3aa2d5ce9795e244691d9f4afc",
+      "bytes": 77265,
+      "fetched_at": "2026-09-26T12:08:00Z",
+      "timestamp_source": "retained response file mtime"
+    }
+  ],
+  "ocr_graphs": [
+    {
+      "file": "det-inference.onnx",
+      "sha256": "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+      "operators": {
+        "Add": 36,
+        "Concat": 2,
+        "Conv": 83,
+        "ConvTranspose": 2,
+        "Div": 13,
+        "Erf": 13,
+        "GlobalAveragePool": 8,
+        "HardSigmoid": 13,
+        "MaxPool": 1,
+        "Mul": 39,
+        "ReduceMean": 5,
+        "Relu": 20,
+        "Resize": 6,
+        "Sigmoid": 1
+      },
+      "inputs": [
+        {
+          "name": "x",
+          "dimensions": [
+            "DynamicDimension.0",
+            3,
+            "DynamicDimension.1",
+            "DynamicDimension.2"
+          ]
+        }
+      ],
+      "external_tensors": 0,
+      "nested_graph_attributes": 0,
+      "local_functions": 0
+    },
+    {
+      "file": "rec-inference.onnx",
+      "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+      "operators": {
+        "Add": 103,
+        "AveragePool": 1,
+        "BatchNormalization": 3,
+        "Concat": 3,
+        "Conv": 57,
+        "Div": 18,
+        "Erf": 13,
+        "HardSigmoid": 5,
+        "Identity": 135,
+        "MatMul": 13,
+        "MaxPool": 1,
+        "Mul": 43,
+        "Pow": 5,
+        "ReduceMean": 15,
+        "Relu": 10,
+        "Reshape": 8,
+        "Shape": 4,
+        "Sigmoid": 5,
+        "Slice": 8,
+        "Softmax": 3,
+        "Sqrt": 5,
+        "Squeeze": 8,
+        "Sub": 5,
+        "Transpose": 9,
+        "Unsqueeze": 1
+      },
+      "inputs": [
+        {
+          "name": "x",
+          "dimensions": [
+            "DynamicDimension.0",
+            3,
+            48,
+            "DynamicDimension.1"
+          ]
+        }
+      ],
+      "external_tensors": 0,
+      "nested_graph_attributes": 0,
+      "local_functions": 0
+    }
+  ],
+  "local_evidence_directory": ".local/audits/dependencies-2026-09-26-s18"
+}

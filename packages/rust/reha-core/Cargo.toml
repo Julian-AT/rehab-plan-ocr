@@ -23,7 +23,9 @@ regex = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 imageproc = { version = "0.25", default-features = false }
 kamadak-exif = "0.6"
-rusqlite = { version = "0.37", features = ["bundled"] }
+# SQLite 3.53.2 includes the reviewed FTS5 fixes; preserve checked unsigned
+# conversions and the existing statement cache without adding a WASM backend.
+rusqlite = { version = "=0.40.1", default-features = false, features = ["bundled", "cache", "fallible_uint"] }
 thiserror = "2"
 ort = { version = "=2.0.0-rc.10", optional = true, default-features = false, features = ["std", "ndarray"] }
 

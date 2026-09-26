@@ -4078,7 +4078,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 
 ========================================================================
 Notice SHA-256: 85806d613cfda5901f848b3b5b4b04396c8c64e89c97c0af3706c42b0c44bb47
-libsqlite3-sys 0.35.0: sqlite3/sqlite3.h (opening notice)
+libsqlite3-sys 0.38.1: sqlite3/sqlite3.h (opening notice)
 
 /*
 ** 2001-09-15
@@ -5362,7 +5362,6 @@ errno 0.3.14: LICENSE-APACHE
 fastrand 2.5.0: LICENSE-APACHE
 find-msvc-tools 0.1.12: LICENSE-APACHE
 flate2 1.1.10: LICENSE-APACHE
-hashbrown 0.15.5: LICENSE-APACHE
 hashbrown 0.17.1: LICENSE-APACHE
 heck 0.5.0: LICENSE-APACHE
 indexmap 2.14.2: LICENSE-APACHE
@@ -6282,7 +6281,7 @@ DEALINGS IN THE SOFTWARE.
 
 ========================================================================
 Notice SHA-256: b1181a40b2a7b25cf66fd01481713bc1005df082c53ef73e851e55071b102744
-foldhash 0.1.5: LICENSE
+foldhash 0.2.0: LICENSE
 
 Copyright (c) 2024 Orson Peters
 
@@ -6388,8 +6387,8 @@ SOFTWARE.
 
 ========================================================================
 Notice SHA-256: c10c1f27337546471e5f7e4e97fdd398b35b9d4e126115dcd22de8d8e65abf6f
-libsqlite3-sys 0.35.0: LICENSE
-rusqlite 0.37.0: LICENSE
+libsqlite3-sys 0.38.1: LICENSE
+rusqlite 0.40.1: LICENSE
 
 Copyright (c) 2014 The rusqlite developers
 
@@ -6413,7 +6412,7 @@ THE SOFTWARE.
 
 ========================================================================
 Notice SHA-256: c144680885b29e4719e2a51f0aab5439a1e02d980692b5aaf086cae12727f28b
-hashlink 0.10.0: LICENSE-APACHE
+hashlink 0.12.2: LICENSE-APACHE
 
                               Apache License
                         Version 2.0, January 2004
@@ -7527,7 +7526,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ========================================================================
 Notice SHA-256: e915669a595b11a200873df8286561881b0e04932f6412a585db6297ba0bc97c
-hashlink 0.10.0: LICENSE-MIT
+hashlink 0.12.2: LICENSE-MIT
 
 This work is derived in part from the `linked-hash-map` crate, Copyright (c)
 2015 The Rust Project Developers
@@ -7712,7 +7711,6 @@ authorization of the copyright holder.
 
 ========================================================================
 Notice SHA-256: ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2
-hashbrown 0.15.5: LICENSE-MIT
 hashbrown 0.17.1: LICENSE-MIT
 
 Copyright (c) 2016 Amanieu d'Antras

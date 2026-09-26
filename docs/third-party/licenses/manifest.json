@@ -7,7 +7,7 @@
   "onnx-runtime-third-party-notices.txt": "a59131044500f454151c25b7b75da37a10aa9a678bf330e437e942e6be3215c7",
   "ort-license-mit": "b880185add684cd1c6d24394a2e30fe08b75ba4586619b0890ce764bc4cd43a0",
   "paddle-ocr-license": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
-  "rust-dependencies.txt": "b02918ef2f846e0a12c2226dc4d17d4b79516193a9968fa7cc7665cc70efcd6d",
+  "rust-dependencies.txt": "3d02ee833251cb2e2af162666158dcf839ffc1787c49e5bf4c9b57b62a1bfd33",
   "uniffi-mpl-2.0.txt": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
   "uniffi-source.txt": "8b099c68a03aa18b44c233f5dd8d13da159c952846276452f9aa62a43964b083"
 }

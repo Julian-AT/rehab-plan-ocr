@@ -9,7 +9,7 @@
   "features": [
     "onnx"
   ],
-  "generated_notice_sha256": "b02918ef2f846e0a12c2226dc4d17d4b79516193a9968fa7cc7665cc70efcd6d",
+  "generated_notice_sha256": "3d02ee833251cb2e2af162666158dcf839ffc1787c49e5bf4c9b57b62a1bfd33",
   "native_components": [
     {
       "name": "libfvad/WebRTC VAD",
@@ -22,7 +22,7 @@
       "source_archive_sha256": "bf639e4a5bc37b1c90e047c42524e80a1d0cecadeb6e0a61a33580fca22a00ab"
     }
   ],
-  "notice_manifest_sha256": "ff7c0e837b6967249876ba426396b540e0ef79d5f83fea6bd1d6364a92cf2bd6",
+  "notice_manifest_sha256": "a4442a560459c2c4b8aa8cb733acaea5f8206c3bb2d2b8305e64ec8176b2da9f",
   "open_distribution_items": [
     "first-party publisher/rights review"
   ],
@@ -899,7 +899,7 @@
       "version": "1.1.10"
     },
     {
-      "checksum": "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2",
+      "checksum": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb",
       "features": [],
       "license_expression": "Zlib",
       "name": "foldhash",
@@ -914,7 +914,7 @@
       "repository": "https://github.com/orlp/foldhash",
       "scope": "target_dependency",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.5"
+      "version": "0.2.0"
     },
     {
       "checksum": "b91aa448ca50d7e79433bdf3ee8d99215430d2ec02ade5aefab2a073a1822e8a",
@@ -1011,35 +1011,10 @@
       "version": "0.4.3"
     },
     {
-      "checksum": "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1",
-      "features": [
-        "default-hasher",
-        "inline-more"
-      ],
-      "license_expression": "MIT OR Apache-2.0",
-      "name": "hashbrown",
-      "notices": [
-        {
-          "bundle_file": "rust-dependencies.txt",
-          "section": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
-          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
-          "source_notice": "LICENSE-APACHE"
-        },
-        {
-          "bundle_file": "rust-dependencies.txt",
-          "section": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2",
-          "sha256": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2",
-          "source_notice": "LICENSE-MIT"
-        }
-      ],
-      "repository": "https://github.com/rust-lang/hashbrown",
-      "scope": "target_dependency",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.15.5"
-    },
-    {
       "checksum": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a",
-      "features": [],
+      "features": [
+        "default-hasher"
+      ],
       "license_expression": "MIT OR Apache-2.0",
       "name": "hashbrown",
       "notices": [
@@ -1062,7 +1037,7 @@
       "version": "0.17.1"
     },
     {
-      "checksum": "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1",
+      "checksum": "a596f1b20ed2cc5ecac41a164aaebc7258057060f06c0cf7a2ba3991ee7990fb",
       "features": [],
       "license_expression": "MIT OR Apache-2.0",
       "name": "hashlink",
@@ -1080,10 +1055,10 @@
           "source_notice": "LICENSE-MIT"
         }
       ],
-      "repository": "https://github.com/kyren/hashlink",
+      "repository": "https://github.com/djc/hashlink",
       "scope": "target_dependency",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.10.0"
+      "version": "0.12.2"
     },
     {
       "checksum": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
@@ -1325,13 +1300,13 @@
       "version": "0.2.16"
     },
     {
-      "checksum": "133c182a6a2c87864fe97778797e46c7e999672690dc9fa3ee8e241aa4a9c13f",
+      "checksum": "f6c19a05435c21ac299d71b6a9c13db3e3f47c520517d58990a462a1397a61db",
       "features": [
         "bundled",
         "bundled_bindings",
         "cc",
         "default",
-        "min_sqlite_version_3_14_0",
+        "min_sqlite_version_3_34_1",
         "pkg-config",
         "vcpkg"
       ],
@@ -1354,7 +1329,7 @@
       "repository": "https://github.com/rusqlite/rusqlite",
       "scope": "target_dependency",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.35.0"
+      "version": "0.38.1"
     },
     {
       "checksum": "3f607c237553f086e7043417a51df26b2eb899d3caff94e6a67592ff992fedc7",
@@ -2446,9 +2421,12 @@
       "version": "0.3.0"
     },
     {
-      "checksum": "165ca6e57b20e1351573e3729b958bc62f0e48025386970b6e4d29e7a7e71f3f",
+      "checksum": "11438310b19e3109b6446c33d1ed5e889428cf2e278407bc7896bc4aaea43323",
       "features": [
         "bundled",
+        "cache",
+        "fallible_uint",
+        "hashlink",
         "modern_sqlite"
       ],
       "license_expression": "MIT",
@@ -2464,7 +2442,7 @@
       "repository": "https://github.com/rusqlite/rusqlite",
       "scope": "target_dependency",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.37.0"
+      "version": "0.40.1"
     },
     {
       "checksum": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190",
@@ -3655,7 +3633,7 @@
   "selection": "cargo tree normal/build; procedural macros and their private dependencies are build scope",
   "source_inputs": {
     ".gitattributes": "58ea1a98637e91203a2612149552c82433b6d6d1ab6160783a6fc2411eb4faa9",
-    "Cargo.lock": "d9c63ed15e9fdfb64a9873da9f4a0619ea78ed22b8dd59c96fd74a0ef71a8fc7",
+    "Cargo.lock": "d0713380817e7c094194b1605bc3b94960199f2752d4d22bd8eaaff03ef0d827",
     "Cargo.toml": "bee89b4d113092d0bd1453f25a6dda0bbce36a9bf73e1e85d78ed64567a231d0",
     "apps/ios/project.yml": "43e8cebe6699b050d12ed202bc0ecf8db5ea933bd368fbb5cd3d794ea10f25bc",
     "config/storage/workspace.json": "d254a25be67f0ba0c3e548547aaca38b0d0600823761fa6304e1a189359dc862",
@@ -3699,7 +3677,7 @@
     "packages/apple/VoiceActivity/Sources/CFvad/src/vad/vad_gmm.h": "a9c51c01dae8eed13b17507b9f2e1a6ec248297f4372124f0b59ace88f46d16f",
     "packages/apple/VoiceActivity/Sources/CFvad/src/vad/vad_sp.c": "9b7718a283c04c13caeb1c4174d63cc6de9a7c02dad05c65d2cbc5df2686a059",
     "packages/apple/VoiceActivity/Sources/CFvad/src/vad/vad_sp.h": "5de6fc001a838f8cd9acab67c082695a8ed37c8f905bf3abac122c5edb17f041",
-    "packages/rust/reha-core/Cargo.toml": "346b1be202d4f30b3c774b28444ce94151d99160ff7ec7742990d086b1799ccf",
+    "packages/rust/reha-core/Cargo.toml": "04bc871fcd873443e3a5197d0b779bab5fbda194f586559fe31a8cdfbd905f9e",
     "packages/rust/reha-core/build.rs": "20cffe11d39ac9efbbef09b1b70ae19ebce59cbd757da8e29e48cecb98de052d",
     "packages/rust/reha-ffi/Cargo.toml": "56bc3fa650fa7dff6dfa47a0662a172ba8618595784c135de15bf49b9d81f53e",
     "rust-toolchain.toml": "09d61e489c122ee1374fc258ed39367f8a34a60be0f38db55fe081d3e1c69f24",

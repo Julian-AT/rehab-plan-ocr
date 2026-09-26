@@ -7,7 +7,7 @@ Native packaging verifies those hashes and the bundled runtime inventory. Source
 VoiceActivity package remain required for its copied C implementation.
 
 `runtime-inventory.json` records the actual `reha-ffi` iOS dependency selection with
-the `onnx` feature: 136 normal/build packages, including 109 packages reachable by
+the `onnx` feature: 135 normal/build packages, including 108 packages reachable by
 normal edges without procedural macros. Two are first-party workspace packages.
 These are dependency-graph counts, not measurements of linked code or installed
 size. Inactive optional Cargo metadata entries are excluded. Versions, archive
@@ -15,6 +15,11 @@ checksums, selected features, declared licenses, notice sources and target/build
 scope are recorded per package. Shared texts are deduplicated in the bundled
 `licenses/rust-dependencies.txt`; SQLite's amalgamation declaration is retained
 separately from its Rust wrapper's MIT license.
+
+The [2026-09-26 security review](../releases/dependency-security-2026-09-26-s18.md)
+records the RustSec snapshot, native-library findings, SQLite update and remaining
+maintenance/ONNX qualification work. Its result is bound to the recorded inputs;
+it is not an evergreen security clearance.
 
 `make inventory-runtime` explicitly regenerates the inventory offline using the
 restored Cargo registry. `make check-runtime-inventory` recomputes it and rejects
