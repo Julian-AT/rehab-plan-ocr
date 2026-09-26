@@ -465,3 +465,13 @@ diagnose-ocr-convolution-lowering: PEAK_GIB = 1
 diagnose-ocr-convolution-lowering: check-storage
 	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private experiment directory'; exit 2; }
 	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_lowering.py execute --output "$(DIAGNOSTIC_RUN)"
+
+.PHONY: prepare-ocr-convolution-stage diagnose-ocr-convolution-stage
+prepare-ocr-convolution-stage:
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to a new private experiment directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_stage.py prepare --output "$(DIAGNOSTIC_RUN)"
+
+diagnose-ocr-convolution-stage: PEAK_GIB = 2
+diagnose-ocr-convolution-stage: check-storage
+	@test -n "$(DIAGNOSTIC_RUN)" || { echo 'Set DIAGNOSTIC_RUN to the prepared private experiment directory'; exit 2; }
+	.local/envs/ocr/bin/python ml/evaluation/recognition/convolution_stage.py execute --output "$(DIAGNOSTIC_RUN)"
