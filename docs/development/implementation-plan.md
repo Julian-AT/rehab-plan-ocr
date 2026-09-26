@@ -60,7 +60,7 @@ Both custom models must be trained and evaluated before the project is complete.
 - [x] Geometry-aware augmentation and pixel-checked reproducible synthetic plans.
 - [x] Matching PP-OCRv6 Small checkpoint, training/export/desktop-runtime smoke test.
 - [x] Frozen-backbone versus full fine-tuning, resumable lineage and validation stop.
-- [x] ONNX parity comparison before quantization (frozen passes; full adaptation rejected).
+- [x] ONNX parity before quantization: small frozen smoke passes; both larger candidates fail.
 - [x] Experimental custom OCR checkpoint, deployment artifact and model card.
 - [x] Baseline/custom simulator app import, native rereading, warm sessions and persistence compatibility.
 - [ ] Grouped real-photo critical-field/correction evaluation and shipping iOS route.
@@ -108,6 +108,35 @@ entries must distinguish portable/native tests, simulator builds, physical evide
 and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
+
+### Completed larger OCR comparison — 2026-09-26
+
+Both adaptation modes complete on the same 512/91 pixel-verified synthetic crop
+dataset. Frozen selects epoch one after four epochs/1,024 steps; full adaptation
+selects epoch two after five epochs/1,280 steps. Both selected checkpoints score
+91/91 exact validation crops versus 90/91 pretrained, with no newly wrong critical
+crop. Full adaptation's last epoch drops to 70/91; selection retains epoch two.
+There are no real-photo or novel title/room/notes validation pixels.
+
+Official export and ONNX conversion complete for both. At unchanged tolerances,
+frozen numeric parity passes 1,188/1,206 and full passes 1,167/1,206; all token
+sequences agree. The pretrained baseline also fails 19 of these numeric checks.
+This does not determine the cause or permit promotion. Actual combined registration
+rechecks lineage, dataset pixels, checkpoint/state and complete export evidence.
+The [experiment and model card](../../ml/experiments/2026-09-26-s18-synthetic-ocr-development.md)
+retain all identities and failed outcomes. No physical-device or model update occurs.
+
+### Second completed portable CI candidate — 2026-09-26
+
+[Run 35300286611](archive:github/run-35300286611)
+passes at `b8d31a21a4e5ba0b78fc3fd57a1ecb347160795a`: 174 Linux Rust tests,
+208 tool tests, twelve monitor tests and portable lint. Its Apple job is explicitly
+skipped. Retained full logs and identity receipt are in
+`.local/runs/hosted-ci-portable-20260926-s18-002`; summary SHA-256 is
+`2ca30ffd976439d5d6f7239e452abf70585cb0bf33603707b18ef908297e3035`.
+Subsequent download-deadline changes pass thirteen local monitor tests. Failed
+downloads retain incomplete receipts; 1.4 GB UI evidence receives a size-based,
+bounded deadline, while metadata operations retain their one-minute limit.
 
 ### OCR numeric-parity diagnosis — 2026-09-26
 

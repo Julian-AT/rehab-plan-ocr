@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "model": "PP-OCRv6_small_rec",
+  "status": "experimental-crop-adaptation",
+  "base_registry": "ocr-base.json",
+  "dataset": {
+    "kind": "pixel-verified-synthetic-crops",
+    "sha256": "7314061c5104738dea1da2f627fea27fa30612372c4402968bfe700cce073ef6",
+    "partitions": {
+      "train": {
+        "crops": 512,
+        "source_groups": 129,
+        "fields": {
+          "date": 74,
+          "end_time": 73,
+          "location": 73,
+          "notes": 73,
+          "start_time": 73,
+          "therapist": 73,
+          "title": 73
+        }
+      },
+      "validation": {
+        "crops": 91,
+        "source_groups": 42,
+        "fields": {
+          "date": 56,
+          "end_time": 26,
+          "start_time": 3,
+          "therapist": 6
+        }
+      }
+    }
+  },
+  "variants": [
+    {
+      "mode": "frozen-backbone",
+      "run": ".local/runs/ocr-synthetic-frozen-001",
+      "learning_rate": 0.0001,
+      "completed_epochs": 4,
+      "completed_steps": 1024,
+      "stop_reason": "validation-stopped",
+      "selected_epoch": 1,
+      "checkpoint_sha256": "76acc813ae5ede18a27478396af7d34da83df5a19e1c41322a5ac4de2d926989",
+      "run_identity_sha256": "6c05304f1b684489e099e0b3fde046c1626605c20c948736e111d61992f09116",
+      "onnx_sha256": "7418100fef149c47029bf42f7be8b8e2a3c9480b3d33a560a4b8338b7c22a808",
+      "baseline_metrics": {
+        "overall": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 90,
+          "critical_samples": 91,
+          "critical_errors": 1,
+          "group_mean_error": 0.005952380952380952,
+          "character_errors": 1,
+          "reference_characters": 841
+        },
+        "originals": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 90,
+          "critical_samples": 91,
+          "critical_errors": 1,
+          "group_mean_error": 0.005952380952380952,
+          "character_errors": 1,
+          "reference_characters": 841
+        },
+        "robustness": {
+          "samples": 0,
+          "independent_groups": 0,
+          "exact": 0,
+          "critical_samples": 0,
+          "critical_errors": 0,
+          "group_mean_error": 0,
+          "character_errors": 0,
+          "reference_characters": 0
+        }
+      },
+      "selected_metrics": {
+        "overall": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 91,
+          "critical_samples": 91,
+          "critical_errors": 0,
+          "group_mean_error": 0.0,
+          "character_errors": 0,
+          "reference_characters": 841
+        },
+        "originals": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 91,
+          "critical_samples": 91,
+          "critical_errors": 0,
+          "group_mean_error": 0.0,
+          "character_errors": 0,
+          "reference_characters": 841
+        },
+        "robustness": {
+          "samples": 0,
+          "independent_groups": 0,
+          "exact": 0,
+          "critical_samples": 0,
+          "critical_errors": 0,
+          "group_mean_error": 0,
+          "character_errors": 0,
+          "reference_characters": 0
+        }
+      },
+      "new_critical_errors": 0,
+      "parity": {
+        "passed": false,
+        "cases": 1206,
+        "numeric_cases_passed": 1188,
+        "argmax_cases_passed": 1206,
+        "max_absolute_error": 0.00047653913497924805,
+        "rtol": 0.001,
+        "atol": 1e-05
+      },
+      "evidence": {
+        "settings.json": "48993875ebed8fa2151f4ca47c44f9feabdefc435486807654951b8e33562578",
+        "identity.json": "6c05304f1b684489e099e0b3fde046c1626605c20c948736e111d61992f09116",
+        "baseline.json": "923726eb6ff6b9f9f50bfc33cdc0318b76bb61833ebdf3425bc4a064eabf9e01",
+        "progress.json": "7dd68b1f6927051ddf05484c5671fa2640d0f2a367dbbc68f12d361a4c39bc3f",
+        "selection.json": "d61d7160ab91b3079a3b2223dd7e05761a5d33b11c4bb895a6111c998a4337a8",
+        "checkpoints/epoch-0001/checkpoint.json": "0f29959cc2495e87008698f43512250aab190a883356f86a31124596c19937ea",
+        "deployment/export.json": "acaa01c477cb1f09e339a800ecac5733e12648f862b729c6fe0f2d84a805dfe3",
+        "deployment/parity.json": "679cbc8452a8114026cdb88d377563a2a8899efbc993403885939f61989869e0"
+      },
+      "qualified": false
+    },
+    {
+      "mode": "full",
+      "run": ".local/runs/ocr-synthetic-full-001",
+      "learning_rate": 1e-05,
+      "completed_epochs": 5,
+      "completed_steps": 1280,
+      "stop_reason": "validation-stopped",
+      "selected_epoch": 2,
+      "checkpoint_sha256": "f2fb5c1fc0b0445414a33a787ebb9b1425c4dc88db9f10213e088a0b4251bb25",
+      "run_identity_sha256": "42ffba379858d9ac093691b781cf6133db4fab4e80262687ec15d2950c1d0c6c",
+      "onnx_sha256": "a19917f226331db300e28faf62dc50a1e9650aa4c66ba371ed91f1663cef03a9",
+      "baseline_metrics": {
+        "overall": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 90,
+          "critical_samples": 91,
+          "critical_errors": 1,
+          "group_mean_error": 0.005952380952380952,
+          "character_errors": 1,
+          "reference_characters": 841
+        },
+        "originals": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 90,
+          "critical_samples": 91,
+          "critical_errors": 1,
+          "group_mean_error": 0.005952380952380952,
+          "character_errors": 1,
+          "reference_characters": 841
+        },
+        "robustness": {
+          "samples": 0,
+          "independent_groups": 0,
+          "exact": 0,
+          "critical_samples": 0,
+          "critical_errors": 0,
+          "group_mean_error": 0,
+          "character_errors": 0,
+          "reference_characters": 0
+        }
+      },
+      "selected_metrics": {
+        "overall": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 91,
+          "critical_samples": 91,
+          "critical_errors": 0,
+          "group_mean_error": 0.0,
+          "character_errors": 0,
+          "reference_characters": 841
+        },
+        "originals": {
+          "samples": 91,
+          "independent_groups": 42,
+          "exact": 91,
+          "critical_samples": 91,
+          "critical_errors": 0,
+          "group_mean_error": 0.0,
+          "character_errors": 0,
+          "reference_characters": 841
+        },
+        "robustness": {
+          "samples": 0,
+          "independent_groups": 0,
+          "exact": 0,
+          "critical_samples": 0,
+          "critical_errors": 0,
+          "group_mean_error": 0,
+          "character_errors": 0,
+          "reference_characters": 0
+        }
+      },
+      "new_critical_errors": 0,
+      "parity": {
+        "passed": false,
+        "cases": 1206,
+        "numeric_cases_passed": 1167,
+        "argmax_cases_passed": 1206,
+        "max_absolute_error": 0.000942528247833252,
+        "rtol": 0.001,
+        "atol": 1e-05
+      },
+      "evidence": {
+        "settings.json": "b2aa5c50d5836e45a9f0418714752c2a405933e466fbe2dd4025f03687e7e4ee",
+        "identity.json": "42ffba379858d9ac093691b781cf6133db4fab4e80262687ec15d2950c1d0c6c",
+        "baseline.json": "923726eb6ff6b9f9f50bfc33cdc0318b76bb61833ebdf3425bc4a064eabf9e01",
+        "progress.json": "da333250253aaaefea0b30ffae87d4f9e8d3e7658778b35d27240f3f6b5dfbf2",
+        "selection.json": "79dd24f2422fb0764cc919bcc45b381f860e6d162df318ec9b66b78620a5d62b",
+        "checkpoints/epoch-0002/checkpoint.json": "8ac40c00a7d191b850c070bbf09aa25dd1b587ae5919d087ab0dee87a78e29c3",
+        "deployment/export.json": "44c48a857c6f504dcf5fc52217dbc821c5279bbbcbbfdf5859b5cf501e89dfa8",
+        "deployment/parity.json": "5cc3cd232843a9c081288e890670d2a616e8e915b2b52d3434118a71e7259c41"
+      },
+      "qualified": false
+    }
+  ],
+  "registration_source_sha256": "0711cf837b9acf954fa25dcc1312a2cc2150ba44bf6ece1ceb85fc00f3f315fa",
+  "quality_improvement_established": false,
+  "physical_ios_verified": false,
+  "promoted": false,
+  "limitations": [
+    "Crop scores do not measure complete schedules or correction effort.",
+    "Source groups do not establish independent real examples for synthetic data.",
+    "No human review, physical measurements or runtime promotion is granted."
+  ]
+}

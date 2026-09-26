@@ -50,7 +50,20 @@ The matching full-adaptation run completes five epochs (1,280 optimizer steps)
 under the same dataset, seed, width, batch and validation policy, at learning rate
 1e-5 rather than 1e-4. It selects epoch two with 91/91 exact validation crops and no
 new critical errors. The final epoch declines to 70/91; the selected checkpoint
-remains epoch two. Its export qualification is pending.
+remains epoch two. The official export and ONNX conversion complete; numeric
+parity passes 1,167/1,206 cases, while all 1,206 argmax sequences agree. Maximum
+absolute difference is 0.000942528247833252. This candidate also fails deployment
+parity. The full run's selected checkpoint SHA-256 is
+`f2fb5c1fc0b0445414a33a787ebb9b1425c4dc88db9f10213e088a0b4251bb25`;
+its report SHA-256 is
+`5cc3cd232843a9c081288e890670d2a616e8e915b2b52d3434118a71e7259c41`.
+
+The [combined generated model card](../registry/ocr-synthetic-development-001.json)
+revalidates both completed runs and records failed parity for each. It has SHA-256
+`231d713f7c140fa2368f8078f2f0a78d29350434b998b60e2640e8c40dbe0ead`.
+Neither latest candidate enters the app probe. The earlier smoke experiment's
+passing frozen artifact remains a separate, much smaller compatibility result.
+
 Training and file-ASR diagnosis overlap on the host, so no runtime-latency,
 energy or thermal comparison is inferred. No human reference/crop approval,
 final holdout, physical-device update or production model change occurs.
