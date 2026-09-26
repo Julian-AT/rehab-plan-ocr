@@ -2,13 +2,18 @@
 
 import copy
 import json
+import re
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from ml.evaluation.conversation.app_evaluation import evaluate, prepare  # noqa: E402
+from ml.evaluation.conversation.app_evaluation import (  # noqa: E402
+    RULES_MODEL_IDENTITY,
+    evaluate,
+    prepare,
+)
 from ml.training.assistant.prepare import examples  # noqa: E402
 
 
@@ -114,9 +119,25 @@ class AppEvaluationTests(unittest.TestCase):
 
     def test_rules_fallback_preserves_its_own_identity(self):
         changed = copy.deepcopy(self.result)
-        changed["cases"][0].update(provider="complete-rules", model_identity="calendar-3")
+        changed["cases"][0].update(provider="complete-rules", model_identity=RULES_MODEL_IDENTITY)
         self.audit(changed)
         changed["cases"][0]["model_identity"] = "pinned"
+        with self.assertRaises(ValueError):
+            self.audit(changed)
+
+    def test_current_swift_rule_identity_is_accepted_and_stale_rules_are_rejected(self):
+        source = (
+            Path(__file__).resolve().parents[4]
+            / "apps/ios/Features/Conversation/InterpretationProvider.swift"
+        )
+        identity = re.search(
+            r'provider: "complete-rules", model: "([^"]+)"', source.read_text()
+        ).group(1)
+        self.assertEqual(RULES_MODEL_IDENTITY, identity)
+        changed = copy.deepcopy(self.result)
+        changed["cases"][0].update(provider="complete-rules", model_identity=identity)
+        self.audit(changed)
+        changed["cases"][0]["model_identity"] = "calendar-3"
         with self.assertRaises(ValueError):
             self.audit(changed)
 
@@ -133,7 +154,9 @@ class AppEvaluationTests(unittest.TestCase):
 
     def test_rules_no_match_retains_requested_denominator(self):
         self.fixture["mode"] = "rules"
-        self.result.update(mode="rules", provider="complete-rules", model_identity="calendar-3")
+        self.result.update(
+            mode="rules", provider="complete-rules", model_identity=RULES_MODEL_IDENTITY
+        )
         self.result["cases"] = [
             dict(id=r["id"], status="no_match", interpretation_seconds=0) for r in self.rows
         ]

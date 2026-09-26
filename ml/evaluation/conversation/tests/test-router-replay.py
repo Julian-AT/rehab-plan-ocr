@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from ml.evaluation.conversation import router_replay as replay  # noqa: E402
-from ml.evaluation.conversation.app_evaluation import prepare  # noqa: E402
+from ml.evaluation.conversation.app_evaluation import RULES_MODEL_IDENTITY, prepare  # noqa: E402
 from ml.evaluation.conversation.router_replay import VARIANTS, assess  # noqa: E402
 from ml.training.assistant.contract import messages  # noqa: E402
 from ml.training.assistant.prepare import examples  # noqa: E402
@@ -98,6 +98,17 @@ class ReplayTests(unittest.TestCase):
         changed["variants"][2]["recorded_responses_admitted"] -= 1
         with self.assertRaises(ValueError):
             self.audit(changed)
+
+    def test_complete_rule_observations_keep_the_current_rule_identity(self):
+        changed = copy.deepcopy(self.result)
+        for variant in changed["variants"]:
+            variant["cases"][0].update(provider="complete-rules", recorded_response_admitted=False)
+            variant["recorded_responses_admitted"] -= 1
+        report = self.audit(changed)
+        for variant in report["variants"].values():
+            self.assertEqual(
+                variant["cases"][0]["observation"]["model_identity"], RULES_MODEL_IDENTITY
+            )
 
     def test_prepared_replay_rejects_a_changed_complete_rule_source(self):
         app, deployment, native = (

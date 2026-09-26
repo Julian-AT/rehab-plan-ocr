@@ -13,7 +13,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from ml.evaluation.conversation.app_evaluation import evaluate, prepare  # noqa: E402
+from ml.evaluation.conversation.app_evaluation import (  # noqa: E402
+    RULES_MODEL_IDENTITY,
+    evaluate,
+    prepare,
+)
 from ml.training.assistant.contract import messages, sha  # noqa: E402
 from ml.training.assistant.export import clean_answer  # noqa: E402
 
@@ -192,7 +196,7 @@ def assess(result, fixture, rows, recorded):
                     status="interpreted",
                     operation=case["operation"],
                     provider="complete-rules" if rules else "custom-qwen-trial",
-                    model_identity="calendar-3" if rules else source["model_identity"],
+                    model_identity=RULES_MODEL_IDENTITY if rules else source["model_identity"],
                 )
             elif "error" in case and "operation" not in case:
                 item.update(status="error")

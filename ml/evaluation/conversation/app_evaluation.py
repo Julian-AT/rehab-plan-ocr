@@ -6,6 +6,8 @@ from ml.evaluation.conversation.intent import InvalidIntent, validate
 from ml.evaluation.conversation.paired import clusters
 from ml.training.assistant.contract import validate_dataset
 
+RULES_MODEL_IDENTITY = "calendar-4"
+
 
 def prepare(path, run_id, mode):
     data = validate_dataset(path)
@@ -54,7 +56,7 @@ def evaluate(result, fixture, rows, model_identity):
         or not isinstance(result.get("model_identity"), str)
         or not result["model_identity"]
         or (mode == "custom" and result["model_identity"] != model_identity)
-        or (mode == "rules" and result["model_identity"] != "calendar-3")
+        or (mode == "rules" and result["model_identity"] != RULES_MODEL_IDENTITY)
     ):
         raise ValueError("Stale, incomplete or wrong-provider app evaluation")
     observations = result.get("cases")
@@ -86,7 +88,9 @@ def evaluate(result, fixture, rows, model_identity):
             provider = observed.get("provider")
             if provider not in {"complete-rules", providers[mode]} or observed.get(
                 "model_identity"
-            ) != ("calendar-3" if provider == "complete-rules" else result["model_identity"]):
+            ) != (
+                RULES_MODEL_IDENTITY if provider == "complete-rules" else result["model_identity"]
+            ):
                 raise ValueError("Observed provider changed during evaluation")
             operation = observed.get("operation")
             if type(operation) is not dict:
