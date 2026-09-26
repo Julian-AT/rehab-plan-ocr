@@ -64,6 +64,29 @@ revalidates both completed runs and records failed parity for each. It has SHA-2
 Neither latest candidate enters the app probe. The earlier smoke experiment's
 passing frozen artifact remains a separate, much smaller compatibility result.
 
+The subsequent reproducible `diagnose-ocr-stage-parity` command isolates the failed
+cases without changing weights, tolerances or runtime settings. The official
+[export code](https://github.com/PaddlePaddle/PaddleOCR/blob/dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf/ppocr/utils/export_model.py)
+calls the backbone's reparameterization before saving the static graph. Applying
+that same transformation to a copy of each selected model reproduces the saved
+Paddle graph's outputs **bit-for-bit on all 18 frozen and 39 full failed cases**.
+Thus these observed dynamic-to-static differences arise in reparameterization;
+the separate static-Paddle-to-ONNX numerical differences remain unresolved.
+
+| Failed-case subset | Dynamic → reparameterized | Reparameterized → saved Paddle | Saved Paddle → ONNX | Dynamic → ONNX |
+| --- | --- | --- | --- | --- |
+| Frozen, 18 cases | 10/18 numeric matches | 18/18, zero difference | 6/18 | 0/18 |
+| Full, 39 cases | 14/39 numeric matches | 39/39, zero difference | 32/39 | 0/39 |
+
+Every stage retains identical argmax sequences for these subsets. These selected
+failures are not new independent examples or complete validation; they cannot
+qualify either artifact. Diagnostic sources, selected run lineage, completed
+export evidence and unchanged input hashes are verified. Reports under
+`.local/runs/ocr-reparameterization-diagnostic-20260926-s18-001` have SHA-256:
+
+- `frozen.json`: `142a8b94d8358ed71a4b77a6b85d46958211c13d36a7c6c14071963221181ffd`.
+- `full.json`: `50c0a87b0f13cd6b21458919fefaf2c0bc2232e218ad8bd5bda4a9301bcfeeaa`.
+
 Training and file-ASR diagnosis overlap on the host, so no runtime-latency,
 energy or thermal comparison is inferred. No human reference/crop approval,
 final holdout, physical-device update or production model change occurs.

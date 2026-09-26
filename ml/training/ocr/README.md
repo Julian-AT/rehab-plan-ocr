@@ -154,6 +154,14 @@ the same prepared crops and widths. Checkpoint, runtime and dictionary pins must
 match. Its report is always diagnostic and cannot qualify an adapted checkpoint.
 The new path preserves previous evidence, including failed comparisons.
 
+`make diagnose-ocr-stage-parity RUN=<prepared-run> PARITY_REPORT=<new-private-json>`
+isolates each failed case across the selected dynamic model, the upstream export's
+`rep()` reparameterization, its saved Paddle graph and the shipping ONNX CPU route.
+It revalidates the completed run, selected scores and full earlier parity evidence,
+then records stage differences and all source identities. This is a failed-case
+diagnostic only: no stage substitutes for complete deployment parity, and the
+original tolerances, model files and reports remain unchanged.
+
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
 pinned model until those independent gates pass.
