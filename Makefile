@@ -53,6 +53,23 @@ inventory-model-objects:
 coalesce-model-objects:
 	python3 tooling/dev/model_objects.py apply --manifest "$(MODEL_OBJECT_MANIFEST)"
 
+# Metadata inventory is read-only; plan/apply require a quiet model/build window.
+.PHONY: inventory-checkpoints plan-checkpoints clean-checkpoints test-checkpoints
+inventory-checkpoints:
+	@test -n "$(RUN)" || { echo 'Set RUN to an existing .local/runs training directory'; exit 2; }
+	python3 tooling/dev/checkpoints.py inventory --run "$(RUN)" $(if $(CHECKPOINT_MANIFEST),--manifest "$(CHECKPOINT_MANIFEST)")
+
+plan-checkpoints:
+	@test -n "$(RUN)" -a -n "$(CHECKPOINT_MANIFEST)" || { echo 'Set RUN and a new CHECKPOINT_MANIFEST below .local/maintenance/checkpoints'; exit 2; }
+	python3 tooling/dev/checkpoints.py plan --run "$(RUN)" --manifest "$(CHECKPOINT_MANIFEST)"
+
+clean-checkpoints:
+	@test -n "$(CHECKPOINT_MANIFEST)" || { echo 'Set CHECKPOINT_MANIFEST to the checked plan'; exit 2; }
+	python3 tooling/dev/checkpoints.py apply --manifest "$(CHECKPOINT_MANIFEST)"
+
+test-checkpoints:
+	python3 tooling/dev/tests/test-checkpoints.py
+
 PEAK_GIB ?= 0
 .PHONY: probe-document probe-speech-availability benchmark-voice-rules
 PROBE_MODE ?= text
@@ -92,6 +109,7 @@ train-ocr resume-ocr train-assistant resume-assistant export-ocr export-assistan
 help:
 	@echo 'Workspace: make check-workspace; make inventory-workspace migrate-workspace WORKSPACE_MANIFEST=<new-local-manifest>'
 	@echo 'Inventory: make inventory-repository; make inventory-artifacts; make clean-artifacts; make check-storage PEAK_GIB=4'
+	@echo 'Checkpoints: make inventory-checkpoints RUN=<training-run>; plan-checkpoints/clean-checkpoints CHECKPOINT_MANIFEST=<new-plan>'
 	@echo 'Apple probes: make probe-document probe-speech-availability benchmark-voice-rules RUN=<new-local-run> (document needs INPUT)'
 	@echo 'Setup: make bootstrap restore convert [TARGET=simulator|device|all]'
 	@echo 'Rust downloads only: make restore-rust; offline repeat: CARGO_NET_OFFLINE=true UV_OFFLINE=true make build'
@@ -112,7 +130,13 @@ help:
 	@echo 'Common provider app trial: make build-assistant-trial; make test-assistant-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>"'
 	@echo 'OCR app trial: make test-recognition-app-trial TEST_ARGS="--run .local/runs/<new-run> --simulator <disposable-id>" (baseline and frozen experiment)'
 	@echo 'OCR synthetic training data: make prepare-ocr-synthetic SOURCE_DATASET=<generated-tables> DATASET=<new-directory>'
+	@echo 'Human reference review: make reference-review-packet DATASET=<private-root> RUN=.local/runs/<new-packet> (creates no approvals)'
 	@echo 'Reference privacy: make reference-privacy-draft DATASET=<reference-root>; reference-privacy-approve additionally requires SOURCE_SHA256 and REVIEWER'
+
+.PHONY: reference-review-packet
+reference-review-packet:
+	@test -n "$(DATASET)" -a -n "$(RUN)" || { echo 'Set DATASET to the private root and RUN to a new private review packet'; exit 2; }
+	/usr/bin/env uv run --locked python ml/data/annotation/review_packet.py --root "$(DATASET)" --output "$(RUN)"
 
 .PHONY: reference-privacy-draft reference-privacy-approve
 reference-privacy-draft:
@@ -366,6 +390,13 @@ ASSISTANT_PER_FAMILY ?= 16
 diagnose-assistant-parity:
 	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" || { echo 'Set RUN and a new private DIAGNOSTIC_RUN directory'; exit 2; }
 	.local/envs/assistant/bin/python ml/evaluation/conversation/runtime_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)"
+
+# Prompt/token diagnosis preserves all historical generation/parity evidence.
+.PHONY: diagnose-assistant-token-parity
+diagnose-assistant-token-parity: PEAK_GIB = 8
+diagnose-assistant-token-parity: check-storage
+	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" -a -n "$(WEIGHTS_EVIDENCE)" || { echo 'Set RUN, a new DIAGNOSTIC_RUN and the existing WEIGHTS_EVIDENCE JSON'; exit 2; }
+	.local/envs/assistant/bin/python ml/evaluation/conversation/token_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)" --weights-evidence "$(WEIGHTS_EVIDENCE)"
 
 ASSISTANT_EPOCHS ?= 20
 ASSISTANT_PATIENCE ?= 3

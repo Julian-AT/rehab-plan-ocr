@@ -94,3 +94,59 @@ native libraries were hashed before and after and remain identical; app products
 content-addressed FFI artifacts and every checkpoint remain intact. That cleanup
 receipt is `.local/runs/completed-native-rust-intermediates-cleanup-20260926-s18-001.json`,
 SHA-256 `66672a098b19d71856d99a19cc623780bfb6c47dc11e9d1a2b9555876e928f54`.
+
+
+## Checkpoint retention
+
+The checkpoint tool recognizes the pinned OCR and LoRA training producers and
+their actual resumable file contracts. It retains the best checkpoint, the latest
+complete checkpoint, any separate selected epoch, and epochs referenced by model
+cards, exports, comparisons or failure evidence. OCR keeps its combined model and
+optimizer state; LoRA keeps adapters, optimizer, random state and configuration.
+Unknown producers, changed dataset/model/environment pins, incomplete contracts,
+shared writable inodes, symlinks and unexplained missing files stop the operation.
+An incomplete checkpoint directory is never a deletion candidate.
+
+```sh
+make inventory-checkpoints RUN=.local/runs/<training-run>
+make plan-checkpoints RUN=.local/runs/<training-run> CHECKPOINT_MANIFEST=.local/maintenance/checkpoints/<new-plan>.json
+make clean-checkpoints CHECKPOINT_MANIFEST=.local/maintenance/checkpoints/<same-plan>.json
+```
+
+Inventory reads metadata only and may run while a model is being evaluated. It is
+not a deletion authorization: plan/apply additionally verify tensor hashes, acquire
+the trainer's own lock and the shared maintenance lock, and check running model and
+build processes, open files, tracked files, worktrees and symbolic consumers. Stop
+other model/build work for the whole plan/apply window. The CLI accepts repeated
+`--run` arguments for a shared plan; Make deliberately accepts one quoted run.
+Trace files above eight MiB are streamed; any run named there is conservatively
+protected in full because its structured epoch context is not loaded.
+An optional `CHECKPOINT_MANIFEST` on inventory writes a new metadata snapshot;
+use a different path for the fully checked deletion plan.
+
+Only unreferenced intermediate tensor payloads are removed. Original datasets,
+selected/exported weights, model cards, pins, checkpoint receipts, configurations,
+metrics and historical reports stay in place. A checked path/hash pair referring
+to retained metadata protects that receipt without treating it as a consumer of
+all tensor bytes; an actual model/checkpoint hash still protects the whole state.
+Combined model cards are evaluated in each run's own scope. New references after
+the plan prevent deletion of the newly needed state.
+
+The separate private plan, durable per-file journal and receipt under
+`.local/maintenance/checkpoints` record removed paths and retained identities.
+Repeat the same apply after interruption; only a prior durable removal intent
+explains a missing payload. A completed replay returns its receipt and cannot
+remove later restored files. Never remove these inventory records: subsequent
+inventories use them to distinguish intentional removal from lost training data.
+The best/latest checkpoints still pass each actual trainer's resume reader.
+Removed intermediate tensors require rerunning pinned training; byte-identical
+reconstruction is not promised. Their historical receipt alone is not a usable
+checkpoint. No tensors are hardlinked, deduplicated or silently reconstructed.
+
+Logical bytes and allocated block counts are reported separately from measured
+free-volume change. APFS sharing, snapshots and unrelated system activity prevent
+a guaranteed saving estimate. The checked format/source contract is versioned
+with the tool; a changed tool needs a new plan rather than weakening old checks.
+Synthetic tests cover resume, interrupted deletion, new references, corruption,
+missing optimizer state and path/inode attacks. The initial real metadata review
+is separate from actual cleanup; no release/model qualification follows from it.

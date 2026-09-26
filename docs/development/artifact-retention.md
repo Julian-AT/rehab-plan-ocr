@@ -75,9 +75,10 @@ Dateiidentitäten, Registryhash, Neustartzustand und gemessene Volume-Differenz
 bleiben im privaten Bestandsindex. Trainings- und Exportprogramme schreiben
 weiterhin neue Laufverzeichnisse; bestehende Basisobjekte werden nicht verändert.
 
-Noch offen: Ausweitung auf weitere einzeln geprüfte Modellidentitäten,
-checkpointbewusste Begrenzung aktiver Trainings und überholte Exporte. Unbekannte
-Bestände werden durch diese Regel nicht zu Entfernungskandidaten.
+Für Checkpoints gilt inzwischen der separate [referenzbewusste Vertrag](private-storage.md#checkpoint-retention)
+mit besten/jüngsten fortsetzbaren Zuständen und eigenem Bestandsindex. Noch offen:
+Ausweitung auf weitere einzeln geprüfte Modellidentitäten und überholte Exporte.
+Unbekannte Bestände werden durch diese Regel nicht zu Entfernungskandidaten.
 
 ## Ausgeführt am 26. September 2026
 
