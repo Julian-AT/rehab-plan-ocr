@@ -95,6 +95,21 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Runtime dependency inventory — 2026-09-26
 
+### Captured conversation timezone — 2026-09-26
+
+A new failing regression reproduced reuse of one calendar snapshot for two civil
+days with the same start but different ends during a DST transition. Conversation
+queries now carry the requested timezone through day boundaries, live-reference
+checks, follow-up anchors, pagination and spoken date/time formatting. Cache keys
+contain typed start/end instants and the timezone; the discussed civil date retains
+its original zone. All complete rules retain an explicitly supplied calendar zone.
+
+The regression passes for 23- and 25-hour days, Vienna/Lagos cache separation and
+New York evening appointments while the host runs in Vienna. Reference lookup,
+spoken start time and pagination preserve the chosen day. Existing calendar-answer,
+agenda-projection and conversation-reply probes and the simulator build also pass.
+This is deterministic timezone coverage, not a real-device travel test.
+
 ### Custom provider in the experimental app — 2026-09-26
 
 The separate Debug simulator build now selects the verified custom GGUF through

@@ -219,6 +219,7 @@ def tests(portable):
             "conversation-state",
             "conversation-replies",
             "calendar-answers",
+            "calendar-timezone",
             "interpretation-provider",
             "assistant-request",
             "custom-assistant-provider",

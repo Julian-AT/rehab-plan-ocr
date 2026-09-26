@@ -22,6 +22,11 @@ struct CalendarQuestion: Equatable, Sendable {
   /// Filled only after resolving an allowed conversational reference to live data.
   var afterEventID: String?
   var afterEventDate: Date?
+  var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: timezone) ?? .current
+    return calendar
+  }
   var hasTimeBounds: Bool { afterMinutes != nil || beforeMinutes != nil }
   var validTimeBounds: Bool {
     [afterMinutes, beforeMinutes].compactMap { $0 }.allSatisfy { (0..<1440).contains($0) }
@@ -43,6 +48,12 @@ struct CalendarQuestion: Equatable, Sendable {
 
   /// Deliberately complete patterns: extra constraints go to structured understanding.
   static func direct(_ input: String, now: Date = .now, calendar: Calendar = .current) -> Self? {
+    var question = directInCalendar(input, now: now, calendar: calendar)
+    question?.timezone = calendar.timeZone.identifier
+    return question
+  }
+
+  private static func directInCalendar(_ input: String, now: Date, calendar: Calendar) -> Self? {
     let text = VoiceRules.normalized(input).trimmingCharacters(in: .punctuationCharacters)
     if [
       "danach", "und danach", "was kommt danach", "welcher termin kommt danach",
@@ -136,6 +147,7 @@ enum CalendarAnswer {
     guard question.validTimeBounds else {
       return Result(text: "Bitte die Uhrzeitangabe und den Zeitraum prüfen.")
     }
+    let timezone = question.calendar.timeZone
     var seen = Set<String>()
     var found = events.filter {
       $0.values.end > $0.values.start && seen.insert($0.id).inserted
@@ -152,8 +164,7 @@ enum CalendarAnswer {
     var warnings = [warning].filter { !$0.isEmpty }
     if question.hasTimeBounds {
       let unknownTimes = found.contains(where: \.isAllDay)
-      var calendar = Calendar.current
-      calendar.timeZone = TimeZone(identifier: question.timezone)!
+      let calendar = question.calendar
       found = found.filter { event in
         guard !event.isAllDay else { return false }
         let parts = calendar.dateComponents([.hour, .minute], from: event.values.start)
@@ -187,7 +198,7 @@ enum CalendarAnswer {
       }
       let remaining = question.detail == .next ? 0 : found.count - question.offset - page.count
       return Result(
-        text: prefix + page.map(\.spoken).joined(separator: " ")
+        text: prefix + page.map { $0.spoken(in: timezone) }.joined(separator: " ")
           + (remaining > 0 ? " Es gibt \(remaining) weitere passende Termine." : ""),
         events: page, total: found.count, offset: question.offset)
     }
@@ -195,7 +206,9 @@ enum CalendarAnswer {
       return Result(
         text: prefix + address.choose("Welchen Termin meinst du?", "Welchen Termin meinen Sie?")
           + " "
-          + found.prefix(5).enumerated().map { "\($0.offset + 1). \($0.element.spoken)" }.joined(
+          + found.prefix(5).enumerated().map {
+            "\($0.offset + 1). \($0.element.spoken(in: timezone))"
+          }.joined(
             separator: " ")
           + (found.count > 5
             ? " Es gibt weitere passende Termine; bitte die Suche eingrenzen." : ""),
@@ -211,18 +224,18 @@ enum CalendarAnswer {
       detail =
         event.isAllDay
         ? "Der Termin ist ganztägig eingetragen."
-        : "Der Termin beginnt am \(eventDate(event.values.start))."
+        : "Der Termin beginnt am \(eventDate(event.values.start, timezone: timezone))."
     case .end:
       detail =
         event.isAllDay
-        ? "Der Termin ist bis einschließlich \(eventDay(event.values.end.addingTimeInterval(-1))) ganztägig eingetragen."
-        : "Der Termin endet am \(eventDate(event.values.end))."
+        ? "Der Termin ist bis einschließlich \(eventDay(event.values.end.addingTimeInterval(-1), timezone: timezone)) ganztägig eingetragen."
+        : "Der Termin endet am \(eventDate(event.values.end, timezone: timezone))."
     case .duration:
       detail =
         event.isAllDay
         ? "Der Termin ist ganztägig eingetragen; eine Behandlungsdauer ist nicht bekannt."
         : "Der Termin dauert \(Int(event.values.end.timeIntervalSince(event.values.start) / 60)) Minuten."
-    case .list, .next, .count: detail = event.spoken
+    case .list, .next, .count: detail = event.spoken(in: timezone)
     }
     return Result(text: prefix + detail, events: [event], total: 1)
   }

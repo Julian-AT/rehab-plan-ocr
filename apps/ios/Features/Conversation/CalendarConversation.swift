@@ -11,7 +11,12 @@ actor CalendarConversation {
   private var nextID = 0
   private var lastQuestion: CalendarQuestion?
   private var nextOffset = 0
-  private var cached: [String: CalendarQueryResponse] = [:]
+  private struct QueryKey: Hashable {
+    let start: Date
+    let end: Date
+    let timezone: String
+  }
+  private var cached: [QueryKey: CalendarQueryResponse] = [:]
 
   init(fetch: @escaping Fetch) { self.fetch = fetch }
   func begin(_ token: UUID) {
@@ -47,19 +52,22 @@ actor CalendarConversation {
     else { return nil }
     return calendar.startOfDay(for: date)
   }
-  static func day(_ date: Date) -> String {
+  static func day(_ date: Date, calendar: Calendar = .current) -> String {
     let formatter = DateFormatter()
-    formatter.calendar = .current
+    formatter.calendar = calendar
     formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = .current
+    formatter.timeZone = calendar.timeZone
     formatter.dateFormat = "yyyy-MM-dd"
     return formatter.string(from: date)
   }
   func context() throws -> String {
+    let discussedDate = lastQuestion.flatMap { question in
+      question.date.map { Self.day($0, calendar: question.calendar) }
+    }
     let value: [String: Any] = [
       "today": Self.day(.now), "now_local": eventDate(.now),
       "timezone": TimeZone.current.identifier,
-      "last_discussed_date": lastQuestion?.date.map(Self.day) ?? "",
+      "last_discussed_date": discussedDate ?? "",
       "last_page": lastPage.compactMap { id -> [String: Any]? in
         guard let event = references[id] else { return nil }
         return [
@@ -72,14 +80,16 @@ actor CalendarConversation {
       decoding: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
       as: UTF8.self)
   }
-  private func query(start: Date, days: Int, token: UUID) async throws -> CalendarQueryResponse {
+  private func query(start: Date, days: Int, calendar: Calendar, token: UUID) async throws
+    -> CalendarQueryResponse
+  {
     try check(token)
     guard (1...90).contains(days),
-      let end = Calendar.current.date(byAdding: .day, value: days, to: start)
+      let end = calendar.date(byAdding: .day, value: days, to: start)
     else {
       throw CalendarUnderstandingError.invalidRequest
     }
-    let key = "\(start.timeIntervalSince1970):\(days)"
+    let key = QueryKey(start: start, end: end, timezone: calendar.timeZone.identifier)
     if let response = cached[key] { return response }
     let response = try await fetch(start, end)
     try check(token)
@@ -119,6 +129,7 @@ actor CalendarConversation {
           text: "Bitte den Zeitraum oder die Terminbezeichnung eingrenzen.")
       }
     }
+    let calendar = question.calendar
     let referenced = reference(question)
     let needsReference =
       question.reference != nil || question.ordinal > 0
@@ -130,16 +141,17 @@ actor CalendarConversation {
     }
     if followsReference && question.date == nil { question.days = 90 }
     if needsReference && !followsReference, let date = question.date, let referenced,
-      !Calendar.current.isDate(date, inSameDayAs: referenced.values.start)
+      !calendar.isDate(date, inSameDayAs: referenced.values.start)
     {
       return CalendarAnswer.Result(
         text:
           "Der besprochene Termin liegt an einem anderen Tag. Bitte den Termin oder das Datum genauer angeben."
       )
     }
-    let start = Calendar.current.startOfDay(for: question.date ?? referenced?.values.start ?? now)
+    let start = calendar.startOfDay(for: question.date ?? referenced?.values.start ?? now)
     let response = try await query(
-      start: start, days: referenced == nil || followsReference ? question.days : 1, token: token)
+      start: start, days: referenced == nil || followsReference ? question.days : 1,
+      calendar: calendar, token: token)
     try check(token)
     if followsReference {
       question.afterEventID = referenced?.id
@@ -150,10 +162,10 @@ actor CalendarConversation {
     if let anchorID = question.afterEventID {
       let anchorResponse: CalendarQueryResponse
       if let anchorDate = question.afterEventDate,
-        !Calendar.current.isDate(anchorDate, inSameDayAs: start)
+        !calendar.isDate(anchorDate, inSameDayAs: start)
       {
         anchorResponse = try await query(
-          start: Calendar.current.startOfDay(for: anchorDate), days: 1, token: token)
+          start: calendar.startOfDay(for: anchorDate), days: 1, calendar: calendar, token: token)
         if !anchorResponse.warning.isEmpty && anchorResponse.warning != warning {
           warning = [warning, anchorResponse.warning].filter { !$0.isEmpty }.joined(separator: " ")
         }

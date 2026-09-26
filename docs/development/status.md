@@ -32,6 +32,9 @@ establish current device behavior or authorize an update.
   Dates, minimal voice changes and explicit conversation state have native probes.
   Time constraints survive pagination; “Und danach?” rereads the visible anchor.
   Explicit dates are retained when resolving references. Both typed-query UI tests pass.
+- Conversation day boundaries, live references, pagination and spoken times retain
+  the request's timezone. A reproduced DST cache collision is fixed; deterministic
+  23/25-hour and cross-zone regressions pass with the simulator build.
 - German month names/ordinals, invalid dates, mixed-format self-corrections and
   negated field values have executable regressions. Short rejections drop pending
   mutations. The corresponding new UI scenario is still blocked by audio aborts.

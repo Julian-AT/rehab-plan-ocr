@@ -104,10 +104,15 @@ struct CalendarEventValues: Codable, Equatable, Sendable {
   var reminder_minutes: Int?
   var start: Date { $start_utc ?? .distantPast }
   var end: Date { $end_utc ?? .distantPast }
-  var spoken: String {
-    let until = Calendar.current.isDate(start, inSameDayAs: end) ? eventTime(end) : eventDate(end)
+  var spoken: String { spoken(in: .current) }
+  func spoken(in timezone: TimeZone) -> String {
+    var calendar = Calendar.current
+    calendar.timeZone = timezone
+    let until =
+      calendar.isDate(start, inSameDayAs: end)
+      ? eventTime(end, timezone: timezone) : eventDate(end, timezone: timezone)
     return
-      "\(title) beginnt am \(eventDay(start)) um \(eventTime(start)) und endet \(Calendar.current.isDate(start, inSameDayAs: end) ? "um" : "am") \(until)."
+      "\(title) beginnt am \(eventDay(start, timezone: timezone)) um \(eventTime(start, timezone: timezone)) und endet \(calendar.isDate(start, inSameDayAs: end) ? "um" : "am") \(until)."
       + (location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         ? "" : " Ort: \(location).")
   }
@@ -200,18 +205,22 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
     }
     return nil
   }
-  var spoken: String {
+  var spoken: String { spoken(in: .current) }
+  func spoken(in timezone: TimeZone) -> String {
+    var calendar = Calendar.current
+    calendar.timeZone = timezone
     let summary: String
     if isAllDay {
       let last = values.end.addingTimeInterval(-1)
       let span =
-        Calendar.current.isDate(values.start, inSameDayAs: last) ? "" : " bis \(eventDay(last))"
+        calendar.isDate(values.start, inSameDayAs: last)
+        ? "" : " bis \(eventDay(last, timezone: timezone))"
       summary =
-        "\(values.title), ganztägig am \(eventDay(values.start))\(span).\(values.location.isEmpty ? "" : " " + values.location + ".")"
+        "\(values.title), ganztägig am \(eventDay(values.start, timezone: timezone))\(span).\(values.location.isEmpty ? "" : " " + values.location + ".")"
     } else {
       var summaryValues = values
       summaryValues.location = knownPlace
-      summary = summaryValues.spoken
+      summary = summaryValues.spoken(in: timezone)
     }
     return
       summary
@@ -219,17 +228,21 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
   }
 }
 
-func eventTime(_ date: Date) -> String {
-  date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "de_AT")))
-}
-func eventDate(_ date: Date) -> String {
+func eventTime(_ date: Date, timezone: TimeZone = .current) -> String {
   date.formatted(
-    .dateTime.weekday(.wide).day().month(.wide).year().hour().minute().locale(
-      Locale(identifier: "de_AT")))
+    Date.FormatStyle(timeZone: timezone).hour().minute().locale(Locale(identifier: "de_AT")))
+}
+func eventDate(_ date: Date, timezone: TimeZone = .current) -> String {
+  date.formatted(
+    Date.FormatStyle(timeZone: timezone).weekday(.wide).day().month(.wide).year().hour().minute()
+      .locale(
+        Locale(identifier: "de_AT")))
 }
 
-func eventDay(_ date: Date) -> String {
-  date.formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "de_AT")))
+func eventDay(_ date: Date, timezone: TimeZone = .current) -> String {
+  date.formatted(
+    Date.FormatStyle(timeZone: timezone).day().month(.wide).year().locale(
+      Locale(identifier: "de_AT")))
 }
 
 /// Strict routing for widget and notification URLs; external parameters are ignored by rejection.
