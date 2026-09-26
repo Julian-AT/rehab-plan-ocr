@@ -183,6 +183,8 @@ def main():
                 "17",
                 "--enable_auto_update_opset",
                 "False",
+                "--optimize_tool",
+                "None",
             ],
         ),
     ]

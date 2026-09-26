@@ -132,12 +132,14 @@ The matching PP-OCRv6 Small checkpoint has already completed loading, a short
 training run, export and 24/24 Paddle/ONNX comparisons; the artifact remains
 experimental. See the [recorded smoke experiment](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
 
-The production trainer must compare frozen-backbone adaptation against lower-rate
-full fine-tuning, retain the exact dictionary and derive sequence lengths from
-verified labels. Runs must retain optimizer/checkpoint state, complete lineage and
-validation-based stopping. The former eight-hour cap is removed. Detection training
-remains conditional on measured detection errors. Full resumable training,
-critical-field/correction evaluation and device export parity remain open.
+The [adaptation trainer](../ml/training/ocr/README.md) now supports frozen-backbone
+and lower-rate full fine-tuning, the exact dictionary, label-derived sequence
+lengths, atomic optimizer checkpoints and validation stopping. A forced mid-epoch
+interruption reproduced the uninterrupted tensors exactly. The former eight-hour
+cap is removed. Its synthetic comparison passes export parity for the frozen
+candidate; the full-adaptation candidate fails two numerical parity cases and is
+rejected. Real-photo adaptation, critical-field/correction evaluation and device
+parity remain open. Detection training stays conditional on measured errors.
 
 An adapted model may replace the unchanged pipeline only after group-wide gains,
 no additional critical date/time or missing/invented appointment errors, and

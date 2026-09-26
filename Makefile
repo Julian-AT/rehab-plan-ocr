@@ -96,3 +96,32 @@ migrate-private:
 intake:
 	@test -n "$(REQUEST)" -a -n "$(BATCH)" || { echo 'Set REQUEST and a new BATCH below .local/datasets/incoming'; exit 2; }
 	uv run --locked python ml/data/annotation/intake.py "$(REQUEST)" "$(BATCH)"
+
+OCR_MODE ?= frozen-backbone
+OCR_EPOCHS ?= 100
+OCR_PATIENCE ?= 5
+FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
+FOLD ?= 0
+.PHONY: restore-ocr-assets prepare-ocr-smoke prepare-ocr-data train-ocr resume-ocr export-ocr
+restore-ocr-assets: restore-ocr-training
+	.local/envs/ocr/bin/python ml/training/ocr/restore.py
+
+prepare-ocr-smoke:
+	@test -n "$(DATASET)" || { echo 'Set DATASET to a new directory below .local'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/prepare.py --output "$(DATASET)" --smoke-font "$(FONT)"
+
+prepare-ocr-data:
+	@test -n "$(DATASET)" -a -n "$(SOURCE_DATASET)" || { echo 'Set DATASET and SOURCE_DATASET to reviewed local references'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/prepare.py --output "$(DATASET)" --references "$(SOURCE_DATASET)" --fold "$(FOLD)"
+
+train-ocr:
+	@test -n "$(RUN)" -a -n "$(DATASET)" || { echo 'Set RUN and DATASET'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/train.py start --run "$(RUN)" --dataset "$(DATASET)/dataset.json" --mode "$(OCR_MODE)" --max-epochs "$(OCR_EPOCHS)" --patience "$(OCR_PATIENCE)"
+
+resume-ocr:
+	@test -n "$(RUN)" || { echo 'Set RUN to an existing training run'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/train.py resume --run "$(RUN)"
+
+export-ocr:
+	@test -n "$(RUN)" || { echo 'Set RUN to a completed training run'; exit 2; }
+	.local/envs/ocr/bin/python ml/training/ocr/export.py --run "$(RUN)"

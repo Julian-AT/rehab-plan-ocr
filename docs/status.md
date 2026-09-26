@@ -59,6 +59,13 @@ Separate OCR and MLX-LM environments are locked under `ml/training/`. A matching
 trainable OCR checkpoint loads and has completed a synthetic training/export
 smoke test with 24/24 ONNX parity cases. See the
 [model experiment](../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
+The resumable OCR trainer now compares frozen-backbone and full adaptation, with
+atomic optimizer checkpoints and validation stopping. Its synthetic interruption
+test matches all 902 model/optimizer tensors. Frozen-backbone export passes 24/24
+desktop parity cases; full adaptation fails 2/24 and remains rejected. Both retain
+4/4 correctness on the tiny synthetic validation set, already achieved by the base.
+No real-photo improvement follows. See the
+[resumption experiment](../ml/experiments/2026-09-26-s17-ocr-resumption.md).
 Qwen3-0.6B also completed an eight-step LoRA/fusion/GGUF smoke run and local runtime
 execution. Both untuned and briefly tuned models failed the 12-case structured
 output diagnostic: all outputs were rejected. The artifacts remain experimental,

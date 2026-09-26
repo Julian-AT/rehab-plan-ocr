@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "model": "PP-OCRv6_small_rec",
+  "status": "synthetic-adaptation-mechanics-only",
+  "base_registry": "ocr-base.json",
+  "dataset": {
+    "kind": "invented-text-crops",
+    "train": 8,
+    "validation": 4,
+    "real_photos": 0,
+    "human_evaluation_dialogues": 0,
+    "sha256": "bacd059c1381da4d5d97597a49b81a3e23ad5b811c9ffbc3a7230570d7a582aa"
+  },
+  "resume": {
+    "forced_signal": "SIGTERM",
+    "after_step": 5,
+    "replayed_epoch": 2,
+    "completed_steps": 8,
+    "identical_tensors": 902,
+    "unchanged_backbone_tensors": 295
+  },
+  "variants": [
+    {
+      "mode": "frozen-backbone",
+      "run": ".local/runs/ocr-resume-smoke-002",
+      "learning_rate": 0.0001,
+      "selected_epoch": 1,
+      "checkpoint_sha256": "251a29f2f484b38da49e7f766fb75aa330cadac1c9899c883e85920f7ea80d38",
+      "onnx_sha256": "c40a2cfb53e00e9e00e736e60961fa2c96fb8c19d9d41ed161b21c101b09347b",
+      "run_identity_sha256": "c11075aa6928713c98758a7ac03801d14fa3723b1f477dbe87a66bf16bc1c5bb",
+      "development_exact": {
+        "correct": 4,
+        "count": 4
+      },
+      "parity": {
+        "passed": true,
+        "numeric_cases_passed": 24,
+        "argmax_cases_passed": 24,
+        "cases": 24,
+        "rtol": 0.001,
+        "atol": 1e-05,
+        "max_absolute_error": 3.4302473068237305e-05
+      },
+      "qualified": false
+    },
+    {
+      "mode": "full",
+      "run": ".local/runs/ocr-full-smoke-002",
+      "learning_rate": 1e-05,
+      "selected_epoch": 1,
+      "checkpoint_sha256": "68e88797e4e1325f71dceea91d24e7446ec6b9978f93cc5c6b34c17b477a9a44",
+      "onnx_sha256": "736fdf8f43cc114e805653d4cb302db378e52a974599a9a076eb41ee5a4873e5",
+      "run_identity_sha256": "0791e85e100d069271e64abe95ec46c51ad711c0f092fce370c882c45e3f5c78",
+      "development_exact": {
+        "correct": 4,
+        "count": 4
+      },
+      "parity": {
+        "passed": false,
+        "numeric_cases_passed": 22,
+        "argmax_cases_passed": 24,
+        "cases": 24,
+        "rtol": 0.001,
+        "atol": 1e-05,
+        "max_absolute_error": 0.00021606683731079102
+      },
+      "qualified": false
+    }
+  ],
+  "offline_export": "network-denied subprocess, optional post-optimizer explicitly disabled",
+  "quality_improvement_established": false,
+  "physical_ios_verified": false,
+  "promoted": false
+}

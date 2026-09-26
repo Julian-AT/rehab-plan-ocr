@@ -169,3 +169,30 @@ follows from the isolated archive verification.
 The known iPhone 17 was unavailable during the read-only device inventory. No
 device was updated. No real-device speed, energy, thermal or usability improvement
 has been claimed. Milestones 1–4 remain open until their complete exit gates pass.
+
+## Verified implementation slices — 2026-09-26
+
+The collection guide, consent draft and local intake copy verified incoming files
+without replacing the reference inventory or granting approval. Purpose/receipt,
+retention, speaker grouping, interrupted-copy and existing-inventory checks pass.
+Actual participant access, completed consent materials and review remain external
+prerequisites.
+
+The OCR adapter materializes approved, separately reviewed crops with grouped
+provenance and rechecks live approvals before training/resume/export. Its tests use
+invented references; the 20 private originals remain unapproved. The CPU trainer
+supports frozen-backbone and lower-rate full adaptation, label-derived lengths,
+atomic epoch checkpoints, Adam-state resume and validation stopping without a time
+cap. A SIGTERM after step five replayed the interrupted epoch; all 902 model and
+optimizer tensors matched uninterrupted execution and all 295 frozen backbone
+state tensors remained unchanged. Both synthetic modes stopped at epoch two and
+selected epoch one with 4/4 validation crops, matching the pretrained baseline.
+
+Frozen-backbone ONNX export passes 24/24 numerical/token comparisons. Full adaptation
+passes 22/24 numerical comparisons and 24/24 token comparisons; its export is
+rejected. Disabling runtime graph optimization does not resolve the two numerical
+failures. Both conversions repeat identically with network access denied after
+disabling the converter's optional automatic dependency installation. These are
+pipeline mechanics, not clinical or physical-device qualification. The
+[experiment](../ml/experiments/2026-09-26-s17-ocr-resumption.md) and
+[artifact card](../ml/registry/ocr-adaptation-smoke-002.json) preserve the results.

@@ -1,0 +1,115 @@
+# Local PP-OCRv6 Small adaptation
+
+The registry pins the official trainable checkpoint, source revision and exact
+shipping CTC dictionary. Model development stays outside app dependencies. Restore
+once online; preparation, adaptation, export and parity then use local files.
+
+```sh
+make restore-ocr-assets
+make prepare-ocr-smoke DATASET=.local/datasets/ocr-example
+make train-ocr DATASET=.local/datasets/ocr-example RUN=.local/runs/ocr-example-frozen
+make resume-ocr RUN=.local/runs/ocr-example-frozen
+make export-ocr RUN=.local/runs/ocr-example-frozen
+```
+
+The smoke dataset contains eight invented training lines and four validation lines.
+It proves mechanics only. `FONT` can select another local font; its hash is recorded.
+Training uses CPU and defaults to two numerical-library threads. There is no eight-hour cap.
+`OCR_EPOCHS` is the maximum epoch count (default 100); `OCR_PATIENCE` defaults to five
+validation epochs without improvement. These are recorded before training.
+
+## Reviewed data
+
+The real-data adapter uses the existing reference exporter and crop materializer:
+
+```sh
+make prepare-ocr-data SOURCE_DATASET=.local/datasets/private \
+  DATASET=.local/datasets/ocr-reviewed-fold0 FOLD=0
+```
+
+It requires human-approved references, separately reviewed complete text crops and
+frozen source-related development groups. It fails on the current unapproved photo
+collection. It never changes approval or assigns a final holdout. Each prepared
+crop retains source/reference/review hashes, its group, field, variant and partition.
+Time fields `start` and `end` become canonical `start_time` and `end_time`.
+
+Before training, resume and export, the adapter checks the live references, crop
+review and grouping against the prepared snapshot. Altered text, removed examples,
+changed partitions, revoked approval and changed pixels stop the run. Data from new
+collections also requires the human privacy and permitted-use review described in
+the [collection guide](../../../docs/product/research/collection-guide.md); no
+automatic consent-to-reference merge or withdrawal service is implemented.
+
+Unusable, unreadable, blank, cropped and contradictory evidence cannot become full
+recognition targets. Such cases remain part of schedule evaluation, not positive
+text-crop training. Every label must fit the unchanged dictionary. Maximum sequence
+length comes from the actual labels plus NRTR's start/end tokens; encoding and CTC
+alignment capacity are checked without truncation. `--width 640` or `960` can support
+longer crops; an insufficient width fails explicitly.
+
+## Compare adaptation modes
+
+Use the identical prepared dataset, seed, width and validation policy for each run:
+
+```sh
+make train-ocr DATASET=.local/datasets/ocr-reviewed-fold0 \
+  RUN=.local/runs/ocr-frozen-fold0 OCR_MODE=frozen-backbone
+make train-ocr DATASET=.local/datasets/ocr-reviewed-fold0 \
+  RUN=.local/runs/ocr-full-fold0 OCR_MODE=full
+```
+
+Frozen mode fixes all backbone parameters and normalization buffers and uses a
+constant learning rate of 1e-4. Full mode updates the whole model at 1e-5. The Adam
+and L2 settings follow the pinned configuration; parameters with their own upstream
+regularizer retain that regularizer. There is no additional unrecorded random
+augmentation: variants are prepared with the data exporter. To change learning
+rate, batch size, width or seed, use the same `train.py start --help` CLI directly.
+Resume accepts only operational options and always uses its recorded settings.
+
+Validation first minimizes critical-field crop errors, then mean group error and
+character errors. Each group has equal weight in mean group error; derivative counts
+are disclosed. Original crops and augmented robustness cases have separate reports.
+The report also lists newly incorrect critical samples relative to the pretrained
+baseline. A selected checkpoint is a development candidate, never automatic app
+promotion. Human correction effort and complete schedule accuracy are not inferred
+from crop character errors. A quality result still needs all end-to-end gates.
+
+## Interruption and lineage
+
+Every completed epoch writes weights, Adam state, metrics and validation-stop state
+into a checksummed directory, published with an atomic rename. File contents and
+the parent directory are synchronized before continuation. An incomplete directory
+is ignored. A corrupted completed checkpoint fails explicitly. Keep the complete
+run and its prepared dataset; do not rename or edit them during a run.
+
+Each epoch has its recorded deterministic seed. An interrupted epoch replays from
+the most recent complete epoch with the same optimizer and data order. A deliberate
+pause is available as `--pause-after-epoch 1`; resume continues normally. There is
+an exclusive local process lock. Low disk space stops further epochs while keeping
+completed checkpoints. Checkpoints are retained; storage is not silently pruned.
+
+`identity.json` binds dataset, settings, trainer/helper sources, upstream registry,
+environment lock, installed key package versions, Python and platform. Changed
+lineage requires a new run. `baseline.json`, per-epoch `checkpoint.json`,
+`progress.json`, `selection.json` and stage logs retain the evidence. Selecting a
+checkpoint binds the export configuration as well as its weights.
+
+`verify_resume.py` compares every model and optimizer tensor between uninterrupted
+and resumed runs and checks frozen backbone buffers against the original weights.
+The [recorded experiment](../../experiments/2026-09-26-s17-ocr-resumption.md) states the
+actual verification evidence and its limits.
+
+## Export
+
+`make export-ocr` requires a selected checkpoint and a new `deployment/` directory.
+It runs the official Paddle export, ONNX opset 17 conversion with optional
+post-optimization disabled (`--optimize_tool None` prevents automatic dependency
+installation), and the pinned ONNX
+Runtime 1.22.0 CPU comparator at widths 320 and 640 plus the configured width.
+Raw CTC outputs must match within rtol 1e-3 / atol 1e-5, with identical argmax tokens.
+Empty comparisons fail. File hashes and failed stages remain recorded. A failed
+export can be retried with `export.py --output NEW_LOCAL_DIRECTORY`.
+
+ONNX parity does not establish physical iOS parity, latency, recognition quality,
+quantization safety or release readiness. The app continues using its existing
+pinned model until those independent gates pass.

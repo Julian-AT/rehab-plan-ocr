@@ -33,11 +33,31 @@ def normalized_image(path, width):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
+    parser.add_argument("--onnx", type=Path)
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     if ort.__version__ != "1.22.0":
         raise ValueError("Parity must use the pinned shipping runtime, ONNX Runtime 1.22.0")
     run = args.run.resolve()
-    config = yaml.safe_load((run / "config.yml").read_text())
+    if (run / "settings.json").exists():
+        settings = json.loads((run / "settings.json").read_text())
+        dataset_path = Path(settings["dataset"])
+        dataset = json.loads(dataset_path.read_text())
+        records = [dict(row, path=dataset_path.parent / row["image"]) for row in dataset["samples"]]
+        checkpoint = run / "selected.pdparams"
+        selected = json.loads((run / "selection.json").read_text())
+        if digest(checkpoint) != selected["sha256"]:
+            raise ValueError("Selected checkpoint changed")
+        config_path = run / "export.yml"
+        widths = sorted({320, 640, settings["width"]})
+    else:
+        config_path = run / "config.yml"
+        checkpoint = run / "checkpoints/latest.pdparams"
+        records = [json.loads(line) for line in (run / "samples.jsonl").read_text().splitlines()]
+        records = [dict(row, path=run / f"{row['id']}.png") for row in records]
+        widths = [320, 640]
+    model_path = args.onnx or run / "recognizer.onnx"
+    config = yaml.safe_load(config_path.read_text())
     characters = Path(config["Global"]["character_dict_path"]).read_text().splitlines()
     config["Architecture"]["Head"]["out_channels_list"] = {
         "CTCLabelDecode": len(characters) + 2,
@@ -48,21 +68,22 @@ def main():
 
     paddle.set_device("cpu")
     model = build_model(config["Architecture"])
-    model.set_state_dict(paddle.load(str(run / "checkpoints/latest.pdparams")))
+    model.set_state_dict(paddle.load(str(checkpoint)))
     model.eval()
     options = ort.SessionOptions()
     options.intra_op_num_threads = 2
     options.inter_op_num_threads = 1
     session = ort.InferenceSession(
-        str(run / "recognizer.onnx"), sess_options=options, providers=["CPUExecutionProvider"]
+        str(model_path), sess_options=options, providers=["CPUExecutionProvider"]
     )
     rows = []
-    records = [json.loads(line) for line in (run / "samples.jsonl").read_text().splitlines()]
     with paddle.no_grad():
         for record in records:
+            if digest(record["path"]) != record["image_sha256"]:
+                raise ValueError("Parity pixels changed since dataset preparation")
             # Both common and longer crops exercise dynamic width through export.
-            for width in [320, 640]:
-                image = normalized_image(run / f"{record['id']}.png", width)
+            for width in widths:
+                image = normalized_image(record["path"], width)
                 expected = model(paddle.to_tensor(image)).numpy()
                 actual = session.run(None, {session.get_inputs()[0].name: image})[0]
                 equal_shape = expected.shape == actual.shape
@@ -81,7 +102,7 @@ def main():
                         "same_tokens": same_tokens,
                     }
                 )
-    passed = all(row["allclose"] and row["same_tokens"] for row in rows)
+    passed = bool(rows) and all(row["allclose"] and row["same_tokens"] for row in rows)
     report = {
         "schema_version": 1,
         "kind": "paddle-onnx-export-parity",
@@ -89,15 +110,15 @@ def main():
         "onnxruntime": ort.__version__,
         "provider": "CPUExecutionProvider",
         "paddle": paddle.__version__,
-        "artifact_sha256": digest(run / "recognizer.onnx"),
-        "checkpoint_sha256": digest(run / "checkpoints/latest.pdparams"),
+        "artifact_sha256": digest(model_path),
+        "checkpoint_sha256": digest(checkpoint),
         "rtol": 1e-3,
         "atol": 1e-5,
         "cases": rows,
         "quality_qualification": False,
         "physical_ios_verified": False,
     }
-    (run / "parity.json").write_text(json.dumps(report, indent=2) + "\n")
+    (args.report or run / "parity.json").write_text(json.dumps(report, indent=2) + "\n")
     print(
         f"Export parity: {sum(row['allclose'] and row['same_tokens'] for row in rows)}/{len(rows)} cases"
     )
