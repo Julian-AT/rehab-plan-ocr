@@ -2,6 +2,8 @@
 
 Private rehabilitation-plan app with on-device recognition. Current implementation and remaining release gates: [Laßnitzhöhe release](docs/lassnitzhoehe-release.md).
 
+The native preview (build 2026092607) adds a monochrome four-tab interface, a dedicated **Sprechen** area and pinned offline German Kokoro/Martin speech. See [implementation and verification](docs/apple-voice-preview.md) and [real simulator images and audio samples](docs/preview/2026-09-26-s12/README.md). This preview has not been installed on the personal iPhone.
+
 Die iPhone-Version **0.3.0** ergänzt Heute-Ansicht, Widgets und eigene lokale Erinnerungen. [Umsetzung und Abnahme](docs/agenda-030.md).
 
 The latest delivery adds source-linked room/therapist review, a 60-second automatic

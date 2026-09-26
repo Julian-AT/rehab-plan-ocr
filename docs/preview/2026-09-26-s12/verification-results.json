@@ -1,0 +1,221 @@
+{
+  "date": "2026-09-26",
+  "build": "2026092607",
+  "implementation_commit": "d21aaed",
+  "ui_tests_commit": "a9fd15e",
+  "note": "20 distinct non-playback UI cases passed across separate runs; this is not an all-green full-suite result. Raw xcresult bundles are local build artifacts, excluded from Git.",
+  "ui_tests": [
+    {
+      "test": "AgendaPreviewTests/testEmptyCenteredAndNoSelectionAreDistinct",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 38.687
+    },
+    {
+      "test": "AgendaPreviewTests/testLargestTypeAndDarkModeRemainUsable",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 20.294
+    },
+    {
+      "test": "AgendaPreviewTests/testOverlapsMidnightAndPastInLight",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 25.998
+    },
+    {
+      "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable",
+      "status": "passed",
+      "result_bundle": "reha-orb-idle.xcresult",
+      "seconds": 16.533
+    },
+    {
+      "test": "AgendaPreviewTests/testSingleAndFutureEventsAppearOnce",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 21.987
+    },
+    {
+      "test": "AgendaPreviewTests/testUnavailableRecognitionCanStartFreshAfterTabChange",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 15.951
+    },
+    {
+      "test": "NativeFlowTests/testAdjustableControlsAndMoreAppearance",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 27.682
+    },
+    {
+      "test": "NativeFlowTests/testCalendarAndVoiceSettingsAreVisible",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 23.563
+    },
+    {
+      "test": "NativeFlowTests/testCaptureMenuPresentsAllSources",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 52.651
+    },
+    {
+      "test": "NativeFlowTests/testFailedCaptureRetry",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 20.24
+    },
+    {
+      "test": "NativeFlowTests/testNativeTabsArchiveSettingsAndColdLaunch",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 42.57
+    },
+    {
+      "test": "NativeFlowTests/testOneActionSaveAndUndo",
+      "status": "passed",
+      "result_bundle": "reha-native-final.xcresult",
+      "seconds": 59.806
+    },
+    {
+      "test": "NativeFlowTests/testPartialSaveAndMultiPageSummary",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 18.61
+    },
+    {
+      "test": "NativeFlowTests/testRecognitionKeepsOtherTabsAvailable",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 24.322
+    },
+    {
+      "test": "NativeFlowTests/testRetainedEditorAndOriginal",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 30.687
+    },
+    {
+      "test": "NativeFlowTests/testTextSizeAndDarkAppearance",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 22.913
+    },
+    {
+      "test": "NativeFlowTests/testUpcomingDaysExpandAndPastIsSeparate",
+      "status": "passed",
+      "result_bundle": "reha-native-flows.xcresult",
+      "seconds": 22.107
+    },
+    {
+      "test": "NativeFlowTests/testVoiceCreationPreviewIsRevokedOnTabChange",
+      "status": "passed",
+      "result_bundle": "reha-native-final.xcresult",
+      "seconds": 72.998
+    },
+    {
+      "test": "NativeFlowTests/testZPhotoPickerImportsARealImage",
+      "status": "passed",
+      "result_bundle": "reha-preview-current.xcresult",
+      "seconds": 17.353
+    },
+    {
+      "test": "NativeFlowTests/testZZFilePickerImportsAPublicPlan",
+      "status": "passed",
+      "result_bundle": "reha-file-layout.xcresult",
+      "seconds": 21.231
+    },
+    {
+      "test": "AgendaPreviewTests/testRealAudioDrivesOrbAndStopEndsIt",
+      "status": "failed",
+      "reason": "Host CoreAudio cannot start output; AVAudioPlayer and independent afplay fail with AudioQueueStart failed (-66681). No simulated audio levels."
+    },
+    {
+      "test": "NativeFlowTests/testNeuralPlaybackStopAndRepeat",
+      "status": "not_run",
+      "reason": "Known host audio failure must be resolved first."
+    },
+    {
+      "test": "NativeFlowTests/testVoiceTabIsExplicitAndPlaybackStopsOnTabChange",
+      "status": "not_run",
+      "reason": "Known host audio failure must be resolved first."
+    }
+  ],
+  "other_verification": [
+    {
+      "check": "Rust core and FFI, default features",
+      "status": "passed",
+      "tests": 122
+    },
+    {
+      "check": "Kokoro library with ONNX",
+      "status": "passed",
+      "tests": 60
+    },
+    {
+      "check": "Production Kokoro inference",
+      "status": "passed",
+      "evidence": "Three real 24 kHz WAVs, legacy IDs, long text and pre/in-flight cancellation"
+    },
+    {
+      "check": "Swift 6 and UniFFI integration",
+      "status": "passed"
+    },
+    {
+      "check": "Native agenda, DST, ownership and crash recovery",
+      "status": "passed",
+      "checks": 56
+    },
+    {
+      "check": "New daily projection edge cases",
+      "status": "passed"
+    },
+    {
+      "check": "German voice rules",
+      "status": "passed",
+      "checks": 23
+    },
+    {
+      "check": "Simulator EventKit",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "check": "Web tests",
+      "status": "passed",
+      "tests": 13
+    },
+    {
+      "check": "Web lint and Next build",
+      "status": "passed"
+    },
+    {
+      "check": "Tauri cargo check and full iOS simulator archive",
+      "status": "passed"
+    },
+    {
+      "check": "Native Debug simulator and unsigned iPhoneOS Release build",
+      "status": "passed"
+    },
+    {
+      "check": "Release bundled speech assets and license hashes",
+      "status": "passed",
+      "speech_files": 15,
+      "license_files": 25
+    }
+  ],
+  "new_photo_import": {
+    "sha256": "8b4265c5b30a430e741407865cf18f5a97ce8178641bc1515c81d8214d191974",
+    "observed_result": "One additional plan; processing_attempts completed"
+  },
+  "remaining": [
+    "Resolve host audio output and rerun all three playback UI tests",
+    "Record real audio-driven orb movement",
+    "User assessment of German voice samples",
+    "Audible VoiceOver, long microphone pauses, physical camera and call interruptions on device after approval",
+    "Explicit preview approval, fresh backup, signed device update without uninstall and retained-data comparison"
+  ],
+  "physical_device_updated": false,
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

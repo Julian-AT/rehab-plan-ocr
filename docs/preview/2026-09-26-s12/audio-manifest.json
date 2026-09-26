@@ -1,0 +1,33 @@
+{
+  "model_revision": "a1cba7fbf0e72fbae38f0a3a48ce0dc8e6077804",
+  "source": "crates/reha-core/examples/speech_probe.rs",
+  "recording": "Direct output of the production Rust Kokoro renderer; public synthetic text; not a microphone recording.",
+  "files": [
+    {
+      "file": "martin-kalender.wav",
+      "sha256": "afe2dd32d540133187eaf113f940d74cd085e3ab25358ef253ff5ef86f1ebe73",
+      "sample_rate": 24000,
+      "channels": 1,
+      "bits": 16,
+      "seconds": 12.55
+    },
+    {
+      "file": "martin-lange-antwort.wav",
+      "sha256": "38e6fe7350bd1c98bf4a332fb3d744ad2628471fc39220cc828cb06d4762fabd",
+      "sample_rate": 24000,
+      "channels": 1,
+      "bits": 16,
+      "seconds": 25.975
+    },
+    {
+      "file": "martin-langsam.wav",
+      "sha256": "5dc2f251f422982c1386073b6df64c583da3a48b230dca1e876eccbc804d39f8",
+      "sample_rate": 24000,
+      "channels": 1,
+      "bits": 16,
+      "seconds": 17.175
+    }
+  ],
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}

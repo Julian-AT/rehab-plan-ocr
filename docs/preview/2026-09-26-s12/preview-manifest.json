@@ -1,0 +1,228 @@
+{
+  "build": "2026092607",
+  "implementation_commit": "d21aaed",
+  "ui_tests_commit": "a9fd15e",
+  "device": "iPhone 17 simulator, iOS 26.4",
+  "data": "Only public synthetic fixtures",
+  "files": [
+    {
+      "file": "archiv-dunkel-groesste-schrift.png",
+      "sha256": "f2f8358e8185556d4a687104f16af48ba3f41d76a4dc4c6f0c48df3b0f42431f",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testLargestTypeAndDarkModeRemainUsable()",
+      "attachment": "13-archive-dark-accessibility_0_233F4C49-8813-4F5E-B4EE-3458B205F1B6.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "bereits-vorbei.png",
+      "sha256": "3d4138665bac95aeb8958fa06e59f6114d142580c3bea219228b2d62a3cc3a45",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testOverlapsMidnightAndPastInLight()",
+      "attachment": "07-past-expanded-before-check_0_8BA0EB39-9FC2-4008-80CD-E6F871404AC6.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "bewegung-reduziert.png",
+      "sha256": "9f57a9611c26b5e93cbd3cdd6aab685250912a7802f6e12c21d6ef47adb1bde8",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable()",
+      "attachment": "17-speaking-reduced-motion_0_7F56220E-A124-4524-88A2-A9B15255FB8C.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "dateiimport.png",
+      "sha256": "4e0fc51a0e0844c721321dc1fbfb54059363c058f1b24a5160330f5bb84a3b63",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testZZFilePickerImportsAPublicPlan()",
+      "attachment": "Public plan imported through Files_0_E410E5FD-9E91-4F81-8835-4EF2A14794FF.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "ein-termin.png",
+      "sha256": "03e4aa1118d065b9d9e735274d45c1b2d3276348cbadd61ed089ee599924888f",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testSingleAndFutureEventsAppearOnce()",
+      "attachment": "03-one-appointment_0_1DAD13B5-5771-4D78-BAD0-EBA7432D2063.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "fotoimport.png",
+      "sha256": "bd68f271d66aa95bf82fbd15ecb5fd09a9f9c6ee5be001f1799fa26f26e383a1",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testZPhotoPickerImportsARealImage()",
+      "attachment": "Real photo imported and recognized_0_7F2BD03E-8D25-452E-AB00-10668C06C15B.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "gespeichert-rueckgaengig.png",
+      "sha256": "5866e20ea0dcc4dc8b60b9ec5110967d633e20ddc920579104f8af41783d770a",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testOneActionSaveAndUndo()",
+      "attachment": "Saved with undo_0_4B8A9968-9B01-4CE9-935C-9E24C9A3A805.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "gleichnamige-kalender.png",
+      "sha256": "826f3fdd1e3b22b6cd294e9940b3dba3acdfdc47f44c24bde6fd0c683064270a",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testOverlapsMidnightAndPastInLight()",
+      "attachment": "09-same-name-calendars_0_D6D3489F-CF3E-4C8D-A047-0A54A84B705D.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "heute-frei.png",
+      "sha256": "bc401fd1b38d1ed4d6dd202583955425fc60ff9fa9aaf35c3659887576efc36f",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testSingleAndFutureEventsAppearOnce()",
+      "attachment": "04-no-today-with-future-days_0_ACCE801E-AC52-47D1-A6C6-CFEB535A9D08.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "kalenderauswahl-fehlt.png",
+      "sha256": "f3baddafb55e64249fb27b4379bca266a243eb97887201014277321dba078eb7",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testEmptyCenteredAndNoSelectionAreDistinct()",
+      "attachment": "02-calendar-selection-needed_0_89D7B82E-7425-40B7-ADC8-F0A7F1C9BF64.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "kalenderzugriff-fehlt.png",
+      "sha256": "73b47f125ba116943abd9652bf0cb3135ca8f589dacc1ee1b4f52035fa13e2fd",
+      "capture": "simctl io screenshot",
+      "scenario": "Calendar permission revoked and app cold-launched; permission restored afterward."
+    },
+    {
+      "file": "kamera-simulator.png",
+      "sha256": "5cebabae2d623d97cbb1745fa2f78d52b85d243de5469c40ba3aec88d965f2db",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testCaptureMenuPresentsAllSources()",
+      "attachment": "Camera presentation and unavailable simulator hardware_0_E5C33DFD-D268-424D-9728-347E49156788.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "leer.png",
+      "sha256": "b226837327195c5c775d9e4a4f8ec897138204a4c293b4ea04c1a316911439e5",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testEmptyCenteredAndNoSelectionAreDistinct()",
+      "attachment": "01-empty-centered_0_2EBED9DF-73CB-434D-991C-D79322005316.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "martin-kalender.wav",
+      "sha256": "afe2dd32d540133187eaf113f940d74cd085e3ab25358ef253ff5ef86f1ebe73",
+      "capture": "Production Rust Kokoro renderer; see audio-manifest.json"
+    },
+    {
+      "file": "martin-lange-antwort.wav",
+      "sha256": "38e6fe7350bd1c98bf4a332fb3d744ad2628471fc39220cc828cb06d4762fabd",
+      "capture": "Production Rust Kokoro renderer; see audio-manifest.json"
+    },
+    {
+      "file": "martin-langsam.wav",
+      "sha256": "5dc2f251f422982c1386073b6df64c583da3a48b230dca1e876eccbc804d39f8",
+      "capture": "Production Rust Kokoro renderer; see audio-manifest.json"
+    },
+    {
+      "file": "mehr.png",
+      "sha256": "bdd68c9da29998e72733c241efc6309c19caf064cb7beb3a555128e4d4b31d1e",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testOverlapsMidnightAndPastInLight()",
+      "attachment": "08-more-light_0_DCDD24AC-3027-48A5-91A0-90F345B6FC80.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "neues-foto-erkannt.png",
+      "sha256": "7c21da74cbb610a14494a01447cadd6572e9b916d3f5512d4397bde2da563008",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testZPhotoPickerImportsARealImage()",
+      "attachment": "Real photo imported and recognized_0_B03F11CE-FB24-4E01-99C1-C854D8138166.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "plan-speichern.png",
+      "sha256": "bace0a088a508824c1a88004d750d75ff1af29aee1404decd2ef7bdcaf9b283b",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testOneActionSaveAndUndo()",
+      "attachment": "Clear plan one action_0_8D88E6D2-4AA5-43F5-86D4-FE245EBA6153.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "spracherkennung-fehlt.png",
+      "sha256": "ea641f3e2c34bcf119be41c381cc4b2ba4a3c7b2887852919c9b012560b6bcfd",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testUnavailableRecognitionCanStartFreshAfterTabChange()",
+      "attachment": "16-recognition-unavailable_0_E1F53052-6D26-4A95-BFDF-9A625889C3A2.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "sprachvorschau-verworfen.png",
+      "sha256": "40b0d5619d7d7359dcb5db98ea87cb671300d218a2388c3fa8acced08fd705d0",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testVoiceCreationPreviewIsRevokedOnTabChange()",
+      "attachment": "Voice proposal revoked after tab change_0_BA402468-464D-4745-B261-0549F05BC1D4.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "sprachvorschau.png",
+      "sha256": "0fe805a0924a26ca1fdc30bd061e79251f872df99b1d6599569932cc3b0463b7",
+      "capture": "XCTest screenshot",
+      "test": "NativeFlowTests/testVoiceCreationPreviewIsRevokedOnTabChange()",
+      "attachment": "Voice concrete preview before confirmation_0_7667F8E1-8282-47E6-9FEE-9CE260123EB7.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "sprechen-groesste-schrift.png",
+      "sha256": "8c24d506855ffb1e0e9a3e568103bf3572c81a5d5dc42b26213b9a1da5901e03",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testLargestTypeAndDarkModeRemainUsable()",
+      "attachment": "12-speaking-largest-type_0_FBF54819-0136-4941-8F04-97D574C0A29B.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "sprechen-ruhender-orb.mp4",
+      "sha256": "49b2f260d461ea1c002e8c178c07ad46ade13652a2d5fda321aa0258147f76b7",
+      "capture": "XCTest screen recording; silent, Reduce Motion enabled",
+      "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable()",
+      "source_attachment": "4150CB28-055E-4089-B570-08B279A0E2E9.mp4",
+      "source_sha256": "342ca0df821ee887c02e66fdc41cca7fe43fd80c233bbb8fde4550020bff5348",
+      "trim_start_seconds": 4.4,
+      "duration_seconds": 6.4,
+      "encoding": "H.264, 30 fps, original 1206 x 2622 dimensions, no audio",
+      "limitation": "Does not verify audio playback or audio-driven movement."
+    },
+    {
+      "file": "sprechen.png",
+      "sha256": "9f57a9611c26b5e93cbd3cdd6aab685250912a7802f6e12c21d6ef47adb1bde8",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testReducedMotionSystemSettingKeepsVoiceUsable()",
+      "attachment": "17-speaking-reduced-motion_0_7F56220E-A124-4524-88A2-A9B15255FB8C.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "termine-dunkel-groesste-schrift.png",
+      "sha256": "82626e820a9adcb55548f2a32e5bcc06937a8804c6eca0e45bd79117fb4e6369",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testLargestTypeAndDarkModeRemainUsable()",
+      "attachment": "11-agenda-dark-accessibility_0_1355AB80-8A7D-4F11-BEBC-338E29D4562F.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "termine-hell.png",
+      "sha256": "6a7567a38695169ba16cd2cd22bbdb1f36aaf8a39661b8849d67b6119018daa1",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testOverlapsMidnightAndPastInLight()",
+      "attachment": "06-agenda-light-overlaps_0_7A20569A-EEDE-4E37-91E4-7A6C5F593E17.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    },
+    {
+      "file": "weitere-tage.png",
+      "sha256": "7e4c3ebe5034454895626ad6b97c369b912cf3d105c51611bfc16e8ac8e46516",
+      "capture": "XCTest screenshot",
+      "test": "AgendaPreviewTests/testSingleAndFutureEventsAppearOnce()",
+      "attachment": "05-five-future-days_0_04287E0A-5A5E-4014-B2CA-35187EC6E05D.png",
+      "timestamp_utc": "2026-09-26T12:08:00Z"
+    }
+  ],
+  "record_kind": "historical-technical-record",
+  "original_attestation": "external-private-archive"
+}
