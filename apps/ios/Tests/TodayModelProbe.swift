@@ -6,6 +6,7 @@ import Foundation
   var responses: [Date: CalendarQueryResponse] = [:]
   var queries: [Date] = []
   var synchronizations = 0
+  var maintenanceCompletions = 0
   var holdNext = false
   var failure = false
   var wrongResponseScope = false
@@ -17,6 +18,7 @@ import Foundation
   func selection() async throws -> AgendaSelection { selected }
   func synchronize() async throws {
     synchronizations += 1
+    defer { maintenanceCompletions += 1 }
     if holdMaintenance {
       await withCheckedContinuation { maintenancePending = $0 }
     }
@@ -115,8 +117,16 @@ import Foundation
     }
     precondition(source.maintenancePending != nil)
     source.maintenanceFailure = true
+    source.holdMaintenance = false
     source.maintenancePending?.resume()
     source.maintenancePending = nil
+    for _ in 0..<10_000 {
+      if source.maintenanceCompletions == 1 { break }
+      await Task.yield()
+    }
+    precondition(source.maintenanceCompletions == 1, "Held maintenance did not finish")
+    precondition(model.availability == .ready && model.error == nil)
+    precondition(model.events(on: week.start)?.count == 1)
     source.holdNext = true
     let pending = Task { await refresh(model, source, key: "selection-race") }
     await waitForQuery(source)
@@ -129,6 +139,7 @@ import Foundation
     let count = source.queries.count
     await refresh(model, source, key: "empty-after-save")
     precondition(source.queries.count == count && model.availability == .noSelection)
+    precondition(source.maintenancePending == nil, "Probe left another maintenance task suspended")
   }
 
   private static func marksOnlyKnownDaysAndClearsRepairedGaps() async {
