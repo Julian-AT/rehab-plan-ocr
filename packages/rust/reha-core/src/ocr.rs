@@ -15,6 +15,48 @@ use std::{
 fn err(e: impl std::fmt::Display) -> Error {
     Error::Invalid(format!("Local model inference failed: {e}"))
 }
+
+const DETECTOR_FILE: &str = "det-inference.onnx";
+const RECOGNIZER_FILE: &str = "rec-inference.onnx";
+
+fn verify_model_files(directory: &Path, manifest: &serde_json::Value) -> Result<()> {
+    let files = manifest["files"]
+        .as_array()
+        .ok_or_else(|| err("Missing model hashes"))?;
+    for required in [DETECTOR_FILE, RECOGNIZER_FILE] {
+        if files
+            .iter()
+            .filter(|item| item["path"].as_str() == Some(required))
+            .count()
+            != 1
+        {
+            return Err(err(format!(
+                "Expected exactly one model hash for {required}"
+            )));
+        }
+    }
+    for item in files {
+        let name = item["path"]
+            .as_str()
+            .ok_or_else(|| err("Missing model path"))?;
+        if ![
+            DETECTOR_FILE,
+            RECOGNIZER_FILE,
+            "det-inference.yml",
+            "rec-inference.yml",
+        ]
+        .contains(&name)
+        {
+            return Err(err("Unexpected model path"));
+        }
+        let digest = crate::hash(&std::fs::read(directory.join(name))?);
+        if item["sha256"].as_str() != Some(&digest) {
+            return Err(err("Model checksum mismatch"));
+        }
+    }
+    Ok(())
+}
+
 pub struct OnnxEngine {
     detector: Session,
     recognizer: Session,
@@ -26,28 +68,7 @@ impl OnnxEngine {
     pub fn load(directory: &Path) -> Result<Self> {
         let manifest: serde_json::Value =
             serde_json::from_slice(&std::fs::read(directory.join("manifest.json"))?)?;
-        let files = manifest["files"]
-            .as_array()
-            .ok_or_else(|| err("Missing model hashes"))?;
-        for item in files {
-            let name = item["path"]
-                .as_str()
-                .ok_or_else(|| err("Missing model path"))?;
-            if ![
-                "det-inference.onnx",
-                "rec-inference.onnx",
-                "det-inference.yml",
-                "rec-inference.yml",
-            ]
-            .contains(&name)
-            {
-                return Err(err("Unexpected model path"));
-            }
-            let digest = crate::hash(&std::fs::read(directory.join(name))?);
-            if item["sha256"].as_str() != Some(&digest) {
-                return Err(err("Model checksum mismatch"));
-            }
-        }
+        verify_model_files(directory, &manifest)?;
         let dict = std::fs::read(directory.join("dictionary.json"))?;
         if manifest["dictionary_sha256"].as_str() != Some(&crate::hash(&dict)) {
             return Err(err("Dictionary checksum mismatch"));
@@ -63,8 +84,8 @@ impl OnnxEngine {
                 .map_err(err)
         };
         Ok(Self {
-            detector: load("det-inference.onnx")?,
-            recognizer: load("rec-inference.onnx")?,
+            detector: load(DETECTOR_FILE)?,
+            recognizer: load(RECOGNIZER_FILE)?,
             dictionary: serde_json::from_slice(&dict)?,
             name: manifest["engine"].as_str().unwrap_or("PP-OCRv6").into(),
             manifest,
@@ -514,6 +535,71 @@ fn components(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn model_file_fixture() -> (tempfile::TempDir, serde_json::Value) {
+        let directory = tempfile::tempdir().unwrap();
+        let files: Vec<_> = [
+            DETECTOR_FILE,
+            RECOGNIZER_FILE,
+            "det-inference.yml",
+            "rec-inference.yml",
+        ]
+        .into_iter()
+        .map(|name| {
+            // Deliberately not an ONNX model: these tests exercise only the
+            // file-integrity gate, without initializing the native runtime.
+            let bytes = format!("synthetic fixture for {name}");
+            std::fs::write(directory.path().join(name), &bytes).unwrap();
+            serde_json::json!({"path": name, "sha256": crate::hash(bytes.as_bytes())})
+        })
+        .collect();
+        (directory, serde_json::json!({"files": files}))
+    }
+
+    #[test]
+    fn model_manifest_requires_exactly_one_hash_for_each_loaded_model() {
+        let (directory, manifest) = model_file_fixture();
+        let files = manifest["files"].as_array().unwrap();
+        let mut invalid = vec![
+            ("missing file list", serde_json::json!({})),
+            ("empty file list", serde_json::json!({"files": []})),
+            ("only YAML", serde_json::json!({"files": &files[2..]})),
+        ];
+        for (index, name) in [(0, DETECTOR_FILE), (1, RECOGNIZER_FILE)] {
+            let mut missing = files.clone();
+            missing.remove(index);
+            invalid.push((name, serde_json::json!({"files": missing})));
+            let mut duplicated = files.clone();
+            duplicated.push(files[index].clone());
+            invalid.push((name, serde_json::json!({"files": duplicated})));
+        }
+        for (case, manifest) in invalid {
+            assert!(
+                verify_model_files(directory.path(), &manifest).is_err(),
+                "{case} must fail before model initialization"
+            );
+        }
+    }
+
+    #[test]
+    fn model_manifest_preserves_required_and_optional_file_forms() {
+        let (directory, manifest) = model_file_fixture();
+        verify_model_files(directory.path(), &manifest).unwrap();
+        let files = manifest["files"].as_array().unwrap();
+        verify_model_files(directory.path(), &serde_json::json!({"files": &files[..2]})).unwrap();
+    }
+
+    #[test]
+    fn model_manifest_rejects_changed_loaded_file_bytes() {
+        for name in [DETECTOR_FILE, RECOGNIZER_FILE] {
+            let (directory, manifest) = model_file_fixture();
+            std::fs::write(directory.path().join(name), b"changed fixture bytes").unwrap();
+            assert!(verify_model_files(directory.path(), &manifest)
+                .unwrap_err()
+                .to_string()
+                .contains("Model checksum mismatch"));
+        }
+    }
 
     fn component_fixture(side: usize, rings: bool) -> Vec<f32> {
         (0..side * side)
