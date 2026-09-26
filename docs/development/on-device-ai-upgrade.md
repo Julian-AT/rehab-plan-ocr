@@ -1,6 +1,8 @@
 # On-device AI upgrade — 2026-09-27
 
-This is an implementation/qualification record, not a device release approval.
+This is an implementation/qualification record. The separately approved
+[physical update](../releases/2026-09-27-ai-upgrade-device.md) installed build
+2026092701; conversational release qualification remains open.
 The app identity, persistent data, visual contracts and visible calendar confirmation
 remain in force. Private speech, plans, weights and run artifacts stay under `.local`.
 
@@ -47,9 +49,9 @@ cancellation, formats, voice flow, calendar confirmation and bounded diagnostics
 These do not satisfy the 100 physical microphone/answer cycles or natural-dialogue
 accuracy target. Simulator builds are supporting evidence only.
 
-Before release: approve a fresh simulator preview and listening samples, back up
-the phone, install in place, compare persistent data, then run the guided real-speech
-session. Include microphone-only/duplex comparison, airplane mode after setup and
+The approved device update and reviewed persistent-data comparison are complete.
+Before conversational release, run the guided real-speech session. Include
+microphone-only/duplex comparison, airplane mode after setup and
 reboot, missing assets, disabled Intelligence, permissions, Bluetooth/interruption,
 foreground changes, quiet speech, dialect, long pauses, corrections, sustained
 combined workloads and memory pressure. Capture cold/warm endpoint-to-audio p95,
@@ -123,7 +125,8 @@ controls remain distinct from natural dialogue or physical-device qualification.
 - Simulator and unsigned arm64 iPhone Release builds, focused audio/recognition/voice/calendar/evidence checks, Rust
   evidence projection, generated-binding parity and repository lint pass.
   The unsigned iPhone bundle passes identity, extension, model-resource, privacy
-  and runtime-inventory validation. Signatures and physical acceptance remain pending.
+  and runtime-inventory validation. The subsequent signed physical package passes
+  signing/provisioning checks; conversation acceptance remains pending.
 - 14 intake/group/qualification tests pass. They exercise permission separation,
   related-source leakage, failed-turn timing, unsafe results and paired identities.
   All tool-test files pass across the full run and serial completion (879 cases).
@@ -148,11 +151,15 @@ controls remain distinct from natural dialogue or physical-device qualification.
   ASR C/C++ and Metal libraries cross-compile for arm64 iOS 26. No inference,
   streaming-quality result, framework integration or phone qualification is implied.
 
-Physical installation still requires explicit approval of these previews and
-listening samples under AGENTS.md, followed by a fresh backup and in-place update.
-The fresh read-only device listing reports the iPhone disconnected; connect and
-unlock it for the approved backup/install/session. The Release build is unsigned,
-so signing/provisioning must be verified for the actual installable package.
+The user approved installation after these previews and samples were prepared.
+The [signed in-place update](../releases/2026-09-27-ai-upgrade-device.md) to build
+2026092701 includes a fresh verified backup and a reviewed schema-8-to-11 comparison:
+all original database rows, preferences and source files are preserved. App startup
+was observed during the initial post-install copy, so the stable comparison covers
+the first-launch migration rather than a separate pre-launch state. New phone
+diagnostics include two failed recognition finalizations and one short finalized
+transcript through the legacy provider. These unannotated turns do not pass voice
+qualification or demonstrate SpeechAnalyzer operation on the phone.
 The next critical step is the guided natural-speech session. Parakeet/Ultra,
 WhisperKit, neural VAD, compact Qwen comparisons, Pocket TTS, whole-plan Apple OCR
 and accelerated OCR remain unqualified; training awaits purpose-approved grouped
