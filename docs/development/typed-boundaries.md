@@ -26,6 +26,25 @@
   nicht lesbare Kalender/Vorkommen. Die genaue Serieninstanz wird durch
   Kalenderkennung, externe Kennung, Vorkommenszeit und erwarteten Beginn
   aufgelöst. Die Auswahlprüfung vor und nach dem Lesen bleibt im Core.
+- Agenda und Sprachantworten rufen `agenda_selection` und `query_calendar_events`
+  als eigene UniFFI-Methoden auf. `AgendaQueryRequest` trägt UTC-Grenzen und einen
+  optional erwarteten Scope (Kalender-IDs, Einstellungszeitzone, Auswahlrevision).
+  `AgendaQueryResult` trägt den tatsächlich verwendeten Scope, die Grenzen und
+  sämtliche Termine sowie Ausfallhinweise. Auswahl und Importzuordnungen kommen
+  ausschließlich aus dem Core. `calendar_reads::query` liefert auch intern ein
+  typisiertes Ergebnis; keine vollständige Leseantwort wird dafür zu JSON umgebaut.
+- Die Agenda verlangt ihren erfassten Scope und prüft ihn vor der Veröffentlichung
+  erneut. Der erste Read eines Gesprächsschritts erfasst die aktuelle Auswahl;
+  alle weiteren Reads desselben Tokens, einschließlich eines separaten Referenztags,
+  verlangen diese Revision. Ein Wechsel verwirft den Schritt samt Antwortcache.
+  Die im Kalenderanliegen erfasste Zeitzone bestimmt weiterhin die Tagesgrenzen;
+  die Einstellungszeitzone im Scope ersetzt sie nicht.
+- Bereichsfehler sind typisierte Validierungsfehler, unzulässige Plattformantworten
+  Speicherfehler. Ein Auswahlwechsel ist im Core `QueryError::SelectionChanged`
+  und wird am nativen Eingang auf `StaleRevision` abgebildet; der Swift-Leseadapter
+  zeigt eine kalenderbezogene Meldung. Native Fehlerarten bleiben unverändert.
+  Die bisherigen `agendaSelection`-/`queryCalendarEvents`-Befehle delegieren an
+  dieselbe Logik und behalten ihre JSON-Ergebnisform sowie Scope-Fehlertexte.
 - Widgets verwenden denselben typisierten Query auf ihrer seriellen
   Kalenderqueue. Ihre Abfrage bindet sich synchron an den lokalen Auswahlstand
   (lokale Revision 0); die asynchrone App-Abfrage trägt die dauerhafte
@@ -130,10 +149,8 @@ transportieren weitere aktive Kalenderbefehle weiterhin als String/JSON. Dazu
 gehören Kalenderstatus, Reparatur, Verlaufsabfrage, manuelle Klärung ungewisser
 Schreibvorgänge, der Aufruf des Wiederanlaufs und Agenda-Abgleich. Der darunter
 liegende einzelne Wiederanlauf-Schreibauftrag ist bereits typisiert.
-Systemeditor, Berechtigungsanfrage und weitere Plattformeffekte bleiben offen. Die UI benutzt außerdem weiterhin den
-JSON-Aufrufadapter für Abfragen; darunter läuft der Plattformleseeffekt bereits
-typisiert. Diese Pfade sind **noch keine vollständig
-typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
+Systemeditor, Berechtigungsanfrage und weitere Plattformeffekte bleiben offen.
+Diese verbleibenden Pfade sind **noch keine vollständig typisierten Produktgrenzen**. Ihre bestehenden Bereichs-, Revisions-,
 Bestätigungs- und Journalprüfungen müssen bei einer Umstellung erhalten bleiben.
 
 `ServiceError::Legacy` hält die bisherige Verarbeitung von Domain-Fehlertexten
@@ -157,6 +174,11 @@ migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
 - `make test-calendar-read-contracts` und Rust `calendar_reads`: Metadaten- und
   Identitätserhalt, typisierte Abwesenheit/Fehler, Auswahlrevision, leere Auswahl
   und Zurückweisung von Antworten außerhalb der aktuellen Auswahl.
+- `make test-calendar-answers` prüft zusätzlich einen Auswahlwechsel zwischen
+  Ziel- und Referenztag, A→B→A, einen widersprüchlichen Fake und Wiederanlauf mit
+  einem neuen Gesprächstoken. `test-calendar-timezone` erhält Sommerzeit-,
+  Tagesgrenzen- und Fortsetzungsfälle. `test-agenda-cache` verwirft auch einen
+  nicht zur Anfrage passenden Antwortscope.
 - Rust `recognition_jobs`/`recognition_job_tests` und `make test-native-bindings`:
   Registrierung, Vorstart-Abbruch, eigene Versuch-ID bei Wiederholung,
   unbekannte/abgeschlossene IDs, frühe Dateifehler und verworfenes Aufruf-Future.
@@ -180,3 +202,15 @@ Vorschau, Button-Bestätigung und Journal-Replay über die neuen Callbacks.
 Die Gesprächsprobe behält die bisherigen Auswahl-, Ordinal-, Bestätigungs-,
 Abbruch- und Wartungsassertionen. Gemeinsamer Appbuild, EventKit-Integration
 und Geräteabnahme bleiben nachgelagerte Prüfungen auf dem endgültigen Stand.
+
+Der anschließende Query-Slice besteht 228 Core-/FFI-Tests, Clippy mit
+`--all-targets -- -D warnings`, den offiziellen Bindingsgenerator samt
+`check-bindings`, `test-native-bindings`, `test-agenda-cache`,
+`test-agenda-projection`, `test-calendar-answers`, `test-calendar-timezone` und
+`test-voice-flow`. Der native Roundtrip prüft den neuen App-Eingang neben dem
+Legacy-Eingang, Scope und Bereich, opake Metadaten, Ausfallhinweise, leere Auswahl
+ohne Plattformzugriff, A→B→A und sämtliche zehn nativen Fehleridentitäten.
+Die neue Gesprächsregression prüft einen Auswahlwechsel zwischen Ziel- und
+Referenztag, die Sperre des alten Antwortcaches und den anschließenden Neustart
+mit einem neuen Token. Diese Host-Nachweise ersetzen den gemeinsamen Appbuild
+und die Geräteabnahme nicht.

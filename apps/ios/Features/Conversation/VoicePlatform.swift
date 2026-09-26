@@ -16,12 +16,8 @@ extension VoiceModel {
           calendar.timeZone = .current
           return calendar
         }, address: { .saved() }, isVoiceOverRunning: { UIAccessibility.isVoiceOverRunning },
-        fetchCalendar: { start, end in
-          let iso = ISO8601DateFormatter()
-          return try await core.eventRequest(
-            "queryCalendarEvents",
-            ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
-            as: CalendarQueryResponse.self)
+        fetchCalendar: { start, end, scope in
+          try await core.calendarEvents(from: start, to: end, expecting: scope)
         }, preferences: { try await core.preferences() },
         destinations: {
           try await core.eventCalendars().map {

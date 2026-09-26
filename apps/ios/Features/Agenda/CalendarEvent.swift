@@ -25,15 +25,28 @@ import Foundation
   }
 }
 
-struct CalendarQueryResponse: Decodable, Sendable {
+struct AgendaSelection: Equatable, Sendable {
+  let calendarIDs: Set<String>
+  var timezone: String = "Europe/Vienna"
+  var revision: UInt64 = 0
+}
+
+enum CalendarQueryFailure: Error, LocalizedError {
+  case selectionChanged
+  case invalidResponse
+  var errorDescription: String? {
+    switch self {
+    case .selectionChanged: "Kalenderauswahl wurde geändert. Bitte erneut laden oder fragen."
+    case .invalidResponse: "Kalenderantwort passt nicht zur Anfrage. Bitte erneut laden."
+    }
+  }
+}
+
+struct CalendarQueryResponse: Sendable {
+  let scope: AgendaSelection
   let events: [CalendarEvent]
   let unavailableCalendarIDs: [String]?
   var unavailableEvents: [UnavailableCalendarEvent]? = nil
-  enum CodingKeys: String, CodingKey {
-    case events
-    case unavailableCalendarIDs = "unavailable_calendar_ids"
-    case unavailableEvents = "unavailable_events"
-  }
   var warning: String {
     unavailableCalendarIDs?.isEmpty == false
       ? "Einige Kalenderdaten sind nicht verfügbar. Die Auskunft umfasst nur lesbare Termine. " : ""

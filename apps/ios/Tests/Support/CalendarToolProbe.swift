@@ -4,12 +4,8 @@
 
   @MainActor enum CalendarToolProbe {
     static func run(_ core: NativeApplication, day: Date) async throws {
-      let store = CalendarConversation(fetch: { start, end in
-        let iso = ISO8601DateFormatter()
-        return try await core.eventRequest(
-          "queryCalendarEvents",
-          ["start_utc": iso.string(from: start), "end_utc": iso.string(from: end)],
-          as: CalendarQueryResponse.self)
+      let store = CalendarConversation(fetch: { start, end, scope in
+        try await core.calendarEvents(from: start, to: end, expecting: scope)
       })
       let token = UUID()
       await store.begin(token)

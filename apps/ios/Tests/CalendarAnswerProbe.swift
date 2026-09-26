@@ -6,9 +6,42 @@ actor CalendarFixture {
   var calls = 0
   init(_ events: [CalendarEvent]) { self.events = events }
   func replace(_ events: [CalendarEvent]) { self.events = events }
-  func query(_ start: Date, _ end: Date) -> CalendarQueryResponse {
+  func query(_ start: Date, _ end: Date, _ expected: AgendaSelection?) throws
+    -> CalendarQueryResponse
+  {
     calls += 1
-    return CalendarQueryResponse(events: events, unavailableCalendarIDs: [])
+    let scope = AgendaSelection(calendarIDs: ["visible"])
+    guard expected == nil || expected == scope else { throw CalendarQueryFailure.selectionChanged }
+    return CalendarQueryResponse(scope: scope, events: events, unavailableCalendarIDs: [])
+  }
+}
+
+/// Simulate a Core selection change between the answer range and anchor lookup.
+private actor ChangingSelectionFixture {
+  let events: [CalendarEvent]
+  var scope = AgendaSelection(calendarIDs: ["visible"], revision: 4)
+  var changeAfterRead = false
+  var ignoreExpected = false
+  var requested: [AgendaSelection?] = []
+  init(_ events: [CalendarEvent]) { self.events = events }
+  func arm(ignoreExpected: Bool) {
+    changeAfterRead = true
+    self.ignoreExpected = ignoreExpected
+    requested = []
+  }
+  func query(_ start: Date, _ end: Date, _ expected: AgendaSelection?) throws
+    -> CalendarQueryResponse
+  {
+    requested.append(expected)
+    if !ignoreExpected, let expected, expected != scope {
+      throw CalendarQueryFailure.selectionChanged
+    }
+    let result = CalendarQueryResponse(scope: scope, events: events, unavailableCalendarIDs: [])
+    if changeAfterRead {
+      changeAfterRead = false
+      scope.revision += 2  // A -> B -> A; IDs and timezone look unchanged.
+    }
+    return result
   }
 }
 
@@ -150,8 +183,8 @@ actor CalendarFixture {
       } catch CalendarUnderstandingError.invalidRequest {}
     }
     let boundedFixture = CalendarFixture(rows)
-    let boundedStore = CalendarConversation(fetch: { start, end in
-      await boundedFixture.query(start, end)
+    let boundedStore = CalendarConversation(fetch: { start, end, scope in
+      try await boundedFixture.query(start, end, scope)
     })
     let boundedToken = UUID()
     await boundedStore.begin(boundedToken)
@@ -164,8 +197,8 @@ actor CalendarFixture {
       preconditionFailure("Contradictory time bounds accepted")
     } catch CalendarUnderstandingError.invalidRequest {}
     let relativeFixture = CalendarFixture(rows)
-    let relativeStore = CalendarConversation(fetch: { start, end in
-      await relativeFixture.query(start, end)
+    let relativeStore = CalendarConversation(fetch: { start, end, scope in
+      try await relativeFixture.query(start, end, scope)
     })
     let relativeToken = UUID()
     await relativeStore.begin(relativeToken)
@@ -192,8 +225,8 @@ actor CalendarFixture {
       source: "Quelle", occurrence: "", recurring: false, system_only: false, writable: true,
       values: tomorrowValues, metadata: .object([:]), fingerprint: "tomorrow")
     let nextDayFixture = CalendarFixture(rows + [nextDayEvent])
-    let nextDayStore = CalendarConversation(fetch: { start, end in
-      await nextDayFixture.query(start, end)
+    let nextDayStore = CalendarConversation(fetch: { start, end, scope in
+      try await nextDayFixture.query(start, end, scope)
     })
     let nextDayToken = UUID()
     await nextDayStore.begin(nextDayToken)
@@ -213,8 +246,41 @@ actor CalendarFixture {
     let tomorrowMore = try await nextDayStore.resolve(
       CalendarQuestion(offset: 5, usesLastPage: true), token: nextDayToken, now: now)
     precondition(tomorrowMore.events.isEmpty && tomorrowMore.offset == 1)
+    for ignoresExpected in [false, true] {
+      let changing = ChangingSelectionFixture(rows + [nextDayEvent])
+      let guarded = CalendarConversation(fetch: { try await changing.query($0, $1, $2) })
+      let priorTurn = UUID()
+      await guarded.begin(priorTurn)
+      _ = try await guarded.resolve(
+        CalendarQuestion(detail: .next, date: now), token: priorTurn, now: now)
+      let turn = UUID()
+      await guarded.begin(turn)
+      await changing.arm(ignoreExpected: ignoresExpected)
+      do {
+        _ = try await guarded.resolve(
+          CalendarQuestion(detail: .next, date: tomorrow, usesLastPage: true), token: turn, now: now
+        )
+        preconditionFailure("An answer combined two different selection revisions")
+      } catch CalendarQueryFailure.selectionChanged {}
+      let requests = await changing.requested
+      precondition(requests.count == 2 && requests[0] == nil)
+      precondition(requests[1]?.revision == 4 && requests[1]?.calendarIDs == ["visible"])
+      do {
+        _ = try await guarded.resolve(CalendarQuestion(date: tomorrow), token: turn, now: now)
+        preconditionFailure("An invalidated turn reused its old answer cache")
+      } catch CalendarQueryFailure.selectionChanged {}
+      let freshTurn = UUID()
+      await guarded.begin(freshTurn)
+      let fresh = try await guarded.resolve(
+        CalendarQuestion(date: tomorrow), token: freshTurn, now: now)
+      precondition(fresh.events.map(\.id) == ["tomorrow"])
+      let freshRequests = await changing.requested
+      precondition(freshRequests.last! == nil, "A new turn must capture the new selection")
+    }
     let fixture = CalendarFixture(rows)
-    let store = CalendarConversation(fetch: { start, end in await fixture.query(start, end) })
+    let store = CalendarConversation(fetch: { start, end, scope in
+      try await fixture.query(start, end, scope)
+    })
     let token = UUID()
     await store.begin(token)
     let first = try await store.resolve(CalendarQuestion(date: now), token: token, now: now)

@@ -1,7 +1,6 @@
 //! Calendar editing independent of photo ownership. Only an explicit UI confirmation
 //! consumes a volatile proposal; confirmed requests alone enter the durable journal.
 use super::{failure, AppState, Platform, Response};
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -12,98 +11,30 @@ fn required<'a>(v: &'a Value, key: &str) -> Response<&'a str> {
         .filter(|s| !s.is_empty())
         .ok_or_else(|| format!("{key} fehlt.").into())
 }
-fn preferences(state: &AppState) -> Response<Value> {
-    super::settings::settings_value(state, None)
-}
-fn ids(p: &Value) -> Vec<String> {
-    p["display_calendar_ids"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|s| s.as_str().map(str::to_string))
-        .collect()
-}
-
-/// A read is bound to one visible selection, independently of the save target
-/// and reminder ownership. The revision also detects A -> B -> A changes.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct AgendaScope {
-    pub calendar_ids: Vec<String>,
-    pub timezone: String,
-    pub revision: u64,
-}
-impl AgendaScope {
-    fn current(state: &AppState) -> Response<Self> {
-        let p = preferences(state)?;
-        let mut calendar_ids = ids(&p);
-        calendar_ids.sort();
-        calendar_ids.dedup();
-        Ok(Self {
-            calendar_ids,
-            timezone: p["timezone"].as_str().unwrap_or("Europe/Vienna").into(),
-            revision: p["display_selection_revision"].as_u64().unwrap_or(0),
-        })
-    }
-}
 async fn native(platform: &Arc<dyn Platform>, name: &'static str, args: Value) -> Response<Value> {
     let platform = platform.clone();
     tokio::task::spawn_blocking(move || platform.call(name, args))
         .await
         .map_err(failure)?
 }
+/// Compatibility command adapter. New application callers use agenda_queries directly.
 pub async fn query(platform: Arc<dyn Platform>, state: &AppState, args: Value) -> Response<Value> {
-    let start = chrono::DateTime::parse_from_rfc3339(required(&args, "start_utc")?)
-        .map_err(|_| "Suchbeginn ungültig.")?;
-    let end = chrono::DateTime::parse_from_rfc3339(required(&args, "end_utc")?)
-        .map_err(|_| "Suchende ungültig.")?;
-    if end <= start || end - start > chrono::Duration::days(366) {
-        return Err("Suchzeitraum: maximal ein Jahr.".into());
-    }
-    let scope = AgendaScope::current(state)?;
-    if let Some(requested) = args.get("scope") {
-        let requested: AgendaScope = serde_json::from_value(requested.clone()).map_err(failure)?;
-        if requested != scope {
-            return Err("Kalenderauswahl wurde geändert. Erneut laden.".into());
-        }
-    }
-    if scope.calendar_ids.is_empty() {
-        return Ok(
-            json!({"events":[],"unavailable_calendar_ids":[],"unavailable_events":[],"scope":scope}),
-        );
-    }
-    let selected = &scope.calendar_ids;
-    let records: Vec<_> = state
-        .store
-        .lock()
-        .map_err(failure)?
-        .owned_records()
-        .map_err(failure)?
-        .into_iter()
-        .filter(|r| r.status == "saved" && r.external_id.is_some())
-        .collect();
-    let mut result = super::calendar_reads::query(
-        &platform,
-        super::calendar_reads::Query {
-            calendar_ids: selected.clone(),
-            records,
-            start_utc: required(&args, "start_utc")?.into(),
-            end_utc: required(&args, "end_utc")?.into(),
-            timezone: scope.timezone.clone(),
-            selection_revision: scope.revision,
-        },
-    )
-    .await?;
-    if AgendaScope::current(state)? != scope {
-        return Err("Kalenderauswahl wurde während des Ladens geändert. Erneut laden.".into());
-    }
-    if result["events"].as_array().is_none_or(|a| {
-        a.iter()
-            .any(|e| !selected.contains(&e["calendar_id"].as_str().unwrap_or_default().to_string()))
-    }) {
-        return Err("Kalenderantwort außerhalb der Auswahl.".into());
-    }
-    result["scope"] = serde_json::to_value(scope).map_err(failure)?;
-    Ok(result)
+    let request = super::agenda_queries::Request {
+        start_utc: required(&args, "start_utc")?.into(),
+        end_utc: required(&args, "end_utc")?.into(),
+        // Missing scope means current selection; explicit null remains invalid.
+        expected_scope: args
+            .get("scope")
+            .map(|scope| serde_json::from_value(scope.clone()))
+            .transpose()
+            .map_err(failure)?,
+    };
+    let result = super::agenda_queries::query(platform, state, request)
+        .await
+        .map_err(super::agenda_queries::QueryError::legacy)?;
+    Ok(json!({"events": result.events, "scope": result.scope,
+        "unavailable_calendar_ids": result.unavailable_calendar_ids,
+        "unavailable_events": result.unavailable_events}))
 }
 pub async fn dispatch(
     platform: Arc<dyn Platform>,
@@ -221,7 +152,9 @@ pub async fn dispatch(
                 json!({"count": super::calendar::append_pages(state, required(&args, "id")?.into(), pages)?}),
             )
         }
-        "agendaSelection" => serde_json::to_value(AgendaScope::current(state)?).map_err(failure),
+        "agendaSelection" => {
+            serde_json::to_value(super::agenda_queries::selection(state)?).map_err(failure)
+        }
         "queryCalendarEvents" => query(platform, state, args).await,
         "previewEventMutation" => serde_json::to_value(
             super::calendar_mutations::preview(

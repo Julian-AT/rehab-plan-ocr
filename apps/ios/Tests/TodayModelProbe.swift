@@ -8,6 +8,7 @@ import Foundation
   var synchronizations = 0
   var holdNext = false
   var failure = false
+  var wrongResponseScope = false
   var maintenanceFailure = false
   var maintenancePending: CheckedContinuation<Void, Never>?
   var holdMaintenance = false
@@ -25,13 +26,18 @@ import Foundation
     scopes.append(scope)
     queries.append(week.start)
     let result =
-      responses[week.start] ?? CalendarQueryResponse(events: [], unavailableCalendarIDs: [])
+      responses[week.start]
+      ?? CalendarQueryResponse(
+        scope: AgendaSelection(calendarIDs: ["therapy"]), events: [], unavailableCalendarIDs: [])
     if holdNext {
       holdNext = false
       await withCheckedContinuation { pending = $0 }
     }
     if failure { throw CocoaError(.fileReadUnknown) }
-    return result
+    return CalendarQueryResponse(
+      scope: wrongResponseScope ? AgendaSelection(calendarIDs: ["hidden"]) : scope,
+      events: result.events, unavailableCalendarIDs: result.unavailableCalendarIDs,
+      unavailableEvents: result.unavailableEvents)
   }
   func release() {
     let continuation = pending
@@ -55,7 +61,9 @@ import Foundation
       metadata: .object([:]), fingerprint: title)
   }
   private static func response(_ title: String) -> CalendarQueryResponse {
-    CalendarQueryResponse(events: [event(title)], unavailableCalendarIDs: [])
+    CalendarQueryResponse(
+      scope: AgendaSelection(calendarIDs: ["therapy"]), events: [event(title)],
+      unavailableCalendarIDs: [])
   }
   private static func refresh(_ model: TodayModel, _ source: Source, key: String) async {
     await model.refresh(using: source, week: week, visibleWeek: week.start, key: key)
@@ -76,8 +84,21 @@ import Foundation
     await invalidatesSensitiveContexts()
     await boundsCacheAndReusesRecentWeeks()
     await selectionRaceAndIndependentMaintenance()
+    await rejectsMismatchedResponseScope()
     print(
       "Agenda cache: refresh, empty weeks, errors, cancellation, invalidation and eviction passed")
+  }
+
+  private static func rejectsMismatchedResponseScope() async {
+    let source = Source()
+    let model = TodayModel()
+    source.responses[week.start] = response("Falsche Auswahl")
+    source.wrongResponseScope = true
+    await refresh(model, source, key: "wrong-response-scope")
+    precondition(model.events(on: week.start) == nil)
+    source.wrongResponseScope = false
+    await refresh(model, source, key: "restored-response-scope")
+    precondition(model.events(on: week.start)?.first?.values.title == "Falsche Auswahl")
   }
 
   private static func selectionRaceAndIndependentMaintenance() async {
@@ -118,6 +139,7 @@ import Foundation
     let third = Calendar.current.date(byAdding: .day, value: 2, to: week.start)!
     let fourth = Calendar.current.date(byAdding: .day, value: 3, to: week.start)!
     source.responses[week.start] = CalendarQueryResponse(
+      scope: AgendaSelection(calendarIDs: ["therapy"]),
       events: [event("Weiterhin lesbar")], unavailableCalendarIDs: ["gone"],
       unavailableEvents: [
         UnavailableCalendarEvent(
@@ -129,6 +151,7 @@ import Foundation
     precondition(!model.hasKnownGap(on: third) && !model.hasKnownGap(on: fourth))
     precondition(model.events(on: week.start)?.count == 1, "Readable events must not be hidden")
     source.responses[week.start] = CalendarQueryResponse(
+      scope: AgendaSelection(calendarIDs: ["therapy"]),
       events: [], unavailableCalendarIDs: ["unknown-calendar"])
     await refresh(model, source, key: "unknown-days")
     precondition(
@@ -163,11 +186,13 @@ import Foundation
     precondition(model.events(on: week.start)?.first?.values.title == "Geändert")
     source.failure = false
     source.responses[week.start] = CalendarQueryResponse(
+      scope: AgendaSelection(calendarIDs: ["therapy"]),
       events: [], unavailableCalendarIDs: ["gone"])
     await refresh(model, source, key: "deleted")
     precondition(model.events(on: week.start)?.isEmpty == true && model.error == nil)
     precondition(model.unavailableCalendars == ["gone"])
-    source.responses[week.start] = CalendarQueryResponse(events: [], unavailableCalendarIDs: [])
+    source.responses[week.start] = CalendarQueryResponse(
+      scope: AgendaSelection(calendarIDs: ["therapy"]), events: [], unavailableCalendarIDs: [])
     source.holdNext = true
     let empty = Task { await refresh(model, source, key: "empty") }
     await waitForQuery(source)

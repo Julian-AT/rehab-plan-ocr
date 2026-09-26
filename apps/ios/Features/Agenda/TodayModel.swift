@@ -1,16 +1,6 @@
 import Foundation
 import Observation
 
-struct AgendaSelection: Codable, Equatable, Sendable {
-  let calendarIDs: Set<String>
-  var timezone: String = "Europe/Vienna"
-  var revision: UInt64 = 0
-  enum CodingKeys: String, CodingKey {
-    case calendarIDs = "calendar_ids"
-    case timezone, revision
-  }
-}
-
 @MainActor protocol AgendaDataSource {
   var hasAccess: Bool { get }
   func selection() async throws -> AgendaSelection
@@ -124,6 +114,10 @@ struct AgendaSelection: Codable, Equatable, Sendable {
       for item in weeks where cache[item.start]?.epoch != epoch {
         let result = try await source.events(in: item, scope: selection)
         guard accept(request, source: source) else { return }
+        guard result.scope == selection else {
+          invalidate()
+          return
+        }
         guard try await source.selection() == selection else {
           guard accept(request, source: source) else { return }
           invalidate()

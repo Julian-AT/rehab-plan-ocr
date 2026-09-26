@@ -142,6 +142,7 @@ impl Application {
     }
 }
 pub mod agenda;
+pub mod agenda_queries;
 pub mod calendar;
 pub mod calendar_mutations;
 pub mod calendar_reads;

@@ -673,6 +673,10 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
+    func agendaSelection() async throws  -> AgendaQueryScope
+    
+    func queryCalendarEvents(request: AgendaQueryRequest) async throws  -> AgendaQueryResult
+    
     /**
      * Acceptance and write intent survive a dropped Swift future.
      */
@@ -850,6 +854,38 @@ open class NativeApplication: NativeApplicationProtocol, @unchecked Sendable {
 
     
 
+    
+open func agendaSelection()async throws  -> AgendaQueryScope  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_agenda_selection(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeAgendaQueryScope_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
+    
+open func queryCalendarEvents(request: AgendaQueryRequest)async throws  -> AgendaQueryResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativeapplication_query_calendar_events(
+                        self.uniffiCloneHandle(),FfiConverterTypeAgendaQueryRequest_lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_reha_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_reha_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeAgendaQueryResult_lift,
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
     
     /**
      * Acceptance and write intent survive a dropped Swift future.
@@ -1980,6 +2016,192 @@ public func FfiConverterTypeRecognitionJob_lower(_ value: RecognitionJob) -> UIn
 }
 
 
+
+
+public struct AgendaQueryRequest: Equatable, Hashable {
+    public var startUtc: String
+    public var endUtc: String
+    public var expectedScope: AgendaQueryScope?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(startUtc: String, endUtc: String, expectedScope: AgendaQueryScope?) {
+        self.startUtc = startUtc
+        self.endUtc = endUtc
+        self.expectedScope = expectedScope
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaQueryRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaQueryRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaQueryRequest {
+        return
+            try AgendaQueryRequest(
+                startUtc: FfiConverterString.read(from: &buf), 
+                endUtc: FfiConverterString.read(from: &buf), 
+                expectedScope: FfiConverterOptionTypeAgendaQueryScope.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaQueryRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.startUtc, into: &buf)
+        FfiConverterString.write(value.endUtc, into: &buf)
+        FfiConverterOptionTypeAgendaQueryScope.write(value.expectedScope, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryRequest_lift(_ buf: RustBuffer) throws -> AgendaQueryRequest {
+    return try FfiConverterTypeAgendaQueryRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryRequest_lower(_ value: AgendaQueryRequest) -> RustBuffer {
+    return FfiConverterTypeAgendaQueryRequest.lower(value)
+}
+
+
+public struct AgendaQueryResult: Equatable, Hashable {
+    public var startUtc: String
+    public var endUtc: String
+    public var scope: AgendaQueryScope
+    public var events: [CalendarReadEvent]
+    public var unavailableCalendarIds: [String]
+    public var unavailableEvents: [CalendarReadUnavailableEvent]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(startUtc: String, endUtc: String, scope: AgendaQueryScope, events: [CalendarReadEvent], unavailableCalendarIds: [String], unavailableEvents: [CalendarReadUnavailableEvent]) {
+        self.startUtc = startUtc
+        self.endUtc = endUtc
+        self.scope = scope
+        self.events = events
+        self.unavailableCalendarIds = unavailableCalendarIds
+        self.unavailableEvents = unavailableEvents
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaQueryResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaQueryResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaQueryResult {
+        return
+            try AgendaQueryResult(
+                startUtc: FfiConverterString.read(from: &buf), 
+                endUtc: FfiConverterString.read(from: &buf), 
+                scope: FfiConverterTypeAgendaQueryScope.read(from: &buf), 
+                events: FfiConverterSequenceTypeCalendarReadEvent.read(from: &buf), 
+                unavailableCalendarIds: FfiConverterSequenceString.read(from: &buf), 
+                unavailableEvents: FfiConverterSequenceTypeCalendarReadUnavailableEvent.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaQueryResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.startUtc, into: &buf)
+        FfiConverterString.write(value.endUtc, into: &buf)
+        FfiConverterTypeAgendaQueryScope.write(value.scope, into: &buf)
+        FfiConverterSequenceTypeCalendarReadEvent.write(value.events, into: &buf)
+        FfiConverterSequenceString.write(value.unavailableCalendarIds, into: &buf)
+        FfiConverterSequenceTypeCalendarReadUnavailableEvent.write(value.unavailableEvents, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryResult_lift(_ buf: RustBuffer) throws -> AgendaQueryResult {
+    return try FfiConverterTypeAgendaQueryResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryResult_lower(_ value: AgendaQueryResult) -> RustBuffer {
+    return FfiConverterTypeAgendaQueryResult.lower(value)
+}
+
+
+public struct AgendaQueryScope: Equatable, Hashable {
+    public var calendarIds: [String]
+    public var timezone: String
+    public var revision: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(calendarIds: [String], timezone: String, revision: UInt64) {
+        self.calendarIds = calendarIds
+        self.timezone = timezone
+        self.revision = revision
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgendaQueryScope: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgendaQueryScope: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgendaQueryScope {
+        return
+            try AgendaQueryScope(
+                calendarIds: FfiConverterSequenceString.read(from: &buf), 
+                timezone: FfiConverterString.read(from: &buf), 
+                revision: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgendaQueryScope, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.calendarIds, into: &buf)
+        FfiConverterString.write(value.timezone, into: &buf)
+        FfiConverterUInt64.write(value.revision, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryScope_lift(_ buf: RustBuffer) throws -> AgendaQueryScope {
+    return try FfiConverterTypeAgendaQueryScope.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgendaQueryScope_lower(_ value: AgendaQueryScope) -> RustBuffer {
+    return FfiConverterTypeAgendaQueryScope.lower(value)
+}
 
 
 public struct Appointment: Equatable, Hashable {
@@ -8330,6 +8552,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeAgendaQueryScope: FfiConverterRustBuffer {
+    typealias SwiftType = AgendaQueryScope?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAgendaQueryScope.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAgendaQueryScope.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeApprovalSnapshot: FfiConverterRustBuffer {
     typealias SwiftType = ApprovalSnapshot?
 
@@ -9498,6 +9744,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_func_normalize_speech() != 54361) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_agenda_selection() != 50868) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_query_calendar_events() != 36807) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_accept_and_save() != 28991) {

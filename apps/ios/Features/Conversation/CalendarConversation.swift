@@ -3,9 +3,11 @@ import Foundation
 /// References survive turns, query results do not. Every new answer rechecks visibility
 /// and live values; repeated lookups within that answer share one snapshot.
 actor CalendarConversation {
-  typealias Fetch = @Sendable (Date, Date) async throws -> CalendarQueryResponse
+  typealias Fetch = @Sendable (Date, Date, AgendaSelection?) async throws -> CalendarQueryResponse
   private let fetch: Fetch
   private var active: UUID?
+  private var scope: AgendaSelection?
+  private var scopeInvalidated = false
   private var references: [String: CalendarEvent] = [:]
   private var lastPage: [String] = []
   private var nextID = 0
@@ -21,11 +23,15 @@ actor CalendarConversation {
   init(fetch: @escaping Fetch) { self.fetch = fetch }
   func begin(_ token: UUID) {
     active = token
+    scope = nil
+    scopeInvalidated = false
     cached = [:]
   }
   func invalidate(_ token: UUID? = nil) {
     guard token == nil || active == token else { return }
     active = nil
+    scope = nil
+    scopeInvalidated = false
     cached = [:]
   }
   func clear(_ token: UUID? = nil) {
@@ -39,6 +45,7 @@ actor CalendarConversation {
   private func check(_ token: UUID) throws {
     try Task.checkCancellation()
     guard token == active else { throw CancellationError() }
+    guard !scopeInvalidated else { throw CalendarQueryFailure.selectionChanged }
   }
   static func civilDate(_ text: String, calendar: Calendar = .current) -> Date? {
     let formatter = DateFormatter()
@@ -92,9 +99,28 @@ actor CalendarConversation {
     }
     let key = QueryKey(start: start, end: end, timezone: calendar.timeZone.identifier)
     if let response = cached[key] { return response }
-    let response = try await fetch(start, end)
+    let response: CalendarQueryResponse
+    do {
+      response = try await fetch(start, end, scope)
+    } catch {
+      try check(token)
+      if case CalendarQueryFailure.selectionChanged = error {
+        scopeInvalidated = true
+        cached = [:]
+      }
+      throw error
+    }
     try check(token)
+    // A follow-up/anchor query must use the same visible selection as the first
+    // read of this turn. Also check the returned scope for injected test sources.
+    guard scope == nil || scope == response.scope else {
+      scopeInvalidated = true
+      cached = [:]
+      throw CalendarQueryFailure.selectionChanged
+    }
+    scope = response.scope
     let scoped = CalendarQueryResponse(
+      scope: response.scope,
       events: response.events.filter { $0.values.start < end && $0.values.end > start },
       unavailableCalendarIDs: response.unavailableCalendarIDs,
       unavailableEvents: response.unavailableEvents)

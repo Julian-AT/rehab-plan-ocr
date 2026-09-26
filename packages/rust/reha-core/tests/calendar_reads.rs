@@ -22,6 +22,7 @@ struct Typed {
     references: Mutex<Vec<read::Reference>>,
     wrong_scope: bool,
     change_selection: bool,
+    change_timezone: bool,
     failure: Option<ServiceError>,
 }
 impl Platform for Typed {
@@ -42,6 +43,14 @@ impl Platform for Typed {
                     "timezone":"Europe/Vienna","display_calendar_ids":ids})),
                 )?;
             }
+        }
+        if self.change_timezone {
+            service::settings::settings_value(
+                &self.state,
+                Some(json!({
+                    "timezone":"America/New_York", "display_calendar_ids":["selected"]
+                })),
+            )?;
         }
         Ok(read::QueryResult {
             events: vec![event(if self.wrong_scope {
@@ -90,6 +99,7 @@ fn fixture(
         references: Mutex::new(vec![]),
         wrong_scope,
         change_selection,
+        change_timezone: false,
         failure,
     });
     (root, state, host)
@@ -157,6 +167,12 @@ async fn typed_read_errors_are_not_reclassified_by_display_text() {
                 .unwrap_err(),
             error
         );
+        assert_eq!(
+            service::agenda_queries::query(host.clone(), &state, typed_range(None))
+                .await
+                .unwrap_err(),
+            service::agenda_queries::QueryError::Service(error.clone())
+        );
         let platform: Arc<dyn Platform> = host;
         assert_eq!(
             read::resolve(&platform, &event("selected"))
@@ -165,4 +181,156 @@ async fn typed_read_errors_are_not_reclassified_by_display_text() {
             error
         );
     }
+}
+
+fn typed_range(
+    expected_scope: Option<service::agenda_queries::Scope>,
+) -> service::agenda_queries::Request {
+    service::agenda_queries::Request {
+        start_utc: "2026-09-18T00:00:00Z".into(),
+        end_utc: "2026-09-19T00:00:00Z".into(),
+        expected_scope,
+    }
+}
+#[tokio::test]
+async fn application_query_and_legacy_adapter_preserve_the_same_scope_and_evidence() {
+    use service::agenda_queries as agenda;
+    let (_root, state, host) = fixture(false, false, None);
+    let scope = agenda::selection(&state).unwrap();
+    let typed = agenda::query(host.clone(), &state, typed_range(Some(scope.clone())))
+        .await
+        .unwrap();
+    let mut args = range();
+    args["scope"] = serde_json::to_value(&scope).unwrap();
+    let legacy = events::query(host.clone(), &state, args).await.unwrap();
+    assert_eq!(typed.scope, scope);
+    assert_eq!(typed.start_utc, "2026-09-18T00:00:00Z");
+    assert_eq!(typed.end_utc, "2026-09-19T00:00:00Z");
+    assert_eq!(
+        legacy,
+        json!({
+            "scope":typed.scope, "events":typed.events,
+            "unavailable_calendar_ids":typed.unavailable_calendar_ids,
+            "unavailable_events":typed.unavailable_events
+        })
+    );
+    assert_eq!(host.queries.lock().unwrap().len(), 2);
+    assert!(host.queries.lock().unwrap()[0].records.is_empty());
+    assert_eq!(
+        events::dispatch(host, &state, "agendaSelection", json!({}))
+            .await
+            .unwrap(),
+        serde_json::to_value(scope).unwrap()
+    );
+}
+#[tokio::test]
+async fn application_query_rejects_each_stale_scope_component_before_host_access() {
+    use service::agenda_queries as agenda;
+    let (_root, state, host) = fixture(false, false, None);
+    let scope = agenda::selection(&state).unwrap();
+    for component in 0..3 {
+        let mut stale = scope.clone();
+        match component {
+            0 => stale.calendar_ids = vec!["hidden".into()],
+            1 => stale.timezone = "America/New_York".into(),
+            _ => stale.revision += 2,
+        }
+        assert_eq!(
+            agenda::query(host.clone(), &state, typed_range(Some(stale)))
+                .await
+                .unwrap_err(),
+            agenda::QueryError::SelectionChanged { during_load: false }
+        );
+    }
+    let mut null_scope = range();
+    null_scope["scope"] = Value::Null;
+    assert!(events::query(host.clone(), &state, null_scope)
+        .await
+        .is_err());
+    assert!(host.queries.lock().unwrap().is_empty());
+    for (wrong, changed) in [(true, false), (false, true)] {
+        let (_root, state, host) = fixture(wrong, changed, None);
+        let result = agenda::query(host, &state, typed_range(None))
+            .await
+            .unwrap_err();
+        if wrong {
+            assert!(matches!(
+                result,
+                agenda::QueryError::Service(ServiceError::Storage(_))
+            ));
+        } else {
+            assert_eq!(
+                result,
+                agenda::QueryError::SelectionChanged { during_load: true }
+            );
+        }
+    }
+}
+#[tokio::test]
+async fn changed_settings_timezone_invalidates_in_flight_query_without_reinterpreting_utc_range() {
+    use service::agenda_queries as agenda;
+    let (_root, state, mut host) = fixture(false, false, None);
+    Arc::get_mut(&mut host).unwrap().change_timezone = true;
+    let scope = agenda::selection(&state).unwrap();
+    let result = agenda::query(host.clone(), &state, typed_range(Some(scope))).await;
+    assert_eq!(
+        result.unwrap_err(),
+        agenda::QueryError::SelectionChanged { during_load: true }
+    );
+    let query = &host.queries.lock().unwrap()[0];
+    assert_eq!(query.timezone, "Europe/Vienna");
+    assert_eq!(query.start_utc, "2026-09-18T00:00:00Z");
+    assert_eq!(query.end_utc, "2026-09-19T00:00:00Z");
+}
+#[tokio::test]
+async fn typed_range_validation_precedes_empty_selection_and_preserves_the_366_day_limit() {
+    use service::agenda_queries as agenda;
+    let (_root, state, host) = fixture(false, false, None);
+    service::settings::settings_value(
+        &state,
+        Some(json!({"timezone":"Europe/Vienna","display_calendar_ids":[]})),
+    )
+    .unwrap();
+    for (start, end) in [
+        ("", "2026-09-19T00:00:00Z"),
+        ("invalid", "2026-09-19T00:00:00Z"),
+        ("2026-09-18T00:00:00Z", "invalid"),
+        ("2026-09-18T00:00:00Z", "2026-09-18T00:00:00Z"),
+        ("2026-09-19T00:00:00Z", "2026-09-18T00:00:00Z"),
+        ("2026-01-01T00:00:00Z", "2027-01-02T00:00:01Z"),
+    ] {
+        let result = agenda::query(
+            host.clone(),
+            &state,
+            agenda::Request {
+                start_utc: start.into(),
+                end_utc: end.into(),
+                expected_scope: None,
+            },
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(agenda::QueryError::Service(ServiceError::Validation(_)))
+        ));
+    }
+    let result = agenda::query(
+        host.clone(),
+        &state,
+        agenda::Request {
+            start_utc: "2026-01-01T00:00:00Z".into(),
+            end_utc: "2027-01-02T00:00:00Z".into(),
+            expected_scope: None,
+        },
+    )
+    .await
+    .unwrap();
+    assert!(
+        result.events.is_empty()
+            && result.unavailable_calendar_ids.is_empty()
+            && result.unavailable_events.is_empty()
+            && result.scope.calendar_ids.is_empty()
+    );
+    assert_eq!(result.scope, agenda::selection(&state).unwrap());
+    assert!(host.queries.lock().unwrap().is_empty());
 }

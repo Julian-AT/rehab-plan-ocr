@@ -4,9 +4,13 @@ private actor ZonedCalendarFixture {
   var intervals: [(Date, Date)] = []
   let events: [CalendarEvent]
   init(_ events: [CalendarEvent]) { self.events = events }
-  func query(_ start: Date, _ end: Date) -> CalendarQueryResponse {
+  func query(_ start: Date, _ end: Date, _ expected: AgendaSelection?) throws
+    -> CalendarQueryResponse
+  {
     intervals.append((start, end))
-    return CalendarQueryResponse(events: events, unavailableCalendarIDs: [])
+    let scope = AgendaSelection(calendarIDs: ["visible"])
+    guard expected == nil || expected == scope else { throw CalendarQueryFailure.selectionChanged }
+    return CalendarQueryResponse(scope: scope, events: events, unavailableCalendarIDs: [])
   }
 }
 
@@ -32,7 +36,7 @@ private actor ZonedCalendarFixture {
     let fixture = ZonedCalendarFixture([
       event("late", "2026-03-29T22:30:00Z", "2026-03-29T22:45:00Z")
     ])
-    let conversation = CalendarConversation(fetch: { await fixture.query($0, $1) })
+    let conversation = CalendarConversation(fetch: { try await fixture.query($0, $1, $2) })
     let token = UUID()
     await conversation.begin(token)
     let first = try await conversation.resolve(
@@ -60,7 +64,7 @@ private actor ZonedCalendarFixture {
     let day = date("2026-09-15T04:00:00Z")
     let late = event("night", "2026-09-16T02:00:00Z", "2026-09-16T02:30:00Z")
     let evening = ZonedCalendarFixture([late])
-    let reference = CalendarConversation(fetch: { await evening.query($0, $1) })
+    let reference = CalendarConversation(fetch: { try await evening.query($0, $1, $2) })
     let referenceToken = UUID()
     await reference.begin(referenceToken)
     let listed = try await reference.resolve(
@@ -92,7 +96,7 @@ private actor ZonedCalendarFixture {
       (0..<6).map { index in
         event("page-\(index)", "2026-09-16T02:0\(index):00Z", "2026-09-16T02:1\(index):00Z")
       })
-    let paging = CalendarConversation(fetch: { await pagingFixture.query($0, $1) })
+    let paging = CalendarConversation(fetch: { try await pagingFixture.query($0, $1, $2) })
     let pageToken = UUID()
     await paging.begin(pageToken)
     let page = try await paging.resolve(

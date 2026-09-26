@@ -71,12 +71,11 @@ pub struct QueryResult {
 pub fn invalid_response(error: impl std::fmt::Display) -> ServiceError {
     ServiceError::Storage(format!("Kalenderantwort ungültig: {error}"))
 }
-pub async fn query(platform: &Arc<dyn Platform>, request: Query) -> Response<Value> {
+pub async fn query(platform: &Arc<dyn Platform>, request: Query) -> Response<QueryResult> {
     let platform = platform.clone();
-    let result = tokio::task::spawn_blocking(move || platform.query_calendar(request))
+    tokio::task::spawn_blocking(move || platform.query_calendar(request))
         .await
-        .map_err(failure)??;
-    serde_json::to_value(result).map_err(invalid_response)
+        .map_err(|error| ServiceError::Storage(error.to_string()))?
 }
 pub async fn resolve(platform: &Arc<dyn Platform>, event: &Event) -> Response<Option<Event>> {
     if event.calendar_id.is_empty() || event.external_id.is_empty() || event.occurrence.is_empty() {

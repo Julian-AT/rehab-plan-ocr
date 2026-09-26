@@ -3,6 +3,8 @@ use std::sync::OnceLock;
 uniffi::setup_scaffolding!();
 mod records;
 pub use records::*;
+mod agenda_queries;
+pub use agenda_queries::*;
 mod calendar_mutations;
 pub use calendar_mutations::*;
 mod calendar_reads;

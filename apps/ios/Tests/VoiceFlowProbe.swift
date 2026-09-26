@@ -98,11 +98,15 @@ import RehaCore
         end_utc: String(format: "2031-05-15T%02d:30:00Z", hour), timezone: "Europe/Vienna",
         location: room, reminder_minutes: 10), metadata: .object([:]), fingerprint: id)
   }
-  func fetch(_ start: Date, _ end: Date) throws -> CalendarQueryResponse {
+  func fetch(_ start: Date, _ end: Date, _ expected: AgendaSelection?) throws
+    -> CalendarQueryResponse
+  {
     reads += 1
     if failRead { throw CocoaError(.fileReadNoPermission) }
+    let scope = AgendaSelection(calendarIDs: ["visible"])
+    guard expected == nil || expected == scope else { throw CalendarQueryFailure.selectionChanged }
     return CalendarQueryResponse(
-      events: events.filter { $0.values.start < end && $0.values.end > start },
+      scope: scope, events: events.filter { $0.values.start < end && $0.values.end > start },
       unavailableCalendarIDs: [])
   }
   func preferences() -> Preferences {
@@ -161,7 +165,7 @@ import RehaCore
       dependencies: VoiceDependencies(
         now: { calendar.now }, calendar: { calendar.calendar },
         address: { .sie }, isVoiceOverRunning: { false },
-        fetchCalendar: { start, end in try await calendar.fetch(start, end) },
+        fetchCalendar: { start, end, scope in try await calendar.fetch(start, end, scope) },
         preferences: { calendar.preferences() }, destinations: { [] }, trace: { _ in },
         errorMessage: { $0.localizedDescription }),
       understanding: provider,

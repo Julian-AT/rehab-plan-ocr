@@ -553,7 +553,7 @@ struct VoiceSnapshot {
       let start = intent.date ?? calendar.startOfDay(for: dependencies.now())
       let end = calendar.date(
         byAdding: .day, value: intent.date == nil && intent.action != .list ? 90 : 1, to: start)!
-      let response = try await dependencies.fetchCalendar(start, end)
+      let response = try await dependencies.fetchCalendar(start, end, nil)
       var found = response.events
       guard session == current else { return }
       if let name = intent.calendarName {

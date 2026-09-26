@@ -3,7 +3,10 @@ import os
 
 final class TestHost: AppleHost, Sendable {
   let failure = OSAllocatedUnfairLock<AppError?>(initialState: nil)
+  let queries = OSAllocatedUnfairLock<[CalendarReadQuery]>(initialState: [])
   func queryCalendar(request: CalendarReadQuery) throws -> CalendarReadResult {
+    precondition(!Thread.isMainThread)
+    queries.withLock { $0.append(request) }
     if let error = failure.withLock({ $0 }) { throw error }
     precondition(request.calendarIds == ["selected"] && request.timezone == "Europe/Vienna")
     precondition(request.selectionRevision > 0)
@@ -119,12 +122,62 @@ final class TestHost: AppleHost, Sendable {
     precondition((event["metadata"] as? [String: Any])?["notes"] as? String == "Unverändert")
     precondition(
       (response["unavailable_events"] as? [[String: Any]])?.first?["id"] as? String == "missing")
+    let scope = try await core.agendaSelection()
+    let legacyScopeText = try await core.calendarRequest(
+      command: "agendaSelection", arguments: "{}")
+    let legacyScope =
+      try JSONSerialization.jsonObject(with: Data(legacyScopeText.utf8)) as! [String: Any]
+    precondition(scope.calendarIds == ["selected"] && scope.timezone == preferences.timezone)
+    precondition(scope.revision == (legacyScope["revision"] as! NSNumber).uint64Value)
+    let typedRequest = AgendaQueryRequest(
+      startUtc: "2026-09-18T00:00:00Z", endUtc: "2026-09-19T00:00:00Z", expectedScope: scope)
+    let typedQuery = try await core.queryCalendarEvents(request: typedRequest)
+    precondition(typedQuery.scope == scope)
+    precondition(
+      typedQuery.startUtc == typedRequest.startUtc && typedQuery.endUtc == typedRequest.endUtc)
+    let typedEvent = typedQuery.events[0]
+    precondition(typedEvent.id == event["id"] as? String && typedEvent.importId == nil)
+    precondition(typedEvent.fingerprint == event["fingerprint"] as? String)
+    let typedMetadata =
+      try JSONSerialization.jsonObject(with: Data(typedEvent.metadataJson.utf8)) as! NSDictionary
+    precondition(typedMetadata == event["metadata"] as! NSDictionary)
+    precondition(typedQuery.unavailableCalendarIds == ["selected"])
+    precondition(typedQuery.unavailableEvents.first?.id == "missing")
+    precondition(host.queries.withLock { $0.last?.selectionRevision } == scope.revision)
+    let queryCount = host.queries.withLock { $0.count }
+    var staleRequest = typedRequest
+    staleRequest.expectedScope?.revision += 2
+    do {
+      _ = try await core.queryCalendarEvents(request: staleRequest)
+      preconditionFailure("Obsolete scope reached the native callback")
+    } catch { precondition(error as? AppError == .StaleRevision) }
+    var emptyPreferences = preferences
+    emptyPreferences.displayCalendarIds = []
+    _ = try await core.savePreferencesDetailed(value: emptyPreferences)
+    let emptyQuery = try await core.queryCalendarEvents(
+      request: AgendaQueryRequest(
+        startUtc: typedRequest.startUtc, endUtc: typedRequest.endUtc, expectedScope: nil))
+    precondition(emptyQuery.scope.calendarIds.isEmpty && emptyQuery.events.isEmpty)
+    precondition(emptyQuery.unavailableCalendarIds.isEmpty && emptyQuery.unavailableEvents.isEmpty)
+    precondition(host.queries.withLock { $0.count } == queryCount)
+    _ = try await core.savePreferencesDetailed(value: preferences)
+    do {
+      _ = try await core.queryCalendarEvents(request: typedRequest)
+      preconditionFailure("A -> B -> A accepted an obsolete selection revision")
+    } catch { precondition(error as? AppError == .StaleRevision) }
+    let currentScope = try await core.agendaSelection()
+    let currentRequest = AgendaQueryRequest(
+      startUtc: typedRequest.startUtc, endUtc: typedRequest.endUtc, expectedScope: currentScope)
     for expected in nativeFailures {
       host.failure.withLock { $0 = expected }
       do {
         _ = try await core.calendarRequest(
           command: "queryCalendarEvents", arguments: queryArguments)
         preconditionFailure("Typed read failure disappeared")
+      } catch { precondition(error as? AppError == expected) }
+      do {
+        _ = try await core.queryCalendarEvents(request: currentRequest)
+        preconditionFailure("Typed application read failure disappeared")
       } catch { precondition(error as? AppError == expected) }
     }
     host.failure.withLock { $0 = nil }

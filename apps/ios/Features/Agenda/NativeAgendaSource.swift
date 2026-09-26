@@ -7,7 +7,7 @@ import RehaCore
   var hasAccess: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
 
   func selection() async throws -> AgendaSelection {
-    try await core.eventRequest("agendaSelection", [:], as: AgendaSelection.self)
+    AgendaSelection(try await core.agendaSelection())
   }
 
   func synchronize() async throws {
@@ -21,16 +21,6 @@ import RehaCore
         try await Task.sleep(for: .seconds(3))
       }
     #endif
-    let iso = ISO8601DateFormatter()
-    return try await core.eventRequest(
-      "queryCalendarEvents",
-      [
-        "start_utc": iso.string(from: week.start), "end_utc": iso.string(from: week.end),
-        "scope": [
-          "calendar_ids": scope.calendarIDs.sorted(), "timezone": scope.timezone,
-          "revision": scope.revision,
-        ],
-      ],
-      as: CalendarQueryResponse.self)
+    return try await core.calendarEvents(from: week.start, to: week.end, expecting: scope)
   }
 }
