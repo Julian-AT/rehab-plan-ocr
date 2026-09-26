@@ -5,6 +5,63 @@ import WidgetKit
 import XCTest
 
 final class AgendaNativeTests: XCTestCase {
+  private static func pendingOpen(_ service: AgendaService, acknowledge: String? = nil)
+    async throws -> String?
+  {
+    let native = NativeServices(agenda: service)
+    let arguments = try JSONSerialization.data(
+      withJSONObject: acknowledge.map { ["acknowledge": $0] } ?? [:])
+    let response: Data = try await withCheckedThrowingContinuation { continuation in
+      native.perform("pendingEventOpen", arguments: arguments) {
+        continuation.resume(with: $0)
+      }
+    }
+    let value = try XCTUnwrap(JSONSerialization.jsonObject(with: response) as? [String: Any])
+    return value["id"] as? String
+  }
+
+  func testPendingNotificationLinkSurvivesFailedAcknowledgement() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let file = root.appendingPathComponent("agenda-private-v1.json")
+    let id = UUID().uuidString
+    let original = try JSONSerialization.data(withJSONObject: [
+      "schemaVersion": 1, "records": [], "journal": [:], "migrationVersion": 0,
+      "preferences": ["enabled": false, "minutes": 10, "sound": true, "preview": true],
+      "pendingOpen": id, "displayCalendarIDs": [],
+    ])
+    try original.write(to: file, options: .atomic)
+    let service = AgendaService(storageRoot: root, widgetRoot: root)
+    service.start(registerBackground: false)
+    let unacknowledged = try await Self.pendingOpen(service, acknowledge: "another-link")
+    XCTAssertEqual(unacknowledged, id)
+    XCTAssertEqual(try Data(contentsOf: file), original)
+
+    // Block only this isolated journal destination, without relying on permissions.
+    try FileManager.default.removeItem(at: file)
+    try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+    do {
+      _ = try await Self.pendingOpen(service, acknowledge: id)
+      XCTFail("A failed durable acknowledgement was reported as successful")
+    } catch {}
+    let retained = try await Self.pendingOpen(service)
+    XCTAssertEqual(retained, id, "Failed acknowledgement lost the current notification link")
+
+    try FileManager.default.removeItem(at: file)
+    try original.write(to: file, options: .atomic)
+    let reopened = AgendaService(storageRoot: root, widgetRoot: root)
+    reopened.start(registerBackground: false)
+    let recovered = try await Self.pendingOpen(reopened)
+    XCTAssertEqual(recovered, id)
+    let acknowledged = try await Self.pendingOpen(service, acknowledge: id)
+    XCTAssertNil(acknowledged)
+    let final = AgendaService(storageRoot: root, widgetRoot: root)
+    final.start(registerBackground: false)
+    let completed = try await Self.pendingOpen(final)
+    XCTAssertNil(completed, "Durably acknowledged notification reappeared after reopening")
+  }
+
   func testLocalErasureDoesNotRequireAnAccessibleCalendar() async throws {
     #if targetEnvironment(simulator)
       let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -188,10 +245,19 @@ final class AgendaNativeTests: XCTestCase {
       let permission = Task {
         try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
       }
-      await MainActor.run {
+      let permissionDismissed = await MainActor.run {
         let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons[
           "Allow"]
-        if allow.waitForExistence(timeout: 3) { allow.tap() }
+        let visible = XCTNSPredicateExpectation(
+          predicate: NSPredicate(format: "exists == true AND hittable == true"), object: allow)
+        guard XCTWaiter.wait(for: [visible], timeout: 10) == .completed else { return false }
+        allow.tap()
+        return allow.waitForNonExistence(timeout: 5)
+      }
+      guard permissionDismissed else {
+        permission.cancel()
+        XCTFail("Notification permission dialog could not be accepted")
+        return
       }
       let allowed = try await permission.value
       XCTAssertTrue(allowed)

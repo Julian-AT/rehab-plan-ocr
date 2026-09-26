@@ -844,7 +844,13 @@ final class AgendaService: NSObject, UNUserNotificationCenterDelegate, @unchecke
   func pendingOpen(acknowledge: String?) throws -> [String: Any] {
     if let acknowledge, state.pendingOpen == acknowledge {
       state.pendingOpen = nil
-      try persist()
+      do {
+        try persist()
+      } catch {
+        // The serial owner must retain the link until acknowledgement is durable.
+        state.pendingOpen = acknowledge
+        throw error
+      }
     }
     return ["id": state.pendingOpen as Any? ?? NSNull()]
   }
