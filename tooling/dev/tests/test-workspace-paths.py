@@ -114,7 +114,12 @@ class WorkspacePathTests(unittest.TestCase):
         )
 
     def test_native_generator_uses_alternate_cargo_outputs_not_stale_default(self):
-        for name in ["tooling/dev/workspace.py", "tooling/build/build-native.sh"]:
+        for name in [
+            "tooling/dev/workspace.py",
+            "tooling/dev/artifacts.py",
+            "tooling/build/build-native.sh",
+            "tooling/build/product_generation.py",
+        ]:
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(workspace.ROOT / name, target)
@@ -154,14 +159,17 @@ class WorkspacePathTests(unittest.TestCase):
             target = self.root / "packages/apple/RehaCore" / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
+        environment = dict(
+            os.environ,
+            PATH=f"{tools}:/usr/bin:/bin",
+            CARGO_TARGET_DIR=str(alternative.parent),
+        )
+        # The isolated checkout owns a distinct lock, never a caller's descriptor.
+        environment.pop("REHA_NATIVE_BUILD_LEASE_FD", None)
         completed = subprocess.run(
             ["/bin/sh", "tooling/build/build-native.sh", "check-bindings"],
             cwd=self.root,
-            env=dict(
-                os.environ,
-                PATH=f"{tools}:/usr/bin:/bin",
-                CARGO_TARGET_DIR=str(alternative.parent),
-            ),
+            env=environment,
             text=True,
             capture_output=True,
             timeout=30,
