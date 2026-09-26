@@ -90,6 +90,19 @@ class RestorationTests(unittest.TestCase):
         self.assertEqual(self.lock.read_bytes(), self.original)
         self.assertFalse(list(self.assets.glob(".dictionary.json-*")))
 
+    def test_metadata_remains_readable_and_repair_preserves_existing_permissions(self):
+        with patch.object(MODULE, "fetch", return_value=self.content):
+            self.run_restore()
+        dictionary = self.assets / "dictionary.json"
+        manifest = self.assets / "manifest.json"
+        self.assertEqual(dictionary.stat().st_mode & 0o777, 0o644)
+        self.assertEqual(manifest.stat().st_mode & 0o777, 0o644)
+        dictionary.write_bytes(b"damaged dictionary")
+        dictionary.chmod(0o640)
+        self.run_restore("--offline")
+        self.assertEqual(dictionary.read_bytes(), self.dictionary)
+        self.assertEqual(dictionary.stat().st_mode & 0o777, 0o640)
+
     def test_offline_missing_asset_never_downloads(self):
         with patch.object(MODULE, "fetch", side_effect=AssertionError("network access")):
             with self.assertRaisesRegex(SystemExit, "Missing or corrupt"):

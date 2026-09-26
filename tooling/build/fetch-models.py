@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import os
+import stat
 import tempfile
 import urllib.request
 from pathlib import Path
@@ -30,6 +31,9 @@ def write_if_changed(path, content):
     temporary = Path(name)
     try:
         with os.fdopen(descriptor, "wb") as stream:
+            os.fchmod(
+                stream.fileno(), stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+            )
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
