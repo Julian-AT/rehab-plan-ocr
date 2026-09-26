@@ -6,6 +6,7 @@ import {
   defaultConfig,
   defaultPreferences,
   type Config,
+  type Appointment,
   type History,
   type Preferences,
   type Run,
@@ -34,6 +35,7 @@ export function useWorkbench() {
   const active = useRef<AbortController | null>(null);
   const saves = useRef<Promise<unknown>>(Promise.resolve());
   const saveError = useRef<unknown>(null);
+  const revision = useRef(0);
   const report = useCallback(
     (error: unknown) =>
       setError(error instanceof Error ? error.message : String(error)),
@@ -87,13 +89,13 @@ export function useWorkbench() {
     ])
       .then(([preferences, history, runtime]) => {
         if (disposed) return;
-        setPreferences(preferences);
+        setPreferences({ ...defaultPreferences, ...preferences });
         setHistory(history);
         setRuntime(runtime);
         setConfig((value) => ({
           ...value,
           timezone: preferences.timezone,
-          detailed_debug: preferences.detailed_debug,
+          detailed_debug: false,
         }));
       })
       .catch(report);
@@ -118,18 +120,20 @@ export function useWorkbench() {
         ? false
         : (patch.review_confirmed ?? run.review_confirmed),
     };
+    const version = ++revision.current;
     setRun(next);
     if (native) {
       saves.current = saves.current
         .catch(() => {})
         .then(async () => {
           try {
-            await command("save_review", {
+            const saved = await command<Run>("save_review", {
               id: next.document.id,
               appointments: next.appointments,
               complete: next.complete_page_confirmed,
               reviewed: next.review_confirmed,
             });
+            if (revision.current === version) setRun(saved);
             saveError.current = null;
           } catch (error) {
             saveError.current = error;
@@ -154,17 +158,18 @@ export function useWorkbench() {
   }
 
   function acceptRun(run: Run) {
+    revision.current++;
     setRun(run);
-    setConfig(run.config);
+    setConfig({ ...run.config, detailed_debug: false });
     setView("run");
   }
 
   async function importFiles(files: File[]) {
-    await execute("Running OCR", async (signal) => {
+    await execute("Foto wird gelesen", async (signal) => {
       await flush();
       for (const [index, file] of files.entries()) {
         if (signal.aborted) break;
-        setBusy(`Running OCR · ${index + 1}/${files.length}`);
+        setBusy(`Foto wird gelesen · ${index + 1}/${files.length}`);
         const result = await processImage({
           base64: await encodeImage(file),
           filename: file.name,
@@ -208,7 +213,7 @@ export function useWorkbench() {
   }
 
   async function openScan(id: string) {
-    await execute("Loading scan", async () => {
+    await execute("Plan wird geöffnet", async () => {
       await flush();
       acceptRun(await command<Run>("load_scan", { id }));
     });
@@ -235,7 +240,7 @@ export function useWorkbench() {
   }
 
   async function capture(source: "camera" | "photos") {
-    await execute("Capturing image", async () => {
+    await execute("Foto wird übernommen", async () => {
       await flush();
       const image = await command<ImageInput>("capture", { source });
       acceptRun((await processImage(image)).run);
@@ -243,8 +248,49 @@ export function useWorkbench() {
     });
   }
 
+  async function saveReview(
+    appointments: Appointment[],
+    selection: string[] = [],
+  ) {
+    if (!run) throw new Error("Kein Plan geöffnet.");
+    await flush();
+    const saved = native
+      ? await command<Run>("save_review", {
+          id: run.document.id,
+          appointments,
+          complete: run.complete_page_confirmed,
+          reviewed: false,
+          selection,
+        })
+      : {
+          ...run,
+          appointments: appointments.map((a) => ({
+            ...a,
+            approval: selection.includes(a.id)
+              ? {
+                  values_hash: "browser-preview",
+                  approved_at: Date.now() / 1000,
+                }
+              : a.approval,
+          })),
+        };
+    revision.current++;
+    setRun(saved);
+    await refresh();
+    return saved;
+  }
+  async function retry() {
+    if (!run) return;
+    await execute("Foto wird erneut geprüft", async () => {
+      await flush();
+      const next = await command<Run>("retry_scan", { id: run.document.id });
+      acceptRun(next);
+      await refresh();
+    });
+  }
+
   async function savePreferences(value: Preferences) {
-    await execute("Saving configuration", async () => {
+    return await execute("Einstellungen werden gespeichert", async () => {
       if (native) await command("settings", { value });
       setPreferences(value);
       setConfig((config) => ({
@@ -257,6 +303,7 @@ export function useWorkbench() {
           ? "Configuration saved."
           : "Configuration applied to browser session.",
       );
+      return true;
     });
   }
 
@@ -296,6 +343,8 @@ export function useWorkbench() {
     flush,
     refresh,
     updateRun,
+    saveReview,
+    retry,
     processImage,
     acceptRun,
     importFiles,

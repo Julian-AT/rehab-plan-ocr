@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function SourceViewer({
   run,
   native,
+  simple = false,
   highlight = [],
   onRegion,
   onCorner,
@@ -23,6 +24,7 @@ export function SourceViewer({
 }: {
   run: Run;
   native: boolean;
+  simple?: boolean;
   highlight?: string[];
   onRegion?: (id: string) => void;
   onCorner?: (point: Point) => void;
@@ -37,21 +39,26 @@ export function SourceViewer({
       .flatMap((o) => o.region_ids),
   );
   return (
-    <section aria-label="Source image" className="flex min-w-0 flex-col gap-3">
+    <section
+      aria-label={simple ? "Quellfoto" : "Source image"}
+      className="flex min-w-0 flex-col gap-3"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Field orientation="horizontal" className="w-auto">
-          <Checkbox
-            id="regions-visible"
-            checked={overlay}
-            onCheckedChange={(value) => setOverlay(value === true)}
-          />
-          <FieldLabel htmlFor="regions-visible">Regions</FieldLabel>
-        </Field>
+        {!simple && (
+          <Field orientation="horizontal" className="w-auto">
+            <Checkbox
+              id="regions-visible"
+              checked={overlay}
+              onCheckedChange={(value) => setOverlay(value === true)}
+            />
+            <FieldLabel htmlFor="regions-visible">Regions</FieldLabel>
+          </Field>
+        )}
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Zoom out"
+            aria-label={simple ? "Verkleinern" : "Zoom out"}
             disabled={zoom <= 1}
             onClick={() => setZoom(Math.max(1, zoom - 0.25))}
           >
@@ -60,7 +67,7 @@ export function SourceViewer({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Zoom in"
+            aria-label={simple ? "Vergrößern" : "Zoom in"}
             disabled={zoom >= 3}
             onClick={() => setZoom(Math.min(3, zoom + 0.25))}
           >
@@ -69,7 +76,7 @@ export function SourceViewer({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Reset zoom"
+            aria-label={simple ? "Zoom zurücksetzen" : "Reset zoom"}
             onClick={() => setZoom(1)}
           >
             <Maximize2 />
@@ -86,7 +93,9 @@ export function SourceViewer({
           {src ? (
             <Image
               src={src}
-              alt="Original schedule"
+              alt={
+                simple ? "Originalfoto des Terminplans" : "Original schedule"
+              }
               width={run.document.width}
               height={run.document.height}
               className="h-auto w-full"
@@ -101,7 +110,7 @@ export function SourceViewer({
               "absolute inset-0 size-full",
               onCorner && "cursor-crosshair",
             )}
-            aria-label="Source coordinates"
+            aria-label={simple ? "Markierte Textstellen" : "Source coordinates"}
             onClick={(event) => {
               if (!onCorner) return;
               const rect = event.currentTarget.getBoundingClientRect();
@@ -173,10 +182,12 @@ export function SourceViewer({
           </svg>
         </div>
       </div>
-      <p className="break-all font-mono text-xs text-muted-foreground">
-        {run.document.width} × {run.document.height} ·{" "}
-        {run.document.source_hash.slice(0, 16)}
-      </p>
+      {!simple && (
+        <p className="break-all font-mono text-xs text-muted-foreground">
+          {run.document.width} × {run.document.height} ·{" "}
+          {run.document.source_hash.slice(0, 16)}
+        </p>
+      )}
     </section>
   );
 }

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>NSCameraUsageDescription</key><string>Capture schedule images for local OCR experiments.</string>
-<key>NSPhotoLibraryUsageDescription</key><string>Import schedule images for local OCR processing.</string>
-<key>NSCalendarsFullAccessUsageDescription</key><string>Write approved appointments and compare revisions with existing calendar values.</string>
+<key>CFBundleDisplayName</key><string>Termine</string>
+<key>NSCameraUsageDescription</key><string>Terminpläne fotografieren und auf diesem Gerät erkennen.</string>
+<key>NSPhotoLibraryUsageDescription</key><string>Terminpläne aus Fotos importieren und auf diesem Gerät erkennen.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>Bestätigte Termine speichern und Änderungen mit vorhandenen Kalendereinträgen abgleichen.</string>
 <key>UIFileSharingEnabled</key><false/>
 <key>LSSupportsOpeningDocumentsInPlace</key><false/>
 </dict></plist>

@@ -129,7 +129,7 @@
 }
 @layer base {
   body {
-    min-width: 360px;
+    min-width: 320px;
   }
   button,
   input,
@@ -150,4 +150,65 @@
   fill: color-mix(in oklch, var(--primary) 15%, transparent);
   stroke: var(--primary);
   stroke-width: 3;
+}
+
+.simple-interface
+  :is(button, [role="button"], input:not([type="checkbox"]), select, summary) {
+  min-height: 44px;
+}
+.simple-interface :is(button, [role="button"]) {
+  min-width: 44px;
+}
+.simple-interface input,
+.simple-interface textarea {
+  font-size: 16px;
+}
+.simple-interface summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+.simple-interface summary::before {
+  content: "+";
+  margin-right: 0.75rem;
+}
+.simple-interface details[open] > summary::before {
+  content: "−";
+}
+.simple-interface [data-slot="field-label"] {
+  min-height: 44px;
+  align-items: center;
+}
+.simple-interface [data-slot="item-title"],
+.simple-interface [data-slot="item-description"] {
+  overflow-wrap: anywhere;
+}
+.simple-panel {
+  max-height: calc(
+    var(--visible-height, 100dvh) - env(safe-area-inset-top) - 1rem
+  );
+  bottom: var(--keyboard-inset, 0px);
+}
+.simple-panel[data-side="bottom"] {
+  height: min(90dvh, var(--visible-height, 90dvh));
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+.simple-panel[data-side="right"] {
+  width: min(100vw, 36rem);
+  max-width: 36rem;
+  height: var(--visible-height, 100dvh);
+  top: env(safe-area-inset-top);
+}
+.simple-panel [data-slot="sheet-footer"] {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,5 +1,4 @@
-import { Workbench } from "@/features/workbench/workbench";
-
+import { Application } from "@/features/simple/application";
 export default function Page() {
-  return <Workbench />;
+  return <Application />;
 }

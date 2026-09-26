@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, FlaskConical, SquareTerminal, X } from "lucide-react";
-import { useWorkbench } from "./use-workbench";
+import { type Workbench as WorkbenchState } from "./use-workbench";
 import { RunPanel } from "./run-panel";
 import { HistoryPanel } from "./history-panel";
 import { ConfigurationPanel } from "./configuration-panel";
@@ -33,14 +33,22 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty";
 
-export function Workbench() {
-  const w = useWorkbench();
+export function Workbench({
+  workbench: w,
+  onClose,
+}: {
+  workbench: WorkbenchState;
+  onClose: () => void;
+}) {
   const ios = w.runtime?.platform === "ios";
   return (
     <main
       id="main"
       className="mx-auto flex min-h-dvh max-w-[1800px] flex-col gap-5 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6"
     >
+      <Button variant="outline" className="self-start" onClick={onClose}>
+        Zurück zu Terminen
+      </Button>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <SquareTerminal className="size-5" aria-hidden="true" />

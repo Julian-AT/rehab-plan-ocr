@@ -55,6 +55,7 @@ export function CalendarPanel({
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [proposalInput, setProposalInput] = useState("");
   const [approveRemovals, setApproveRemovals] = useState(false);
+  const [replacement, setReplacement] = useState(false);
   const [results, setResults] = useState<WriteResult[]>([]);
   const input = JSON.stringify([
     run,
@@ -62,6 +63,7 @@ export function CalendarPanel({
     calendarId,
     previous,
     pages,
+    replacement,
   ]);
   const current = proposalInput === input ? proposal : null;
   const eligible =
@@ -120,6 +122,7 @@ export function CalendarPanel({
           previous: previous === "auto" ? null : previous,
           timezone: w.preferences.timezone,
           reminder: w.preferences.reminder,
+          replacement,
         }),
       );
       setProposalInput(input);
@@ -284,6 +287,17 @@ export function CalendarPanel({
           </FieldSet>
         )}
       </FieldGroup>
+      <Field orientation="horizontal">
+        <Checkbox
+          id="complete-replacement"
+          checked={replacement}
+          disabled={!run.complete_page_confirmed || !!w.busy}
+          onCheckedChange={(v) => setReplacement(v === true)}
+        />
+        <FieldLabel htmlFor="complete-replacement">
+          Complete replacement: propose removals for missing appointments
+        </FieldLabel>
+      </Field>
       <Button disabled={!eligible || !calendarId || !!w.busy} onClick={prepare}>
         Prepare calendar operations
       </Button>
