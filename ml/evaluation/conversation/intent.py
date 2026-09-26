@@ -9,7 +9,7 @@ import datetime
 import json
 import re
 
-DETAILS = {"next", "room", "therapist", "duration", "list"}
+DETAILS = {"next", "room", "therapist", "start", "end", "duration", "list", "count"}
 TOPICS = {"capture", "calendars", "archive", "voice", "privacy"}
 PROBLEMS = {
     "invalid_date",

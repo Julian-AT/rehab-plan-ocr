@@ -125,3 +125,24 @@ resume-ocr:
 export-ocr:
 	@test -n "$(RUN)" || { echo 'Set RUN to a completed training run'; exit 2; }
 	.local/envs/ocr/bin/python ml/training/ocr/export.py --run "$(RUN)"
+
+ASSISTANT_PER_FAMILY ?= 16
+ASSISTANT_EPOCHS ?= 20
+ASSISTANT_PATIENCE ?= 3
+ASSISTANT_LAYERS ?= 8
+.PHONY: prepare-assistant-data train-assistant resume-assistant export-assistant
+prepare-assistant-data:
+	@test -n "$(DATASET)" || { echo 'Set DATASET to a new directory below .local'; exit 2; }
+	python3 ml/training/assistant/prepare.py --output "$(DATASET)" --per-family "$(ASSISTANT_PER_FAMILY)"
+
+train-assistant:
+	@test -n "$(RUN)" -a -n "$(DATASET)" || { echo 'Set RUN and DATASET'; exit 2; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/train.py start --run "$(RUN)" --dataset "$(DATASET)/dataset.json" --max-epochs "$(ASSISTANT_EPOCHS)" --patience "$(ASSISTANT_PATIENCE)" --num-layers "$(ASSISTANT_LAYERS)"
+
+resume-assistant:
+	@test -n "$(RUN)" || { echo 'Set RUN to an existing training run'; exit 2; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/train.py resume --run "$(RUN)"
+
+export-assistant:
+	@test -n "$(RUN)" || { echo 'Set RUN to a completed training run'; exit 2; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .local/envs/assistant/bin/python ml/training/assistant/export.py --run "$(RUN)"

@@ -97,3 +97,10 @@ acceptance.
 Replacement-preview concurrency now has a dedicated passing regression probe:
 changed inputs, late resolutions, A→B→A changes and calendar invalidation cannot
 restore an old preview or its deletion approval. The simulator build passes.
+
+The assistant development trainer now preserves full epoch optimizer/random state
+and selects checkpoints with unsafe-mutation and grouped operation-error gates.
+The new proof matches 171 tensors after resume and 10/10 complete answers through
+fusion/GGUF. Its 4/10 correct development operations and one unsafe proposal still
+fail acceptance; it is not integrated as the app's provider. The expanded invented
+corpus still awaits human review and is not an independent real dialogue set.

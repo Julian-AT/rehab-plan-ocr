@@ -257,3 +257,15 @@ both pass; the repeat took 5.604 seconds locally and preserved all five framewor
 file/link timestamps without Swift recompilation. This is a development-build
 measurement, not device runtime performance. Existing legacy build products remain
 available until their separate consumer-inventoried cleanup.
+
+The German assistant now has a resumable development trainer and complete-answer
+export gate. Thirty-eight disjoint invented scenario families cover calendar facts,
+constraints, corrections, negations, minimal changes, cancellation and app help;
+human language review remains pending. Data validation rejects family/speaker
+leakage, hidden references, invalid labels, duplicate prompts, final holdout and
+stale review hashes. Eight new contract/checkpoint tests and eight intent tests pass.
+Two-process resume matches all 171 adapter/Adam/random tensors and validation
+answers against uninterrupted training. Ten complete answers match across adapter,
+fusion and desktop GGUF. The tuned model still has only 4/10 exact development
+operations and one unsafe proposed mutation, so it remains unqualified. See the
+[resumption experiment](../ml/experiments/2026-09-26-s17-assistant-resumption.md).

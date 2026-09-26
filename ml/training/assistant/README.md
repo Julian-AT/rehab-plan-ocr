@@ -42,8 +42,50 @@ operations or replace the app's confirmation and snapshot checks. The comparator
 records raw outputs and exact expected-operation matches separately for training
 and validation examples. Invalid outputs are rejected, not repaired into successes.
 
-These agent-authored examples await human German-language review. They are not
-independent test dialogues. The smoke trainer does not yet provide optimizer-state
-resume, validation stopping, a full corpus, capability selection or iOS deployment.
-The fusion probe checks only the greedy next token, not complete-answer parity.
+These smoke examples await human German-language review. They are not independent
+test dialogues. The original smoke runner remains a historical compatibility check;
+its fusion probe checks only the greedy next token.
 See [the experiment and limits](../../experiments/2026-09-26-s16-assistant-compatibility.md).
+
+The development trainer now provides grouped validation and complete epoch resume:
+
+```sh
+make prepare-assistant-data DATASET=.local/datasets/assistant-new
+make train-assistant DATASET=.local/datasets/assistant-new RUN=.local/runs/assistant-new
+make resume-assistant RUN=.local/runs/assistant-new
+make export-assistant RUN=.local/runs/assistant-new
+```
+
+`prepare.py` creates 28 training and 10 validation scenario families with versioned
+seeds. Related scenarios, paraphrases and speakers cannot cross partitions. The
+examples include corrections, negations, pauses represented in text, references,
+minimal mutations, missing information, invalid dates and app help. They are
+invented, agent-authored development examples pending human review. More parameter
+combinations do not increase the number of independent families. No final holdout
+is accepted by the trainer. Speech timing requires actual recordings and is not
+measured by ellipses in a transcript.
+
+`contract.py` validates expected operations and context visibility before training.
+For reviewed input it requires a named reviewer, review date and content hash;
+editing the transcript or label invalidates that approval. No workflow grants
+approval to generated data. The intent schema includes start/end/count questions
+as well as the original smoke query types.
+
+`train.py` masks prompt tokens, disables Qwen thinking, checks every sequence before
+training and never truncates labels. Epoch checkpoints atomically preserve adapter
+weights, Adam state, random state, validation outputs and hashes. A crashed epoch
+replays from the last complete checkpoint. Resume checks source, data, settings,
+base weights and environment identity. MLX 0.32 random state is reconstructed using
+the public seed API with a checked two-word key round trip. Validation selection
+prioritizes unsafe mutations, exact operation errors and family error before loss.
+Patience stops training; there is no eight-hour cap. A low-disk reserve protects
+existing artifacts. A process lock prevents concurrent writes to one run.
+
+`verify_resume.py` compares every adapter/optimizer/random tensor, validation
+outputs and restored random draws against uninterrupted training. `export.py`
+fuses the selected checkpoint, preserves the pinned tokenizer, converts both base
+and tuned models to F16 GGUF and compares complete greedy answers for the adapter,
+fused model and desktop runtime. Raw answers, strict schema rejection, exact
+operations and unsafe mutations remain in the report. Any full-answer parity
+difference fails the export gate. A passing export remains experimental until
+human dialogue, shipping iOS runtime, resource and latency qualification pass.

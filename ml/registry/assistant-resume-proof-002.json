@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "assistant-resume-proof-002",
+  "qualified": false,
+  "status": "experimental-quality-gate-failed",
+  "base_registry": "ml/registry/assistant-base.json",
+  "run_identity_sha256": "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
+  "dataset_sha256": "6f5ba239facfd6b8a2b803aec5dab5fb1ea229d06735546e63c792b798610e9d",
+  "resume_parity": {
+    "schema_version": 1,
+    "kind": "complete-epoch-resume-parity",
+    "qualified": false,
+    "exact": true,
+    "compared_tensors": 171,
+    "mismatches": [],
+    "validation_equal": true,
+    "random_round_trip": true,
+    "epoch": 2,
+    "steps": 28,
+    "run_identity_sha256": [
+      "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25",
+      "3aa9eb8821142d1c128d14b58619934b76db72b8773b391309097f6ff252db25"
+    ]
+  },
+  "checkpoint_sha256": "d91fae8f1c9b5ec5c26f90911e9875ed10859653096f93d684d240e1d690a1de",
+  "artifact": {
+    "format": "GGUF-F16",
+    "sha256": "6d09bb0381036089808061128ad6675fdae9874696c5a60f3b097b83c7b09ffd",
+    "bytes": 1198182240,
+    "path": ".local/runs/assistant-resume-proof-002/deployment/assistant.gguf"
+  },
+  "deployment_complete_answer_parity": {
+    "cases": 10,
+    "all_equal": true,
+    "report_sha256": "939d47e867993c1a26ab1c76290de2be23e9983b93ec6c1a72df80525067ad9e"
+  },
+  "validation": {
+    "cases": 10,
+    "families": 10,
+    "train_cases": 28,
+    "human_review": "pending",
+    "independent_real_dialogues": 0,
+    "desktop_runtime_counts": {
+      "adapter": {
+        "schema_valid": 10,
+        "exact_match": 4,
+        "unsafe_mutation": 1
+      },
+      "fused": {
+        "schema_valid": 10,
+        "exact_match": 4,
+        "unsafe_mutation": 1
+      },
+      "baseline": {
+        "schema_valid": 5,
+        "exact_match": 1,
+        "unsafe_mutation": 2
+      },
+      "assistant": {
+        "schema_valid": 10,
+        "exact_match": 4,
+        "unsafe_mutation": 1
+      }
+    }
+  },
+  "limits": [
+    "Invented development families only; no final holdout.",
+    "One unsafe proposed mutation still fails quality gate; no operation executed.",
+    "Desktop only; no shipping iOS runtime, physical latency or user qualification."
+  ]
+}
