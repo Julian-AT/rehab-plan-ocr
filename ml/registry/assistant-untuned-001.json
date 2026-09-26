@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "assistant-untuned-001",
+  "qualified": false,
+  "status": "experimental-untuned-comparator",
+  "base_registry": "ml/registry/assistant-base.json",
+  "run_identity_sha256": "f60f76431622ad81eb4bb5d343b60cb6cd13128055ddd328b77c1faf83c35ca5",
+  "converter_revision": "41fc7584f0c1d72d9cc1ac46ccae8defc1587f0f",
+  "artifact": {
+    "format": "GGUF-F16",
+    "sha256": "cf3244d20b79dd454f06fb9be8744c5beecf76b9e75a7cc581f17d6c29b09220",
+    "bytes": 1509347584,
+    "path": ".local/runs/assistant-development-001/deployment/baseline.gguf"
+  },
+  "export_record": {
+    "path": ".local/runs/assistant-development-001/deployment/export.json",
+    "sha256": "f1d2e7cd19fea286774429e5811428fb74ecf4b1e232d7b4f7bd3df26b3b44d1",
+    "baseline_export_stage": "passed",
+    "overall_status": "interrupted-or-failed"
+  },
+  "validation": {
+    "cases": 40,
+    "exact_match": 4,
+    "schema_valid": 18,
+    "unsafe_mutation": 7,
+    "report_sha256": "e66f23c95f46d357996714ce88358bd8fbb1c3d121ecba14da05c76b9212a7ed",
+    "human_review": "pending",
+    "independent_real_dialogues": 0
+  },
+  "limits": [
+    "Unmodified base-model GGUF retained from the original development comparison.",
+    "The export record's overall failure reflects the tuned model's complete-answer parity failure; it is not relabeled successful.",
+    "Desktop invented-development results do not qualify task quality, physical performance or public deployment."
+  ]
+}

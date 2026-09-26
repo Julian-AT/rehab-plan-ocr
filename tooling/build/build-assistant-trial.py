@@ -4,6 +4,7 @@ This never installs an app or changes the ordinary project's declared dependenci
 The normal generated project is restored after compiling the separate trial output.
 """
 
+import argparse
 import importlib.util
 import json
 import plistlib
@@ -48,17 +49,36 @@ def source_snapshot():
     return {name: assembly.sha(ROOT / name) for name in sorted(set(names)) if name}
 
 
-def prepare():
-    registry_path = ROOT / "ml/registry/assistant-development-001.json"
+def model_artifact(variant):
+    registries = {
+        "tuned": "assistant-development-001.json",
+        "untuned": "assistant-untuned-001.json",
+    }
+    if variant not in registries:
+        raise ValueError("Select a registered tuned or untuned experimental model")
+    registry_path = ROOT / "ml/registry" / registries[variant]
     registry = json.loads(registry_path.read_text())
     artifact = registry["artifact"]
-    model = ROOT / artifact["path"]
+    model = (ROOT / artifact["path"]).resolve()
     if (
-        registry["qualified"] is not False
+        registry["schema_version"] != 1
+        or registry["qualified"] is not False
+        or not isinstance(registry["id"], str)
+        or not registry["id"]
+        or artifact["format"] != "GGUF-F16"
+        or type(artifact["bytes"]) is not int
+        or artifact["bytes"] <= 0
+        or not model.is_relative_to((ROOT / ".local/runs").resolve())
         or assembly.sha(model) != artifact["sha256"]
         or model.stat().st_size != artifact["bytes"]
     ):
-        raise ValueError("The trial requires the recorded unqualified development model")
+        raise ValueError("The trial requires an intact registered unqualified development artifact")
+    return registry_path, registry, model
+
+
+def prepare(variant):
+    registry_path, registry, model = model_artifact(variant)
+    artifact = registry["artifact"]
     framework = (PACKAGE / "RehaAssistantNative.xcframework").resolve()
     receipt = json.loads((framework.parent / "receipt.json").read_text())
     if "simulator" not in receipt["identity"] or not assembly.matches(
@@ -134,11 +154,14 @@ def prepare():
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--model", choices=["tuned", "untuned"], default="tuned")
+    args = parser.parse_args()
     BASE.mkdir(parents=True, exist_ok=True)
     sources = source_snapshot()
     # These paths perform read-only manifest verification and normal source builds.
     run("sh", "tooling/build/build-native.sh", "simulator")
-    manifest = prepare()
+    manifest = prepare(args.model)
     try:
         run(
             "xcodegen",

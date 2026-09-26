@@ -108,6 +108,24 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Untuned and tuned models in the same app binary — 2026-09-26
+
+The trial builder can now select the retained, hash-verified untuned development
+GGUF as well as the tuned checkpoint. Four model-selection regressions, all 179
+tool tests, lint and both simulator builds pass. The untuned route interprets
+16/40 cases (including four rule matches), with four exact operations, two wrong
+mutation proposals and 24 strict rejections. The tuned route remains 17 exact,
+eleven wrong proposals and one rejection. Both use the identical app binary,
+prompt/native runtime, dataset and evaluator on the same simulator.
+
+All eleven wrong tuned proposals are new relative to this untuned app run; its
+two earlier wrong proposals improve. The paired auditor flags 23 cases overall
+and supplies no interval because the data has one connected speaker component.
+No provider is promoted. These are interpretation-segment results: earlier
+VoiceModel rules, state, speech and calendar execution are outside the probe.
+Apple model attempts still fail in the simulator. The complete physical workflow
+and latency comparison remain open. See the [comparison record](../../ml/experiments/2026-09-26-s18-app-provider-comparison.md).
+
 ### Forty development cases through the app interpretation route — 2026-09-26
 
 The isolated simulator trial now accepts the complete invented validation partition

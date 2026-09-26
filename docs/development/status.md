@@ -121,9 +121,14 @@ evaluation probe, all 175 tool tests, lint and both simulator builds pass. Rules
 answer four cases exactly and leave 36 unmatched. Apple advertises availability,
 but its 36 model attempts fail at a missing simulator system component; the four
 rule answers still pass. Custom routing returns 17 exact operations, 11 unsafe
-proposals and one rejected answer. No operation executes. The same correlated,
-unreviewed corpus remains development evidence; untuned app comparison and actual
-Apple/physical qualification remain open. Run identities are in the ledger.
+proposals and one rejected answer. The retained untuned export now runs through
+the identical app binary: four exact operations, two wrong proposals and 24 rejected
+answers. All eleven wrong tuned proposals are new relative to that app comparison.
+Four model-selection tests, all 179 tool tests, lint and both simulator builds pass.
+No operation executes. The same correlated, unreviewed corpus remains development
+evidence. Earlier VoiceModel rules, full conversation and actual Apple/physical
+qualification remain outside this probe. Run identities are in the ledger and
+[comparison report](../../ml/experiments/2026-09-26-s18-app-provider-comparison.md).
 
 All four privacy manifests pass built-bundle verification. Privacy/support drafts
 are prepared; publisher/contact information and public distribution review remain open.

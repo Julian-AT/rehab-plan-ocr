@@ -137,7 +137,7 @@ build-assistant-native:
 	python3 tooling/build/build-assistant-native.py $(ASSISTANT_NATIVE_TARGETS)
 
 build-assistant-trial:
-	python3 tooling/build/build-assistant-trial.py
+	python3 tooling/build/build-assistant-trial.py --model "$(or $(ASSISTANT_TRIAL_MODEL),tuned)"
 
 assistant-smoke:
 	@test -n "$(RUN)" || { echo 'Set RUN to a new directory below .local/runs'; exit 2; }

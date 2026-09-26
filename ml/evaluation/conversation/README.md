@@ -51,6 +51,10 @@ make test-assistant-app-trial TEST_ARGS='--run .local/runs/<new-run> --simulator
 ```
 
 Repeat serially with distinct output directories and `--mode rules` or `--mode apple`.
+To evaluate the preserved untuned export, first run
+`make build-assistant-trial ASSISTANT_TRIAL_MODEL=untuned`, then use `--mode custom`
+with another output directory. The receipt identifies which registered GGUF was
+bundled. Omit the build selector (or use `tuned`) to restore the tuned trial.
 Rules mode records unmatched inputs; Apple/custom modes retain the normal complete
 rule routing before generation. Availability, errors, the actual per-case provider,
 all requested cases and dependency groups remain visible. An unavailable Apple model
@@ -67,6 +71,8 @@ Reports retain dataset/fixture/build/source/output hashes. Each case has a fresh
 30-second request deadline; weights may remain warm within a run. These serial
 simulator observations establish neither interleaved paired latency nor complete
 voice/calendar behavior. The probe opens no application database or audio session
-and performs no calendar operation. No result promotes a model. Human review,
-untuned-model comparison through this route, eligible Apple hardware and physical
-end-to-end measurements remain required.
+and performs no calendar operation. It covers the interpretation router; the
+`VoiceModel` state machine and its earlier mutation/cancellation rules are outside
+this segment. Thus `rules` means the router's complete calendar-question rules,
+not every rule used in a full conversation. No result promotes a model. Human
+review, eligible Apple hardware and physical end-to-end measurements remain required.
