@@ -46,3 +46,13 @@ Private evidence:
 
 Earlier failed experiments remain unchanged. This result establishes an improved
 development score and a passing export for this corpus, not product qualification.
+
+The isolated simulator trial accepts the new artifact explicitly:
+
+```sh
+make build-assistant-trial ASSISTANT_TRIAL_MODEL=tuned-v2
+```
+
+The historical `tuned` and `untuned` selections retain their original identities.
+All choices require intact registered experimental weights; the public bundle
+continues to reject these assets. Building the trial does not update a device.

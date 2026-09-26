@@ -30,6 +30,7 @@ class TrialModelTests(unittest.TestCase):
         self.paths = {}
         for variant, name in [
             ("tuned", "assistant-development-001"),
+            ("tuned-v2", "assistant-development-002"),
             ("untuned", "assistant-untuned-001"),
         ]:
             model = self.root / ".local/runs/example" / (variant + ".gguf")
@@ -52,9 +53,11 @@ class TrialModelTests(unittest.TestCase):
 
     def test_variants_use_distinct_registered_model_bytes(self):
         tuned = builder.model_artifact("tuned")
+        candidate = builder.model_artifact("tuned-v2")
         baseline = builder.model_artifact("untuned")
-        self.assertNotEqual(tuned[1]["id"], baseline[1]["id"])
-        self.assertNotEqual(tuned[2].read_bytes(), baseline[2].read_bytes())
+        self.assertEqual(candidate[1]["id"], "assistant-development-002")
+        self.assertEqual(len({v[1]["id"] for v in [tuned, candidate, baseline]}), 3)
+        self.assertEqual(len({v[2].read_bytes() for v in [tuned, candidate, baseline]}), 3)
         with self.assertRaises(ValueError):
             builder.model_artifact("../unknown")
 

@@ -53,14 +53,17 @@ def source_snapshot():
     return {name: assembly.sha(ROOT / name) for name in sorted(set(names)) if name}
 
 
+MODEL_REGISTRIES = {
+    "tuned": "assistant-development-001.json",
+    "tuned-v2": "assistant-development-002.json",
+    "untuned": "assistant-untuned-001.json",
+}
+
+
 def model_artifact(variant):
-    registries = {
-        "tuned": "assistant-development-001.json",
-        "untuned": "assistant-untuned-001.json",
-    }
-    if variant not in registries:
-        raise ValueError("Select a registered tuned or untuned experimental model")
-    registry_path = ROOT / "ml/registry" / registries[variant]
+    if variant not in MODEL_REGISTRIES:
+        raise ValueError("Select an explicitly registered experimental model")
+    registry_path = ROOT / "ml/registry" / MODEL_REGISTRIES[variant]
     registry = json.loads(registry_path.read_text())
     artifact = registry["artifact"]
     model = (ROOT / artifact["path"]).resolve()
@@ -159,7 +162,7 @@ def prepare(variant):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["tuned", "untuned"], default="tuned")
+    parser.add_argument("--model", choices=MODEL_REGISTRIES, default="tuned")
     args = parser.parse_args()
     with product_generation.leased(ROOT) as (_, descriptor):
         build_trial(args.model, descriptor)
