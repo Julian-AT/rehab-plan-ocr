@@ -208,3 +208,22 @@ No command upgrades packages, updates environments/locks, grants an exception or
 approves release. Findings require review of the relevant tooling/training usage
 and separately validated remediation. Run the network-free synthetic regressions
 with `.local/envs/tools/bin/python tooling/release/tests/test-audit-python.py`.
+
+The actual canonical retrieval on 2026-09-26 after the Pillow update queried
+**152 package/version pairs** from 234 registry occurrences; four virtual projects
+were excluded. Snapshot `.local/audits/python-osv-canonical-20260926-s21-002` has receipt
+SHA-256 `822d72318d88c83d88e8946e6ef047fca9d7df25e1329c6a9f80b82911bab4a4`.
+The separate replay at `.local/audits/python-review-canonical-20260926-s21-002` completed
+under an operating-system network-denial sandbox. A connection counterprobe was
+denied with `EPERM`. The audit correctly returned exit 1: **38 active advisory
+records, seven affected package/version pairs and 24 connected vulnerability
+groups**, with no withdrawn records. This is a completed audit with open findings,
+not a clean dependency or release result. The
+[dated package review](../releases/dependency-security-2026-09-26-s21-python.md)
+retains the original pre-update findings and the separately qualified Pillow change.
+
+The incomplete first canonical retrieval remains unchanged. It exposed OSV's
+microsecond batch timestamp versus the full advisory's nanosecond timestamp.
+The corrected reader accepts only the upstream's directed microsecond truncation;
+different full-precision timestamps still fail. All 27 isolated regressions pass,
+including the actual retained response pair and changed-time counterexamples.
