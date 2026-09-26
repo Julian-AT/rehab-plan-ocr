@@ -13,9 +13,13 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tooling.utils.xcresult import command, preserved_result  # noqa: E402
+
 BASELINE = ROOT / "docs/product/visual-baseline"
 spec = importlib.util.spec_from_file_location(
     "comparison", Path(__file__).with_name("compare-screenshots.py")
@@ -114,6 +118,41 @@ def write_review(report, baseline, output):
     (output / "review.html").write_text(document)
 
 
+def export_evidence(bundle, output, run=command):
+    if output.resolve().is_relative_to(bundle.resolve()):
+        raise ValueError("Visual evidence must remain outside the source result bundle")
+    with preserved_result(bundle) as (working, source_files):
+        summary = json.loads(
+            run(
+                [
+                    "get",
+                    "test-results",
+                    "summary",
+                    "--path",
+                    str(working),
+                ]
+            )
+        )
+        (output / "test-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        run(
+            [
+                "export",
+                "attachments",
+                "--path",
+                str(working),
+                "--output-path",
+                str(output / "attachments"),
+            ]
+        )
+    (output / "source-result.json").write_text(
+        json.dumps(
+            {"bundle": str(bundle.resolve()), "files": source_files, "unchanged": True}, indent=2
+        )
+        + "\n"
+    )
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -124,8 +163,13 @@ def main():
     output = args.run.resolve()
     if not output.is_relative_to(ROOT / ".local/runs"):
         raise ValueError("Use a new .local/runs directory")
+    if args.xcresult and output.is_relative_to(args.xcresult.resolve()):
+        raise ValueError("Visual evidence must remain outside the source result bundle")
     output.mkdir(parents=True, exist_ok=False)
-    before = source_snapshot()
+    evaluator_revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    before = source_snapshot() if args.capture else None
     capture_status = None
     result_bundle = args.xcresult
     if args.capture:
@@ -162,33 +206,7 @@ def main():
             )
             + "\n"
         )
-    summary = json.loads(
-        subprocess.check_output(
-            [
-                "xcrun",
-                "xcresulttool",
-                "get",
-                "test-results",
-                "summary",
-                "--path",
-                str(result_bundle),
-            ]
-        )
-    )
-    (output / "test-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    subprocess.run(
-        [
-            "xcrun",
-            "xcresulttool",
-            "export",
-            "attachments",
-            "--path",
-            str(result_bundle),
-            "--output-path",
-            str(output / "attachments"),
-        ],
-        check=True,
-    )
+    summary = export_evidence(result_bundle, output)
     report = compare_suite(BASELINE, output / "attachments", output / "previews")
     report["tests_passed"] = (
         summary.get("result") == "Passed"
@@ -198,17 +216,20 @@ def main():
         and summary.get("skippedTests") == 0
     )
     report["passed"] = report["passed"] and report["tests_passed"]
-    report["sources"] = before
+    # A supplied historical bundle does not identify the app with today's checkout.
+    report["capture_mode"] = "fresh" if args.capture else "provided-result"
+    report["evaluator_revision"] = evaluator_revision
+    report["source_revision"] = evaluator_revision if args.capture else None
     if args.capture:
+        report["sources"] = before
         report["capture_exit_code"] = capture_status
         report["sources_unchanged"] = before == source_snapshot()
         report["passed"] = report["passed"] and capture_status == 0 and report["sources_unchanged"]
-    report["source_revision"] = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
     report["comparator_sha256"] = sha(Path(__file__))
     report["pixel_comparator_sha256"] = sha(Path(__file__).with_name("compare-screenshots.py"))
     report["xcresult"] = str(result_bundle.resolve())
+    report["source_result_receipt_sha256"] = sha(output / "source-result.json")
+    report["result_reader_sha256"] = sha(ROOT / "tooling/utils/xcresult.py")
     app = ROOT / "apps/ios/build/DerivedData/Build/Products/Debug-iphonesimulator/Laßnitzhöhe.app"
     if args.capture and (app / "Termine.debug.dylib").is_file():
         report["app_binary_sha256"] = sha(app / "Termine.debug.dylib")
@@ -231,10 +252,16 @@ def source_snapshot():
                 "-z",
                 "--",
                 "apps/ios",
-                "packages/apple",
+                "packages",
+                "tooling/build",
                 "tooling/checks/test-native-ui.sh",
+                "tooling/checks/native-simulator.py",
                 "docs/third-party/runtime-inventory.json",
-                "config/toolchains/versions.json",
+                "config",
+                "ml/registry/runtime",
+                "Cargo.toml",
+                "Cargo.lock",
+                "rust-toolchain.toml",
             ],
             cwd=ROOT,
         )

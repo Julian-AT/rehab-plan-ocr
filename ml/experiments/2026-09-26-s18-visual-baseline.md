@@ -52,3 +52,28 @@ Still open: deterministic large-row viewport positions and stable system renderi
 full-app visual coverage, the separate CoreAudio/voice gate, user preview/listening
 approval and physical verification. Neither the test counts nor familiar-looking
 screens authorize an iPhone update or establish complete visual qualification.
+
+## Preserving result evidence during later comparisons
+
+The comparator and focused native failure collector now share a verified
+disposable-copy reader. `xcresulttool` may write a SQLite index even for a read
+command; neither consumer exposes the retained original to that command. Every
+source file is hashed before copying, the copy is verified before use, and the
+original is checked again even if extraction fails. Nested output is rejected.
+
+A real re-evaluation of run 002 preserves all 130 source files (84,994,477 bytes)
+and reproduces the same **13/22** pixel matches with three passed UI tests. The
+comparison still exits with failure because nine images differ. It adds no new
+capture or visual acceptance. Evidence remains under
+`.local/runs/visual-evidence-preservation-20260926-s18-001`: report SHA-256
+`a2638126bf4412eaa2ccc156f76c8b3249698a39ed359338659a5777e759c691`,
+source-result receipt SHA-256
+`425c8fafce80e1297a1d04e32d6572812c375e9a8f6078df0bfece178513df18`.
+
+Provided historical bundles now identify the current revision as the evaluator
+revision and leave the tested app revision unknown; today's checkout is not
+silently attributed to an older capture. Fresh captures retain their app-source
+snapshot, now including Rust, build tooling, runtime manifests and toolchain/test
+configuration. Six visual-tool tests and three native-collector tests cover
+pixel failures, index creation, interrupted extraction, original-file changes,
+nested destinations and historical-source attribution.

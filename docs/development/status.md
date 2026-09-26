@@ -43,7 +43,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded candidates. The latest local tool suite passes 214 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledger. |
+| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded candidates. The latest local tool suite passes 219 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledger. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | Run 35306312405 at `404f68e` is blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. Exact annotations are retained; the user was asked to check account billing. No retry, payment or limit change was made. |
@@ -51,7 +51,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 | Prior hosted UI | 59 passes, three failures and one skip before the old job timeout; three cases incomplete. Focused midnight/permission/picker corrections pass locally. See the [retained report](../releases/history/2026-09-26-s18-hosted-ui.md). |
 | Local audio/UI | Local CoreAudio aborts also occur in an independent minimal app. CI run 35295159442 instead shows actual playback while retained accessibility values are stale. Current-query/scroll corrections compile and await hosted behavioral verification. The corrected public-plan share test passes locally. Complete audio acceptance remains open. |
 | Reduced motion | The actual simulator Settings switch, usable speaking control, stationary app pixels and setting restoration pass without a skip. System-clock pixels are excluded from animation comparisons. |
-| Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. No baseline replacement or tolerance hides these differences. |
+| Appearance | All 22 original PNGs are unchanged. Exact repeated comparisons match 15/22 then 13/22; large-text scroll positions and small system-rendering differences remain unresolved. A verified-copy re-evaluation preserves all 130 original result files and reproduces 13/22. Historical captures are no longer attributed to today's app checkout. No baseline replacement or tolerance hides differences. |
 | Persistence | Ten synthetic backup-comparison tests cover schemas 8–11, original columns, sources, preferences and App Group journals. A fresh complete physical backup/update comparison remains pending. |
 | Packaging | Signed private archive/IPA at `21ff054` passes four-component signature/profile, model, notice and privacy checks. Earliest profile expiry is September 26, 2026 at 11:56:33 UTC. See the [package record](../releases/history/2026-09-26-s18-signed-package.md); recheck signing before any approved update. |
 

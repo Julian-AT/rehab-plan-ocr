@@ -1,36 +1,16 @@
 """Collect small failure evidence while preserving the complete source xcresult."""
 
 import argparse
-import hashlib
 import json
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-
-def inventory(root):
-    files = {}
-    for path in sorted(root.rglob("*")):
-        if path.is_symlink():
-            raise ValueError("Result evidence must not contain symlinks")
-        if path.is_file():
-            with path.open("rb") as stream:
-                digest = hashlib.file_digest(stream, "sha256").hexdigest()
-            files[str(path.relative_to(root))] = {"bytes": path.stat().st_size, "sha256": digest}
-    return files
-
-
-def command(arguments):
-    return subprocess.run(
-        ["xcrun", "xcresulttool", *arguments],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    ).stdout
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tooling.utils.xcresult import command, inventory, preserved_result  # noqa: E402
 
 
 def extract(bundle, output, receipt, run):
@@ -108,22 +88,9 @@ def collect(bundle, output, commit, run=command):
         record()
         return receipt
     try:
-        receipt["source_files"] = inventory(bundle)
-        if not receipt["source_files"]:
-            raise ValueError("Source result bundle is empty")
-        # xcresulttool may create a database.sqlite3 index even for read commands.
-        # Read a disposable copy; the downloaded bundle remains byte-for-byte intact.
-        with tempfile.TemporaryDirectory(prefix="reha-xcresult-") as temporary:
-            working = Path(temporary) / "result.xcresult"
-            if sys.platform == "darwin":
-                subprocess.run(["cp", "-cRp", str(bundle), str(working)], check=True, timeout=120)
-            else:
-                shutil.copytree(bundle, working)
-            if inventory(working) != receipt["source_files"]:
-                raise ValueError("Result working copy does not match the source")
+        with preserved_result(bundle) as (working, source_files):
+            receipt["source_files"] = source_files
             extract(working, output, receipt, run)
-        if inventory(bundle) != receipt["source_files"]:
-            raise ValueError("Source result bundle changed while collecting evidence")
         receipt["status"] = "collected"
         receipt["files"] = {k: v for k, v in inventory(output).items() if k != "receipt.json"}
         record()
