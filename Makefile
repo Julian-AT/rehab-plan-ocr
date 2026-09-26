@@ -420,7 +420,7 @@ diagnose-assistant-parity:
 diagnose-assistant-token-parity: PEAK_GIB = 8
 diagnose-assistant-token-parity: check-storage
 	@test -n "$(RUN)" -a -n "$(DIAGNOSTIC_RUN)" -a -n "$(WEIGHTS_EVIDENCE)" || { echo 'Set RUN, a new DIAGNOSTIC_RUN and the existing WEIGHTS_EVIDENCE JSON'; exit 2; }
-	.local/envs/assistant/bin/python ml/evaluation/conversation/token_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)" --weights-evidence "$(WEIGHTS_EVIDENCE)"
+	.local/envs/assistant/bin/python ml/evaluation/conversation/token_parity.py --run "$(RUN)" --output "$(DIAGNOSTIC_RUN)" --weights-evidence "$(WEIGHTS_EVIDENCE)" $(if $(REUSE_MLX),--reuse-mlx "$(REUSE_MLX)")
 
 ASSISTANT_EPOCHS ?= 20
 ASSISTANT_PATIENCE ?= 3
