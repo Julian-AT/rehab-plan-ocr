@@ -31,11 +31,37 @@ def timing(values):
 
 def compare(base, candidate):
     """Count reductions cannot hide a newly wrong date/time on another row."""
-    old = {(r["source_hash"], r.get("repeat", 0)): r for r in base}
-    new_critical, new_invented, new_false_acceptances = [], [], []
+
+    def index(rows):
+        result = {}
+        for row in rows:
+            repeat = row.get("repeat", 0)
+            key = (row["source_hash"], repeat)
+            if (
+                not isinstance(repeat, int)
+                or isinstance(repeat, bool)
+                or repeat < 0
+                or key in result
+                or not math.isfinite(row["wall_ms"])
+                or row["wall_ms"] < 0
+            ):
+                raise ValueError("Unique photo/repeat pairs and finite timings required.")
+            result[key] = row
+        return result
+
+    old, new = index(base), index(candidate)
+    if not old or old.keys() != new.keys():
+        raise ValueError("Both candidates must cover the same nonempty photo/repeat set.")
+    repeats = sorted({repeat for _, repeat in old})
+    photos = {source for source, _ in old}
+    if repeats != list(range(len(repeats))) or len(old) != len(photos) * len(repeats):
+        raise ValueError("Every photo needs the same consecutive repeats starting at zero.")
+    new_critical, new_invented, new_missed, new_false_acceptances = [], [], [], []
     for row in candidate:
         prior = old[(row["source_hash"], row.get("repeat", 0))]["metrics"]
         current = row["metrics"]
+        if current["reference_count"] != prior["reference_count"]:
+            raise ValueError("Reference counts changed between candidates.")
         for key, destination in [
             ("critical_errors", new_critical),
             ("critical_false_acceptances", new_false_acceptances),
@@ -46,24 +72,38 @@ def compare(base, candidate):
             )
         if current["invented_count"] > prior["invented_count"]:
             new_invented.append(row["source_hash"])
-    a = summarize([r for r in base if r.get("repeat", 0) == 0])
-    b = summarize([r for r in candidate if r.get("repeat", 0) == 0])
+        if current["missed_count"] > prior["missed_count"]:
+            new_missed.append(row["source_hash"])
+    quality_by_repeat = []
+    for repeat in repeats:
+        a = summarize([r for r in base if r.get("repeat", 0) == repeat])
+        b = summarize([r for r in candidate if r.get("repeat", 0) == repeat])
+        quality_by_repeat.append(
+            {
+                "repeat": repeat,
+                "improved": b["counts"]["field_corrections_needed"]
+                < a["counts"]["field_corrections_needed"]
+                and (
+                    b["counts"]["fully_correct_count"] > a["counts"]["fully_correct_count"]
+                    or b["fully_correct_photos"] > a["fully_correct_photos"]
+                ),
+            }
+        )
     ta, tb = timing([r["wall_ms"] for r in base]), timing([r["wall_ms"] for r in candidate])
-    improved = b["counts"]["field_corrections_needed"] < a["counts"][
-        "field_corrections_needed"
-    ] and (
-        b["counts"]["fully_correct_count"] > a["counts"]["fully_correct_count"]
-        or b["fully_correct_photos"] > a["fully_correct_photos"]
-    )
+    improved = all(row["improved"] for row in quality_by_repeat)
     speed = tb["median_ms"] <= ta["median_ms"] and tb["p95_ms"] <= ta["p95_ms"]
     return {
         "new_critical_errors": new_critical,
         "photos_with_additional_invented_rows": new_invented,
+        "photos_with_additional_missed_rows": new_missed,
         "new_critical_false_acceptances": new_false_acceptances,
+        "quality_by_repeat": quality_by_repeat,
         "desktop_quality_improved": improved,
         "desktop_timing_not_slower": speed,
         "eligible_for_iphone_comparison": bool(
-            improved and speed and not (new_critical or new_invented or new_false_acceptances)
+            improved
+            and speed
+            and not (new_critical or new_invented or new_missed or new_false_acceptances)
         ),
         "eligible_as_default": False,
         "default_blocker": "Physical iPhone cold/warm, thermal and memory evidence required.",
