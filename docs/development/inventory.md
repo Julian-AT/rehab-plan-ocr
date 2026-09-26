@@ -54,12 +54,14 @@ bei 237.420 Bytes. Die zentrale aktive Referenzsammlung bleibt
 | `.local/models` | Gepinnte Laufzeit-/Trainingsmodelle und bisherige Experimente; Build, Export, Training | Geschützt |
 | `.local/objects` | Hashadressierte unveränderliche Basis-GGUFs; identische APFS-Kopien an bisherigen Versuchspfaden | Geschützt; Checkpoints ausgeschlossen |
 | `.local/runs` | Trainingszustände, Bewertungen, CI, Vorschauen und frühere Gerätesicherungen | Geschützt; keine pauschale Altersregel |
+| `.local/releases` | Pro Lauf reservierte Archive, Symbole, Pakete und Freigabenachweise | Geschützt; bestehende Läufe werden nicht überschrieben |
 | `.local/migrations` | Hashinventare und Wiederanlaufjournale der früheren Umzüge | Geschützt |
 | `.local/upstream` | Gepinnte Fremdquellen und verknüpfter llama.cpp-Worktree | Geschützt, Quellidentitäten für Exporte erforderlich |
 | `.local/envs` | Getrennte gelockte Trainings-/Exportumgebungen | Für Offline-Wiederanlauf erhalten |
 | `.local/builds` | Native Assembly, Modellruntime, isolierte Tests und Probe-Compilerprodukte | Nur explizit geprüfte Zwischenprodukte bereinigen |
 | `.local/maintenance` | Neue Bestands-, Lösch- und Schutzbelege | Privat erhalten |
-| `target`, `.tools`, `.venv`, `apps/ios/build` | Noch nicht migrierte Entwicklungsprodukte; bestehende Skripte/SwiftPM/CI | Verbraucher vor Pfadumstellung migrieren; keine pauschale Löschung |
+| `.local/tools`, `.local/envs/tools`, `.local/builds/rust`, `.local/builds/ios` | Kanonische Werkzeug- und Buildpfade; Make, SwiftPM, Cargo und CI | Geprüfte Migration aller 25.335 Einträge abgeschlossen; [Wiederanlaufbeleg](build-reproducibility.md) |
+| `target`, `.tools`, `.venv`, `apps/ios/build` | Erhaltene Kompatibilitätslinks auf die kanonischen Bestände; alte Interpreter-Einstiege und historische Nachweise | Links erhalten; keine separaten, nochmals löschbaren Bestände |
 
 Die [Bereinigungsregel](artifact-retention.md) begrenzt zunächst nachgewiesene
 Zwischenprodukte. Weitere lokale Untergruppen sind vor Entfernung einzeln zu prüfen.
