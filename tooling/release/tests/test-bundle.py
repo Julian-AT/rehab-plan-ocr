@@ -200,6 +200,69 @@ class BundleTests(unittest.TestCase):
                 self.verify()
             binary.write_bytes(original)
 
+    def test_assistant_resources_fail_without_the_trial_info_marker(self):
+        for name in [
+            "assistant-trial/payload.data",
+            "nested/ASSISTANT-TRIAL/manifest.json",
+            "assistant-system-v1.txt",
+            "PlugIns/RehaShare.appex/assistant-system-v1.txt",
+        ]:
+            path = self.app / name
+            write(path, b"Preserved experimental assistant resource")
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "assistant resources"):
+                self.verify()
+            path.unlink()
+            # Empty trial directories must not be mistaken for approved assets.
+            if "assistant-trial" in name.lower():
+                with self.assertRaisesRegex(ValueError, "assistant resources"):
+                    self.verify()
+                shutil.rmtree(self.app / Path(name).parts[0])
+
+    def test_assistant_models_fail_by_extension_and_renamed_gguf_header(self):
+        for name, data in [
+            ("model.gguf", b"Incomplete model"),
+            ("nested/model.GGUF", b"Incomplete model"),
+            ("renamed.data", b"GGUF\x03\x00\x00\x00synthetic model"),
+            (
+                "PlugIns/RehaShare.appex/nested/model.payload",
+                b"GGUF\x03\x00\x00\x00synthetic model",
+            ),
+        ]:
+            path = self.app / name
+            write(path, data)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "assistant model"):
+                self.verify()
+            path.unlink()
+
+    def test_renamed_nested_trial_manifest_fails_regardless_of_qualification(self):
+        manifest = {
+            "schema_version": 1,
+            "model_id": "synthetic-trial",
+            "model_sha256": "a" * 64,
+            "model_bytes": 12,
+            "prompt_sha256": "b" * 64,
+            "native_identity": "c" * 64,
+        }
+        for name in ["renamed/manifest.json", "PlugIns/RehaShare.appex/nested/MANIFEST.JSON"]:
+            path = self.app / name
+            for qualification in [{}, {"qualified": False}, {"qualified": True}]:
+                write(path, encoded(manifest | qualification))
+                with (
+                    self.subTest(name=name, qualification=qualification),
+                    self.assertRaisesRegex(ValueError, "assistant manifest"),
+                ):
+                    self.verify()
+            path.unlink()
+
+    def test_unrelated_json_and_non_model_assets_remain_allowed(self):
+        for name, data in [
+            ("approved/manifest.json", encoded({"schema_version": 1, "qualified": False})),
+            ("approved/options.json", encoded(["GGUF is a format name in this text"])),
+            ("approved/notes.txt", b"A format description mentions GGUF here."),
+        ]:
+            write(self.app / name, data)
+        self.verify()
+
     def test_external_and_internal_symlinks_fail_even_for_matching_bytes(self):
         path = self.app / "small/model.bin"
         data = path.read_bytes()

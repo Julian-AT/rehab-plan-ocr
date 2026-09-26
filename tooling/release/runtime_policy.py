@@ -1,5 +1,6 @@
 """Mechanical release exclusions; these checks do not grant distribution rights."""
 
+import json
 import re
 
 MODELS = ("small",)
@@ -10,6 +11,8 @@ EXCLUDED_RESOURCE_PARTS = {
     "libespeak-ng.a",
     "libucd.a",
 }
+EXCLUDED_ASSISTANT_PARTS = {"assistant-trial", "assistant-system-v1.txt"}
+ASSISTANT_MANIFEST_KEYS = {"model_sha256", "prompt_sha256", "native_identity"}
 ESPEAK_SYMBOL = re.compile(rb"(?:^|[^a-zA-Z0-9])_?espeak(?:_ng)?_[a-zA-Z0-9]+")
 # mach-o/loader.h and mach-o/fat.h: both byte orders and 32-/64-bit headers.
 MACHO_MAGICS = {
@@ -59,5 +62,25 @@ def embedded_code(app):
 
 def check_resources(app):
     for path in app.rglob("*"):
-        if any(part.lower() in EXCLUDED_RESOURCE_PARTS for part in path.relative_to(app).parts):
+        parts = {part.lower() for part in path.relative_to(app).parts}
+        if parts & EXCLUDED_RESOURCE_PARTS:
             raise ValueError("Experimental speech resources are forbidden in release bundles")
+        if parts & EXCLUDED_ASSISTANT_PARTS:
+            raise ValueError("Experimental assistant resources are forbidden in release bundles")
+        if not path.is_file():
+            continue
+        with path.open("rb") as source:
+            header = source.read(4)
+        # Inspect content as well as names: a renamed model or a missing trial
+        # Info.plist marker must not turn development weights into release assets.
+        if path.suffix.lower() == ".gguf" or header == b"GGUF":
+            raise ValueError("Custom assistant models are forbidden in release bundles")
+        if path.name.lower() == "manifest.json":
+            try:
+                manifest = json.loads(path.read_bytes())
+            except (ValueError, UnicodeError):
+                continue
+            # A qualification flag is not release approval. Match the trial
+            # artifact identity even after its containing directory was renamed.
+            if isinstance(manifest, dict) and ASSISTANT_MANIFEST_KEYS <= manifest.keys():
+                raise ValueError("Custom assistant manifests are forbidden in release bundles")

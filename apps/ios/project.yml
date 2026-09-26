@@ -30,6 +30,7 @@ targets:
       - path: App
         excludes: [Info.plist]
       - path: Features
+        excludes: [Conversation/Resources/assistant-system-v1.txt]
       - path: Shared
       - path: Tests/Support
       - path: ../../.local/models/runtime/small

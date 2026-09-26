@@ -8,6 +8,8 @@ targets:
     dependencies:
       - package: LocalAssistant
     sources:
+      - path: Features/Conversation/Resources/assistant-system-v1.txt
+        buildPhase: resources
       - path: ../../.local/models/runtime/assistant-trial
         type: folder
         buildPhase: resources
