@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "id": "assistant-development-002",
+  "qualified": false,
+  "promoted": false,
+  "status": "experimental-export-parity-passed-quality-open",
+  "base_registry": "ml/registry/assistant-base.json",
+  "protocol": "ml/experiments/2026-09-26-s21-assistant-development-v2.md",
+  "run_identity_sha256": "1868fa0cb9d998ef383b45e669b41dd5e930c3ac711434cc460675a28e18c5df",
+  "dataset_sha256": "a86258061e01115e8990f43eb1efa171d775bd2e10a6720509f5b9bbe6d8b3e3",
+  "settings": {
+    "seed": 20260917,
+    "fine_tune_type": "lora",
+    "num_layers": 8,
+    "batch_size": 2,
+    "learning_rate": 0.0001,
+    "max_epochs": 20,
+    "patience": 3,
+    "max_seq_length": 1536,
+    "max_output_tokens": 192,
+    "lora_parameters": {
+      "rank": 8,
+      "scale": 20.0,
+      "dropout": 0.0
+    }
+  },
+  "selection": {
+    "epoch": 8,
+    "steps": 1088,
+    "stale_epochs": 3,
+    "best_epoch": 5,
+    "best_score": [
+      4,
+      10,
+      0.25,
+      0.15960631156121963
+    ],
+    "stopped": true
+  },
+  "selected_checkpoint_sha256": "9c3723310af4547a1c3d7e6dd653d0f7236933ed48b5dee13d1923ad44854c04",
+  "artifact": {
+    "format": "GGUF-F16",
+    "sha256": "0dfee2695c0c1bf44bbb1aa2bd9d59ce17c723fdf8b76f9a0ad2ad96da0f44a2",
+    "bytes": 1198182240,
+    "path": ".local/runs/assistant-development-002/deployment/assistant.gguf"
+  },
+  "deployment_complete_answer_parity": {
+    "cases": 40,
+    "fusion_equal": 40,
+    "runtime_equal": 40,
+    "all_equal": true,
+    "report_sha256": "6fb288545ebcadcf4c844b677464e0c75e49847fad76eafd3477c631fa9f95b0"
+  },
+  "validation": {
+    "cases": 40,
+    "families": 10,
+    "train_cases": 272,
+    "validation_use": "previously-examined-development-only",
+    "human_review": "pending",
+    "independent_real_dialogues": 0,
+    "desktop_runtime_counts": {
+      "adapter": {
+        "schema_valid": 36,
+        "exact_match": 30,
+        "unsafe_mutation": 4
+      },
+      "fused": {
+        "schema_valid": 36,
+        "exact_match": 30,
+        "unsafe_mutation": 4
+      },
+      "baseline": {
+        "schema_valid": 10,
+        "exact_match": 0,
+        "unsafe_mutation": 2
+      },
+      "assistant": {
+        "schema_valid": 36,
+        "exact_match": 30,
+        "unsafe_mutation": 4
+      }
+    },
+    "previous_mlx_selected": {
+      "cases": 40,
+      "families": 10,
+      "exact": 17,
+      "schema_valid": 38,
+      "unsafe_mutations": 10,
+      "critical_errors": 23,
+      "family_mean_error": 0.575,
+      "loss": 0.3398752085528354
+    },
+    "current_mlx_selected": {
+      "cases": 40,
+      "families": 10,
+      "exact": 30,
+      "schema_valid": 36,
+      "unsafe_mutations": 4,
+      "critical_errors": 10,
+      "family_mean_error": 0.25,
+      "loss": 0.15960631156121963
+    }
+  },
+  "evidence": {
+    ".local/runs/assistant-development-002-evidence/source.json": "175df8bbbf4df79ae87bbe91f8898b486f9ed00e582f115bc6279390969a7fcf",
+    ".local/runs/assistant-development-002-evidence/training-completion.json": "6f8be021d858c2c1041df4ee96bc146dbf56da61456fb8847f1a7c5298b69d95",
+    ".local/runs/assistant-development-002-evidence/export-execution.json": "f1c2f546891f67861952e7d5156b752956e887628568e4010f6beac454f9ee83",
+    ".local/runs/assistant-development-002/baseline.json": "13b27d201acf1aa237b1b6d71f944fdd4f59d4d9dc5c5e126b9456adf646652d",
+    ".local/runs/assistant-development-002/result.json": "5807d161507c6921b45fb3d5fdaab449a05aa1a972bfbd07677485175569082f",
+    ".local/runs/assistant-development-002/deployment/export.json": "a3930dc6d86927023829710bb20d2de6ac03738972ff6bd0fe162eb8261fbc69"
+  },
+  "limits": [
+    "Known synthetic development controls influenced training expansion; not an unseen holdout or independent participants.",
+    "Four raw native mutation proposals choose an ambiguous event and remain unsafe; no calendar operation was executed.",
+    "Schema-valid outputs decreased from 38 to 36 relative to the prior MLX selected model, despite exact answers improving from 17 to 30.",
+    "Current router replay, native app conversation, physical resources/latency, human language/listening and independent evaluation remain separate requirements.",
+    "Complete-answer parity is a deployment check on these 40 cases, not a generalization or safety guarantee.",
+    "Public custom-provider selection remains unchanged."
+  ]
+}

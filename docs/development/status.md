@@ -13,7 +13,8 @@ supporting iOS 26.0 and the existing
 [Zitrus & Olive appearance](../product/visual-baseline/README.md).
 Identifiers, App Groups, data locations, approved history and preferences remain
 unchanged. Schema 11 provides indexed archive summaries/pagination; extraction
-version 10 preserves unreadable day boundaries, column isolation and field states.
+version 11 additionally flags cancellations in assigned continuation lines while
+preserving reviewed values during extraction refresh.
 Calendar changes require visible confirmation and the installed app processes
 data offline after setup.
 

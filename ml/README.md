@@ -30,8 +30,11 @@ The assistant environment targets Qwen3-0.6B using
 [MLX-LM LoRA and adapter fusion](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/LORA.md).
 
 Both custom models have experimental trained artifacts; neither is qualified for
-production. The [current status](../docs/development/status.md) records quality and
-parity failures. Preserve train/validation lineage, resumable optimizer state and
+production. The [new assistant candidate](experiments/2026-09-26-s21-assistant-development-v2-results.md)
+passes complete-answer export parity on its 40 known development cases, with
+30 exact answers and four unsafe raw proposals. OCR export parity remains open.
+The [current status](../docs/development/status.md) records the scoped evidence.
+Preserve train/validation lineage, resumable optimizer state and
 grouped evaluation. Existing real references remain unapproved; the exporter keeps
 them blocked from training. The [synthetic table generator](data/synthesis/README.md)
 checks actual pixels and labels, but its counts cannot establish real-photo or
