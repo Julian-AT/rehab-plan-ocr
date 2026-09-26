@@ -57,6 +57,15 @@ struct DiagnosticTimelineView: View {
 extension DiagnosticStep {
   fileprivate var title: String {
     switch self {
+    case .recognitionReadiness: "Spracherkennung vorbereiten"
+    case .recognitionLocale: "Erkennungssprache"
+    case .recognitionProgress: "Erkennungsfortschritt"
+    case .recognitionPartial: "Vorläufiges Sprachergebnis"
+    case .recognitionFinal: "Bestätigtes Sprachergebnis"
+    case .recognitionFinalization: "Spracherkennung abschließen"
+    case .speechEndpoint: "Sprechpause"
+    case .audioPCMFormat: "Audioformat"
+    case .voiceProcessing: "Echounterdrückung"
     case .microphonePermission: "Mikrofonfreigabe"
     case .speechPermission: "Spracherkennungsfreigabe"
     case .inputRoute: "Audioeingang"

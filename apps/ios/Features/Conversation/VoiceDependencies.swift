@@ -4,6 +4,7 @@ import RehaCore
 enum VoiceRecordingState { case idle, preparing, recording, finishing }
 
 @MainActor protocol VoiceRecording: AnyObject {
+  var turnID: UUID { get set }
   var state: VoiceRecordingState { get }
   var transcript: String { get }
   var level: Double { get }
@@ -19,6 +20,7 @@ enum VoiceRecordingState { case idle, preparing, recording, finishing }
 }
 
 @MainActor protocol VoiceSpeaking: AnyObject {
+  var turnID: UUID { get set }
   var speaking: Bool { get }
   var responseID: UUID { get }
   var spokenText: String { get }
@@ -34,6 +36,7 @@ enum VoiceTrace {
   case recognitionStarted(String)
   case recognitionCompleted(String, Int)
   case interpretationStarted(String)
+  case calendarRead(String, Bool)
   case cancelled(String)
 }
 

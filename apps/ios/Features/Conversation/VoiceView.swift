@@ -164,6 +164,7 @@ import RehaCore
       sessionState = .speaking
       recorder.monitorForInterruption()
     }
+    output.turnID = UUID(uuidString: session)!
     output.speak(reply)
     if !rounds.isEmpty { rounds[rounds.count - 1].outputID = output.responseID }
   }
@@ -179,6 +180,7 @@ import RehaCore
       sessionState = .speaking
       recorder.monitorForInterruption()
     }
+    output.turnID = UUID(uuidString: session)!
     output.speak(preparedResponse)
     if !rounds.isEmpty { rounds[rounds.count - 1].outputID = output.responseID }
   }
@@ -191,6 +193,9 @@ import RehaCore
       output.stop()
       rememberSpoken()
     }
+    session = UUID().uuidString
+    recorder.turnID = UUID(uuidString: session)!
+    output.turnID = recorder.turnID
     dependencies.trace(.recognitionStarted(session))
     running = true
     sessionState = .listening
@@ -362,11 +367,13 @@ import RehaCore
     }
     guard current == session, modelToken == token, !Task.isCancelled else { return }
     do {
+      dependencies.trace(.calendarRead(session, false))
       let result = try await calendarConversation.resolve(
         request, token: token, now: dependencies.now(), address: dependencies.address())
       guard current == session, modelToken == token, !Task.isCancelled else { return }
       candidates = result.events
       selected = candidates.count == 1 ? candidates.first : nil
+      dependencies.trace(.calendarRead(session, true))
       say(result.text, question: .action)
     } catch {
       guard current == session, modelToken == token, !Task.isCancelled else { return }
@@ -595,6 +602,7 @@ import RehaCore
     await calendarConversation.begin(token)
     guard session == current, modelToken == token, !Task.isCancelled else { return }
     do {
+      dependencies.trace(.calendarRead(session, false))
       let result = try await calendarConversation.resolve(
         CalendarQuestion(
           date: intent.date, calendarName: intent.calendarName,
@@ -603,6 +611,7 @@ import RehaCore
         rememberAnswer: false)
       guard session == current, modelToken == token, !Task.isCancelled else { return }
       guard result.total == 1, let event = result.events.first else {
+        dependencies.trace(.calendarRead(session, true))
         say(result.text, question: .action)
         return
       }

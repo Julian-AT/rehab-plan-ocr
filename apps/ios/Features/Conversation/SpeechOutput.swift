@@ -1,4 +1,5 @@
 import AVFoundation
+import AppleServices
 import SwiftUI
 
 struct PlaybackWord: Identifiable {
@@ -8,6 +9,7 @@ struct PlaybackWord: Identifiable {
 @MainActor @Observable final class SpeechOutput {
   enum Phase: String { case idle, preparing, playing, failed }
   static let shared = SpeechOutput()
+  var turnID = UUID()
   var phase: Phase = .idle
   var status = "Bereit zum Vorlesen"
   var lastText = ""
@@ -85,6 +87,7 @@ struct PlaybackWord: Identifiable {
   private func beginResponse() {
     stop()
     responseID = UUID()
+    LocalDiagnostics.shared.record(.synthesis, .started, correlation: turnID.uuidString)
     words = []
     spokenText = ""
     lastText = ""
@@ -126,6 +129,8 @@ struct PlaybackWord: Identifiable {
           currentMarks = audio.marks
           revealed = 0
           committed = 0
+          LocalDiagnostics.shared.record(.synthesis, .completed, correlation: turnID.uuidString)
+          LocalDiagnostics.shared.record(.playback, .started, correlation: turnID.uuidString)
           phase = .playing
           status = "Wird vorgelesen"
           lineVisible = true

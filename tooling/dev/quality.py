@@ -414,6 +414,7 @@ def tests(portable):
             "native-photo",
             "native-text-recognition",
             "speech-input",
+            "recognition-turn",
             "ordered-settings",
             "service-request",
             "notification-deadline",

@@ -7,6 +7,9 @@ public enum DiagnosticStep: String, Codable, Sendable {
   case microphonePermission, speechPermission, inputRoute, audioEngine, audioConfiguration,
     audioBuffer,
     audioSampleRate, audioChannels, audioLevel, audioConversion, audioRestart
+  case recognitionReadiness, recognitionLocale, recognitionProgress, recognitionPartial,
+    recognitionFinal
+  case recognitionFinalization, speechEndpoint, audioPCMFormat, voiceProcessing
   case speechSession, speechRecognition, tools, synthesis, playback, interruption
 }
 public enum DiagnosticOutcome: String, Codable, Sendable {

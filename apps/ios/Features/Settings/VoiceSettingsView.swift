@@ -4,6 +4,7 @@ struct VoiceSettingsView: View {
 
   @AppStorage(VoiceAddress.key) private var address: VoiceAddress = .du
   @State private var rate = SpeechOutput.shared.rate
+  @State private var recognitionAvailable = false
   @State private var output = SpeechOutput.shared
   var body: some View {
     Form {
@@ -42,8 +43,7 @@ struct VoiceSettingsView: View {
       Section {
         LabeledContent(
           "Spracherkennung",
-          value: LocalSpeechRecorder.makeRecognizer() == nil
-            ? "Nicht verfügbar" : "Auf diesem iPhone")
+          value: recognitionAvailable ? "Auf diesem iPhone" : "Nicht verfügbar")
       } header: {
         AppSectionHeader(
           title: "Spracherkennung",
@@ -54,6 +54,9 @@ struct VoiceSettingsView: View {
 
     }.pageTitle("Sprache")
       .onAppear { rate = output.rate }
+      .task {
+        recognitionAvailable = (try? await SpeechRecognitionProviders.ready(titles: [])) != nil
+      }
       .onChange(of: rate) {
         output.stop()
         output.rate = rate

@@ -37,6 +37,9 @@ extension VoiceModel {
               .speechRecognition, .completed, correlation: session, count: count)
           case .interpretationStarted(let session):
             LocalDiagnostics.shared.record(.tools, .started, correlation: session)
+          case .calendarRead(let session, let completed):
+            LocalDiagnostics.shared.record(
+              .calendarRead, completed ? .completed : .started, correlation: session)
           case .cancelled(let session):
             LocalDiagnostics.shared.record(.speechSession, .cancelled, correlation: session)
           }

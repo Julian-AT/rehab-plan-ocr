@@ -60,7 +60,11 @@ import Foundation
       let graph = AVAudioEngine()
       engine = graph
       LocalDiagnostics.shared.record(.audioEngine, .started, correlation: diagnosticID)
-      try graph.inputNode.setVoiceProcessingEnabled(true)
+      let microphoneOnly = ProcessInfo.processInfo.arguments.contains("--microphone-only-trial")
+      try graph.inputNode.setVoiceProcessingEnabled(!microphoneOnly)
+      LocalDiagnostics.shared.record(
+        .voiceProcessing, .completed, correlation: diagnosticID,
+        count: microphoneOnly ? 0 : 1)
       attachPlayer(graph)
       let graphID = graphGeneration
       configurationObserver = NotificationCenter.default.addObserver(
@@ -121,6 +125,9 @@ import Foundation
       .audioSampleRate, .started, correlation: diagnosticID, count: Int(format.sampleRate))
     LocalDiagnostics.shared.record(
       .audioChannels, .started, correlation: diagnosticID, count: Int(format.channelCount))
+    LocalDiagnostics.shared.record(
+      .audioPCMFormat, .completed, correlation: diagnosticID,
+      count: Int(format.commonFormat.rawValue) * 2 + (format.isInterleaved ? 1 : 0))
     graph.prepare()
     try graph.start()
     LocalDiagnostics.shared.record(.audioEngine, .completed, correlation: diagnosticID)

@@ -5,6 +5,7 @@ import RehaCore
   // Deterministic recording, output, provider and calendar effects shared by
   // the host VoiceModel regressions and the explicitly selected app trial.
   @MainActor final class FlowInput: VoiceRecording {
+    var turnID = UUID()
     var state = VoiceRecordingState.idle
     var transcript = ""
     var level = 0.0
@@ -34,6 +35,7 @@ import RehaCore
   }
 
   @MainActor final class FlowOutput: VoiceSpeaking {
+    var turnID = UUID()
     var speaking = false
     var responseID = UUID()
     var spokenText = ""

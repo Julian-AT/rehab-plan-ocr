@@ -83,6 +83,7 @@ final class VoiceActivityDetector: @unchecked Sendable {
   private let format = AVAudioFormat(
     commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: false)!
   private var samples: [Int16] = []
+  private var outputBuffer: AVAudioPCMBuffer?
   init(input: AVAudioFormat) throws {
     inputFormat = input
     guard input.sampleRate > 0, input.channelCount > 0 else { throw InputAudioError.invalidFormat }
@@ -105,9 +106,11 @@ final class VoiceActivityDetector: @unchecked Sendable {
     guard buffer.frameLength > 0 else { return }
     let capacity = AVAudioFrameCount(
       ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 320)
-    guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else {
-      throw InputAudioError.conversion
+    if outputBuffer == nil || outputBuffer!.frameCapacity < capacity {
+      outputBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity)
     }
+    guard let output = outputBuffer else { throw InputAudioError.conversion }
+    output.frameLength = 0
     let input = ConverterInput(buffer)
     var error: NSError?
     let status = converter.convert(to: output, error: &error) { _, status in input.take(status) }
@@ -134,7 +137,7 @@ final class VoiceActivityDetector: @unchecked Sendable {
 }
 
 /// The converter receives the tap buffer once; access to consumption state is locked.
-private final class ConverterInput: @unchecked Sendable {
+final class ConverterInput: @unchecked Sendable {
   private let lock = NSLock()
   private var buffer: AVAudioPCMBuffer?
   init(_ buffer: AVAudioPCMBuffer) { self.buffer = buffer }
