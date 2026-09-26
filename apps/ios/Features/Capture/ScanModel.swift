@@ -182,6 +182,7 @@ struct StagedPhoto: Transferable, Sendable {
   private func updateRunning() {
     running = !tasks.isEmpty || pendingIntakes > 0 || documentJobs > 0 || !awaitingBytes.isEmpty
   }
+  private var recognitionJobs: [String: RecognitionJob] = [:]
   private var cancelled = Set<String>()
   init(core: NativeApplication) { self.core = core }
   @discardableResult func beginCapture(parent: String? = nil, ticket: IntakeAdmission.Ticket? = nil)
@@ -288,13 +289,19 @@ struct StagedPhoto: Transferable, Sendable {
           do {
             let preferences = try await core.preferences()
             guard accepted(id), !Task.isCancelled else { return }
+            let job = try core.registerJob(id: id)
+            recognitionJobs[id] = job
+            defer {
+              job.close()
+              recognitionJobs[id] = nil
+            }
             let result = try await withTaskCancellationHandler {
               try await core.importPhoto(
                 request: PhotoRequest(
                   id: id, path: retained, timezone: preferences.timezone, quarterTurns: turns,
-                  mirrored: mirrored, pageCorners: corners, force: force))
-            } onCancel: { [core] in
-              try? core.cancelJob(id: id)
+                  mirrored: mirrored, pageCorners: corners, force: force), job: job)
+            } onCancel: {
+              job.cancel()
             }
             if result.duplicate && currentID == id { presentedID = result.scan.document.id }
             LocalDiagnostics.shared.record(
@@ -358,8 +365,18 @@ struct StagedPhoto: Transferable, Sendable {
           await ingestFile(url, id: id, navigate: false)
           return
         }
-        guard accepted(id) else { return }
-        let review = try await core.retryCapture(id: id)
+        guard accepted(id), !Task.isCancelled else { return }
+        let job = try core.registerJob(id: id)
+        recognitionJobs[id] = job
+        defer {
+          job.close()
+          recognitionJobs[id] = nil
+        }
+        let review = try await withTaskCancellationHandler {
+          try await core.retryCapture(id: id, job: job)
+        } onCancel: {
+          job.cancel()
+        }
         guard accepted(id) else { return }
         finishedID = review.document.id
       } catch { self.error = userMessage(error) }
@@ -536,11 +553,11 @@ struct StagedPhoto: Transferable, Sendable {
     if let currentID { LocalDiagnostics.shared.record(.intake, .cancelled, correlation: currentID) }
     if let currentID {
       cancelled.insert(currentID)
-      try? core.cancelJob(id: currentID)
+      recognitionJobs[currentID]?.cancel()
     }
     for (id, task) in tasks {
       cancelled.insert(id)
-      try? core.cancelJob(id: id)
+      recognitionJobs[id]?.cancel()
       task.cancel()
     }
     awaitingBytes.removeAll()

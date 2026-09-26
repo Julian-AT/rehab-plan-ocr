@@ -167,15 +167,40 @@ final class TestHost: AppleHost, Sendable {
     let retained = try await reopened.history()
     precondition(
       retained.pending.isEmpty && retained.imports.first?.externalId == "synthetic-external")
-    let job = UUID().uuidString
-    try core.cancelJob(id: job)
+    let jobID = UUID().uuidString
+    let job = try core.registerJob(id: jobID)
+    try core.cancelJob(id: job.attemptId())
     do {
       _ = try await core.importPhoto(
         request: PhotoRequest(
-          id: job, path: "/unavailable-test-photo", timezone: "Europe/Vienna", quarterTurns: 0,
-          mirrored: false, pageCorners: [], force: false))
-      fatalError("Cancellation before job registration was lost")
+          id: jobID, path: "/unavailable-test-photo", timezone: "Europe/Vienna", quarterTurns: 0,
+          mirrored: false, pageCorners: [], force: false), job: job)
+      fatalError("Cancellation before import start was lost")
     } catch AppError.Cancelled {}
+    precondition(!core.recognitionBusy())
+    let retry = try core.registerJob(id: jobID)
+    precondition(retry.attemptId() != job.attemptId())
+    job.cancel()
+    job.close()
+    try core.cancelJob(id: job.attemptId())
+    try core.cancelJob(id: UUID().uuidString)
+    do {
+      _ = try await core.importPhoto(
+        request: PhotoRequest(
+          id: jobID, path: "/unavailable-test-photo", timezone: "Europe/Vienna", quarterTurns: 0,
+          mirrored: false, pageCorners: [], force: false), job: retry)
+      fatalError("Missing photo was accepted")
+    } catch AppError.Storage {}
+    retry.close()
+    let unused = try core.registerJob(id: jobID)
+    unused.close()
+    let retryBeforeStart = try core.registerJob(id: jobID)
+    retryBeforeStart.cancel()
+    do {
+      _ = try await core.retryCapture(id: jobID, job: retryBeforeStart)
+      fatalError("Cancellation before retry start was lost")
+    } catch AppError.Cancelled {}
+    retryBeforeStart.close()
     do {
       _ = try await core.artifactPath(id: id, artifact: "../../ledger.sqlite")
       fatalError("Traversal accepted")

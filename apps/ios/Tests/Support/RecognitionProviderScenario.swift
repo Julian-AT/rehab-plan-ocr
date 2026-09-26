@@ -102,10 +102,12 @@
           try save()
           let id = UUID().uuidString
           let start = ContinuousClock.now
+          let job = try core.registerJob(id: id)
+          defer { job.close() }
           let outcome = try await core.importPhoto(
             request: PhotoRequest(
               id: id, path: source.path, timezone: "Europe/Vienna", quarterTurns: 0,
-              mirrored: false, pageCorners: [], force: true))
+              mirrored: false, pageCorners: [], force: true), job: job)
           let elapsed = start.duration(to: .now).components
           guard !outcome.duplicate, outcome.scan.document.id == id else {
             throw InterpretationError.invalidRequest

@@ -1,0 +1,188 @@
+use super::{host_routing_tests::Host, *};
+
+async fn application() -> (tempfile::TempDir, Arc<NativeApplication>) {
+    let dir = tempfile::tempdir().unwrap();
+    let app = open_application(
+        dir.path().to_string_lossy().into(),
+        "missing".into(),
+        Box::new(Host::default()),
+    )
+    .await
+    .unwrap();
+    (dir, app)
+}
+fn request(id: &str, path: &std::path::Path) -> PhotoRequest {
+    PhotoRequest {
+        id: id.into(),
+        path: path.to_string_lossy().into(),
+        timezone: "Europe/Vienna".into(),
+        quarter_turns: 0,
+        mirrored: false,
+        page_corners: vec![],
+        force: false,
+    }
+}
+async fn drained(app: &NativeApplication) {
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while app.bridge.jobs.len() != 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("recognition lease not released");
+}
+#[tokio::test]
+async fn early_photo_errors_and_prestart_cancel_release_every_registration() {
+    let (dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let absent = dir.path().join("absent");
+    let first = app.register_job(id.clone()).unwrap();
+    app.cancel_job(first.attempt_id()).unwrap();
+    assert!(matches!(
+        app.import_photo(request(&id, &absent), first.clone()).await,
+        Err(AppError::Cancelled)
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    assert!(!app.recognition_busy());
+    assert!(matches!(
+        app.job_progress(id.clone()).unwrap().state,
+        JobState::Cancelled
+    ));
+
+    for trace in [false, true] {
+        let retry = app.register_job(id.clone()).unwrap();
+        assert_ne!(first.attempt_id(), retry.attempt_id());
+        app.cancel_job(first.attempt_id()).unwrap();
+        app.cancel_job(uuid::Uuid::new_v4().to_string()).unwrap();
+        first.cancel();
+        first.close();
+        let result = if trace {
+            app.import_trace_photo(request(&id, &absent), retry.clone())
+                .await
+        } else {
+            app.import_photo(request(&id, &absent), retry.clone()).await
+        };
+        assert!(matches!(result, Err(AppError::Storage { .. })));
+        assert_eq!(app.bridge.jobs.len(), 0);
+        assert!(!app.recognition_busy());
+        assert!(matches!(
+            app.job_progress(id.clone()).unwrap().state,
+            JobState::Failed
+        ));
+    }
+    // Metadata succeeds for a directory; reading its bytes is a separate early error.
+    let read_error = app.register_job(id.clone()).unwrap();
+    assert!(matches!(
+        app.import_photo(request(&id, dir.path()), read_error).await,
+        Err(AppError::Storage { .. })
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    let invalid = dir.path().join("not-a-photo");
+    std::fs::write(&invalid, b"synthetic").unwrap();
+    let job = app.register_job(id.clone()).unwrap();
+    let mut photo = request(&id, &invalid);
+    photo.page_corners.push(Point { x: 0.0, y: 0.0 });
+    assert!(matches!(
+        app.import_photo(photo, job).await,
+        Err(AppError::Validation { .. })
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    let huge = dir.path().join("sparse-oversized");
+    std::fs::File::create(&huge)
+        .unwrap()
+        .set_len(40 * 1024 * 1024 + 1)
+        .unwrap();
+    let job = app.register_job(id.clone()).unwrap();
+    assert!(matches!(
+        app.import_photo(request(&id, &huge), job).await,
+        Err(AppError::Validation { .. })
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+}
+#[tokio::test]
+async fn retry_uses_a_new_attempt_and_observes_cancellation_before_reading_store() {
+    let (_dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let first = app.register_job(id.clone()).unwrap();
+    first.cancel();
+    assert!(matches!(
+        app.retry_capture(id.clone(), first.clone()).await,
+        Err(AppError::Cancelled)
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    let second = app.register_job(id.clone()).unwrap();
+    first.cancel();
+    app.cancel_job(first.attempt_id()).unwrap();
+    assert!(matches!(
+        app.retry_capture(id, second).await,
+        Err(AppError::ExpiredScan)
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+}
+#[tokio::test]
+async fn dropped_caller_cancels_but_worker_owns_cleanup_until_it_returns() {
+    let (_dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let job = app.register_job(id.clone()).unwrap();
+    let (entered, entering) = tokio::sync::oneshot::channel();
+    let (finish, finishing) = tokio::sync::oneshot::channel();
+    let cloned = app.clone();
+    let token = job.clone();
+    let scan = id.clone();
+    let caller = tokio::spawn(async move {
+        cloned
+            .recognition_job(token, scan, async move {
+                entered.send(()).unwrap();
+                finishing.await.unwrap();
+                Ok(())
+            })
+            .await
+    });
+    entering.await.unwrap();
+    assert!(app.recognition_busy());
+    let worker_flag = app.bridge.cancellation_flag(&id).unwrap();
+    // This is the same Arc that scan::import_image/retry_scan put into state.cancel.
+    assert!(!worker_flag.load(Ordering::Relaxed));
+    caller.abort();
+    assert!(caller.await.unwrap_err().is_cancelled());
+    assert!(worker_flag.load(Ordering::Relaxed));
+    assert_eq!(app.bridge.jobs.len(), 1);
+    job.close();
+    assert!(matches!(app.register_job(id.clone()), Err(AppError::Busy)));
+    finish.send(()).unwrap();
+    drained(&app).await;
+    assert!(!app.recognition_busy());
+    let retry = app.register_job(id).unwrap();
+    job.cancel();
+    assert!(!retry.is_cancelled());
+    retry.close();
+}
+#[tokio::test]
+async fn successful_failed_and_panicking_workers_all_release_their_attempt() {
+    let (_dir, app) = application().await;
+    let id = uuid::Uuid::new_v4().to_string();
+    let job = app.register_job(id.clone()).unwrap();
+    app.recognition_job(job, id.clone(), async { Ok(()) })
+        .await
+        .unwrap();
+    assert_eq!(app.bridge.jobs.len(), 0);
+    let job = app.register_job(id.clone()).unwrap();
+    assert!(matches!(
+        app.recognition_job(job, id.clone(), async { Err::<(), _>(AppError::Busy) })
+            .await,
+        Err(AppError::Busy)
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    let job = app.register_job(id.clone()).unwrap();
+    assert!(matches!(
+        app.recognition_job(job, id, async {
+            panic!("synthetic worker panic");
+            #[allow(unreachable_code)]
+            Ok(())
+        })
+        .await,
+        Err(AppError::Storage { .. })
+    ));
+    assert_eq!(app.bridge.jobs.len(), 0);
+    assert!(!app.recognition_busy());
+}

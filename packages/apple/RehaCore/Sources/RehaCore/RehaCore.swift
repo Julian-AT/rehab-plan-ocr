@@ -699,6 +699,10 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
      */
     func calendarRequest(command: String, arguments: String) async throws  -> String
     
+    /**
+     * The ID is an opaque attempt ID from RecognitionJob, never a scan ID.
+     * Unknown and completed attempts are harmless and allocate no state.
+     */
     func cancelJob(id: String) throws 
     
     func capabilities() async throws  -> Capabilities
@@ -715,12 +719,12 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func history() async throws  -> History
     
-    func importPhoto(request: PhotoRequest) async throws  -> ScanOutcome
+    func importPhoto(request: PhotoRequest, job: RecognitionJob) async throws  -> ScanOutcome
     
     /**
      * Same pipeline as a regular import, with retained detector crops for tracing.
      */
-    func importTracePhoto(request: PhotoRequest) async throws  -> ScanOutcome
+    func importTracePhoto(request: PhotoRequest, job: RecognitionJob) async throws  -> ScanOutcome
     
     func jobProgress(id: String)  -> JobProgress?
     
@@ -751,13 +755,18 @@ public protocol NativeApplicationProtocol: AnyObject, Sendable {
     
     func reconcileCalendar() async throws  -> [CalendarResult]
     
+    /**
+     * Register before installing a cancellation handler or publishing the job.
+     */
+    func registerJob(id: String) throws  -> RecognitionJob
+    
     func resolvePending(attemptId: String, removalApplied: Bool) async throws 
     
     func resolveProposal(token: String, eventId: String, choice: String) async throws  -> Proposal
     
     func retainPdfEvidence(pageId: String, evidenceJson: String) async throws 
     
-    func retryCapture(id: String) async throws  -> ReviewSnapshot
+    func retryCapture(id: String, job: RecognitionJob) async throws  -> ReviewSnapshot
     
     func savePreferences(value: Preferences) async throws  -> Preferences
     
@@ -968,6 +977,10 @@ open func calendarRequest(command: String, arguments: String)async throws  -> St
         )
 }
     
+    /**
+     * The ID is an opaque attempt ID from RecognitionJob, never a scan ID.
+     * Unknown and completed attempts are harmless and allocate no state.
+     */
 open func cancelJob(id: String)throws   {try rustCallWithError(FfiConverterTypeAppError_lift) {
         uniffiCallStatus in
     uniffi_reha_ffi_fn_method_nativeapplication_cancel_job(
@@ -1089,12 +1102,12 @@ open func history()async throws  -> History  {
         )
 }
     
-open func importPhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
+open func importPhoto(request: PhotoRequest, job: RecognitionJob)async throws  -> ScanOutcome  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_reha_ffi_fn_method_nativeapplication_import_photo(
-                        self.uniffiCloneHandle(),FfiConverterTypePhotoRequest_lower(request)
+                        self.uniffiCloneHandle(),FfiConverterTypePhotoRequest_lower(request),FfiConverterTypeRecognitionJob_lower(job)
                 )
             },
             pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
@@ -1108,12 +1121,12 @@ open func importPhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
     /**
      * Same pipeline as a regular import, with retained detector crops for tracing.
      */
-open func importTracePhoto(request: PhotoRequest)async throws  -> ScanOutcome  {
+open func importTracePhoto(request: PhotoRequest, job: RecognitionJob)async throws  -> ScanOutcome  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_reha_ffi_fn_method_nativeapplication_import_trace_photo(
-                        self.uniffiCloneHandle(),FfiConverterTypePhotoRequest_lower(request)
+                        self.uniffiCloneHandle(),FfiConverterTypePhotoRequest_lower(request),FfiConverterTypeRecognitionJob_lower(job)
                 )
             },
             pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
@@ -1322,6 +1335,19 @@ open func reconcileCalendar()async throws  -> [CalendarResult]  {
         )
 }
     
+    /**
+     * Register before installing a cancellation handler or publishing the job.
+     */
+open func registerJob(id: String)throws  -> RecognitionJob  {
+    return try  FfiConverterTypeRecognitionJob_lift(try rustCallWithError(FfiConverterTypeAppError_lift) {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_method_nativeapplication_register_job(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
 open func resolvePending(attemptId: String, removalApplied: Bool)async throws   {
     return
         try  await uniffiRustCallAsync(
@@ -1370,12 +1396,12 @@ open func retainPdfEvidence(pageId: String, evidenceJson: String)async throws   
         )
 }
     
-open func retryCapture(id: String)async throws  -> ReviewSnapshot  {
+open func retryCapture(id: String, job: RecognitionJob)async throws  -> ReviewSnapshot  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_reha_ffi_fn_method_nativeapplication_retry_capture(
-                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id),FfiConverterTypeRecognitionJob_lower(job)
                 )
             },
             pollFunc: ffi_reha_ffi_rust_future_poll_rust_buffer,
@@ -1706,6 +1732,157 @@ public func FfiConverterTypeNativeSpeech_lift(_ handle: UInt64) throws -> Native
 #endif
 public func FfiConverterTypeNativeSpeech_lower(_ value: NativeSpeech) -> UInt64 {
     return FfiConverterTypeNativeSpeech.lower(value)
+}
+
+
+
+
+
+
+public protocol RecognitionJobProtocol: AnyObject, Sendable {
+    
+    /**
+     * Opaque attempt identity, deliberately different from the retained scan ID.
+     */
+    func attemptId()  -> String
+    
+    func cancel() 
+    
+    /**
+     * Releases an unstarted registration. A started worker keeps its lease
+     * until it actually returns; closing its UI owner signals cancellation.
+     */
+    func close() 
+    
+}
+open class RecognitionJob: RecognitionJobProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_reha_ffi_fn_clone_recognitionjob(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_reha_ffi_fn_free_recognitionjob(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Opaque attempt identity, deliberately different from the retained scan ID.
+     */
+open func attemptId() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_method_recognitionjob_attempt_id(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func cancel()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_method_recognitionjob_cancel(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Releases an unstarted registration. A started worker keeps its lease
+     * until it actually returns; closing its UI owner signals cancellation.
+     */
+open func close()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_method_recognitionjob_close(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRecognitionJob: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = RecognitionJob
+
+    public static func lift(_ handle: UInt64) throws -> RecognitionJob {
+        return RecognitionJob(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: RecognitionJob) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RecognitionJob {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: RecognitionJob, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecognitionJob_lift(_ handle: UInt64) throws -> RecognitionJob {
+    return try FfiConverterTypeRecognitionJob.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecognitionJob_lower(_ value: RecognitionJob) -> UInt64 {
+    return FfiConverterTypeRecognitionJob.lower(value)
 }
 
 
@@ -8216,7 +8393,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_calendar_request() != 8659) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_nativeapplication_cancel_job() != 8326) {
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_cancel_job() != 4139) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_capabilities() != 47265) {
@@ -8240,10 +8417,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_history() != 33522) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_nativeapplication_import_photo() != 31693) {
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_import_photo() != 36449) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_nativeapplication_import_trace_photo() != 27536) {
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_import_trace_photo() != 24536) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_job_progress() != 38349) {
@@ -8285,6 +8462,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_reconcile_calendar() != 29299) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_register_job() != 42425) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_resolve_pending() != 18952) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8294,7 +8474,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_nativeapplication_retain_pdf_evidence() != 4073) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_reha_ffi_checksum_method_nativeapplication_retry_capture() != 41999) {
+    if (uniffi_reha_ffi_checksum_method_nativeapplication_retry_capture() != 15339) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_save_preferences() != 63481) {
@@ -8316,6 +8496,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativeapplication_trace_artifact_path() != 29378) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_recognitionjob_attempt_id() != 33303) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_recognitionjob_cancel() != 45956) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_method_recognitionjob_close() != 37454) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_nativespeech_render() != 36515) {

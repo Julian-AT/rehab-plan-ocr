@@ -1,6 +1,6 @@
 use crate::{
-    records::*, runtime, AppError, CalendarReadEvent, CalendarReadQuery, CalendarReadReference,
-    CalendarReadResult,
+    recognition_jobs::RecognitionJobs, records::*, runtime, AppError, CalendarReadEvent,
+    CalendarReadQuery, CalendarReadReference, CalendarReadResult, RecognitionJob,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
@@ -11,9 +11,12 @@ use reha_core::{
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 type Result<T> = std::result::Result<T, AppError>;
@@ -315,7 +318,7 @@ pub trait AppleHost: Send + Sync {
 struct HostBridge {
     host: Box<dyn AppleHost>,
     progress: Mutex<HashMap<String, JobProgress>>,
-    cancelled: Mutex<HashSet<String>>,
+    jobs: Arc<RecognitionJobs>,
 }
 impl Platform for HostBridge {
     fn query_calendar(
@@ -350,11 +353,13 @@ impl Platform for HostBridge {
             (|| -> Result<_> { convert(self.host.overlaps(convert(events)?, exclude)?) })();
         result.map(Some).map_err(platform_failure)
     }
+    fn cancellation_flag(&self, id: &str) -> Option<Arc<AtomicBool>> {
+        self.jobs.flag(id)
+    }
     fn cancelled(&self, id: &str) -> bool {
-        self.cancelled
-            .lock()
-            .map(|ids| ids.contains(id))
-            .unwrap_or(true)
+        self.jobs
+            .flag(id)
+            .is_some_and(|flag| flag.load(Ordering::Relaxed))
     }
     fn call(&self, command: &str, args: Value) -> service::Response<Value> {
         let run = || -> Result<Value> {
@@ -458,7 +463,7 @@ pub async fn open_application(
                 bridge: Arc::new(HostBridge {
                     host,
                     progress: Mutex::new(HashMap::new()),
-                    cancelled: Mutex::new(HashSet::new()),
+                    jobs: Arc::new(RecognitionJobs::default()),
                 }),
             }))
         })
@@ -604,64 +609,69 @@ impl NativeApplication {
         .await
     }
     pub fn recognition_busy(&self) -> bool {
-        self.state
-            .cancel
-            .lock()
-            .map(|jobs| !jobs.is_empty())
-            .unwrap_or(true)
+        self.bridge.jobs.running()
+            || self
+                .state
+                .cancel
+                .lock()
+                .map(|jobs| !jobs.is_empty())
+                .unwrap_or(true)
     }
-    pub async fn retry_capture(&self, id: String) -> Result<ReviewSnapshot> {
-        if self.recognition_busy() {
-            return Err(AppError::Busy);
-        }
-        self.bridge.cancelled.lock().map_err(storage)?.remove(&id);
+    pub async fn retry_capture(
+        &self,
+        id: String,
+        job: Arc<RecognitionJob>,
+    ) -> Result<ReviewSnapshot> {
         let state = self.state.clone();
         let bridge = self.bridge.clone();
-        runtime()
-            .spawn(async move {
-                let staged = {
-                    let store = state.store.lock().map_err(storage)?;
-                    if store.load_run(&id).is_ok() {
-                        None
-                    } else {
-                        let intake = store
-                            .intakes()
-                            .map_err(storage)?
-                            .into_iter()
-                            .find(|i| i.id == id && i.status != "deleted")
-                            .ok_or(AppError::ExpiredScan)?;
-                        Some((
-                            intake,
-                            std::fs::read(store.source_path(&id).map_err(storage)?)
-                                .map_err(storage)?,
-                        ))
-                    }
-                };
-                if let Some((intake, bytes)) = staged {
-                    let value = service::scan::import_image(
-                        bridge,
-                        &state,
-                        service::inference::ImportRequest {
-                            id,
-                            filename: intake.filename,
-                            base64: STANDARD.encode(bytes),
-                            config: intake.config,
-                            force: true,
-                        },
-                    )
-                    .await
-                    .map_err(failure)?;
-                    snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)
+        self.recognition_job(job.clone(), id.clone(), async move {
+            if !state.cancel.lock().map_err(storage)?.is_empty() {
+                return Err(AppError::Busy);
+            }
+            let staged = {
+                let store = state.store.lock().map_err(storage)?;
+                if store.load_run(&id).is_ok() {
+                    None
                 } else {
-                    snapshot(
-                        service::scan::retry_scan(bridge, &state, id)
-                            .await
-                            .map_err(failure)?,
-                    )
+                    let intake = store
+                        .intakes()
+                        .map_err(storage)?
+                        .into_iter()
+                        .find(|i| i.id == id && i.status != "deleted")
+                        .ok_or(AppError::ExpiredScan)?;
+                    Some((
+                        intake,
+                        std::fs::read(store.source_path(&id).map_err(storage)?).map_err(storage)?,
+                    ))
                 }
-            })
-            .await
-            .map_err(storage)?
+            };
+            if job.is_cancelled() {
+                return Err(AppError::Cancelled);
+            }
+            if let Some((intake, bytes)) = staged {
+                let value = service::scan::import_image(
+                    bridge,
+                    &state,
+                    service::inference::ImportRequest {
+                        id,
+                        filename: intake.filename,
+                        base64: STANDARD.encode(bytes),
+                        config: intake.config,
+                        force: true,
+                    },
+                )
+                .await
+                .map_err(failure)?;
+                snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)
+            } else {
+                snapshot(
+                    service::scan::retry_scan(bridge, &state, id)
+                        .await
+                        .map_err(failure)?,
+                )
+            }
+        })
+        .await
     }
     pub async fn diagnostics(&self, id: String) -> Result<Diagnostics> {
         self.blocking(move |s| {
@@ -1094,13 +1104,14 @@ impl NativeApplication {
             .await
             .map_err(storage)?
     }
+    /// Register before installing a cancellation handler or publishing the job.
+    pub fn register_job(&self, id: String) -> Result<Arc<RecognitionJob>> {
+        self.bridge.jobs.register(id)
+    }
+    /// The ID is an opaque attempt ID from RecognitionJob, never a scan ID.
+    /// Unknown and completed attempts are harmless and allocate no state.
     pub fn cancel_job(&self, id: String) -> Result<()> {
-        self.bridge
-            .cancelled
-            .lock()
-            .map_err(storage)?
-            .insert(id.clone());
-        self.state.cancel_job(&id).map_err(failure)
+        self.bridge.jobs.cancel(&id)
     }
     pub fn job_progress(&self, id: String) -> Option<JobProgress> {
         self.bridge.progress.lock().ok()?.get(&id).cloned()
@@ -1130,123 +1141,157 @@ impl NativeApplication {
         })
         .await
     }
-    pub async fn import_photo(&self, request: PhotoRequest) -> Result<ScanOutcome> {
-        self.import_photo_with_debug(request, false).await
+    pub async fn import_photo(
+        &self,
+        request: PhotoRequest,
+        job: Arc<RecognitionJob>,
+    ) -> Result<ScanOutcome> {
+        self.import_photo_with_debug(request, job, false).await
     }
     /// Same pipeline as a regular import, with retained detector crops for tracing.
-    pub async fn import_trace_photo(&self, request: PhotoRequest) -> Result<ScanOutcome> {
-        self.import_photo_with_debug(request, true).await
+    pub async fn import_trace_photo(
+        &self,
+        request: PhotoRequest,
+        job: Arc<RecognitionJob>,
+    ) -> Result<ScanOutcome> {
+        self.import_photo_with_debug(request, job, true).await
     }
 }
 impl NativeApplication {
-    async fn import_photo_with_debug(
+    /// The inner worker owns cleanup even when UniFFI drops the caller's future.
+    /// Its flag is also the Core worker's flag, so late cancellation cannot leak
+    /// into a later attempt for the same retained scan.
+    async fn recognition_job<T: Send + 'static>(
         &self,
-        request: PhotoRequest,
-        detailed_debug: bool,
-    ) -> Result<ScanOutcome> {
-        let state = self.state.clone();
-        let bridge = self.bridge.clone();
-        let id = request.id.clone();
+        job: Arc<RecognitionJob>,
+        id: String,
+        work: impl std::future::Future<Output = Result<T>> + Send + 'static,
+    ) -> Result<T> {
+        let lease = job.start(&self.bridge.jobs, &id)?;
         struct CancelOnDrop {
-            state: Arc<Application>,
-            bridge: Arc<HostBridge>,
-            id: String,
+            job: Arc<RecognitionJob>,
             armed: bool,
         }
         impl Drop for CancelOnDrop {
             fn drop(&mut self) {
                 if self.armed {
-                    if let Ok(mut ids) = self.bridge.cancelled.lock() {
-                        ids.insert(self.id.clone());
+                    self.job.cancel();
+                }
+            }
+        }
+        struct ProgressFinish {
+            bridge: Arc<HostBridge>,
+            id: String,
+            job: Arc<RecognitionJob>,
+            state: JobState,
+        }
+        impl Drop for ProgressFinish {
+            fn drop(&mut self) {
+                if let Ok(mut progress) = self.bridge.progress.lock() {
+                    if let Some(p) = progress.get_mut(&self.id) {
+                        p.state = if self.job.is_cancelled() {
+                            JobState::Cancelled
+                        } else {
+                            self.state
+                        };
                     }
-                    let _ = self.state.cancel_job(&self.id);
                 }
             }
         }
         let mut guard = CancelOnDrop {
-            state: state.clone(),
-            bridge: bridge.clone(),
-            id: id.clone(),
+            job: job.clone(),
             armed: true,
         };
+        let bridge = self.bridge.clone();
         let result = runtime()
             .spawn(async move {
-                if bridge.cancelled(&id) {
-                    return Err(AppError::Cancelled);
-                }
-                let path = PathBuf::from(&request.path);
-                let bytes = tokio::task::spawn_blocking(move || {
-                    let metadata = std::fs::metadata(&path).map_err(storage)?;
-                    if metadata.len() > 40 * 1024 * 1024 {
-                        return Err(AppError::Validation {
-                            message: "Foto maximal 40 MB.".into(),
-                        });
-                    }
-                    std::fs::read(path).map_err(storage)
-                })
-                .await
-                .map_err(storage)??;
-                let corners = if request.page_corners.is_empty() {
-                    None
-                } else {
-                    let points: Vec<domain::Point> = convert(request.page_corners)?;
-                    Some(points.try_into().map_err(|_| AppError::Validation {
-                        message: "Vier Seitenecken erforderlich.".into(),
-                    })?)
-                };
-                let config = domain::PipelineConfig {
-                    detailed_debug,
-                    timezone: request.timezone,
-                    quarter_turns: request.quarter_turns,
-                    mirrored: request.mirrored,
-                    page_corners: corners,
-                    ..Default::default()
-                };
-                let request = service::inference::ImportRequest {
-                    id: id.clone(),
-                    filename: PathBuf::from(&request.path)
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into(),
-                    base64: STANDARD.encode(bytes),
-                    config,
-                    force: request.force,
-                };
-                if bridge.cancelled(&id) {
-                    return Err(AppError::Cancelled);
-                }
-                bridge
-                    .progress
-                    .lock()
-                    .map_err(storage)?
-                    .retain(|_, p| p.state == JobState::Running);
-                bridge.progress(json!({"id":id,"stage":"Foto vorbereiten"}));
-                let result = service::scan::import_image(bridge.clone(), &state, request)
-                    .await
-                    .map_err(failure);
+                let _lease = lease;
                 if let Ok(mut progress) = bridge.progress.lock() {
-                    if let Some(p) = progress.get_mut(&id) {
-                        p.state = if bridge.cancelled(&id) {
-                            JobState::Cancelled
-                        } else if result.is_ok() {
-                            JobState::Completed
-                        } else {
-                            JobState::Failed
-                        };
-                    }
+                    progress.retain(|_, p| p.state == JobState::Running);
                 }
-                bridge.cancelled.lock().map_err(storage)?.remove(&id);
-                let value = result?;
-                Ok(ScanOutcome {
-                    duplicate: value["duplicate"].as_bool().unwrap_or(false),
-                    scan: snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)?,
-                })
+                bridge.progress(json!({"id":id,"stage":"Foto vorbereiten"}));
+                let mut progress = ProgressFinish {
+                    bridge,
+                    id,
+                    job: job.clone(),
+                    state: JobState::Failed,
+                };
+                let result = if job.is_cancelled() {
+                    Err(AppError::Cancelled)
+                } else {
+                    work.await
+                };
+                if result.is_ok() {
+                    progress.state = JobState::Completed;
+                }
+                result
             })
             .await
-            .map_err(storage)?;
+            .map_err(storage);
         guard.armed = false;
-        result
+        result?
+    }
+    async fn import_photo_with_debug(
+        &self,
+        request: PhotoRequest,
+        job: Arc<RecognitionJob>,
+        detailed_debug: bool,
+    ) -> Result<ScanOutcome> {
+        let state = self.state.clone();
+        let bridge = self.bridge.clone();
+        let id = request.id.clone();
+        self.recognition_job(job.clone(), id.clone(), async move {
+            let path = PathBuf::from(&request.path);
+            let bytes = tokio::task::spawn_blocking(move || {
+                let metadata = std::fs::metadata(&path).map_err(storage)?;
+                if metadata.len() > 40 * 1024 * 1024 {
+                    return Err(AppError::Validation {
+                        message: "Foto maximal 40 MB.".into(),
+                    });
+                }
+                std::fs::read(path).map_err(storage)
+            })
+            .await
+            .map_err(storage)??;
+            let corners = if request.page_corners.is_empty() {
+                None
+            } else {
+                let points: Vec<domain::Point> = convert(request.page_corners)?;
+                Some(points.try_into().map_err(|_| AppError::Validation {
+                    message: "Vier Seitenecken erforderlich.".into(),
+                })?)
+            };
+            let config = domain::PipelineConfig {
+                detailed_debug,
+                timezone: request.timezone,
+                quarter_turns: request.quarter_turns,
+                mirrored: request.mirrored,
+                page_corners: corners,
+                ..Default::default()
+            };
+            let request = service::inference::ImportRequest {
+                id: id.clone(),
+                filename: PathBuf::from(&request.path)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into(),
+                base64: STANDARD.encode(bytes),
+                config,
+                force: request.force,
+            };
+            if job.is_cancelled() {
+                return Err(AppError::Cancelled);
+            }
+            let value = service::scan::import_image(bridge, &state, request)
+                .await
+                .map_err(failure)?;
+            Ok(ScanOutcome {
+                duplicate: value["duplicate"].as_bool().unwrap_or(false),
+                scan: snapshot(serde_json::from_value(value["run"].clone()).map_err(storage)?)?,
+            })
+        })
+        .await
     }
 }
 
@@ -1310,7 +1355,7 @@ pub fn appointment_issues(appointment: Appointment, timezone: String) -> Result<
 mod host_routing_tests {
     use super::*;
     #[derive(Default)]
-    struct Host {
+    pub(super) struct Host {
         failure: Option<service::ServiceError>,
         calls: Option<Arc<Mutex<Vec<(String, Value)>>>>,
         response: Option<Value>,
@@ -1375,7 +1420,7 @@ mod host_routing_tests {
         let bridge = HostBridge {
             host: Box::new(Host::default()),
             progress: Mutex::new(HashMap::new()),
-            cancelled: Mutex::new(HashSet::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
         };
         for command in ["recognize", "resolveOwnedEvent", "editSystemEvent"] {
             let args = json!({"base64":"synthetic-crop", "budget_ms":1234});
@@ -1406,7 +1451,7 @@ mod host_routing_tests {
                     ..Host::default()
                 }),
                 progress: Mutex::new(HashMap::new()),
-                cancelled: Mutex::new(HashSet::new()),
+                jobs: Arc::new(RecognitionJobs::default()),
             };
             let actual = bridge
                 .query_calendar(service::calendar_reads::Query {
@@ -1447,7 +1492,7 @@ mod host_routing_tests {
                 ..Host::default()
             }),
             progress: Mutex::new(HashMap::new()),
-            cancelled: Mutex::new(HashSet::new()),
+            jobs: Arc::new(RecognitionJobs::default()),
         };
         let bytes = [0, 255, 128, b'{', b'"', 0];
         assert_eq!(
@@ -1521,6 +1566,10 @@ mod host_routing_tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "recognition_job_tests.rs"]
+mod recognition_job_tests;
 
 fn allowed_trace_artifact(run: &domain::PipelineRun, artifact: &str) -> bool {
     run.config.detailed_debug

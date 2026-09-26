@@ -47,6 +47,28 @@ Aufträge erscheinen getrennt von unklaren Kalenderoperationen im Kalenderstatus
 Ein fehlgeschlagener rein lokaler Abgleich liefert einen Speicherfehler und
 behält das Journal für einen weiteren Versuch.
 
+## Lebensdauer von Erkennungsaufträgen
+
+`registerJob(scanID)` erzeugt einen `RecognitionJob` mit einer eigenen
+Versuch-ID. Import, Tracing und Wiederholung benötigen diese Registrierung.
+Die Aufnahme-ID und alle gespeicherten Originale bleiben unverändert; ein
+erneuter Versuch erhält eine neue Versuch-ID.
+
+Swift registriert vor dem Einrichten des Abbruchhandlers und ruft in `defer`
+`close()` auf. Abbruch vor dem Import bleibt wirksam. Ein ungestarteter Auftrag
+wird beim Schließen beziehungsweise beim Freigeben seines Handles entfernt.
+Nach dem Start besitzt der innere Rust-Worker den Auftrags-Lease. Ein verworfenes
+äußeres Future signalisiert Abbruch; der Worker gibt die Registrierung auch bei
+Dateifehlern, ungültiger Eingabe, regulärem Abschluss und Unwinding frei.
+
+Native Vorbereitung und Core-Erkennung teilen dieselbe atomare Abbruchflagge.
+Ein alter Handle kann deshalb keinen neuen Versuch derselben Aufnahme
+abbrechen. `cancelJob(id:)` erwartet die Versuch-ID; unbekannte und bereits
+abgeschlossene IDs erzeugen keinen Eintrag. Die Verwaltung benötigt weder
+Abbruch-Tombstones noch Ablaufzeiten. `recognitionBusy()` berücksichtigt auch
+die gestartete Vorbereitung vor der eigentlichen Inferenz; ein nach einem
+Zeitlimit noch arbeitender Core-Worker bleibt weiterhin als beschäftigt sichtbar.
+
 ## Serialisierung mit dauerhaftem Zweck
 
 - SQLite-Dokumente, Kalenderjournale, Herkunftsnachweise, Wiederanlaufdaten,
@@ -99,6 +121,9 @@ migrieren; dieses Dokument erklärt Architekturpaket D nicht für abgeschlossen.
 - `make test-calendar-read-contracts` und Rust `calendar_reads`: Metadaten- und
   Identitätserhalt, typisierte Abwesenheit/Fehler, Auswahlrevision, leere Auswahl
   und Zurückweisung von Antworten außerhalb der aktuellen Auswahl.
+- Rust `recognition_jobs`/`recognition_job_tests` und `make test-native-bindings`:
+  Registrierung, Vorstart-Abbruch, eigene Versuch-ID bei Wiederholung,
+  unbekannte/abgeschlossene IDs, frühe Dateifehler und verworfenes Aufruf-Future.
 
 Die Decoderprüfungen sind Host-Prüfungen. Sie belegen keine gemessene
 Leistungsverbesserung und ersetzen weder Geräteprüfung noch OCR-Produktabnahme.

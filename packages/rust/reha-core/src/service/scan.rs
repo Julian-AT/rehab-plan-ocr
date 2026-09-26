@@ -75,7 +75,9 @@ pub async fn import_image(
             }
         }
     }
-    let cancel = Arc::new(AtomicBool::new(false));
+    let cancel = app
+        .cancellation_flag(&request.id)
+        .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
     {
         let mut active = state.cancel.lock().map_err(failure)?;
         if !active.is_empty() {
@@ -395,7 +397,9 @@ pub async fn retry_scan(
     {
         let started = std::time::Instant::now();
         let admission = state.lifecycle_lock.lock().await;
-        let cancel = Arc::new(AtomicBool::new(false));
+        let cancel = app
+            .cancellation_flag(&id)
+            .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
         {
             let mut active = state.cancel.lock().map_err(failure)?;
             if !active.is_empty() {

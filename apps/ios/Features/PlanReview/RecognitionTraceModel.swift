@@ -14,7 +14,7 @@ import RehaCore
   private var workspace: AppTemporaryStore.Lease?
   private var disposing = false
   private var task: Task<Void, Never>?
-  private var jobID: String?
+  private var recognitionJob: RecognitionJob?
   private var closed = false
   private var cancelRequested = false
 
@@ -82,12 +82,17 @@ import RehaCore
           root: work.0.path, models: models.path, host: RecognitionTraceHost())
         core = application
         let id = UUID().uuidString
-        jobID = id
         if closed || cancelRequested {
           await dispose()
           busy = false
           task = nil
           return
+        }
+        let job = try application.registerJob(id: id)
+        recognitionJob = job
+        defer {
+          job.close()
+          recognitionJob = nil
         }
         progress = "Bild vorbereiten"
         let poll = Task {
@@ -108,10 +113,14 @@ import RehaCore
         }
         defer { poll.cancel() }
         do {
-          _ = try await application.importTracePhoto(
-            request: PhotoRequest(
-              id: id, path: work.1.path, timezone: timezone, quarterTurns: 0,
-              mirrored: false, pageCorners: [], force: true))
+          _ = try await withTaskCancellationHandler {
+            try await application.importTracePhoto(
+              request: PhotoRequest(
+                id: id, path: work.1.path, timezone: timezone, quarterTurns: 0,
+                mirrored: false, pageCorners: [], force: true), job: job)
+          } onCancel: {
+            job.cancel()
+          }
         } catch { self.error = userMessage(error) }
         if let json = try? await application.recognitionTrace(id: id) {
           trace = try RecognitionTrace.decode(json)
@@ -131,7 +140,7 @@ import RehaCore
   }
   func cancel() {
     cancelRequested = true
-    if let jobID { try? core?.cancelJob(id: jobID) }
+    recognitionJob?.cancel()
     progress = "Erkennung wird beendet …"
   }
   func close() async {
@@ -153,7 +162,8 @@ import RehaCore
       try? await Task.sleep(for: .milliseconds(100))
     }
     core = nil
-    jobID = nil
+    recognitionJob?.close()
+    recognitionJob = nil
     trace = nil
     original = nil
     page = nil

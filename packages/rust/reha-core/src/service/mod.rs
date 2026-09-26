@@ -90,6 +90,11 @@ pub trait Platform: Send + Sync {
     fn cancelled(&self, _id: &str) -> bool {
         false
     }
+    /// A native registration shares its attempt-specific flag with the worker.
+    /// Other hosts keep the existing Core-owned cancellation registration.
+    fn cancellation_flag(&self, _id: &str) -> Option<Arc<AtomicBool>> {
+        None
+    }
     fn overlaps(
         &self,
         _events: std::collections::BTreeMap<String, crate::contracts::EventValues>,

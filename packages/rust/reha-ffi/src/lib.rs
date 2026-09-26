@@ -5,6 +5,8 @@ mod records;
 pub use records::*;
 mod calendar_reads;
 pub use calendar_reads::*;
+mod recognition_jobs;
+pub use recognition_jobs::RecognitionJob;
 mod speech;
 pub use speech::*;
 mod application;
