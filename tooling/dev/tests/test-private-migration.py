@@ -30,7 +30,9 @@ class PrivateMigrationTests(unittest.TestCase):
             (root / "data/private/external").symlink_to(external)
             migration.plan(root, manifest)
             migration.apply(root, manifest)
+            (root / ".local/datasets/private/new-reference.json").write_text('{"review":"pending"}')
             migration.apply(root, manifest)
+            self.assertTrue((root / "data/private/new-reference.json").is_file())
             for source, destination in migration.MOVES.items():
                 self.assertTrue((root / source).is_symlink())
                 self.assertEqual(

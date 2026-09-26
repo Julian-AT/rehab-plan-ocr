@@ -91,11 +91,23 @@ def apply(root, manifest):
             raise ValueError("Unexpected destination in inventory")
     journal = manifest.with_name(manifest.stem + "-progress.json")
     progress = {"manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(), "moves": {}}
+    if journal.exists():
+        saved = json.loads(journal.read_text())
+        if saved["manifest_sha256"] != progress["manifest_sha256"]:
+            raise ValueError("Progress journal belongs to a different inventory")
+        progress = saved
     for source, destination in MOVES.items():
         old, new = root / source, root / destination
         expected = result["moves"][source]["entries"]
         if new.is_symlink() or not new.parent.resolve().is_relative_to(root.resolve()):
             raise ValueError("Destination must be an actual directory within this workspace")
+        if progress["moves"].get(source) == "verified":
+            if not new.is_dir() or not old.is_symlink() or old.resolve() != new.resolve():
+                raise ValueError("Previously verified storage no longer has its expected location")
+            # Normal work may add/edit labels, caches or model outputs after the
+            # migration. Never roll that work back against a historical snapshot.
+            print(f"Already relocated and verified: {source}", flush=True)
+            continue
         if not new.exists():
             if inventory(old) != expected:
                 raise ValueError(

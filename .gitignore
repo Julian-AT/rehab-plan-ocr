@@ -1,8 +1,8 @@
 # Private documents, annotations, models, and experiment output
 /.local/
-/data/private/
-/artifacts/
-/models/private/
+/data/private
+/artifacts
+/models/private
 *.sqlite*
 *.onnx
 *.gguf

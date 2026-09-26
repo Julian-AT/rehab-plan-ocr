@@ -32,9 +32,27 @@ require an explicit relocation mapping; absolute external links retain their tar
 The progress journal and filesystem state support restart after interruption.
 Existing collections are never merged or overwritten. A post-move mismatch restores
 the original directory, preserving the unexpected contents for investigation.
+Completed journal entries are not rolled back when later normal work adds or edits
+files; reruns check their locations and preserve subsequent work.
 
 Compatibility links intentionally preserve historical absolute/relative references
 and the linked llama.cpp worktree. They must remain until consumers and saved
 references have been migrated and verified. Changing active default paths, moving
 toolchains/build caches and removing obsolete previews are separate follow-up work.
 Private inventories, backups, sources and model weights remain excluded from Git.
+
+## Verified relocation — 2026-09-26
+
+All three collections were moved and verified against inventory SHA-256
+`05023991f697fc7e67ede09c211dd26cbad1e93c45171eb5ee5f28c98335b75d`.
+The ignored progress journal records each collection as verified.
+
+| Collection | Regular files | Bytes | Internal symlinks |
+|---|---:|---:|---:|
+| Dataset | 488 | 623,104,630 | 0 |
+| Model/runtime working files | 12,905 | 7,359,138,423 | 4 |
+| Previous artifacts, including backups | 25,177 | 38,677,402,500 | 0 |
+
+All 38,570 regular files retained their hashes. The four internal links retained
+their targets. Legacy compatibility links and `.local/` are explicitly ignored;
+no private file lists or contents are included in this report.
