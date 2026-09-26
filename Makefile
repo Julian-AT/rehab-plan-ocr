@@ -99,7 +99,12 @@ check-storage:
 # Reserve is additional to the expected temporary build/export/checkpoint peak.
 # Direct low-level scripts retain their historical recovery contracts; supported
 # heavy workflows enter here before generating any new artifacts.
-build test-ios build-assistant-native build-assistant-runtime build-assistant-trial: PEAK_GIB = 4
+build build-assistant-native build-assistant-runtime build-assistant-trial: PEAK_GIB = 4
+# Disposable simulator creation plus test products exceeded the app-only build
+# budget locally. Keep 16 GiB headroom in addition to the 20 GiB working reserve.
+SIMULATOR_CHECKS := test-ios test-native-ui test-calendar-events test-visual-baseline test-reduced-motion test-audio-runtime
+$(SIMULATOR_CHECKS): PEAK_GIB = 16
+$(SIMULATOR_CHECKS): check-storage
 train-ocr resume-ocr: PEAK_GIB = 4
 train-assistant resume-assistant: PEAK_GIB = 3
 export-ocr export-assistant assistant-smoke: PEAK_GIB = 8

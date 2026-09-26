@@ -49,7 +49,12 @@ APFS kann Extents teilen. Der Abschlussbeleg nennt die tatsächlich beobachtete
 Die großen Make-Einstiege für App-/Assistentenbuilds, Training/Wiederaufnahme und
 Export prüfen diese Reserve vor ihrer Arbeit. `quality.py build`, `test-ios` und
 die Speicherprüfungen des nativen Buildskripts verwenden dieselbe Regel. Die
-Spitzenbudgets sind konservative Planwerte (3/4/8 GiB), noch keine gemessenen
+Simulatorabnahmen (`test-ios`, `test-native-ui`, `test-calendar-events`,
+`test-visual-baseline`, `test-reduced-motion`, `test-audio-runtime`) verlangen vor
+dem Start zusätzlich 16 GiB: Einweg-Simulatoren und Testprodukte benötigen mehr
+Platz als der reine Appbuild. Der Make-Regressionslauf weist für alle sechs
+Einstiege nach, dass eine abgelehnte Reserveprüfung keinen Workflow startet.
+Spitzenbudgets sind konservative Planwerte (3/4/8/16 GiB), noch keine gemessenen
 Höchststände. Direkte historische Trainingsskripte behalten ihre quellidentischen
 Wiederaufnahmeverträge; sie sind kein alternativer Einstieg zur Speicherumgehung.
 
