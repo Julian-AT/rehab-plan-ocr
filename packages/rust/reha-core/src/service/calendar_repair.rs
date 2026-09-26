@@ -212,7 +212,8 @@ pub async fn run(
     let refresh_warning = if blocked {
         None
     } else {
-        super::agenda::sync(&platform, state).await.err()
+        let warnings = super::agenda::sync_warnings(&platform, state).await;
+        (!warnings.is_empty()).then(|| warnings.join("\n\n"))
     };
     Ok(json!({"issues": issues, "missing_calendar_ids": missing,
         "relinked_count": relinked, "removed_count": removed,
