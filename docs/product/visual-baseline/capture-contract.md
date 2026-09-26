@@ -164,6 +164,24 @@ Kein Bild wurde ersetzt und keine Prüfgrenze erweitert. Vollständige Bilder,
 Quellarchiv/Patch und ausführbare Produkte bleiben unter dem Vergleichslauf und
 `visual-capture-control-20260926-s19-004` erhalten.
 
+## Bildvergleich der vollständigen 70-Test-Suite
+
+Die getrennte Auswertung `visual-baseline-20260926-s19-005` verwendet ausschließlich
+das erhaltene Ergebnisbundle `ui-complete-20260926-s19-003` an `c8c5211`. Alle 70 Tests
+und die drei zugeordneten Aufnahmetests sind bestanden. Ergebnisbundle und
+Originalreferenzen bleiben unverändert. Der strenge Vergleich bleibt mit
+**15/22 fehlgeschlagen**: dieselben fünf Indikatorbilder und zwei Tagesabschlüsse.
+
+21 Kandidatenbilder sind unterhalb der Statusleiste außerdem bytegenau wie in
+Lauf 004. Nur `large-dark-4` unterscheidet sich dort, vollständig innerhalb der
+rechten Indikatorspur. Sämtliche übrigen Pixel der fünf Indikatorbilder sind zur
+Originalreferenz exakt. Die beiden Tagesabschlüsse haben erneut 1.570/87
+abweichende Pixel und maximale Kanalabweichung 4/1; ihre zentralen Inhalte sind
+exakt. Das erklärt die Unterschiede, ändert aber weder Vergleichsregeln noch
+Freigabestatus. Der zusätzliche Beleg mit Quellzuordnung liegt unter
+`.local/runs/visual-final-suite-review-20260926-s19-001`; Bericht-SHA-256:
+`41f51f6236899516cf25b586c6508731aee08591f2b1443b1d9fab6a0cb79c03`.
+
 ## Diagnose der neun historischen Abweichungen
 
 Quelle ist unverändert `.local/runs/visual-baseline-20260926-s18-002`: drei bestandene
