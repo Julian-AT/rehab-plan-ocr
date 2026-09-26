@@ -28,7 +28,19 @@ assets = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(assets)
 
 
-def prepare_models(output, variant, root=ROOT):
+DEFAULT_CARD = "ocr-adaptation-smoke-002.json"
+
+
+def registry_path(name, root=ROOT):
+    if Path(name).name != name or Path(name).suffix != ".json":
+        raise ValueError("Select one model card filename from ml/registry")
+    path = root / "ml/registry" / name
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Select an existing regular model card in ml/registry")
+    return path
+
+
+def prepare_models(output, variant, root=ROOT, model_card=DEFAULT_CARD):
     if variant not in {"baseline", "frozen"}:
         raise ValueError("Only the corrected baseline and parity-passing frozen model are allowed")
     source = root / ".local/models/runtime/small"
@@ -37,7 +49,7 @@ def prepare_models(output, variant, root=ROOT):
     manifest = json.loads((source / "manifest.json").read_text())
     replacement = None
     if variant == "frozen":
-        card_path = root / "ml/registry/ocr-adaptation-smoke-002.json"
+        card_path = registry_path(model_card, root)
         card = json.loads(card_path.read_text())
         selected = [row for row in card["variants"] if row["mode"] == "frozen-backbone"]
         if (
@@ -57,6 +69,27 @@ def prepare_models(output, variant, root=ROOT):
             or base["deployment_dictionary_sha256"] != manifest["dictionary_sha256"]
         ):
             raise ValueError("Custom artifact, lineage or deployment dictionary changed")
+        if model_card != DEFAULT_CARD:
+            if card.get("promoted") is not False or card.get("physical_ios_verified") is not False:
+                raise ValueError("Select an explicitly experimental model card")
+            evidence = selected.get("evidence", {})
+            for name in ["selection.json", "deployment/export.json", "deployment/parity.json"]:
+                if evidence.get(name) != sha(training / name):
+                    raise ValueError("Registered export evidence changed or is absent")
+            selection = json.loads((training / "selection.json").read_text())
+            parity = json.loads((training / "deployment/parity.json").read_text())
+            export = json.loads((training / "deployment/export.json").read_text())
+            if (
+                selection["sha256"] != selected["checkpoint_sha256"]
+                or sha(training / "selected.pdparams") != selection["sha256"]
+                or parity.get("passed") is not True
+                or parity.get("artifact_sha256") != selected["onnx_sha256"]
+                or parity.get("checkpoint_sha256") != selection["sha256"]
+                or export.get("status") != "desktop-parity-passed"
+                or export.get("run_identity_sha256") != selected["run_identity_sha256"]
+                or export.get("selection_sha256") != evidence["selection.json"]
+            ):
+                raise ValueError("Registered checkpoint did not complete matching export parity")
         for entry in manifest["files"]:
             if entry["path"] == "rec-inference.onnx":
                 entry.update(
@@ -179,17 +212,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)
     parser.add_argument("--simulator", required=True)
+    parser.add_argument("--model-card", default=DEFAULT_CARD)
     args = parser.parse_args()
     output = args.run.resolve()
     if not output.is_relative_to(ROOT / ".local/runs"):
         raise ValueError("Use a new private run directory")
     device = disposable(args.simulator, run)
+    card = registry_path(args.model_card)
     output.mkdir(parents=True, exist_ok=False)
     snapshot = sources()
     helpers = [
         Path(__file__),
         ROOT / "ml/evaluation/device/simulator.py",
         ROOT / "ml/evaluation/conversation/native.py",
+        card,
     ]
     helper_hashes = {str(path.relative_to(ROOT)): sha(path) for path in helpers}
     report = dict(
@@ -222,7 +258,7 @@ def main():
         for variant in ["baseline", "frozen"]:
             destination = output / variant
             destination.mkdir()
-            manifest = prepare_models(destination / "models", variant)
+            manifest = prepare_models(destination / "models", variant, model_card=args.model_card)
             shutil.copytree(destination / "models", folder / "models", dirs_exist_ok=True)
             source = ROOT / "ml/evaluation/fixtures/synthetic-day.png"
             shutil.copyfile(source, folder / "input.png")

@@ -35,6 +35,13 @@ local training path. The runner builds the normal app and verifies source identi
 before and after evaluation. It signs only a disposable copy, preserving all App
 Group entitlements. This route is restricted to Debug simulator builds.
 
+The original smoke card remains the default. To evaluate a later registered frozen
+checkpoint, append `--model-card <filename.json>` to `TEST_ARGS`. Only a regular
+file directly in `ml/registry` is accepted. Later cards must bind the selected
+weights and complete successful export/parity receipts; absent, changed or failed
+evidence stops before model copying. The card's hash is checked again after the
+app run. The full-adaptation variant remains outside this frozen-model probe.
+
 Each variant imports the same public synthetic plan twice into a fresh isolated
 store. `force: true`, distinct document IDs and completed inference stages verify
 fresh recognition. The trace's historical `cache_used` field means **model-session

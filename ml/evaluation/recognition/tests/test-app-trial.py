@@ -188,6 +188,75 @@ class FrozenPreparationTests(unittest.TestCase):
                 prepare_models(self.root / "rejected", "frozen", self.root)
             self.assertFalse((self.root / "rejected").exists())
 
+    def test_new_registered_checkpoint_requires_unchanged_complete_export_evidence(self):
+        checkpoint = self.training / "selected.pdparams"
+        checkpoint.write_text("invented selected checkpoint")
+        selection = self.training / "selection.json"
+        selection.write_text(json.dumps(dict(sha256=sha(checkpoint))))
+        parity = self.training / "deployment/parity.json"
+        parity.write_text(
+            json.dumps(
+                dict(
+                    passed=True,
+                    artifact_sha256=self.variant["onnx_sha256"],
+                    checkpoint_sha256=sha(checkpoint),
+                )
+            )
+        )
+        export = self.training / "deployment/export.json"
+        export.write_text(
+            json.dumps(
+                dict(
+                    status="desktop-parity-passed",
+                    run_identity_sha256=self.variant["run_identity_sha256"],
+                    selection_sha256=sha(selection),
+                )
+            )
+        )
+        self.variant.update(
+            checkpoint_sha256=sha(checkpoint),
+            evidence={
+                str(p.relative_to(self.training)): sha(p) for p in [selection, parity, export]
+            },
+        )
+        card = self.card.with_name("ocr-later-experiment.json")
+        card.write_text(
+            json.dumps(dict(promoted=False, physical_ios_verified=False, variants=[self.variant]))
+        )
+        manifest = prepare_models(self.root / "later", "frozen", self.root, card.name)
+        self.assertEqual(manifest["experimental"]["registry_sha256"], sha(card))
+        original_parity = parity.read_bytes()
+        result = json.loads(original_parity)
+        result["passed"] = False
+        parity.write_text(json.dumps(result))
+        self.variant["evidence"]["deployment/parity.json"] = sha(parity)
+        card.write_text(
+            json.dumps(dict(promoted=False, physical_ios_verified=False, variants=[self.variant]))
+        )
+        with self.assertRaisesRegex(ValueError, "matching export parity"):
+            prepare_models(self.root / "rejected", "frozen", self.root, card.name)
+        parity.write_bytes(original_parity)
+        self.variant["evidence"]["deployment/parity.json"] = sha(parity)
+        card.write_text(
+            json.dumps(dict(promoted=False, physical_ios_verified=False, variants=[self.variant]))
+        )
+        for path in [selection, parity, export, checkpoint]:
+            original = path.read_bytes()
+            path.write_bytes(b"changed")
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                prepare_models(self.root / "rejected", "frozen", self.root, card.name)
+            path.write_bytes(original)
+            self.assertFalse((self.root / "rejected").exists())
+
+    def test_registry_paths_cannot_select_external_or_symlinked_cards(self):
+        for name in ["../ocr-adaptation-smoke-002.json", str(self.card)]:
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                prepare_models(self.root / "rejected", "frozen", self.root, name)
+        link = self.card.with_name("linked.json")
+        link.symlink_to(self.card)
+        with self.assertRaises(ValueError):
+            prepare_models(self.root / "rejected", "frozen", self.root, link.name)
+
 
 if __name__ == "__main__":
     unittest.main()

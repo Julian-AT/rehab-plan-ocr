@@ -109,6 +109,15 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Additional registered OCR candidates in the app probe — 2026-09-26
+
+The existing baseline/frozen app probe accepts an explicit registry filename for
+later frozen checkpoints. New cards require matching selected weights and complete
+successful export/parity receipts, with card identity checked after evaluation.
+Path traversal, symlink cards, changed evidence and rehashed failed parity are
+rejected before copying model assets. The original smoke card remains the default;
+no app runtime or provider selection changes. Nine probe-verifier tests pass.
+
 ### Remaining workspace-root cleanup — 2026-09-26
 
 Consumer inventory identifies only historical documentation for the root-level
