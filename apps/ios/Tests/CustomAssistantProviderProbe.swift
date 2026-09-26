@@ -97,8 +97,146 @@ import Foundation
     let router = InterpretationRouter(generation: unavailable)
     let simple = try await router.interpret(request(input: "Termine morgen"))
     precondition(simple.identity.provider == "complete-rules")
+    for input in [
+      "Und der Raum dazu?", "Was habe ich morgen als Nächstes nach 8 Uhr?",
+      "Nicht morgen, sondern übermorgen: Welche Termine habe ich da?",
+      "Plane Gymnastik am 31. April 2031 um 8 Uhr.",
+      "Stopp, vergiss die Änderung, lass alles wie es ist.",
+    ] {
+      let result = try await router.interpret(request(input: input))
+      precondition(result.identity.provider == "complete-rules", input)
+    }
+    func checked(_ input: String, _ output: String, references: [String] = ["r1"])
+      throws -> ConversationInterpretation
+    {
+      let context = try JSONSerialization.data(withJSONObject: [
+        "last_page": references.map { ["reference": $0] }
+      ])
+      let original = request(
+        history: [
+          [
+            "user": "Lösche den ersten Termin.", "displayed_answer": "Bitte sichtbar bestätigen.",
+          ]
+        ], input: input)
+      let current = InterpretationRequest(
+        text: original.text, context: String(decoding: context, as: UTF8.self),
+        history: original.history, now: original.now, calendar: original.calendar,
+        deadline: original.deadline)
+      return AssistantInterpretation.checked(
+        try AssistantInterpretation.decode(
+          output, references: references, timezone: "Europe/Vienna"),
+        for: current)
+    }
+    for (input, output) in [
+      (
+        "Und der Raum dazu?",
+        #"{"action":"update","query":{"reference":"r1"},"change":{"date":"2031-05-15"}}"#
+      ),
+      ("Lösche den anderen Termin.", #"{"action":"remove","query":{"reference":"r1"}}"#),
+      ("Lösche die Ergotherapie.", #"{"action":"remove","query":{"reference":"r1"}}"#),
+      ("Lösche den Termin Ergotherapie.", #"{"action":"remove","query":{"reference":"r1"}}"#),
+      ("Wie lösche ich den Termin?", #"{"action":"remove","query":{"reference":"r1"}}"#),
+      (
+        "Verschiebe den Termin auf morgen um zehn Uhr.",
+        #"{"action":"update","query":{"reference":"r1"},"change":{"date":"2031-05-16","time":"10:00","duration":30}}"#
+      ),
+      (
+        "Was habe ich morgen nach acht Uhr außer Gymnastik?",
+        #"{"action":"calendar","query":{"detail":"next","date":"2031-05-16","before":"08:00"}}"#
+      ),
+      (
+        "Nicht morgen, sondern übermorgen: Welche Termine habe ich da?",
+        #"{"action":"calendar","query":{"detail":"list","date":"2031-05-16"}}"#
+      ),
+    ] {
+      let result = try checked(input, output)
+      precondition(result.action == .clarify, input)
+    }
+    let otherFromPage = AssistantInterpretation.checked(
+      ConversationInterpretation(action: .remove, query: CalendarQuestion(usesLastPage: true)),
+      for: request(input: "Lösche den anderen Termin."))
+    precondition(otherFromPage.action == .clarify)
+    for input in [
+      "Plane Gymnastik am 31. April 2031 um 8 Uhr.", "Erstelle Gymnastik am 2031-04-31 um 8 Uhr.",
+    ] {
+      let result = try checked(
+        input,
+        #"{"action":"create","change":{"title":"Gymnastik","date":"2031-04-30","time":"08:00"}}"#)
+      precondition(result.action == .clarify && result.problem == .invalidDate)
+    }
+    let selectedInput = "Verschiebe den zweiten Termin auf morgen um zehn Uhr."
+    let wrong = try checked(
+      selectedInput,
+      #"{"action":"update","query":{"reference":"r1"},"change":{"date":"2031-05-16","time":"10:00"}}"#,
+      references: ["r1", "r2"])
+    let right = try checked(
+      selectedInput,
+      #"{"action":"update","query":{"reference":"r2"},"change":{"date":"2031-05-16","time":"10:00"}}"#,
+      references: ["r1", "r2"])
+    precondition(wrong.action == .clarify && right.action == .update)
+    let durationOnly = try checked(
+      "Die Dauer von diesem Termin bitte auf 15 Minuten ändern.",
+      #"{"action":"update","query":{"reference":"r1"},"change":{"duration":15}}"#)
+    precondition(durationOnly.action == .update && durationOnly.change?.duration == 15)
+    if CommandLine.arguments.count == 4 {
+      try await replay(
+        input: URL(fileURLWithPath: CommandLine.arguments[1]),
+        recorded: URL(fileURLWithPath: CommandLine.arguments[2]),
+        output: URL(fileURLWithPath: CommandLine.arguments[3]))
+    }
     print(
-      "Custom provider passed: exact prompt, whole-history trimming, current request retained, local asset fallback and strict references"
+      "Custom provider passed: exact prompt, history trimming, current request retained, complete rules and grounded mutation/date/time/reference boundaries"
     )
+  }
+
+  /// Recheck recorded synthetic outputs through today's router. This never runs
+  /// a model or writes a calendar, and is not a fresh inference/voice evaluation.
+  @MainActor private static func replay(input: URL, recorded: URL, output: URL) async throws {
+    let fixture = try JSONDecoder().decode(
+      InterpretationEvaluation.Fixture.self, from: Data(contentsOf: input))
+    try fixture.validate(runID: fixture.runID)
+    let historical =
+      try JSONSerialization.jsonObject(with: Data(contentsOf: recorded))
+      as! [String: Any]
+    let rows = historical["cases"] as! [[String: Any]]
+    let byID = Dictionary(uniqueKeysWithValues: rows.map { ($0["id"] as! String, $0) })
+    var replayed: [[String: Any]] = []
+    var admitted = 0
+    for sample in fixture.cases {
+      let row = byID[sample.id]!
+      let observation = row["observation"] as! [String: Any]
+      let provider = CustomAssistantProvider(
+        identity: InterpretationIdentity(
+          provider: "recorded-response", model: historical["model_identity"] as! String,
+          schemaVersion: 1), system: "Synthetic response replay"
+      ) { _, _ in
+        admitted += 1
+        guard let operation = observation["operation"] as? [String: Any] else {
+          throw InterpretationError.invalidRequest
+        }
+        return String(
+          decoding: try JSONSerialization.data(withJSONObject: operation), as: UTF8.self)
+      }
+      let router = InterpretationRouter(generation: provider)
+      var result: [String: Any] = [
+        "id": sample.id, "expected": row["expected"]!, "family": row["family"]!,
+      ]
+      do {
+        let value = try await router.interpret(sample.request())
+        result["provider"] = value.identity.provider
+        result["operation"] = try InterpretationEvaluation.operation(value.value, sample: sample)
+      } catch {
+        result["error"] = String(describing: error)
+      }
+      replayed.append(result)
+    }
+    let report: [String: Any] = [
+      "schema_version": 1, "kind": "recorded-synthetic-response-replay",
+      "qualified": false, "fresh_inference": false, "full_voice_workflow": false,
+      "independent_real_dialogues": 0, "cases": replayed,
+      "recorded_responses_admitted": admitted,
+    ]
+    try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+      .write(to: output, options: .withoutOverwriting)
   }
 }

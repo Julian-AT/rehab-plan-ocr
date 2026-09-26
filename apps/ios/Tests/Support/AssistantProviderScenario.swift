@@ -52,6 +52,7 @@
             var observation: [String: Any] = ["id": sample.id]
             do {
               if fixture.mode == "rules",
+                router.rules.immediate(request) == nil,
                 router.rules.match(sample.text, now: request.now, calendar: request.calendar) == nil
               {
                 observation["status"] = "no_match"
@@ -105,8 +106,8 @@
         report["model_identity"] = provider.identity.model
         var cases: [[String: Any]] = []
         for (id, text) in [
-          ("correct-date-0000", "Nicht morgen, sondern übermorgen: Welche Termine habe ich da?"),
-          ("room-follow-up-0000", "Und der Raum dazu?"),
+          ("custom-date-0000", "Zeige mir die Termine für übermorgen."),
+          ("custom-room-0000", "In welchem Raum ist dieser Termin?"),
         ] {
           report["stage"] = "interpreting"
           report["case_id"] = id

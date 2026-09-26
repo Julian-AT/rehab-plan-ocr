@@ -50,7 +50,10 @@ import Foundation
       precondition(input.text == "Termine morgen außer Gymnastik")
       return ConversationInterpretation(
         action: .calendar,
-        query: CalendarQuestion(excluding: "Gymnastik"))
+        query: CalendarQuestion(
+          date: input.calendar.date(
+            byAdding: .day, value: 1, to: input.calendar.startOfDay(for: input.now)),
+          excluding: "Gymnastik"))
     }
     let generated = try await router.interpret(request("Termine morgen außer Gymnastik"))
     precondition(

@@ -114,7 +114,7 @@ class AppEvaluationTests(unittest.TestCase):
 
     def test_rules_fallback_preserves_its_own_identity(self):
         changed = copy.deepcopy(self.result)
-        changed["cases"][0].update(provider="complete-rules", model_identity="calendar-2")
+        changed["cases"][0].update(provider="complete-rules", model_identity="calendar-3")
         self.audit(changed)
         changed["cases"][0]["model_identity"] = "pinned"
         with self.assertRaises(ValueError):
@@ -133,7 +133,7 @@ class AppEvaluationTests(unittest.TestCase):
 
     def test_rules_no_match_retains_requested_denominator(self):
         self.fixture["mode"] = "rules"
-        self.result.update(mode="rules", provider="complete-rules", model_identity="calendar-2")
+        self.result.update(mode="rules", provider="complete-rules", model_identity="calendar-3")
         self.result["cases"] = [
             dict(id=r["id"], status="no_match", interpretation_seconds=0) for r in self.rows
         ]

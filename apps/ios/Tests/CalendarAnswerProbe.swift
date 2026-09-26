@@ -96,6 +96,25 @@ actor CalendarFixture {
     let afternoon = CalendarQuestion.direct(
       "Termine heute nachmittags", now: now, calendar: vienna)!
     precondition(afternoon.afterMinutes == 720 && afternoon.beforeMinutes == 1080)
+    let boundedNext = CalendarQuestion.direct(
+      "Was habe ich morgen als Nächstes nach 8 Uhr?", now: now, calendar: vienna)!
+    precondition(boundedNext.detail == .next && boundedNext.afterMinutes == 480)
+    precondition(vienna.component(.day, from: boundedNext.date!) == 16)
+    let spokenBound = CalendarQuestion.direct(
+      "Was habe ich morgen als Nächstes nach acht Uhr?", now: now, calendar: vienna)
+    precondition(spokenBound == boundedNext)
+    let correctedDay = CalendarQuestion.direct(
+      "Nicht morgen, sondern übermorgen: Welche Termine habe ich da?", now: now, calendar: vienna)!
+    precondition(correctedDay.detail == .list)
+    precondition(vienna.component(.day, from: correctedDay.date!) == 17)
+    precondition(CalendarQuestion.direct("Und der Raum dazu?")?.detail == .room)
+    for phrase in [
+      "Und der Raum dazu außer Gymnastik?", "Und der Raum dazu morgen?",
+      "Was habe ich morgen als Nächstes nach 8 Uhr und vor 11 Uhr?",
+      "Nicht morgen, sondern übermorgen: Welche Termine habe ich da außer Bewegung?",
+    ] {
+      precondition(CalendarQuestion.direct(phrase, now: now, calendar: vienna) == nil, phrase)
+    }
     precondition(
       CalendarAnswer.build(morning, events: rows, now: now).events.map(\.id) == ["0", "1"])
     precondition(CalendarAnswer.build(afternoon, events: rows, now: now).total == 6)

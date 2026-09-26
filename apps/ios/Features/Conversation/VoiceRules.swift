@@ -119,7 +119,7 @@ enum VoiceRules {
   /// Shared with complete-match calendar questions, including malformed years so
   /// they can be rejected rather than silently treated as an undated question.
   static let civilDatePattern =
-    "(?:\\d{1,2}[./]\\d{1,2}[./]\\d*|(?:\\d{1,2}\\.?|\(ordinalPattern))\\s+\(monthPattern)(?:\\s+\\d+)?)"
+    "(?:\\d{4,}-\\d{1,2}-\\d{1,2}|\\d{1,2}[./]\\d{1,2}[./]\\d*|(?:\\d{1,2}\\.?|\(ordinalPattern))\\s+\(monthPattern)(?:\\s+\\d+)?)"
   private static let datePattern =
     "\\b(?:übermorgen|morgen|heute|sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag|\(civilDatePattern))(?![\\p{L}\\d])"
   private static let correctionPattern = #"\b(?:nein|sondern|ich meine)\b"#
@@ -178,6 +178,11 @@ enum VoiceRules {
         calendar.component(.year, from: date) == year
       else { return nil }
       return date
+    }
+    if let value = matches(#"^(\d{4,})-(\d{1,2})-(\d{1,2})$"#, token).first,
+      let day = Int(value[3]), let month = Int(value[2])
+    {
+      return civilDate(day: day, month: month, yearText: value[1])
     }
     if let value = matches(#"^(\d{1,2})[./](\d{1,2})[./](\d*)$"#, token).first,
       let day = Int(value[1]), let month = Int(value[2])
@@ -250,6 +255,17 @@ enum VoiceRules {
         .split(separator: " ").map(String.init))
     return matches("[a-zäöü]+", clean).map { $0[0] }.filter { !ignored.contains($0) }
   }
+  static func explicitMutation(_ input: String) -> VoiceIntent.Action? {
+    let text = normalized(input)
+    let patterns: [(VoiceIntent.Action, String)] = [
+      (.remove, #"\b(?:lösch(?:e|en)?|entfern(?:e|en)?)\b"#),
+      (.update, #"\b(?:verschieb(?:e|en)?|änder(?:e|n)?)\b"#),
+      (.create, #"\b(?:erstell(?:e|en)?|eintragen|hinzufügen)\b"#),
+    ]
+    let actions = patterns.filter { !matches($0.1, text).isEmpty }.map(\.0)
+    // A compound request cannot silently become just its first mutation.
+    return actions.count > 1 ? .unsupported : actions.first
+  }
   static func parse(_ input: String, now: Date = .now, calendar: Calendar = .current) -> VoiceIntent
   {
     let text = normalized(input)
@@ -264,8 +280,9 @@ enum VoiceRules {
     if !matches("\\b(medikamente|medikament|dosis|diagnose|schmerzen)\\b", text).isEmpty {
       return result
     }
-    if ["stopp", "abbrechen", "gespräch beenden", "gesprach beenden", "gespräch abbrechen"]
-      .contains(text.trimmingCharacters(in: .punctuationCharacters))
+    if text.hasPrefix("stopp ")
+      || ["stopp", "abbrechen", "gespräch beenden", "gesprach beenden", "gespräch abbrechen"]
+        .contains(text.trimmingCharacters(in: .punctuationCharacters))
     {
       result.action = .cancel
       return result
@@ -278,19 +295,23 @@ enum VoiceRules {
       return result
     }
 
-    if text.contains("lösch") || text.contains("entfern") {
-      result.action = .remove
-    } else if text.contains("verschieb") || text.contains("änder") {
-      result.action = .update
-    } else if text.contains("erstell") || text.contains("eintragen")
-      || text.contains("neuen termin") || text.contains("neuer termin")
-      || text.contains("hinzufügen")
-    {
+    if let mutation = explicitMutation(text) {
+      result.action = mutation
+    } else if text.contains("neuen termin") || text.contains("neuer termin") {
       result.action = .create
     } else if text.contains("nächst") && (text.contains("termin") || text.contains("wann")) {
       result.action = .next
     } else if text.contains("termin") || text.contains("wann") || text.contains("vorlesen") {
       result.action = .list
+    }
+    if [.create, .update, .remove].contains(result.action),
+      !matches(
+        #"^(?:wie|wo|warum|weshalb|wieso|wann|wer|welche\w*|was|ist|sind|kann ich|könnte ich|darf ich)\b|\b(?:wenn|angenommen|beispielsweise)\b"#,
+        text
+      ).isEmpty
+    {
+      result.action = .unsupported
+      return result
     }
     if result.action == .update, let split = text.range(of: " auf ") {
       result.referenceText = String(text[..<split.lowerBound])

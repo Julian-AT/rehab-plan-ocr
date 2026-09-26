@@ -20,7 +20,7 @@ from ml.evaluation.conversation.native import run, sha, write  # noqa: E402
 from ml.evaluation.device.simulator import disposable, install  # noqa: E402
 
 BUNDLE = "at.rehakalender.personal"
-CASES = ["correct-date-0000", "room-follow-up-0000"]
+CASES = ["custom-date-0000", "custom-room-0000"]
 
 
 def completed(result, identifier, model_identity):

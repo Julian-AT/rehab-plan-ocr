@@ -63,7 +63,7 @@ struct CalendarQuestion: Equatable, Sendable {
       return Self(detail: .next, days: 90, usesLastPage: true)
     }
     let timePattern =
-      #" (vormittags|nachmittags|vor \d{1,2}(?::[0-5]\d)? uhr|(?:nach|ab) \d{1,2}(?::[0-5]\d)? uhr)$"#
+      #" (vormittags|nachmittags|(?:vor|nach|ab) (?:\d{1,2}(?::[0-5]\d)?|[\p{L}]+) uhr)$"#
     if let expression = try? NSRegularExpression(pattern: timePattern),
       let match = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
       let range = Range(match.range, in: text),
@@ -92,6 +92,19 @@ struct CalendarQuestion: Equatable, Sendable {
     if !VoiceRules.matches(next, text).isEmpty { return Self(detail: .next, days: 90) }
     let dates =
       "heute|morgen|übermorgen|(?:am )?(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|\(VoiceRules.civilDatePattern))"
+    let datedNext =
+      "^(?:(?:was|welchen termin) habe ich (?:\(dates)) als nächstes|(?:mein )?nächster termin (?:\(dates)))$"
+    let correctedList =
+      "^nicht (?:\(dates)) sondern (?:\(dates)):? welche termine habe ich da$"
+    if !VoiceRules.matches(datedNext, text).isEmpty
+      || !VoiceRules.matches(correctedList, text).isEmpty
+    {
+      guard !VoiceRules.hasInvalidDate(text, now: now, calendar: calendar),
+        let date = VoiceRules.date(text, now: now, calendar: calendar)
+      else { return nil }
+      return Self(
+        detail: VoiceRules.matches(datedNext, text).isEmpty ? .list : .next, date: date)
+    }
     let day = "(?: (?:\(dates)))?"
     let list =
       "^(?:(?:welche termine habe ich|habe ich (?:keine )?termine|was steht an|(?:meine )?termine|(?:bitte )?termine vorlesen|zeige (?:mir )?(?:meine )?termine)\(day)|(?:\(dates)) termine(?: vorlesen)?)$"
@@ -111,6 +124,8 @@ struct CalendarQuestion: Equatable, Sendable {
     }
     let details: [String: Detail] = [
       "welcher raum": .room, "in welchem raum": .room, "wo": .place,
+      "und der raum dazu": .room, "welcher raum ist das": .room,
+      "in welchem raum ist der termin": .room, "und in welchem raum": .room,
       "wo findet der statt": .place, "wer ist der therapeut": .therapist,
       "wer ist die therapeutin": .therapist, "wann beginnt der": .start,
       "wann endet der": .end, "wie lange dauert der": .duration,

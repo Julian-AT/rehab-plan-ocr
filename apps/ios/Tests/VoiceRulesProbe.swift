@@ -29,8 +29,25 @@ import Foundation
     precondition(parse("Morgen Termine vorlesen").action == .list)
     precondition(parse("Wann ist mein nächster Termin").action == .next)
     precondition(parse("Soll ich meine Medikamente ändern?").action != .create)
+    for question in [
+      "Wie lösche ich den Termin?", "Kann ich einen neuen Termin erstellen?",
+      "Was passiert, wenn ich den Termin löschen lasse?",
+      "Wo kann ich einen Termin ändern?",
+    ] {
+      precondition(parse(question).action == .unsupported, question)
+    }
+    for question in [
+      "Wann wurde der Termin erstellt?", "Was ist mit dem gelöschten Termin?",
+      "Ist der geänderte Termin morgen?", "Wann ist die Terminänderung?",
+    ] {
+      precondition(![.create, .update, .remove].contains(parse(question).action), question)
+    }
+    precondition(parse("Lösche den Termin und erstelle einen neuen Termin.").action == .unsupported)
     precondition(VoiceRules.date("31.02.2026", now: now, calendar: calendar) == nil)
     for invalid in ["31.02.2026", "29.02.2025", "12.09.202", "12.09.20261"] {
+      precondition(VoiceRules.hasInvalidDate(invalid, now: now, calendar: calendar), invalid)
+    }
+    for invalid in ["2031-04-31", "2031-02-29", "0000-01-01", "20311-01-01"] {
       precondition(VoiceRules.hasInvalidDate(invalid, now: now, calendar: calendar), invalid)
     }
     for invalid in [
@@ -87,6 +104,11 @@ import Foundation
     precondition(parse("Habe ich keine Termine?").action == .list)
     precondition(parse("Nicht am Dienstag, am Mittwoch").action != .cancel)
     precondition(parse("Gespräch beenden").action == .cancel)
+    precondition(parse("Stopp, vergiss die Änderung, lass alles wie es ist.").action == .cancel)
+    precondition(
+      VoiceRules.date("2032-02-29", now: now, calendar: calendar)
+        == Calendar(identifier: .gregorian).date(
+          from: DateComponents(timeZone: calendar.timeZone, year: 2032, month: 2, day: 29)))
     precondition(VoiceRules.normalized("  Größe,\tÜBUNG!\n🗓️?  ") == "grösse übung 🗓️")
     precondition(VoiceRules.time("🗓️ um fünf Uhr fünfundvierzig") == 345)
     precondition(VoiceRules.time("um einundzwanzig Uhr zwei") == 1262)

@@ -20,13 +20,13 @@ class AppTrialTests(unittest.TestCase):
             "model_identity": "pinned",
             "cases": [
                 {
-                    "id": "correct-date-0000",
+                    "id": "custom-date-0000",
                     "action": "calendar",
                     "detail": "next",
                     "date": "2031-05-16",
                 },
                 {
-                    "id": "room-follow-up-0000",
+                    "id": "custom-room-0000",
                     "action": "update",
                     "reference": "termin-1",
                     "change_date": "2031-05-15",

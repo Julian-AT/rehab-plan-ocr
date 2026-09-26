@@ -124,15 +124,27 @@ extension InterpretationProvider {
 
 @MainActor final class CalendarRulesProvider: InterpretationProvider {
   let identity = InterpretationIdentity(
-    provider: "complete-rules", model: "calendar-2", schemaVersion: 1)
+    provider: "complete-rules", model: "calendar-3", schemaVersion: 1)
   let capabilities: Set<InterpretationCapability> = [.calendar]
   let availability = InterpretationAvailability.available
 
   func match(_ text: String, now: Date = .now, calendar: Calendar = .current) -> CalendarQuestion? {
     CalendarQuestion.direct(text, now: now, calendar: calendar)
   }
+  func immediate(_ request: InterpretationRequest) -> ConversationInterpretation? {
+    if VoiceRules.parse(request.text, now: request.now, calendar: request.calendar).action
+      == .cancel
+    {
+      return ConversationInterpretation(action: .cancel)
+    }
+    if VoiceRules.hasInvalidDate(request.text, now: request.now, calendar: request.calendar) {
+      return ConversationInterpretation(action: .clarify, problem: .invalidDate)
+    }
+    return nil
+  }
   func interpret(_ request: InterpretationRequest) async throws -> ConversationInterpretation {
     try Task.checkCancellation()
+    if let immediate = immediate(request) { return immediate }
     guard let question = match(request.text, now: request.now, calendar: request.calendar) else {
       throw InterpretationError.invalidRequest
     }
@@ -165,7 +177,8 @@ extension InterpretationProvider {
     try Task.checkCancellation()
     guard ContinuousClock.now < request.deadline else { throw InterpretationError.deadlineExceeded }
     let provider: any InterpretationProvider =
-      rules.match(request.text, now: request.now, calendar: request.calendar) == nil
+      rules.immediate(request) == nil
+        && rules.match(request.text, now: request.now, calendar: request.calendar) == nil
       ? generation : rules
     if case .unavailable(let reason) = provider.availability {
       throw InterpretationError.unavailable(reason)
@@ -189,7 +202,8 @@ extension InterpretationProvider {
       throw InterpretationError.invalidRequest
     }
     return InterpretationResult(
-      value: value, identity: identity, elapsed: started.duration(to: .now))
+      value: AssistantInterpretation.checked(value, for: request), identity: identity,
+      elapsed: started.duration(to: .now))
   }
 }
 
