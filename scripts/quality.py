@@ -210,6 +210,8 @@ def tests(portable):
             "agenda",
             "voice-rules",
             "conversation-rules",
+            "conversation-replies",
+            "input-audio",
             "ordered-settings",
             "diagnostics",
             "intake-erasure",

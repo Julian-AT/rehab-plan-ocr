@@ -1,0 +1,23 @@
+[
+  {
+    "file": "victoria-du.wav",
+    "rate": 24000,
+    "duration": 14.25,
+    "peak": 0.64447021484375,
+    "rms": 0.05929565159555404
+  },
+  {
+    "file": "victoria-sie.wav",
+    "rate": 24000,
+    "duration": 14.275,
+    "peak": 0.6688232421875,
+    "rms": 0.058171635862725356
+  },
+  {
+    "file": "victoria-kontext.wav",
+    "rate": 24000,
+    "duration": 15.95,
+    "peak": 0.655548095703125,
+    "rms": 0.060103977453951525
+  }
+]

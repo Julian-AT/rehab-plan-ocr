@@ -59,7 +59,9 @@ ohne Termininhalte oder Gesprächstranskripte; Exporte sind bereinigt.
 Geräteupdates erfolgen erst nach ausdrücklicher Freigabe neuer Simulatoraufnahmen und Hörproben,
 frischer Sicherung und anschließendem Datenvergleich. Das Update erfolgt ohne Deinstallation.
 Auf dem iPhone ist nach dem [Rückwechsel](docs/fluid-device-update.md) Build 2026092613 installiert.
-Die aktuelle gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mitblättern](docs/preview/2026-09-26-s13-page-axis/README.md).
+Die aktuelle Vorschau enthält [ruhige Terminfarben, Du/Sie und die überarbeitete Mikrofonaufnahme](docs/preview/2026-09-26-s14-calm-voice/README.md). Bilder, Victoria-Hörproben und Prüfprotokoll liegen bereit; Geräteupdate und echte Sprachprüfung folgen nach Freigabe.
+
+Die vorherige gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mitblättern](docs/preview/2026-09-26-s13-page-axis/README.md).
 Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) dokumentiert den verworfenen Versuch
 mit [neuer Simulatorvorschau und Victoria-Hörproben](docs/preview/2026-09-26-s13-fluid/README.md).
 Die [vorherige Qualitätsüberarbeitung](docs/quality-overhaul.md) bleibt als Prüfverlauf erhalten. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.
