@@ -37,7 +37,7 @@ Die Zustände **offen**, **implementiert**, **verifiziert**, **fehlgeschlagen** 
 | A Bestand und Nutzung | **900/900 versionierte Dateien** an `413a70c` mit aktueller Hashbindung inhaltlich beziehungsweise nach Herkunft/Generator geprüft; 42 Bereichsbelege, 17 Verbrauchergruppen und 16 ergänzte Rust-Testbereiche. Zusammenführung **verifiziert** (`content-review-aggregate-20260926-s21-001.json`). | Spätere Änderungen nachführen; verbleibende lokale Untergruppen und laufende Modellartefakte gesondert prüfen. Inhaltsprüfung ersetzt keine Produktabnahme; [Bestand und Entscheidungen](inventory.md). |
 | B Bereinigung | Geprüfte tote Wrapper, Container- und doppelte Probewerkzeuge entfernt; benötigte Swift-/VLM-Probes ausführbar integriert, **verifiziert**. Aktuelle Übersichten konsolidiert. | Inhalts-/Verweisprüfung der versionierten Bestände abgeschlossen; weitere lokale Entfernungskandidaten gesondert prüfen. Originale visuelle Referenzen bleiben zentral erhalten; [Referenzkatalog](../product/visual-baseline/README.md). |
 | C Aufbewahrung | Referenzbewusste Vorschau, Schutzprüfung, Wiederanlauf und tatsächliche Bereinigung **verifiziert** für 5.102 Zwischenprodukte und 15 Assistentencheckpoints. Bester/jüngster fortsetzbarer Stand erhalten. | Weitere lokale Gruppen begrenzen; 17 identische statische Testarchive sind auf vier schreibgeschützte APFS-Objekte zurückgeführt, alle 15.682 Laufnachweise und fünf Einzelarchive unverändert. Keine Pfadlöschung, kein Speichergewinn belegt; Wiederanlauf und tatsächliche Archivleser bestanden. Reserve vor jedem großen Lauf messen; neun referenzierte OCR-Checkpoints geschützt. [Belege](artifact-retention.md). |
-| D Architektur | Aktive native Grenzen einschließlich binärem Import, lokalem Vergessen, versuchsgebundenem Fortschritt und direkter Domain-/FFI-Projektion typisiert; allgemeiner JSON-Konvertierungsumweg entfernt. 307 Workspace-Rusttests, Clippy, iOS-ONNX-Kompilierung und unveränderte Bindings **verifiziert**. Parsergeometrie separat mit 27 Fällen und Refresh-Regression geprüft. | Neue gemeinsame App-/Simulatorabnahme offen. Im vollständigen VoiceModel wurde eine zusätzliche Routinglücke gefunden: erkannte Mutationen umgehen bisher den Modellprovider; bereits genannte Titel können erneut erfragt werden. Korrektur und integrierter Nachweis laufen getrennt. [Grenzen und verbleibende Serialisierungszwecke](typed-boundaries.md), [Lebensdauer](concurrency-ownership.md). |
+| D Architektur | Aktive native Grenzen einschließlich binärem Import, lokalem Vergessen, versuchsgebundenem Fortschritt und direkter Domain-/FFI-Projektion typisiert; allgemeiner JSON-Konvertierungsumweg entfernt. 307 Workspace-Rusttests, Clippy, iOS-ONNX-Kompilierung und unveränderte Bindings **verifiziert**. Parsergeometrie separat mit 27 Fällen und Refresh-Regression geprüft. | Neue gemeinsame App-/Simulatorabnahme offen. Die im tatsächlichen VoiceModel gefundene Routinglücke ist korrigiert: Nur vollständig verstandene Änderungsbefehle bleiben lokal; übrige Anliegen erreichen den vorher ausgewählten Provider. Fünf Hostprobes und strikte Swift-6-Prüfung bestehen; der echte Modell-/UI-/Audioablauf ist noch gesondert abzunehmen. [Grenzen und verbleibende Serialisierungszwecke](typed-boundaries.md), [Lebensdauer](concurrency-ownership.md). |
 | E Entwicklungsbetrieb | Kanonische `.local`-Pfade, getrennte Make-Einstiege, Toolchain/Bindings und frischer Offline-Appbuild an `8f49deb` **verifiziert**; seine Produktquellen stimmen mit dem integrierten `d670608` überein. Alle 16 Schritte und identische Wiederholungsprodukte bestehen. | Künftige Produktänderungen erneut passend prüfen; vollständige CI extern blockiert. [Buildnachweise](build-reproducibility.md), [Abhängigkeiten](dependency-audit.md). |
 | F Kalender und Speicherung | Gemeinsame Schutzregeln, sichtbare Auswahl, dauerhafte Ergebnisse trotz Wartungsfehlern, Migration-/Erasure-/Wiederanlaufregressionen **implementiert** und in den unten benannten Umgebungen **verifiziert**. | Vollständige gemeinsame Geräte-/Betriebsabnahme einschließlich Zeit-/Berechtigungswechsel, Einladungen/Serien, Hintergrund, Widerruf, Audio und langer Sitzungen; [Umsetzungsvertrag](implementation-plan.md). |
 | G UI, Bedienbarkeit, Leistung | Große Schrift, reduzierte Bewegung, Navigation, Archivkorrektur und reale Simulatorwiedergabe in UI-Fällen **verifiziert**. Vollständige UI-Suite an `01fbafe`: **70/70**, keine Fehler/Skips. Strenger Kalenderbildvergleich **fehlgeschlagen: 17/22**. Feste Archivreferenz an `d670608` pixelgleich. | Vier Scrollindikatorabweichungen und eine dunkle Tagesabschluss-Rasterabweichung bleiben offen. Gemeinsame Geräteabnahme, VoiceOver/Fokus/Querformat vollständig prüfen; gepaarte physische Latenz-, Speicher-, Energie- und Thermikmessung offen. [Aufnahmevertrag](../product/visual-baseline/capture-contract.md). |
@@ -56,7 +56,7 @@ die Aussage; spätere Änderungen gelten nicht rückwirkend als geprüft.
 | Prüfung | Ergebnis und Quellenumfang | Privater Nachweis unter `.local/runs/` |
 |---|---|---|
 | Gemeinsame lokale Befehle | `make lint` und `make test` an `413a70c` erfolgreich: **280 Rusttests, 586 Pythonfälle/90 Gruppen einschließlich 21 ausdrücklicher Umgebungs-Skips**, 40 native Probes einschließlich echter Vision-Erkennung und Swift–Rust–Swift-Rundweg sowie C-VAD. Alle 900 versionierten Dateien, Modi, Revision und Checkout vorher/nachher unverändert. Parallel lief das isolierte OCR-Training; keine Leistungsaussage. | `combined-verification-20260926-s21-002`; der fehlgeschlagene künstliche Testcheckout aus `combined-verification-20260926-s21-001` bleibt erhalten. Frühere gemeinsame Stände vom 26.09.2026 bleiben unverändert. |
-| Aktuelle Werkzeugprüfung | `make test-tools`, Ruff und vollständige Inventar-Neuberechnung an den Quellen von `8f49deb` erfolgreich: 461 Pythonfälle/78 Gruppen, 21 ausdrückliche Umgebungs-Skips. Integriertes `make lint` an `d670608` erfolgreich. Jeweils unveränderte geprüfte Quellen. | `package-signer-verification-20260926-s20-002`, `integrated-lint-20260926-s20-001`; frühere OCR-Zusatzprüfung `ocr-strided-convolution-development-20260926-s20-001` |
+| Aktuelle Werkzeugprüfung | Nach Pillow 12.3.0 und aktualisierter Regelnidentität **600 Pythonfälle/91 Gruppen einschließlich 21 ausdrücklicher Umgebungs-Skips** erfolgreich, offline ausgeführt. Alle 29 erfassten Pillow-Verbraucher unverändert; 22 alte Bildpaare ergeben dieselben 17 Erfolge und fünf Fehler. Diese Abhängigkeitsprüfung bei parallel bearbeitetem Gesprächstest ist keine neue gemeinsame Appabnahme. | `pillow-upgrade-20260926-s21-001`; ältere Paket-/Lint-/OCR-Prüfungen bleiben erhalten. |
 | Vollständige UI-Suite | An `01fbafe` alle 70 Methoden ausgeführt und bestanden, null Fehler/Skips. Alle 391 Produktquellen während des Laufs unverändert; tatsächliche Methoden stimmen mit der Quellaufzählung überein. Die separate kompilierte Suite-Aufzählung ist weiterhin nicht verifiziert. Alle zwölf Paketkomponenten geprüft, genaue Testprodukte erhalten. Danach wurden nur Paketprüfung/Provenienz und Dokumentation geändert. | `ui-complete-20260926-s20-004`; frühere fehlgeschlagene Läufe und Cache-Fehlerbelege bleiben unverändert |
 | Typisierte native Erkennung | Gemeinsamer Appbuild an `4ea7fd2`; zwei erzwungene Importe, jeweils acht Termine, zwölf tatsächliche native Ausschnittprüfungen, passende erneut gelesene Traces, null Kalenderaufrufe. Ein synthetischer Quellfall; keine Modell-/Geräte-/Leistungsfreigabe. | `typed-vision-native-20260926-s20-001`, `typed-vision-app-20260926-s20-001` |
 | Lokaler EventKit-Zugriff | An den Quellen von `d246b47`: 21 Erfolge einschließlich sechs Mitteilungs-Rennbedingungen, ein erwarteter Simulator-Dateischutz-Skip, null Fehler. Lesen, Linkprüfung und Wartung fordern null Quellensynchronisierungen an. Die Gegenprobe mit den beiden alten Aufrufen scheitert mit einem beziehungsweise drei gezählten Aufrufen. Swift 6 mit vollständiger Nebenläufigkeitsprüfung besteht. | `local-calendar-refresh-eventkit-20260926-s20-001`, `local-calendar-refresh-negative-20260926-s20-001`; frühere Lebensdauerprüfung `notification-owner-eventkit-20260926-s19-001` |
@@ -68,12 +68,33 @@ die Aussage; spätere Änderungen gelten nicht rückwirkend als geprüft.
 | Aktuelle CI-Voraussetzung | Lauf [35514896902](archive:github/run-35514896902) an `5035121`, 26.09.2026: beide Jobs durch Abrechnung vor Runnerstart blockiert, null ausgeführte Schritte und keine Artefakte. Am 26.09.2026 lesend geprüft; keine vollständige CI-Qualifizierung. Die alten Abrechnungsannotationen belegen keinen aktuellen Kontostatus. Ein neuer Versuch auf dem endgültigen Kandidaten bleibt erforderlich. | `ci-status-20260926-s21-001` |
 
 Der Routervergleich des neuen Assistenten ist **kein vollständiger VoiceModel-
-Nachweis**: In der danach geprüften Gesprächssteuerung gelangen erkannte
-Änderungswünsche bisher überwiegend direkt in die Slotsammlung. Die zwölf
-Modellzulassungen des isolierten Replays dürfen deshalb nicht als tatsächliche
-App-Aufrufe gezählt werden. Die bekannten Wörter, Szenarien und Modellidentitäten
-bleiben für die gesonderte integrierte Prüfung festgelegt; ein bereits im Satz
-genannter, erneut abgefragter Titel zählt als Bedienfehler.
+Nachweis**. Die danach gefundene Routinglücke ist in `2ab34fd` korrigiert; der
+reproduzierte alte Ablauf verliert den bereits genannten Titel, der korrigierte
+Hostablauf erhält Titel, Datum und Uhrzeit und fragt nur nach der fehlenden Dauer.
+Sein Provider ist eine kontrollierte Testimplementierung. Der neue Replay
+`assistant-v2-router-replay-20260926-s21-003` bindet dieselben alten Rohantworten an
+`calendar-5`: weiterhin 40/40, 37/40 und 28/40, null unsichere Routervorschläge,
+jeweils 28 Regeln und zwölf Providerzulassungen. Diese zwölf Zulassungen sind
+keine tatsächlichen App-Modellaufrufe. Die festgelegten integrierten Szenarien mit
+echtem Modell, Bestätigungsbutton und Audio stehen noch aus; ein erneut
+abgefragter bekannter Titel bleibt dabei ein Bedienfehler.
+
+Der abgeschlossene neue OCR-Lauf mit eingefrorenem Backbone wählt nach fünf
+Epochen den zweiten Stand: **112/128** exakte Validierungscrops gegenüber
+**114/128** beim vortrainierten Vergleich, jeweils null Fehler in 110 kritischen
+Crops. Alle 16 Fehler des ausgewählten Kandidaten betreffen Notizen. Die
+Exportprüfung umfasst alle 640 Crops in zwei Breiten: **1.266/1.280** numerische
+Erfolge, 1.280 gleiche Tokenfolgen. Die unveränderte numerische Freigabeschranke
+ist damit nicht bestanden. Es handelt sich um bekannte synthetische
+Entwicklungsdaten; weder Verbesserung noch Auslieferung ist qualifiziert.
+Der Vergleichslauf mit vollständig trainiertem Backbone ist noch nicht
+abgeschlossen. Unveränderte Nachweise: `ocr-v3-frozen-001` und
+`ocr-v3-training-20260926-s21-001-evidence`.
+
+Der neue reproduzierbare Python-Abhängigkeitsaudit ist vollständig ausgeführt,
+bleibt aber mit **sieben betroffenen Paketversionen / 24 Advisorygruppen** negativ.
+Die verbleibenden Migrationsschritte werden getrennt gegen ihre erhaltenen
+Konvertierungen geprüft; [Befunde und Offline-Nachweis](dependency-audit.md).
 
 Am 26. September 2026 meldet die rein lesende Geräteauflistung den Tunnel des iPhone 17
 als nicht verfügbar. Die gespeicherten Angaben zu iOS 26.6 und einer Verbindung
