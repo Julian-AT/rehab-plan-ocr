@@ -1,36 +1,73 @@
 > Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
 
-# Development status
+# Development status — 0.2.0
 
-The current interface is a technical workbench, following the September 26, 2026 request to replace the earlier product UI. Next.js static export replaces Vite; shadcn/ui supplies standard controls. No production server, hosted recognition, accounts, or marketing UI is included.
+The app opens in a minimal German interface with camera/import actions, recent
+schedules and unfinished reviews. The existing development workbench loads through
+**Einstellungen → Entwickleransicht öffnen**, sharing the active scan, edits and
+processing state. Next.js static export, shadcn/ui and the neutral theme remain.
+The iPhone label is **Termine**; the bundle identifier and **Reha Calendar**
+destination are preserved. No hosted recognition or production server is needed.
 
 ## Implemented
 
-- Portable PP-OCRv6 small/tiny/medium CPU inference, pinned models/runtime, preprocessing, source transforms, field provenance, and stage records.
-- Weekday date headings, separate room/therapist fields, multiline continuations, `*Neu` cleanup, and versioned extraction cache invalidation. Raw OCR remains unchanged. Metadata detection no longer drops timed treatments containing “Blutdruck” or “Aufnahme”.
-- Editable appointments, explicit review, source overlays, trace inspection, rotation/crop controls, batch image import, and retained history.
-- Dataset inventory, annotation editing, local batch execution, saved experiment manifests, comparison, and evaluation. Held-out data stays locked in interactive scoring.
-- EventKit proposals and approvals, three-way reconciliation, duplicate multiplicity, uncertain-write recovery, and UTC iCalendar export. Therapist values are included in exported notes.
-- iOS setup creates or reuses a separate Reha Calendar, remembers it across reconnects and renames, and selects it for new imports. Visibility is controlled in Apple Calendar's calendar list; existing imports retain their recorded destination.
-- SQLite retention and import ledger, launch/resume cleanup, separate research storage, and native storage protection.
-
-Native commands are split into scan, calendar, dataset, settings, state, and inference modules. Frontend workflows live under `src/features/`; shared domain components and shadcn primitives live under `src/components/`.
+- Portable PP-OCRv6 inference with multiple spatial date sections, wrapped fields,
+  scoped metadata, field origins and original-resolution crop rereading. The automatic
+  pass stops scheduling work at 30 seconds; explicit retry has a 60-second budget.
+  In-flight CPU inference is cooperative and may finish after that deadline.
+- Protected manual corrections, visible conflicting evidence, and completion
+  suggestions from approved matching clinic/treatment history or editable defaults.
+  Suggestions require acceptance and never supply dates or start times.
+- Appointment sheets, chronological review, pending filtering, metadata details,
+  source access, selected calendar approval and ICS export. Complete appointments can
+  be saved while unfinished siblings remain pending.
+- Rust-enforced approval snapshots, stable calendar/ICS identities, duplicate
+  multiplicity, metadata updates, partial imports, three-way reconciliation and
+  uncertain-write recovery. Partial saves never imply removal.
+- Contract migration, extraction-cache invalidation, SQLite retention and import
+  ledger, 30-day artifact cleanup, storage protection and explicit user defaults.
+- Lazy development tables, source overlays, traces, model/fixture/dataset tools,
+  provisional reference editing and desktop difficult-region comparisons through a
+  pinned llama.cpp/libmtmd adapter. GLM-OCR and PaddleOCR-VL-1.6 remain experiments.
 
 ## Data and verification boundaries
 
-Retained app OCR was inspected locally for the reported extraction bugs. The user subsequently authorized exploratory testing of `verify/`: 21 HEIC files contain 20 distinct originals, plus an existing PNG. All originals remain unchanged. Full-resolution PNG derivatives and local OCR outputs are excluded from Git and Docker contexts. The first real-image baseline completed all 20 inputs but exposed unresolved dates in nine images, including pages with multiple date headings that the current single-date-per-image parser cannot handle. It produced 193 draft items, 17 empty titles and 10 missing end/duration values; these are diagnostic counts, not verified accuracy. See [the baseline report](real-image-baseline.md).
+All 20 distinct development photographs were processed locally with network access
+disabled. The exploratory portable run produced 199 proposals, including 25 missing
+dates, 14 missing end/duration values and 17 empty titles. These are diagnostic
+counts, not verified accuracy. The recorded baseline uses extraction version 3;
+version 4 also fixes repeated contradictory metadata and invalidates earlier caches.
 
-The research dataset still needs paper-verified annotations, explicit day/page/capture identities, and a frozen development/holdout split. These 20 exploratory images have been inspected through local OCR; they must not be described as an unopened final holdout.
+Twenty per-image provisional references and 16 conservative groups are available in
+the development tools. Their references and day/page relationships remain unverified.
+These previously explored images are development data, not an independent final
+holdout. Accuracy evaluation refuses unverified references and grouping.
 
-The physical iPhone 17 connected on September 26, 2026. Device inspection confirmed iOS 26.6 (23G71) and Developer Mode enabled. Version 0.1.1 installed but crashed immediately after launch; launch-command acceptance had been mistaken for successful startup. Version 0.1.2 fixes the sandbox-path mismatch, is installed on the same phone, and remains running after startup. Physical UI automation is blocked by the free-profile app limit; no existing apps were removed. Physical recognition/calendar acceptance, performance and supported stable-release status remain unverified. Simulator, build and installation evidence are recorded separately in `verification.md`.
+Both additional model families passed checkpoint compatibility checks and each read
+one difficult region from all 20 photographs. GLM finished 19 readings and reached
+its output limit on one; Paddle finished 20. Correctness remains unscored. Neither
+model qualifies for packaging without verified appointment-level comparisons and
+20 consecutive physical scans meeting the 30-second p95 target without termination.
+The delivered app therefore bundles the portable small model only.
 
-No training, final holdout, physical p95, peak-memory claim, or clinical accuracy claim has been made. Original targets remain ≥99% critical date/time accuracy, ≥99% appointment precision/recall, ≥90% schedules without correction, and physical iPhone p95 ≤30 seconds.
+Frontend, Rust, Python, browser, simulator and physical installation checks are
+recorded in [the delivery report](simple-app-delivery.md). The physical XCTest runner
+remains blocked by the free-signing app limit; no other installed apps were removed.
+Build success and process survival do not establish camera acceptance, VoiceOver,
+physical OCR accuracy, thermal/memory qualification or the 20-scan p95 target.
 
 ## Remaining validation
 
-- Establish verified day/page/capture groups and development references before model comparison or tuning. Address multiple date sections per image and investigate title/row association errors exposed by the baseline.
-- Test on a connected iPhone: camera/HEIC, calendar permissions and revisions, accessibility, backgrounding, memory pressure, repeated scans, and content-network isolation.
-- Check `.ics` imports in Apple Calendar and Google Calendar.
-- Automatic page detection, selective rereading, memory measurements, and VLM adapters remain unimplemented. Small is packaged; other OCR tiers are source-tree experiments.
+- Verify references and page relationships before accuracy comparison or tuning;
+  collect independent final holdout data.
+- Complete physical camera/HEIC, calendar revision, VoiceOver, large text, background,
+  memory/thermal and repeated-scan acceptance checks. Inspect device-level document
+  traffic; local desktop inference already runs with network access denied.
+- Check exported ICS files in Apple Calendar and Google Calendar.
+- Automatic page-boundary detection remains separate from the implemented spatial
+  schedule-section detection. Other OCR tiers remain development experiments.
 
-Keep content-bearing outputs under ignored private paths. Use the documented verification commands after changes; do not interpret successful compilation as device acceptance.
+No training or final holdout evaluation has been performed. Original targets remain
+at least 99% critical date/time accuracy, 99% appointment precision/recall, 90%
+schedules without correction and physical iPhone p95 at most 30 seconds. Keep all
+content-bearing evidence in ignored private storage.

@@ -8,6 +8,12 @@ test("review preserves repeated items, provenance, and explicit approval", async
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Einstellungen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Reha Calendar Lab" }),
   ).toBeVisible();
@@ -70,6 +76,12 @@ test("trace exposes actual observations and unavailable stages", async ({
   page,
 }) => {
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Einstellungen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
+    .click();
   await page.getByRole("button", { name: "Load fixture" }).click();
   await page.getByRole("tab", { name: "Trace", exact: true }).click();
   await expect(page.getByText("Engine scores are uncalibrated.")).toBeVisible();
@@ -94,6 +106,12 @@ test("offline edits and selection retain appointment multiplicity", async ({
   context,
 }) => {
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Einstellungen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
+    .click();
   await page.getByRole("button", { name: "Load fixture" }).click();
   await expect(
     page.getByText("8 selected / 8 extracted", { exact: true }),
@@ -118,6 +136,12 @@ test("offline edits and selection retain appointment multiplicity", async ({
 
 test("annotation corrections invalidate verification", async ({ page }) => {
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Einstellungen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickleransicht öffnen", exact: true })
+    .click();
   await page.getByRole("button", { name: "Load fixture" }).click();
   await page.getByRole("tab", { name: "Dataset", exact: true }).click();
   await page

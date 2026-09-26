@@ -525,6 +525,30 @@ pub fn preserve_review(previous: &PipelineRun, next: &mut PipelineRun) -> Result
                     true,
                 ));
             }
+            // The new detector may reuse the old row ID despite an ambiguous
+            // split/merge. Reserve that ID for the retained reviewed appointment.
+            for (index, competing) in next.appointments.iter_mut().enumerate() {
+                if competing.id == old.id {
+                    competing.id = uuid::Uuid::new_v5(
+                        &uuid::Uuid::NAMESPACE_OID,
+                        format!("{}:competing:{}:{index}", next.document.id, old.id).as_bytes(),
+                    )
+                    .to_string();
+                    competing.approval = None;
+                    competing.calendar_event_id = None;
+                    competing.ics_event_id = None;
+                    competing.calendar_saved_hash = None;
+                    competing.ics_exported_hash = None;
+                    if !competing.issues.iter().any(|i| i.code == "retained_review") {
+                        competing.issues.push(Issue::new(
+                            "retained_review",
+                            "Geänderte Zeilenzuordnung zu früherem Termin prüfen.",
+                            None,
+                            true,
+                        ));
+                    }
+                }
+            }
             let mut retained = old.clone();
             retained.issues.push(Issue::new(
                 "retained_review",

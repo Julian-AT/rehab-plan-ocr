@@ -90,3 +90,39 @@ Physical evidence from the connected **iPhone 17 / iOS 26.6 (23G71)**:
 The Next.js export and device/simulator builds passed. Tauri Clippy with warnings denied and Swift formatting passed. On the updated iPhone 17 / iOS 26.4 simulator, **three regression tests passed and one was explicitly skipped**, with zero failures: storage reuse/backup exclusion/old-path compatibility, repeated launch and resume, and portable OCR/persistence. The simulator does not expose iOS file-protection attributes, so that hardware-only assertion is not counted as passed. Evidence: `simulator-regression.log` and `simulator-regression.xcresult`.
 
 Private evidence is under `artifacts/private/ios-crash/`: original `.ips` reports, startup console/syslog, signing verification, physical installation and process checks, build/test logs, and symbolication notes. This verifies the startup fix, not physical OCR accuracy, calendar acceptance, or performance targets.
+
+## Version 0.2.0 — simple review and bounded refinement
+
+The app now starts with the German camera/import interface and recent schedules.
+The workbench remains under settings and shares application state. Structured
+metadata, spatial date sections, bounded original-resolution rereading, explicit
+completion suggestions and selected appointment approvals are implemented. Calendar
+and ICS identities survive partial saves and later completion.
+
+September 26, 2026 verification: 50 Rust tests, eight frontend unit tests, 16 Chromium/
+mobile-WebKit tests and ten Python tests passed. Frontend lint/static export and
+workspace Clippy with warnings denied passed. Native simulator checks passed five
+tests and skipped the hardware-only file-protection assertion; a separate denied
+calendar-access test also passed. After the final metadata-conflict correction,
+both iOS builds passed and actual simulator OCR/persistence passed again.
+
+The first signed 0.2.0 update was installed on the physical iPhone 17 / iOS 26.6.
+Its process remained alive after 142 seconds. The database migrated to version 2
+while retaining every existing row, including the original scan, six calendar
+imports, six operations and the schedule binding. Physical XCTest is still blocked
+by the free-signing app limit. No other installed apps were removed.
+
+The final signed IPA includes an additional regression-tested guard for contradictory
+metadata. It is ready at `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0.ipa`; its
+reinstall awaits reconnection of the currently unavailable phone. The installed
+build and the final package have different hashes and are documented separately.
+
+Both local VLM candidates passed checkpoint compatibility checks and each read a
+difficult crop from all 20 development photographs. Provisional references and page
+grouping remain unverified, so no accuracy benefit or packaging qualification is
+claimed. The portable model remains the delivered pipeline.
+
+See [the complete 0.2.0 delivery report](simple-app-delivery.md) for exact test
+artifacts, package hashes, comparison measurements, retained-data checks and
+unavailable physical/accessibility/performance checks. Earlier sections above are
+historical records rather than descriptions of the current interface.

@@ -1,7 +1,7 @@
 {
   "name": "rehab-plan-ocr",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 1420",

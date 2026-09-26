@@ -3000,7 +3000,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rehab-plan-ocr"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3017,7 +3017,7 @@ dependencies = [
 
 [[package]]
 name = "reha-core"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -3868,7 +3868,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-reha-calendar"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",

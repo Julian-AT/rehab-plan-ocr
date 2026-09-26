@@ -49,11 +49,14 @@ Prepare a compatibility manifest using the pinned converter environment:
 ```sh
 uv run --python 3.12 --with torch==2.11.0 --with numpy==2.2.6 \
   --with transformers==4.57.6 --with sentencepiece==0.2.1 \
-  --with protobuf==4.25.8 --with gguf --with pillow==12.1.0 \
+  --with protobuf==4.25.8 --with pillow==12.1.1 \
   python scripts/qualify-vlm.py
 python3 scripts/compare-regions.py /path/to/retained/run.json \
   artifacts/private/my-comparison
 ```
+
+The converter imports `gguf-py` from its own pinned checkout. Leave
+`NO_LOCAL_GGUF` unset so the conversion does not use an unrelated installed version.
 
 Qualification verifies source hashes, requires a clean runtime checkout, converts
 Paddle text/projector artifacts to F16, and reads an invented control image with

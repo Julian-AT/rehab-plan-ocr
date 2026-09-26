@@ -7,16 +7,24 @@ final class SmokeTests: XCTestCase {
 
   private func scrollTo(_ element: XCUIElement, in app: XCUIApplication) {
     for _ in 0..<12 {
-      if element.isHittable && element.frame.midY > 100 && element.frame.midY < 740 { return }
-      if element.frame.midY < 100 { app.swipeDown() } else { app.swipeUp() }
+      if element.isHittable && element.frame.midY > 60 && element.frame.midY < min(740, app.frame.height - 160) { return }
+      if element.frame.midY < 60 { app.swipeDown() } else { app.swipeUp() }
     }
   }
 
   private func tap(_ label: String, in app: XCUIApplication) {
     let element = app.buttons[label].firstMatch
     XCTAssertTrue(element.waitForExistence(timeout: 15), app.debugDescription)
-    scrollTo(element, in: app)
+    let fixedActions = ["Einstellungen speichern", "Auswahl geprüft – weiter", "Im Kalender speichern", "Auswahl als ICS exportieren", "Termin bestätigen", "Angaben speichern", "Schließen"]
+    if !fixedActions.contains(label) || !element.isHittable {
+      scrollTo(element, in: app)
+    }
     element.tap()
+  }
+
+  private func openWorkbench(in app: XCUIApplication) {
+    tap("Einstellungen", in: app)
+    tap("Entwickleransicht öffnen", in: app)
   }
 
   /// Safe on a physical phone: no scans or calendar entries are changed.
@@ -25,12 +33,13 @@ final class SmokeTests: XCTestCase {
     let app = XCUIApplication(bundleIdentifier: bundle)
     for _ in 0..<2 {
       app.launch()
-      XCTAssertTrue(app.buttons["Load fixture"].waitForExistence(timeout: 15))
-      tap("History", in: app)
-      tap("Run", in: app)
+      XCTAssertTrue(app.buttons["Foto aufnehmen"].waitForExistence(timeout: 15))
+      XCTAssertFalse(app.buttons["Load fixture"].exists)
+      tap("Einstellungen", in: app)
+      tap("Schließen", in: app)
       XCUIDevice.shared.press(.home)
       app.activate()
-      XCTAssertTrue(app.buttons["Load fixture"].waitForExistence(timeout: 15))
+      XCTAssertTrue(app.buttons["Importieren"].waitForExistence(timeout: 15))
       XCTAssertEqual(app.state, .runningForeground)
       app.terminate()
     }
@@ -40,6 +49,7 @@ final class SmokeTests: XCTestCase {
     continueAfterFailure = false
     let app = XCUIApplication(bundleIdentifier: bundle)
     app.launch()
+    openWorkbench(in: app)
     tap("Load fixture", in: app)
     let selected = app.staticTexts["synthetic-day.png"]
     XCTAssertTrue(selected.waitForExistence(timeout: 90), app.debugDescription)
@@ -57,9 +67,39 @@ final class SmokeTests: XCTestCase {
     XCTAssertTrue(app.buttons["Open"].firstMatch.waitForExistence(timeout: 5))
     app.terminate()
     app.launch()
+    openWorkbench(in: app)
     tap("History", in: app)
     tap("Open", in: app)
     XCTAssertTrue(selected.waitForExistence(timeout: 10))
+  }
+
+  /// Run after `simctl privacy revoke calendar at.rehakalender.personal`.
+  /// Normal suites skip this check when the target app already has access.
+  func testDeniedCalendarAccess() throws {
+    #if targetEnvironment(simulator)
+      continueAfterFailure = false
+      let app = XCUIApplication(bundleIdentifier: bundle)
+      app.launch()
+      openWorkbench(in: app)
+      tap("Load fixture", in: app)
+      XCTAssertTrue(app.staticTexts["synthetic-day.png"].waitForExistence(timeout: 90))
+      tap("Zurück zu Terminen", in: app)
+      tap("In Kalender übernehmen", in: app)
+      tap("Kalender verbinden", in: app)
+      let denied = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Kalenderzugriff abgelehnt")).firstMatch
+      guard denied.waitForExistence(timeout: 5) else {
+        throw XCTSkip("Revoke calendar access for the target app before running this check.")
+      }
+      XCTAssertTrue(app.buttons["Auswahl als ICS exportieren"].isEnabled)
+      XCTAssertFalse(app.buttons["Auswahl geprüft – weiter"].isEnabled)
+      tap("Schließen", in: app)
+      XCTAssertTrue(app.buttons["11:15 Übungen im Wasser bearbeiten"].exists)
+      app.terminate()
+      app.launch()
+      XCTAssertTrue(app.buttons["Plan öffnen"].firstMatch.waitForExistence(timeout: 15))
+    #else
+      throw XCTSkip("Permission mutations are restricted to the simulator.")
+    #endif
   }
 
   func testNativeCalendarRoundTripAndDuplicatePrevention() throws {
@@ -98,20 +138,16 @@ final class SmokeTests: XCTestCase {
       }
       let app = XCUIApplication(bundleIdentifier: bundle)
       app.launch()
+      openWorkbench(in: app)
       tap("History", in: app)
       tap("Delete all app data", in: app)
       tap("Confirm", in: app)
       tap("Run", in: app)
       tap("Load fixture", in: app)
       XCTAssertTrue(app.staticTexts["synthetic-day.png"].waitForExistence(timeout: 90))
-      let missing = app.switches["Include row 6"]
-      scrollTo(missing, in: app)
-      missing.tap()
-      let reviewed = app.switches["Review confirmed, including unassigned observations"]
-      scrollTo(reviewed, in: app)
-      reviewed.tap()
-      tap("Calendar", in: app)
-      tap("Set up Reha Calendar", in: app)
+      tap("Zurück zu Terminen", in: app)
+      tap("In Kalender übernehmen", in: app)
+      tap("Kalender verbinden", in: app)
       let setup = XCTNSPredicateExpectation(
         predicate: NSPredicate { _, _ in
           store.reset()
@@ -124,8 +160,8 @@ final class SmokeTests: XCTestCase {
       XCTAssertNotEqual(dedicatedID, defaultID)
       let calendarCount = store.calendars(for: .event).count
       for _ in 0..<2 {
-        tap("Prepare calendar operations", in: app)
-        tap("Approve and apply", in: app)
+        tap("Auswahl geprüft – weiter", in: app)
+        tap("Im Kalender speichern", in: app)
         let predicate = NSPredicate { _, _ in
           owned().filter { !baseline.contains($0.eventIdentifier) }.count == 7
         }
@@ -137,6 +173,23 @@ final class SmokeTests: XCTestCase {
             $0.calendar.calendarIdentifier == dedicatedID
           })
       }
+
+      tap("Schließen", in: app)
+      // The missing-duration appointment stays pending and can be saved later.
+      tap("11:15 Übungen im Wasser bearbeiten", in: app)
+      let duration = app.textFields["Dauer (Minuten)"]
+      scrollTo(duration, in: app)
+      duration.tap()
+      duration.typeText("30")
+      tap("Termin bestätigen", in: app)
+      tap("In Kalender übernehmen", in: app)
+      tap("Kalender verbinden", in: app)
+      tap("Auswahl geprüft – weiter", in: app)
+      tap("Im Kalender speichern", in: app)
+      let completed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+        owned().filter { !baseline.contains($0.eventIdentifier) }.count == 8
+      }, object: nil)
+      XCTAssertEqual(XCTWaiter.wait(for: [completed], timeout: 15), .completed)
 
       // Reconnect after a relaunch and a user rename: the same calendar is reused.
       app.terminate()
@@ -151,6 +204,7 @@ final class SmokeTests: XCTestCase {
         }
       }
       app.launch()
+      openWorkbench(in: app)
       tap("History", in: app)
       tap("Open", in: app)
       tap("Calendar", in: app)

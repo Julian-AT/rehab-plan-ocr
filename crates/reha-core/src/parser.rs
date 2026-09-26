@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 3;
+pub const EXTRACTION_VERSION: u32 = 4;
 
 static DATE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b|\b(\d{4})-(\d{2})-(\d{2})\b").unwrap()
@@ -504,27 +504,33 @@ fn observation_bounds(o: &Observation, regions: &[Region]) -> (f64, f64, f64, f6
         .collect();
     bounds(&points)
 }
-fn printed_metadata(observations: &[Observation]) -> Metadata {
+fn printed_metadata(observations: &[Observation]) -> (Metadata, HashSet<&'static str>) {
     let mut result = Metadata::default();
+    let mut conflicts = HashSet::new();
     for o in observations {
         let Some((label, text)) = o.text.split_once(':') else {
             continue;
         };
-        let target = match label.trim().to_lowercase().as_str() {
-            "klinik" | "einrichtung" => &mut result.clinic,
-            "abteilung" => &mut result.department,
-            "adresse" | "anschrift" => &mut result.address,
-            "kontakt" | "telefon" | "e-mail" => &mut result.contact,
+        let (field, target) = match label.trim().to_lowercase().as_str() {
+            "klinik" | "einrichtung" => ("clinic", &mut result.clinic),
+            "abteilung" => ("department", &mut result.department),
+            "adresse" | "anschrift" => ("address", &mut result.address),
+            "kontakt" | "telefon" | "e-mail" => ("contact", &mut result.contact),
             // Preparation and document references require appointment-level association.
             _ => continue,
         };
+        let value = clean(text);
+        if value.is_empty() || conflicts.contains(field) {
+            continue;
+        }
         if target.is_empty() {
-            *target = clean(text);
-        } else if *target != clean(text) {
+            *target = value;
+        } else if *target != value {
             target.clear();
-        } // competing scope is not guessed
+            conflicts.insert(field);
+        }
     }
-    result
+    (result, conflicts)
 }
 
 /// Spatial sections prevent a second day's heading from changing the first day's rows.
@@ -687,7 +693,7 @@ pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<Schedul
             })
             .cloned()
             .collect();
-        result[i].metadata = printed_metadata(&scoped_preamble);
+        result[i].metadata = printed_metadata(&scoped_preamble).0;
         let first_appointment = obs
             .iter()
             .filter(|o| TIME.is_match(&o.text) && !DATE.is_match(&o.text) && !metadata(&o.text))
@@ -702,15 +708,18 @@ pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<Schedul
             })
             .cloned()
             .collect();
-        let local = printed_metadata(&local);
+        let (local, conflicts) = printed_metadata(&local);
         let m = &mut result[i].metadata;
-        for (target, value) in [
-            (&mut m.clinic, local.clinic),
-            (&mut m.department, local.department),
-            (&mut m.address, local.address),
-            (&mut m.contact, local.contact),
+        for (field, target, value) in [
+            ("clinic", &mut m.clinic, local.clinic),
+            ("department", &mut m.department, local.department),
+            ("address", &mut m.address, local.address),
+            ("contact", &mut m.contact, local.contact),
         ] {
-            if !value.is_empty() {
+            if conflicts.contains(field) {
+                // Contradictory local evidence also prevents inheriting a heading.
+                target.clear();
+            } else if !value.is_empty() {
                 *target = value;
             }
         }

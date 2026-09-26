@@ -2,28 +2,32 @@
 
 # iPhone installation and calendar setup
 
-The development app is **Reha Calendar Lab 0.1.2**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
+The development app is **Termine 0.2.0**, bundle identifier `at.rehakalender.personal`. It bundles the frontend, OCR models and native runtime; no development server or reachable Mac is needed after installation. Image recognition remains local. Calendar synchronization follows the settings of the selected iOS calendar account.
 
 ## Install the private build
 
-The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.1.2.ipa`. Installation requires a device included in its signing profile. The paired iPhone 17 is included. The current profile expires **September 26, 2026, 10:57 UTC**; build and sign a fresh package when it expires.
+The versioned package is `artifacts/private/builds/rehab-plan-ocr-lab-0.2.0.ipa`. Installation requires a device included in its signing profile. The paired iPhone 17 is included. The current profile expires **September 26, 2026, 10:57 UTC**; build and sign a fresh package when it expires.
 
 1. Connect the iPhone to the Mac, unlock it and accept **Trust This Computer** if prompted.
 2. Open Xcode's **Window → Devices and Simulators** and select the phone.
 3. On the phone, enable **Settings → Privacy & Security → Developer Mode**, restart and confirm. The option appears after pairing with Xcode. [Apple Developer Mode instructions](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device)
 4. In Xcode's device view, click **+** under **Installed Apps**, select the IPA and wait for installation. [Apple installation instructions](https://help.apple.com/xcode/mac/current/en.lproj/devade83d1d7.html)
 5. If iOS blocks the first launch, open **Settings → General → VPN & Device Management**, select the developer entry for the app and trust its certificate. This approval must be completed on the phone. [Apple's Personal Team instructions](https://developer.apple.com/documentation/appclip/fruta-building-a-feature-rich-app-with-swiftui)
-6. Open **Reha Calendar Lab** on the phone.
+6. Open **Termine** on the phone.
+
+The first 0.2.0 update was installed and its startup/data preservation checked.
+The final package adds a tested metadata-conflict correction; its reinstall currently
+awaits reconnection of the phone. [Build hashes and exact verification](simple-app-delivery.md).
 
 Use the same bundle identifier and signing team when updating. The application's retained scans and import ledger are preserved by an ordinary app update.
 
 ## Save to the separate calendar
 
-1. Import or photograph a schedule in **Run**.
-2. Correct the selected appointments in **Appointments**. Resolve date/time/title errors or exclude incomplete items, then confirm the review.
-3. Open **Calendar → Set up Reha Calendar** and allow full calendar access. This creates or reuses a separate **Reha Calendar**; it does not save appointments yet.
-4. Check the selected calendar and account, then choose **Prepare calendar operations**.
-5. Review the operations and choose **Approve and apply**. Resolve any conflicts first; removals require their separate confirmation.
+1. Use **Foto aufnehmen** or **Importieren**.
+2. Open appointments to check their values against the photograph. Missing values remain pending; suggestions require acceptance.
+3. Choose **In Kalender übernehmen → Kalender verbinden** and allow calendar access. The separate **Reha Calendar** destination is reused.
+4. Check the selected appointments and destination, then choose **Auswahl geprüft – weiter**.
+5. Choose **Im Kalender speichern**. Incomplete appointments stay available for later completion. **Auswahl als ICS exportieren** is available without calendar permission.
 
 New imports select the dedicated calendar. Revisions of an existing app import keep its recorded destination. The app retains stable import IDs and marks its EventKit events for reconciliation and duplicate prevention. Calendar setup reuses its saved identifier even if the calendar is renamed.
 
@@ -48,4 +52,4 @@ APPLE_DEVELOPMENT_TEAM=<team-id> IPHONEOS_DEPLOYMENT_TARGET=17.0 \
 
 The build exports an IPA under `src-tauri/gen/apple/build/`. Copy the verified package to the private builds folder. Do not publish signing profiles, device identifiers, source images or clinical run outputs.
 
-The known extraction limitations remain: pages containing multiple date sections and some row/field associations require correction. Simulator verification and a signed build do not establish physical-device acceptance.
+The app now separates multiple date sections and rereads unresolved source crops, but recognition still requires review. See [implementation and verification details](simple-app-delivery.md). Simulator verification and a signed build do not establish physical-device OCR acceptance.

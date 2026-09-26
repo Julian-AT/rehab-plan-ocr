@@ -1,6 +1,6 @@
 # Rehab Plan OCR
 
-Local development tool for extracting appointments from printed schedules. Next.js App Router and shadcn/ui provide the workbench; Tauri 2 hosts a shared Rust pipeline with PP-OCRv6 and ONNX Runtime. No server is required by the packaged app.
+Local app for extracting and reviewing appointments from printed schedules. It opens with a minimal German interface; the development workbench remains under **Einstellungen → Entwickleransicht öffnen**. Next.js static export and shadcn/ui share one application state; Tauri 2 hosts the Rust pipeline with PP-OCRv6 and ONNX Runtime. No server is required by the packaged app.
 
 ## Development
 
@@ -24,7 +24,7 @@ The workbench contains:
 
 Review confirmation is required before export or calendar writes. Edits invalidate approval. iOS uses full EventKit access; desktop supports `.ics`. Therapist values are stored separately and included as `Therapeut: …` in calendar notes.
 
-On iOS, **Calendar → Set up Reha Calendar** creates or reuses a separate calendar and selects it for new imports. Its events can be shown or hidden together in Apple Calendar's calendar list. Existing imports retain their recorded destination. See [iPhone installation and calendar setup](docs/ios-installation.md).
+On iOS, **In Kalender übernehmen → Kalender verbinden** creates or reuses a separate calendar and selects it for new imports. Its events can be shown or hidden together in Apple Calendar's calendar list. Existing imports retain their recorded destination. See [iPhone installation and calendar setup](docs/ios-installation.md).
 
 ## Layout
 
@@ -94,3 +94,7 @@ uv run tests/verify-ics.py
 Browser tests serve the exported `out/` build in Chromium and mobile WebKit. Native tests in `tests/ios/` exercise an installed simulator build; calendar writes use invented appointments and are removed afterward. Linux execution uses `docker/portable.dockerfile` with networking disabled during inference.
 
 Read [verification](docs/verification.md) and [status](docs/status.md) for measured results and remaining checks. Physical iPhone performance and clinic accuracy are not established. No model has been trained, and no final holdout has been evaluated.
+
+## Simple review interface (0.2.0)
+
+Cold launches open **Foto aufnehmen**, **Importieren** and recent plans. Use **Einstellungen → Entwickleransicht öffnen** for the existing workbench. Complete appointments can be saved while unfinished ones remain pending. The iPhone label is **Termine**; the existing bundle and calendar are preserved. See [delivery, migration and verification](docs/simple-app-delivery.md) and [local model experiments](experiments/vlm/README.md).
