@@ -2,7 +2,7 @@
 
 # Native iPhone-Oberfläche, Build 2026092608
 
-Version 0.3.0. Diese Umsetzung endet mit einer Simulatorvorschau; das persönliche iPhone wurde nicht aktualisiert. Bilder, Hörproben und die Aufnahme der Sprachansicht sind im [Vorschauverzeichnis](preview/2026-09-26-s12-native/README.md) beschrieben.
+Version 0.3.0. Die Umsetzung wurde zunächst als Simulatorvorschau geprüft und anschließend nach ausdrücklicher Freigabe [auf dem iPhone installiert](native-minimal-device-update.md). Bilder, Hörproben und die Aufnahme der Sprachansicht sind im [Vorschauverzeichnis](preview/2026-09-26-s12-native/README.md) beschrieben.
 
 ## Oberfläche
 
@@ -42,4 +42,4 @@ Simulator-Fixtures und die Fehlerauslösung für Einstellungen sind ausschließl
 
 Die vorher vorhandenen Änderungen wurden unter `artifacts/private/native-minimal-baseline-20260926-s12-145752/` gesichert und separat in `eb04530` erhalten. Referenzbilder, private Originale, Sicherungen, Modellgewichte, generierte Projekte und Buildprodukte bleiben ausgeschlossen.
 
-Ein Geräteupdate erfordert weiterhin die ausdrückliche Freigabe der Vorschau und Hörproben. Erst danach folgen frische Sicherung, Installation ohne Deinstallation und Vergleich der dauerhaften Daten.
+Das ausdrücklich freigegebene Geräteupdate erfolgte nach frischer Sicherung ohne Deinstallation. Der [abschließende Datenvergleich](native-minimal-device-update.md) bestätigt den unveränderten dauerhaften Datenstand.

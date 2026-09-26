@@ -2,7 +2,7 @@
 
 Private rehabilitation-plan app with on-device recognition. Current implementation and remaining release gates: [Laßnitzhöhe release](docs/lassnitzhoehe-release.md).
 
-Die neue **native Simulatorvorschau, Build 2026092608**, ergänzt Wochenzeitachse, reduzierte Sprachansicht und sofort gespeicherte Einstellungen. [Umsetzung und Prüfung](docs/native-minimal-iphone.md) · [Bilder und Hörproben](docs/preview/2026-09-26-s12-native/README.md). Dieser Build ist noch nicht auf dem iPhone installiert.
+Die neue **native Oberfläche, Build 2026092608**, ergänzt Wochenzeitachse, reduzierte Sprachansicht und sofort gespeicherte Einstellungen. [Umsetzung und Prüfung](docs/native-minimal-iphone.md) · [Bilder und Hörproben](docs/preview/2026-09-26-s12-native/README.md). Nach ausdrücklicher Freigabe wurde dieser Build auf dem iPhone 17 installiert; [frische Sicherung und Datenerhalt sind geprüft](docs/native-minimal-device-update.md).
 
 Build 2026092607 adds a monochrome four-tab interface, a dedicated **Sprechen** area and pinned offline German Kokoro/Martin speech. It is installed on the iPhone 17 after explicit approval, a fresh backup and a successful retained-data comparison. See [device delivery and remaining audio acceptance](docs/kokoro-device-update.md), [implementation and verification](docs/apple-voice-preview.md) and [real simulator images and audio samples](docs/preview/2026-09-26-s12/README.md).
 

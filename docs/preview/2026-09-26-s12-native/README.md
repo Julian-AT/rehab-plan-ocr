@@ -2,7 +2,7 @@
 
 # Native Simulatorvorschau · 0.3.0
 
-Build **2026092608**, iPhone 17, iOS 26.4. Die Bilder stammen aus der bedienten SwiftUI-App und enthalten ausschließlich synthetische Termine und öffentliche Testpläne. Die Statusleiste ist für die Aufnahmen auf 09:41 gesetzt. Das persönliche iPhone wurde nicht aktualisiert.
+Build **2026092608**, iPhone 17, iOS 26.4. Die Bilder stammen aus der bedienten SwiftUI-App und enthalten ausschließlich synthetische Termine und öffentliche Testpläne. Die Statusleiste ist für die Aufnahmen auf 09:41 gesetzt. Zum Zeitpunkt dieser Simulatorprüfung war das persönliche iPhone noch nicht aktualisiert.
 
 | Termine | Sprechen | Mehr |
 | --- | --- | --- |
@@ -46,4 +46,4 @@ Der zuvor dokumentierte Fehler `AudioQueueStart failed (-66681)` war in diesem L
 
 Die lokale deutsche Spracherkennung ist auf diesem Simulator nicht verfügbar. Der [native Hinweis](spracherkennung-nativer-hinweis.png), Abbrechen und ein erneuter Sitzungsstart sind geprüft. Tatsächliche Mikrofoneingabe mit langen Pausen, hörbares VoiceOver, physische Kamera und Unterbrechungen durch einen Anruf bleiben Geräteprüfungen nach Freigabe. Kalenderanlage mit Rückfragen, manuellen Antworten und ausdrücklicher Bestätigung ist im Simulator geprüft.
 
-Ein Geräteupdate folgt erst nach ausdrücklicher Freigabe dieser Vorschau und der Hörproben, mit frischer Sicherung, Update ohne Deinstallation und anschließendem Datenvergleich.
+Das anschließend ausdrücklich freigegebene [Geräteupdate](../../native-minimal-device-update.md) ist abgeschlossen: mit frischer Sicherung, Installation ohne Deinstallation und erfolgreichem Datenvergleich. Die hier gespeicherten Testberichte dokumentieren weiterhin den vorherigen Stand der Simulatorprüfung.
