@@ -23,7 +23,6 @@ bindings() {
 framework() {
   python3 tooling/dev/quality.py space 2
   bindings
-  mkdir -p apps/ios/build/ffi/device apps/ios/build/ffi/simulator
   case "$mode" in
     simulator | test) variants=simulator ;;
     device) variants=device ;;
@@ -44,20 +43,19 @@ framework() {
     esac
     python3 tooling/dev/quality.py space 1.5
     IPHONEOS_DEPLOYMENT_TARGET=26.0 cargo build --locked --release -p reha-ffi --lib --features onnx --target "$triple"
-    xcrun libtool -static -o "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" \
-      "target/$triple/release/libreha_ffi.a" ".local/models/runtime/runtime/$triple/libonnxruntime.a"
-    xcrun nm -g "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" 2> /dev/null | rg -q ' T _OrtGetApiBase$'
-    if [ "${REHA_LOW_DISK:-0}" = 1 ]; then rm -r "target/$triple/release"; fi
   done
-  assembled=$(mktemp -d)
-  set -- -create-xcframework
+  # Split only our fixed variant names; never interpolate paths or user commands.
+  # shellcheck disable=SC2086
+  python3 tooling/build/assemble-native.py $variants
   for variant in $variants; do
-    set -- "$@" -library "apps/ios/build/ffi/$variant/libRehaCoreFFI.a" -headers packages/apple/RehaCore/Headers
+    if [ "${REHA_LOW_DISK:-0}" = 1 ]; then
+      case "$variant" in
+        device) triple=aarch64-apple-ios ;;
+        simulator) triple=aarch64-apple-ios-sim ;;
+      esac
+      rm -r "target/$triple/release"
+    fi
   done
-  xcodebuild "$@" -output "$assembled/RehaCoreFFI.xcframework"
-  if [ -d packages/apple/RehaCore/RehaCoreFFI.xcframework ]; then rm -r packages/apple/RehaCore/RehaCoreFFI.xcframework; fi
-  mv "$assembled/RehaCoreFFI.xcframework" packages/apple/RehaCore/
-  rmdir "$assembled"
 }
 case "$mode" in
   bindings | check-bindings) bindings ;;

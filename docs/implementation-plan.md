@@ -246,3 +246,14 @@ invalidations clear deletion approval. Failed commits discard the obsolete previ
 and successful committed receipts remain independent of later invalidation. The
 new native state probe passes; the simulator app builds with Swift 6 checking.
 Backend snapshot/revision validation remains the final write-time protection.
+
+Native archive/XCFramework assembly now uses content-addressed storage under
+`.local/builds/ffi`. Identities cover compiled archives, Rust sources, headers,
+model/runtime pins, architecture, SDK and toolchains. Cache hits verify every
+artifact hash and reject extra/missing/corrupt files. A package symlink exposes only
+complete products; initial directory migration rolls back publication failures.
+Seven isolated cache regressions pass. The first simulator build and warm repeat
+both pass; the repeat took 5.604 seconds locally and preserved all five framework
+file/link timestamps without Swift recompilation. This is a development-build
+measurement, not device runtime performance. Existing legacy build products remain
+available until their separate consumer-inventoried cleanup.

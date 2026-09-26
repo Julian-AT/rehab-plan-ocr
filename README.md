@@ -93,3 +93,8 @@ Die vorherige gezielte Änderung lässt die [Uhrzeitspalte mit der Tagesseite mi
 Die nicht abgenommene [Kalender- und Gesprächsüberarbeitung](docs/uniform-calendar-conversation.md) dokumentiert den verworfenen Versuch
 mit [neuer Simulatorvorschau und Victoria-Hörproben](docs/preview/2026-09-26-s13-fluid/README.md).
 Die [vorherige Qualitätsüberarbeitung](docs/quality-overhaul.md) bleibt als Prüfverlauf erhalten. [Native Builddetails](apps/ios/README.md) beschreiben Paketierung und Projektkonfiguration.
+
+Native archive assembly is cached in `.local/builds/ffi` by source, compiled
+archive, model/runtime, headers, architecture and toolchain identities. Every hit
+verifies output hashes. The ignored package XCFramework is an atomic link to the
+verified product; normal builds leave unchanged framework files untouched.
