@@ -4,25 +4,15 @@ import AppleServices
 import SwiftUI
 
 /// Request swaps, detector state and pre-roll share a lock. Callbacks are
-/// immutable and enqueue values only; no tap buffer crosses to the main actor.
+/// ordered scalar observations only; no tap buffer crosses to the main actor.
 private final class SpeechInput: @unchecked Sendable {
   private let lock = NSLock()
   private var request: SFSpeechAudioBufferRecognitionRequest?
   private var ring: [AVAudioPCMBuffer] = []
   private var detector: VoiceActivityDetector?
   private var failed = false
-  private let meter: @Sendable (Double, Double, Int) -> Void
-  private let frame: @Sendable (Bool) -> Void
-  private let failure: @Sendable (InputAudioError) -> Void
-  init(
-    meter: @escaping @Sendable (Double, Double, Int) -> Void,
-    frame: @escaping @Sendable (Bool) -> Void,
-    failure: @escaping @Sendable (InputAudioError) -> Void
-  ) {
-    self.meter = meter
-    self.frame = frame
-    self.failure = failure
-  }
+  private let channel: SpeechInputChannel
+  init(channel: SpeechInputChannel) { self.channel = channel }
   func replace(_ next: SFSpeechAudioBufferRecognitionRequest?, preRoll: Bool = false) {
     lock.lock()
     defer { lock.unlock() }
@@ -36,7 +26,7 @@ private final class SpeechInput: @unchecked Sendable {
     guard !failed else { return }
     do {
       guard let level = try InputAudioLevel.measure(buffer) else { return }
-      meter(level, buffer.format.sampleRate, Int(buffer.format.channelCount))
+      let capturedAt = ProcessInfo.processInfo.systemUptime
       if let detector, detector.inputFormat != buffer.format {
         // A recognition request cannot mix PCM formats. Reprepare the graph
         // and request together instead of appending an incompatible buffer.
@@ -44,7 +34,8 @@ private final class SpeechInput: @unchecked Sendable {
       }
       if detector == nil { detector = try VoiceActivityDetector(input: buffer.format) }
       request?.append(buffer)
-      try detector?.append(buffer, frame: frame)
+      var frames: [Bool] = []
+      try detector?.append(buffer) { frames.append($0) }
       guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
       else { throw InputAudioError.conversion }
       copy.frameLength = buffer.frameLength
@@ -59,9 +50,16 @@ private final class SpeechInput: @unchecked Sendable {
       while ring.reduce(0.0, { $0 + Double($1.frameLength) / $1.format.sampleRate }) > 0.4 {
         ring.removeFirst()
       }
+      if !channel.send(
+        SpeechInputPacket(
+          level: level, sampleRate: buffer.format.sampleRate,
+          channels: Int(buffer.format.channelCount), capturedAt: capturedAt, voicedFrames: frames))
+      {
+        failed = true
+      }
     } catch {
       failed = true
-      failure(error as? InputAudioError ?? .conversion)
+      channel.finish(throwing: error as? InputAudioError ?? .conversion)
     }
   }
 }
@@ -79,6 +77,9 @@ private final class SpeechInput: @unchecked Sendable {
   private var generation = UUID()
   private var segment = UUID()
   private var input: SpeechInput?
+  private var inputChannel: SpeechInputChannel?
+  private var inputTask: Task<Void, Never>?
+  private var levelPublication = InputLevelPublication()
   private var recognizer: SFSpeechRecognizer?
   private var recognition: SFSpeechRecognitionTask?
   private var finished = false
@@ -172,36 +173,44 @@ private final class SpeechInput: @unchecked Sendable {
     let current = generation
     receivedBuffer = false
     state = .preparing
+    inputChannel?.finish()
+    inputTask?.cancel()
+    levelPublication = InputLevelPublication()
     input?.replace(nil)
     recognition?.cancel()
     recognition = nil
     segment = UUID()
-    let input = SpeechInput(
-      meter: { @Sendable [weak self] level, rate, channels in
-        Task { @MainActor in
+    let channel = SpeechInputChannel()
+    inputChannel = channel
+    let input = SpeechInput(channel: channel)
+    inputTask = Task { [weak self] in
+      do {
+        for try await packet in channel.stream {
+          try Task.checkCancellation()
+          try channel.checkActive()
           guard let self, self.generation == current, self.microphoneID == id else { return }
-          self.receiveBuffer(level: level, rate: rate, channels: channels)
-        }
-      },
-      frame: { @Sendable [weak self] voice in
-        Task { @MainActor in
-          guard let self, self.generation == current, self.microphoneID == id else { return }
-          self.receive(voice: voice)
-        }
-      },
-      failure: { @Sendable [weak self] error in
-        Task { @MainActor in
-          guard let self, self.generation == current, self.microphoneID == id else { return }
-          LocalDiagnostics.shared.record(.audioConversion, .failed, correlation: current.uuidString)
-          if error == .invalidFormat {
-            self.configurationChanged(needsNewInput: true)
-          } else {
-            self.failInput(
-              "Die Mikrofondaten konnten nicht verarbeitet werden. Bitte das Gespräch erneut starten."
-            )
+          self.receiveBuffer(
+            level: packet.level, rate: packet.sampleRate, channels: packet.channels,
+            capturedAt: packet.capturedAt)
+          for voice in packet.voicedFrames {
+            guard self.generation == current, self.microphoneID == id else { return }
+            self.receive(voice: voice)
           }
         }
-      })
+      } catch {
+        guard !Task.isCancelled, let self, self.generation == current,
+          self.microphoneID == id
+        else { return }
+        LocalDiagnostics.shared.record(.audioConversion, .failed, correlation: current.uuidString)
+        if let error = error as? InputAudioError, error == .invalidFormat {
+          self.configurationChanged(needsNewInput: true)
+        } else {
+          self.failInput(
+            "Die Mikrofondaten konnten nicht verarbeitet werden. Bitte das Gespräch erneut starten."
+          )
+        }
+      }
+    }
     self.input = input
     // The recognition task and receiver exist before any microphone audio flows.
     startSegment()
@@ -254,11 +263,14 @@ private final class SpeechInput: @unchecked Sendable {
       }
     }
   }
-  private func receiveBuffer(level: Double, rate: Double, channels: Int) {
+  private func receiveBuffer(
+    level: Double, rate: Double, channels: Int,
+    capturedAt: Double = ProcessInfo.processInfo.systemUptime
+  ) {
     let now = ProcessInfo.processInfo.systemUptime
-    watchdog.received(at: now)
-    configurationRecovery.received(at: now)
-    self.level += (level - self.level) * 0.4
+    watchdog.received(at: capturedAt)
+    configurationRecovery.received(at: capturedAt)
+    if let level = levelPublication.receive(level, at: now) { self.level = level }
     if !receivedBuffer {
       receivedBuffer = true
       if state == .preparing { state = .recording }
@@ -332,6 +344,7 @@ private final class SpeechInput: @unchecked Sendable {
     monitor = true
     onset = []
     level = 0
+    levelPublication = InputLevelPublication()
   }
   private func startSegment(preRoll: Bool = false) {
     guard let recognizer, state == .recording || state == .preparing else { return }
@@ -417,6 +430,11 @@ private final class SpeechInput: @unchecked Sendable {
     receivedBuffer = false
     segment = UUID()
     monitor = false
+    inputChannel?.finish()
+    inputChannel = nil
+    inputTask?.cancel()
+    inputTask = nil
+    levelPublication = InputLevelPublication()
     input?.replace(nil)
     input = nil
     if ConversationAudio.shared.microphoneActive {

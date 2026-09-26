@@ -218,6 +218,7 @@ def tests(portable):
             "conversation-replies",
             "calendar-answers",
             "input-audio",
+            "speech-input",
             "ordered-settings",
             "diagnostics",
             "intake-erasure",

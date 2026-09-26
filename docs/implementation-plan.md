@@ -196,3 +196,18 @@ disabling the converter's optional automatic dependency installation. These are
 pipeline mechanics, not clinical or physical-device qualification. The
 [experiment](../ml/experiments/2026-09-26-s17-ocr-resumption.md) and
 [artifact card](../ml/registry/ocr-adaptation-smoke-002.json) preserve the results.
+
+Microphone observations now cross to the main actor through one ordered consumer
+and a bounded 64-packet channel, replacing a task per level/VAD observation.
+Overflow invalidates the input instead of silently dropping speech. PCM work is
+bounded before conversion; VAD borrows each 20 ms frame instead of copying it.
+Level smoothing retains every buffer while observable waveform updates are capped
+at 20 Hz. The existing 1.2/2.5-second endpoint thresholds are unchanged.
+The channel, PCM and conversation probes pass, including cancellation, conversion
+failure, delayed pause evidence and buffer limits. The current simulator test build
+passes. Waveform/stop/background and silent-input UI tests pass. The real-output UI
+test fails: a CoreAudio RPC timeout aborts the simulator app in
+`ConversationAudio.attachPlayer`, before playback. This does not establish a device
+regression or a full UI pass; output and physical pause/latency qualification remain
+open. The simulator fixture tests level publication; the separate channel probe
+tests the production delivery mechanism.

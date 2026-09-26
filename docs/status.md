@@ -45,6 +45,11 @@ a fresh backup and a persistent-data comparison without uninstalling.
 - Agenda timestamps are parsed once per event value. A paired desktop projection
   microbenchmark improved from 220.14 ms to 13.37 ms median including construction;
   this does not establish real-device or full-interaction performance.
+- Audio observations use one bounded, ordered consumer with explicit overflow
+  failure. PCM work and waveform updates are bounded without shortening endpoint
+  pauses. Native probes and two input UI tests pass; the separate output UI test
+  aborted on a simulator CoreAudio RPC timeout before playback. Full audio/device
+  qualification remains open.
 
 ## Dataset and models
 

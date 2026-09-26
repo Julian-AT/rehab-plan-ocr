@@ -7,7 +7,27 @@ enum LocalSpeechError: LocalizedError {
   var errorDescription: String? { if case .message(let text) = self { text } else { nil } }
 }
 
-enum InputAudioError: Error { case invalidFormat, invalidSamples, conversion, detector }
+enum InputAudioError: Error {
+  case invalidFormat, invalidSamples, conversion, detector, bufferLimit
+}
+
+enum InputAudioLimits {
+  static func validate(_ buffer: AVAudioPCMBuffer) throws {
+    try validate(
+      sampleRate: buffer.format.sampleRate, channels: buffer.format.channelCount,
+      frames: buffer.frameLength)
+  }
+  static func validate(sampleRate: Double, channels: AVAudioChannelCount, frames: AVAudioFrameCount)
+    throws
+  {
+    guard sampleRate.isFinite, sampleRate > 0, channels > 0 else {
+      throw InputAudioError.invalidFormat
+    }
+    // Bound allocation and work even when a device returns an unexpectedly large tap.
+    guard channels <= 8, frames <= 192_000, Double(frames) / sampleRate <= 1
+    else { throw InputAudioError.bufferLimit }
+  }
+}
 
 enum InputAudioConversion {
   static func validate(_ status: AVAudioConverterOutputStatus, error: NSError?) throws {
@@ -18,9 +38,7 @@ enum InputAudioConversion {
 /// Measure the actual input, before conversion or voice detection. Silence is valid.
 enum InputAudioLevel {
   static func measure(_ buffer: AVAudioPCMBuffer) throws -> Double? {
-    guard buffer.format.sampleRate.isFinite, buffer.format.sampleRate > 0,
-      buffer.format.channelCount > 0
-    else { throw InputAudioError.invalidFormat }
+    try InputAudioLimits.validate(buffer)
     guard buffer.frameLength > 0 else { return nil }
     let channels = Int(buffer.format.channelCount)
     let interleaved = buffer.format.isInterleaved
@@ -83,6 +101,7 @@ final class VoiceActivityDetector: @unchecked Sendable {
   deinit { fvad_free(detector) }
   func append(_ buffer: AVAudioPCMBuffer, frame: (Bool) -> Void) throws {
     guard buffer.format == inputFormat else { throw InputAudioError.invalidFormat }
+    try InputAudioLimits.validate(buffer)
     guard buffer.frameLength > 0 else { return }
     let capacity = AVAudioFrameCount(
       ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 320)
@@ -99,10 +118,12 @@ final class VoiceActivityDetector: @unchecked Sendable {
     samples.append(contentsOf: UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
     var offset = 0
     while samples.count - offset >= 320 {
-      let part = Array(samples[offset..<(offset + 320)])
-      let rms = sqrt(part.reduce(0.0) { $0 + pow(Double($1) / 32768, 2) } / 320)
-      let decision = part.withUnsafeBufferPointer {
-        fvad_process(detector, $0.baseAddress!, 320)
+      let (decision, rms) = samples.withUnsafeBufferPointer { samples in
+        let part = UnsafeBufferPointer(start: samples.baseAddress!.advanced(by: offset), count: 320)
+        return (
+          fvad_process(detector, part.baseAddress!, 320),
+          sqrt(part.reduce(0.0) { $0 + pow(Double($1) / 32768, 2) } / 320)
+        )
       }
       guard decision >= 0 else { throw InputAudioError.detector }
       frame(decision == 1 && rms > 0.003)

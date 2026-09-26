@@ -63,6 +63,7 @@ import Foundation
       } catch InputAudioError.conversion {}
     }
     try InputAudioConversion.validate(.inputRanDry, error: nil)
+    try bufferLimits()
     var watch = InputBufferWatchdog()
     watch.start(at: 0)
     precondition(watch.check(at: 1.99) == .wait)
@@ -80,8 +81,51 @@ import Foundation
     precondition(watch.check(at: 100) == .wait)
     configurationRecovery()
     print(
-      "PCM: 16/44.1/48 kHz mono/stereo, interleaving, silence, empty and corrupt buffers, format change, one retry and cancellation passed"
+      "PCM: 16/44.1/48 kHz mono/stereo, interleaving, silence, empty and corrupt buffers, bounded work, format change, one retry and cancellation passed"
     )
+  }
+  private static func bufferLimits() throws {
+    do {
+      // Multichannel layouts vary by host; check the cap before allocating PCM.
+      try InputAudioLimits.validate(sampleRate: 48_000, channels: 9, frames: 960)
+      preconditionFailure("Excess channels accepted")
+    } catch InputAudioError.bufferLimit {}
+    try InputAudioLimits.validate(sampleRate: 192_000, channels: 8, frames: 192_000)
+    for (rate, channels, count) in [
+      (16_000.0, 1, 16_001),  // More than one second, even at a low sample rate.
+      (384_000.0, 1, 192_001),  // Excess frames, even below one second.
+    ] {
+      let format = AVAudioFormat(
+        commonFormat: .pcmFormatFloat32, sampleRate: rate,
+        channels: AVAudioChannelCount(channels), interleaved: false)!
+      let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(count))!
+      buffer.frameLength = buffer.frameCapacity
+      do {
+        _ = try InputAudioLevel.measure(buffer)
+        preconditionFailure("Unbounded PCM accepted")
+      } catch InputAudioError.bufferLimit {}
+      if channels == 1 {
+        let detector = try VoiceActivityDetector(input: format)
+        do {
+          try detector.append(buffer) { _ in preconditionFailure("Oversized input reached VAD") }
+          preconditionFailure("VAD accepted unbounded PCM")
+        } catch InputAudioError.bufferLimit {}
+      }
+    }
+    // The inclusive one-second boundary remains valid, with every 20 ms frame.
+    let format = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1)!
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000)!
+    buffer.frameLength = buffer.frameCapacity
+    memset(buffer.floatChannelData![0], 0, 16_000 * MemoryLayout<Float>.size)
+    let level = try InputAudioLevel.measure(buffer)
+    precondition(level == 0)
+    let detector = try VoiceActivityDetector(input: format)
+    var frames = 0
+    try detector.append(buffer) { voiced in
+      precondition(!voiced)
+      frames += 1
+    }
+    precondition(frames == 50, "Bounded PCM lost pause evidence")
   }
   private static func configurationRecovery() {
     var recovery = AudioConfigurationRecovery()
