@@ -34,10 +34,13 @@ records; they do not refer to runs in the new repository.
 The archive is at `~/Documents/Project Archives/rehab-plan-ocr/2026-09-26/`.
 It contains a verified standalone Git bundle, the original Git metadata, the
 original secondary worktree, GitHub records and the two downloaded Actions
-artifacts. `recovery.json` identifies the original workspace data and recovery
-maps; it records the old workspace location until its final move into the
-archive. Original timestamps and original-to-rewritten mappings stay exclusively
-in that archive.
+artifacts. The complete original workspace is retained as `workspace-original`,
+with its old linked worktree in `secondary-worktree-retired`. Both were moved on
+the same volume and checked for unchanged file identities and metadata. Git
+worktree links were repaired after the move. The rewritten secondary worktree is
+retained as `rewritten-secondary-worktree` at its migrated revision.
+`recovery.json` identifies these locations and the recovery maps. Original
+timestamps and original-to-rewritten mappings stay exclusively in that archive.
 
 `branch-cleanup/rewritten-before-cleanup.bundle` preserves all thirteen rewritten
 branch tips before cleanup. It was restored into a separate bare repository and
