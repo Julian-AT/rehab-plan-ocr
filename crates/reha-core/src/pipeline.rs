@@ -23,7 +23,8 @@ pub fn prepare(
     if bytes.len() > 40 * 1024 * 1024 {
         return Err(Error::Invalid("Foto größer als 40 MB.".into()));
     }
-    if !(320..=2560).contains(&config.detector_side)
+    if !(1..=8).contains(&config.recognition_batch_size)
+        || !(320..=2560).contains(&config.detector_side)
         || !config.detector_threshold.is_finite()
         || !(0.05..=0.95).contains(&config.detector_threshold)
         || !config.box_threshold.is_finite()

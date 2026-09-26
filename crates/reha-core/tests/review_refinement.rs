@@ -336,7 +336,45 @@ fn cached_column_refresh_preserves_edits_bindings_and_capture_warnings() {
     assert!(a.approval.is_none());
     r.extraction_version = 6;
     assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+    r.extraction_version = 7;
+    assert!(refinement::refresh_cached_mapping(&mut r).unwrap());
+    assert_eq!(r.appointments[0].title, "Meine geprüfte Bezeichnung");
     assert!(!refinement::refresh_cached_mapping(&mut r).unwrap());
+}
+
+#[test]
+fn actual_numeric_alternatives_stay_visible_and_preserve_original_text() {
+    let mut r = run();
+    let header = r
+        .observations
+        .iter_mut()
+        .find(|o| o.text.contains("Tagesplan"))
+        .unwrap();
+    let original = "Donnerstag, der 10.09.2026".to_string();
+    header.text = original.replace("2026", "2O26");
+    header.alternatives = vec![original];
+    let retained = header.text.clone();
+    let source_id = header.id.clone();
+    let appointments = parser::extract(&r.document.id, &r.observations, &r.regions).0;
+    let sections = parser::sections(&r.observations, &r.regions);
+    assert!(!appointments.is_empty());
+    for a in &appointments {
+        assert_eq!(a.date.as_deref(), Some("2026-09-10"));
+        assert_eq!(a.fields["date"].state, PrintedState::Unreviewed);
+        assert!(a
+            .issues
+            .iter()
+            .any(|i| i.code == "numeric_candidate" && i.blocking));
+    }
+    assert_eq!(sections[0].date.as_deref(), Some("2026-09-10"));
+    assert_eq!(
+        r.observations
+            .iter()
+            .find(|o| o.id == source_id)
+            .unwrap()
+            .text,
+        retained
+    );
 }
 
 #[test]

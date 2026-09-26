@@ -241,6 +241,15 @@ pub struct PipelineConfig {
     #[serde(default)]
     pub mirrored: bool,
     pub page_corners: Option<[Point; 4]>,
+    /// Experimental exact-width recognition batches; one preserves the deployed path.
+    #[serde(default = "default_recognition_batch_size")]
+    pub recognition_batch_size: usize,
+    /// Kept opt-in until the complete latency/quality comparison passes on iPhone.
+    #[serde(default)]
+    pub prioritized_rereads: bool,
+}
+fn default_recognition_batch_size() -> usize {
+    1
 }
 fn default_engine() -> String {
     "portable-small".into()
@@ -257,6 +266,8 @@ impl Default for PipelineConfig {
             quarter_turns: 0,
             mirrored: false,
             page_corners: None,
+            recognition_batch_size: default_recognition_batch_size(),
+            prioritized_rereads: false,
         }
     }
 }

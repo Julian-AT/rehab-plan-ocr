@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub const EXTRACTION_VERSION: u32 = 7;
+pub const EXTRACTION_VERSION: u32 = 8;
 
 /// Robust text baselines supply table skew even when no page edge is visible.
 /// Header anchors are a fallback for old axis-aligned observations.
@@ -498,6 +498,17 @@ impl Columns {
     fn has(&self, field: &str) -> bool {
         self.0.iter().any(|(f, _)| *f == field)
     }
+}
+
+pub(crate) fn heading_date(observations: &[Observation], regions: &[Region]) -> Option<String> {
+    treatment_date(&rows(observations, regions)).0
+}
+
+pub(crate) fn clock_value(text: &str) -> Option<String> {
+    let captures = TIME.captures(text.trim())?;
+    let matched = captures.get(0)?;
+    (matched.start() == 0 && matched.end() == text.trim().len())
+        .then(|| format!("{:0>2}:{}", &captures[1], &captures[2]))
 }
 
 fn treatment_date(rows: &[Row<'_>]) -> (Option<String>, Vec<String>) {
@@ -1118,6 +1129,8 @@ fn printed_metadata(observations: &[Observation]) -> (Metadata, HashSet<&'static
 /// Spatial sections prevent a second day's heading from changing the first day's rows.
 /// Adjacent headings without intervening appointments remain competing evidence.
 pub fn sections(observations: &[Observation], regions: &[Region]) -> Vec<ScheduleSection> {
+    let (prepared, _) = crate::numeric_candidates::prepare(observations);
+    let observations = prepared.as_ref();
     let alignment = TableAlignment::new(observations, regions);
     let mut result = sections_aligned(observations, &alignment.regions(regions));
     for s in &mut result {
@@ -1357,10 +1370,35 @@ pub fn extract(
     observations: &[Observation],
     regions: &[Region],
 ) -> (Vec<Appointment>, Vec<Issue>, Vec<String>) {
+    let (prepared, candidates) = crate::numeric_candidates::prepare(observations);
+    let observations = prepared.as_ref();
     let alignment = TableAlignment::new(observations, regions);
     let (mut appointments, issues, unassigned) =
         extract_aligned(document_id, observations, &alignment.regions(regions));
     for a in &mut appointments {
+        for (field, evidence) in &a.provenance {
+            let states: Vec<_> = evidence
+                .iter()
+                .filter_map(|id| candidates.get(id))
+                .collect();
+            if !states.is_empty() {
+                let assessment = a.fields.entry(field.clone()).or_default();
+                assessment.state = if states.contains(&&PrintedState::Contradictory) {
+                    PrintedState::Contradictory
+                } else {
+                    PrintedState::Unreviewed
+                };
+                assessment
+                    .reasons
+                    .push("OCR-Zahlenalternativen: gedruckte Angabe am Foto bestätigen.".into());
+                a.issues.push(Issue::new(
+                    "numeric_candidate",
+                    "Mehrdeutige Zahl aus vorhandenen OCR-Lesarten.",
+                    Some(field),
+                    true,
+                ));
+            }
+        }
         a.row_polygon = a
             .row_polygon
             .iter()

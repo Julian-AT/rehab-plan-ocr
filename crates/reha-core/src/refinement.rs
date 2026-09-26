@@ -9,7 +9,7 @@ pub type Reading = RefinementReading;
 /// Refresh the version-5/6 column checks from retained OCR when row identities
 /// stay unambiguous. Structural changes still require a full explicit reprocess.
 pub fn refresh_cached_mapping(run: &mut PipelineRun) -> Result<bool> {
-    if ![5, 6].contains(&run.extraction_version) || run.observations.is_empty() {
+    if ![5, 6, 7].contains(&run.extraction_version) || run.observations.is_empty() {
         return Ok(false);
     }
     let observations: Vec<_> = run
@@ -250,65 +250,7 @@ where
     let started = Instant::now();
     let initial_attempts = run.refinement_attempts.len();
     let available = || !cancel.load(Ordering::Relaxed) && Instant::now() < deadline;
-    let mut targets = vec![];
-    for a in &run.appointments {
-        for field in ["location", "therapist"] {
-            if let Some(f) = a
-                .fields
-                .get(field)
-                .filter(|f| !f.polygon.is_empty() && !f.reasons.is_empty())
-            {
-                if !review::field_confirmed(a, field) {
-                    let (x, y, r, b) = geometry::bounds(&f.polygon);
-                    targets.push((Some(a.id.clone()), Some(field.to_string()), x, y, r, b));
-                }
-            }
-        }
-        let weak = a.provenance.values().flatten().any(|id| {
-            run.observations
-                .iter()
-                .any(|o| &o.id == id && o.score.is_some_and(|s| s < 0.8))
-        });
-        if (!crate::parser::validate(a).is_empty()
-            || !a.issues.is_empty()
-            || weak
-            || a.location.is_empty())
-            && a.included
-        {
-            if let Some((x, y, r, b)) = appointment_bounds(a, run) {
-                let section = run
-                    .sections
-                    .iter()
-                    .find(|s| Some(&s.id) == a.section_id.as_ref())
-                    .map(|s| geometry::bounds(&s.polygon));
-                targets.push((
-                    Some(a.id.clone()),
-                    None,
-                    section.map_or(x, |s| s.0),
-                    y,
-                    section.map_or(r, |s| s.2),
-                    b,
-                ));
-            }
-        }
-    }
-    // Undecoded detector regions and unassigned apparent times must not disappear silently.
-    for region in run
-        .regions
-        .iter()
-        .filter(|r| r.kind == "text" || r.kind == "uncertain_text")
-    {
-        let obs = run
-            .observations
-            .iter()
-            .find(|o| o.region_ids.contains(&region.id));
-        if obs.is_none()
-            || obs.is_some_and(|o| run.unassigned.contains(&o.id) && apparent_time(&o.text))
-        {
-            let (x, y, r, b) = geometry::bounds(&region.polygon);
-            targets.push((None, None, x, y, r, b));
-        }
-    }
+    let targets = crate::refinement_targets::schedule(run);
     let mut readings = vec![];
     let mut discovered: BTreeMap<String, Vec<(String, Appointment)>> = BTreeMap::new();
     let loaded;
@@ -322,26 +264,29 @@ where
     } else {
         None
     };
-    for (target, field, x, y, r, b) in targets.into_iter().take(24) {
+    // Visit every selected critical crop before spending time on a second variant.
+    let work: Vec<_> = if run.config.prioritized_rereads {
+        (0..2)
+            .flat_map(|variant| targets.iter().map(move |target| (variant, target)))
+            .collect()
+    } else {
+        targets
+            .iter()
+            .flat_map(|target| (0..2).map(move |variant| (variant, target)))
+            .collect()
+    };
+    let mut adjacent_crop = None;
+    for (variant, target) in work {
+        if run.config.prioritized_rereads && variant == 1 && !target.needs_contrast(run, &readings)
+        {
+            continue;
+        }
         let Some(original) = &original else {
             break;
         };
-        let height = (b - y).max(12.);
-        let polygon = if let Some(field) = &field {
-            run.appointments
-                .iter()
-                .find(|a| Some(&a.id) == target.as_ref())
-                .and_then(|a| a.fields.get(field))
-                .map(|f| f.polygon.clone())
-                .unwrap_or_else(|| geometry::rect(x, y, r - x, b - y))
-        } else {
-            geometry::rect(
-                (x - height).max(0.),
-                (y - height * 0.6).max(0.),
-                (r - x + height * 2.).min(run.page_width as f64),
-                (b - y) + height * 1.2,
-            )
-        };
+        let polygon = &target.polygon;
+        let (x, y, _, b) = geometry::bounds(polygon);
+        let field = &target.field;
         let points: Vec<_> = polygon
             .iter()
             .map(|p| geometry::map(&run.page_to_original, p))
@@ -351,17 +296,27 @@ where
         }
         // The exact field quadrilateral is rectified from original pixels. An
         // enclosing axis-aligned box can contain the neighboring name column.
-        let Ok((source_crop, crop_to_original)) =
-            geometry::rectify_with_transform(original, &points)
-        else {
+        let cached = if variant == 1 && !run.config.prioritized_rereads {
+            adjacent_crop.take()
+        } else {
+            adjacent_crop = None;
+            None
+        };
+        let crop_result = cached
+            .map(Ok)
+            .unwrap_or_else(|| geometry::rectify_with_transform(original, &points));
+        let Ok((source_crop, crop_to_original)) = crop_result else {
             continue;
         };
-        for variant in 0..2 {
+        if variant == 0 && !run.config.prioritized_rereads {
+            adjacent_crop = Some((source_crop.clone(), crop_to_original));
+        }
+        {
             if !available() {
                 break;
             }
             let attempt_started = Instant::now();
-            let mut crop = source_crop.clone();
+            let mut crop = source_crop;
             let scale = if variant == 0 { 1. } else { 1.5 };
             if variant == 1 {
                 crop = image::imageops::contrast(&crop, 20.);
@@ -380,13 +335,8 @@ where
             let id = format!("reread-{:04}", run.refinement_attempts.len());
             let mut attempt = RefinementAttempt {
                 id: id.clone(),
-                target_ids: target.iter().cloned().collect(),
-                reason: if target.is_some() {
-                    "Unvollständige oder unsichere Zeile"
-                } else {
-                    "Nicht zugeordnete Region"
-                }
-                .into(),
+                target_ids: target.appointments.clone(),
+                reason: target.reason().into(),
                 variant: if variant == 0 {
                     "original-context"
                 } else {
@@ -431,14 +381,24 @@ where
                             .map(|o| o.text.as_str())
                             .collect::<Vec<_>>()
                             .join(" ");
-                        if !text.trim().is_empty() {
-                            readings.push(Reading {
-                                appointment_id: target.clone().unwrap(),
-                                field: field.clone().unwrap(),
-                                value: serde_json::json!(text),
-                                evidence: attempt.observation_ids.clone(),
-                                attempt: id.clone(),
-                            });
+                        let value = if field.as_deref() == Some("date") {
+                            crate::parser::heading_date(&observations, &regions)
+                                .map(serde_json::Value::String)
+                        } else if matches!(field.as_deref(), Some("start" | "end")) {
+                            crate::parser::clock_value(&text).map(serde_json::Value::String)
+                        } else {
+                            (!text.trim().is_empty()).then_some(serde_json::json!(text))
+                        };
+                        if let Some(value) = value {
+                            for appointment_id in &target.appointments {
+                                readings.push(Reading {
+                                    appointment_id: appointment_id.clone(),
+                                    field: field.clone().unwrap(),
+                                    value: value.clone(),
+                                    evidence: attempt.observation_ids.clone(),
+                                    attempt: id.clone(),
+                                });
+                            }
                         }
                     } else if complete {
                         let inside = |o: &Observation| {
@@ -485,10 +445,39 @@ where
                                     .is_some_and(|(_, t, _, bottom)| t < b && bottom > y)
                             })
                             .collect();
-                        if let Some(target) = &target {
-                            if candidates.len() == 1 {
+                        let overlaps = |old: &Appointment, new: &Appointment| match (
+                            appointment_bounds(old, run),
+                            appointment_bounds(new, &view),
+                        ) {
+                            (Some((l, t, r, b)), Some((nl, nt, nr, nb))) => {
+                                let area = (r - l) * (b - t);
+                                let other = (nr - nl) * (nb - nt);
+                                area > 0.
+                                    && other > 0.
+                                    && (r.min(nr) - l.max(nl)).max(0.)
+                                        * (b.min(nb) - t.max(nt)).max(0.)
+                                        / area.min(other)
+                                        > 0.5
+                            }
+                            _ => false,
+                        };
+                        for target_id in &target.appointments {
+                            let Some(old) = run.appointments.iter().find(|a| &a.id == target_id)
+                            else {
+                                continue;
+                            };
+                            let matched: Vec<_> =
+                                candidates.iter().filter(|a| overlaps(old, a)).collect();
+                            if matched.len() == 1
+                                && run
+                                    .appointments
+                                    .iter()
+                                    .filter(|a| overlaps(a, matched[0]))
+                                    .count()
+                                    == 1
+                            {
+                                let candidate = matched[0];
                                 for field in review::FIELDS {
-                                    let candidate = &candidates[0];
                                     let evidence = candidate
                                         .provenance
                                         .get(*field)
@@ -496,7 +485,7 @@ where
                                         .unwrap_or_default();
                                     if evidence.iter().any(|e| e.starts_with(&id)) {
                                         readings.push(Reading {
-                                            appointment_id: target.clone(),
+                                            appointment_id: target_id.clone(),
                                             field: (*field).into(),
                                             value: review::value(candidate, field),
                                             evidence,
@@ -509,7 +498,8 @@ where
                                     "Zeilenzuordnung uneindeutig; keine automatische Übernahme."
                                         .into();
                             }
-                        } else {
+                        }
+                        if target.discover {
                             for candidate in candidates {
                                 discovered
                                     .entry(format!(
@@ -606,7 +596,7 @@ where
     });
     Ok(())
 }
-fn apparent_time(text: &str) -> bool {
+pub(crate) fn apparent_time(text: &str) -> bool {
     static TIME: std::sync::LazyLock<regex::Regex> =
         std::sync::LazyLock::new(|| regex::Regex::new(r"\b[0-2]?\d:[0-5]\d\b").unwrap());
     TIME.is_match(text) && !text.to_lowercase().contains("druck")
