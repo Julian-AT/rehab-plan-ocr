@@ -2,7 +2,7 @@ use crate::{contracts::*, geometry::bounds};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use regex::Regex;
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     sync::LazyLock,
 };
 
@@ -1216,6 +1216,14 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
     if headings.is_empty() {
         return vec![];
     }
+    // Scope the cache to this aligned region slice. Reference lists, rather than
+    // observation IDs, also resolve cloned observations without assuming unique
+    // IDs or changing the union of repeated, missing and multiple references.
+    let positions: HashMap<_, _> = observations
+        .iter()
+        .map(|o| (o.region_ids.as_slice(), observation_bounds(o, regions)))
+        .collect();
+    let position = |o: &Observation| positions[o.region_ids.as_slice()];
     let page_right = regions
         .iter()
         .flat_map(|r| &r.polygon)
@@ -1230,7 +1238,7 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
     let first_y = headings[0].y;
     let preamble: Vec<_> = observations
         .iter()
-        .filter(|o| observation_bounds(o, regions).1 < first_y)
+        .filter(|o| position(o).1 < first_y)
         .cloned()
         .collect();
     let mut result: Vec<ScheduleSection> = vec![];
@@ -1249,7 +1257,7 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
             .unwrap_or(page_right + 1.);
         let timed_between = |top: f64, bottom: f64| {
             observations.iter().any(|o| {
-                let (x, y, _, _) = observation_bounds(o, regions);
+                let (x, y, _, _) = position(o);
                 x >= left
                     && x < right
                     && y > top
@@ -1282,11 +1290,11 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
     let header_bottom = observations
         .iter()
         .filter(|o| column_header(&o.text))
-        .map(|o| observation_bounds(o, regions).3)
+        .map(|o| position(o).3)
         .max_by(f64::total_cmp);
     if let Some(header_bottom) = header_bottom {
         if observations.iter().any(|o| {
-            let (_, y, _, _) = observation_bounds(o, regions);
+            let (_, y, _, _) = position(o);
             y > header_bottom
                 && y < first_y
                 && TIME.is_match(&o.text)
@@ -1328,7 +1336,7 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
         let obs: Vec<_> = observations
             .iter()
             .filter(|o| {
-                let (x, y, _, _) = observation_bounds(o, regions);
+                let (x, y, _, _) = position(o);
                 x >= left
                     && x < right
                     && ((y >= top && y < bottom) || (y < first_y && column_header(&o.text)))
@@ -1342,18 +1350,17 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
             .collect();
         result[i].date = treatment_date(&rows(&heading_obs, regions)).0;
         result[i].observation_ids = obs.iter().map(|o| o.id.clone()).collect();
-        result[i].columns =
-            Columns::from_rows(&rows(&obs, regions), &|o| observation_bounds(o, regions))
-                .2
-                .into_iter()
-                .map(|(k, v)| (k.into(), v))
-                .collect();
+        result[i].columns = Columns::from_rows(&rows(&obs, regions), &position)
+            .2
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
         // A heading over the left column must not describe a different clinic's
         // schedule in the right column. Ambiguous global scope stays unassigned.
         let scoped_preamble: Vec<_> = preamble
             .iter()
             .filter(|o| {
-                let (x, _, _, _) = observation_bounds(o, regions);
+                let (x, _, _, _) = position(o);
                 x >= left && x < right
             })
             .cloned()
@@ -1362,13 +1369,13 @@ fn sections_aligned(observations: &[Observation], regions: &[Region]) -> Vec<Sch
         let first_appointment = obs
             .iter()
             .filter(|o| TIME.is_match(&o.text) && !DATE.is_match(&o.text) && !metadata(&o.text))
-            .map(|o| observation_bounds(o, regions).1)
+            .map(|o| position(o).1)
             .min_by(f64::total_cmp)
             .unwrap_or(bottom);
         let local: Vec<_> = obs
             .iter()
             .filter(|o| {
-                let y = observation_bounds(o, regions).1;
+                let y = position(o).1;
                 y >= top && y < first_appointment
             })
             .cloned()
@@ -1717,6 +1724,69 @@ mod tests {
         let (appointments, _, unassigned) = extract("dense-headers", &observations, &regions);
         assert!(appointments.is_empty());
         assert_eq!(unassigned.len(), observations.len());
+    }
+
+    #[test]
+    fn section_positions_preserve_reference_unions_and_refresh_after_alignment() {
+        let cells = [
+            (0., "Montag, der 21.09.2026"),
+            (40., "08:00 - 08:30 Gymnastik"),
+            (100., "Dienstag, der 22.09.2026"),
+            (140., "09:00 - 09:30 Bewegung"),
+        ];
+        let mut regions: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (y, _))| Region {
+                id: format!("r{i}"),
+                polygon: crate::geometry::rect(0., *y, 180., 20.),
+                frame: "page".into(),
+                kind: "text".into(),
+                parent: None,
+                children: vec![],
+            })
+            .collect();
+        let mut observations: Vec<_> = cells
+            .iter()
+            .enumerate()
+            .map(|(i, (_, text))| Observation {
+                id: format!("o{i}"),
+                text: (*text).into(),
+                region_ids: vec![format!("r{i}")],
+                engine: "synthetic".into(),
+                score: None,
+                alternatives: vec![],
+            })
+            .collect();
+        // Bounds retain every region with a matching ID, while repeated and
+        // missing references do not alter the geometric union.
+        let mut extra = regions[1].clone();
+        extra.id = "extra".into();
+        extra.polygon = crate::geometry::rect(180., 40., 50., 20.);
+        regions.push(extra);
+        let mut repeated = regions[1].clone();
+        repeated.polygon = crate::geometry::rect(0., 42., 180., 20.);
+        regions.push(repeated);
+        observations[1].region_ids = ["missing", "r1", "extra", "r1"].map(String::from).to_vec();
+        // Observation IDs alone are not a sufficient cache key.
+        observations[3].id = observations[1].id.clone();
+        let mut unplaced = observations[1].clone();
+        unplaced.id = "unplaced".into();
+        unplaced.region_ids = vec!["missing".into()];
+        observations.push(unplaced);
+
+        for (skew, offset) in [(0., 0.), (0.08, 70.), (-0.12, 130.)] {
+            let transformed =
+                transformed_regions(&regions, &[1., 0., 0., skew, 1., offset, 0., 0., 1.]);
+            let found = sections(&observations, &transformed);
+            assert_eq!(found.len(), 2, "skew={skew}");
+            assert_eq!(found[0].date.as_deref(), Some("2026-09-21"));
+            assert_eq!(found[1].date.as_deref(), Some("2026-09-22"));
+            assert_eq!(found[0].observation_ids, ["o0", "o1"]);
+            assert_eq!(found[1].observation_ids, ["o2", "o1"]);
+            assert!((found[0].polygon[3].y - 100. - offset).abs() < 1e-7);
+            assert!((found[1].polygon[0].y - 100. - offset).abs() < 1e-7);
+        }
     }
 
     #[test]
