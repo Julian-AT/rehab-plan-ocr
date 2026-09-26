@@ -28,6 +28,11 @@ establish current device behavior or authorize an update.
   has a recovery journal; unfinished reviews and existing preferences survive.
   Schemas 10–11 add disposable summaries, indexed batch membership and typed
   archive pagination. The archive retains content during refresh.
+- Local backup comparison is now reusable and tested: schemas 8–11, original table
+  projections, preferences, sources and App Group journals are checked without
+  opening the backup DB in place. Ten synthetic regressions and a recheck of the
+  retained September copies pass; changed historical diagnostics are flagged.
+  All 167 tool tests and lint pass. Fresh physical backup/update comparison remains pending.
 - Unreadable day boundaries and neighboring-column rereads have regressions.
   Dates, minimal voice changes and explicit conversation state have native probes.
   Time constraints survive pagination; “Und danach?” rereads the visible anchor.

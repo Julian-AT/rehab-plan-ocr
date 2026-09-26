@@ -108,6 +108,31 @@ and unperformed validation. No device update is authorized by this ledger.
 
 ## Recent verification
 
+### Reusable retained-data comparison — 2026-09-26
+
+The former private delivery check now has a maintained local-copy implementation:
+`make snapshot-persistence` / `make compare-persistence`. It verifies schemas 8–11,
+all 15 original persistent tables, typed row associations, preferences, original
+files and App Group journals. SQLite/WAL/SHM reads use disposable copies; every
+original backup file is reverified before comparison. Additive schema projections
+are reported separately and cannot silently approve migrations. Changed diagnostics
+remain review items. Outputs stay private, immutable and outside source containers.
+
+Ten synthetic regressions cover unchanged data, modified backups, ownership,
+pending operations, source/preference loss, schema additions, swapped row values,
+WAL-only records, content serialization, incomplete copies and private output.
+All 167 tool tests and repository lint pass. The retained September 26, 2026 copies also
+pass the immediate post-install check: 15 tables, existing preferences, 90 durable
+files and 18 originals are unchanged. The historical post-launch comparison flags
+the changed diagnostics file as expected; 88 other files are byte-identical and
+one JSON file is semantically identical. This rechecks old evidence and performs
+no new device capture, update or acceptance.
+
+Local evidence is in `.local/runs/persistence-audit-20260926-s18-001`. Snapshot SHA-256:
+`9bd76e1cc8a90547e57f6b58d4e8806094796ae7e7f56528e59b9e75a9ec1ae0`;
+post-install report: `cb7aa96f51a532df3b5dd4b349666d697d68220e3ffd53571ccfe4b30be8f421`;
+post-launch review report: `6749aea5e6ac0e441567e3d4d463a1a650d3d8e0ad052cf0a63538ac22ddc37d`.
+
 ### Paired assistant errors and dependency-aware uncertainty — 2026-09-26
 
 `make audit-assistant-pairs` verifies the existing model-card/run/dataset/decoder

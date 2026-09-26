@@ -100,6 +100,15 @@ verify-privacy:
 	@test -n "$(APP_BUNDLE)" || { echo 'Set APP_BUNDLE to a built app directory'; exit 2; }
 	python3 tooling/release/privacy.py "$(APP_BUNDLE)"
 
+.PHONY: snapshot-persistence compare-persistence
+snapshot-persistence:
+	@test -n "$(SNAPSHOT_ROOT)" -a -n "$(OUTPUT)" || { echo 'Set SNAPSHOT_ROOT to copied containers and OUTPUT below .local'; exit 2; }
+	/usr/bin/env uv run --locked python tooling/release/persistence.py snapshot --root "$(SNAPSHOT_ROOT)" --output "$(OUTPUT)"
+
+compare-persistence:
+	@test -n "$(BEFORE)" -a -n "$(SNAPSHOT)" -a -n "$(AFTER)" -a -n "$(OUTPUT)" || { echo 'Set BEFORE, SNAPSHOT, AFTER and a new OUTPUT below .local'; exit 2; }
+	/usr/bin/env uv run --locked python tooling/release/persistence.py compare --before "$(BEFORE)" --snapshot "$(SNAPSHOT)" --after "$(AFTER)" --output "$(OUTPUT)"
+
 NATIVE_PROBES := $(patsubst tooling/checks/%.sh,%,$(wildcard tooling/checks/test-*.sh))
 .PHONY: $(NATIVE_PROBES)
 $(filter-out test-agenda,$(NATIVE_PROBES)):
