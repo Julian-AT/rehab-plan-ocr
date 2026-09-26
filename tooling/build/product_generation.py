@@ -1,4 +1,4 @@
-"""Keep old Xcode products and start clean when their resource/build contract changes."""
+"""Lease shared native inputs and preserve Xcode products across contract changes."""
 
 import argparse
 import fcntl
@@ -30,6 +30,7 @@ INPUTS = (
     "config/toolchains/versions.json",
 )
 MARKER = ".reha-product-generation.json"
+LEASE_DESCRIPTOR = "REHA_NATIVE_BUILD_LEASE_FD"
 
 
 def sync_directory(path):
@@ -120,13 +121,41 @@ def ensure_quiet(root, current):
 
 
 @contextmanager
-def locked(root):
+def leased(root, *, inherit=True):
+    """Protect shared native inputs and products, including delegated shell builds."""
     base = location(root)
     base.mkdir(parents=True, exist_ok=True)
     lock = artifacts.local_path(root, str((base / "product-generation.lock").relative_to(root)))
+    inherited = os.environ.get(LEASE_DESCRIPTOR) if inherit else None
+    if inherited is not None:
+        try:
+            descriptor = int(inherited)
+            actual, expected = os.fstat(descriptor), lock.stat()
+            if (actual.st_dev, actual.st_ino) != (expected.st_dev, expected.st_ino):
+                raise ValueError("Native build lease descriptor belongs to a different file")
+            # An environment flag alone is insufficient. The inherited open-file
+            # description must own (or acquire) this exact exclusive lock.
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (OSError, ValueError) as error:
+            raise ValueError("Invalid inherited native build lease") from error
+        yield base, descriptor
+        return
     with lock.open("a+") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield base, stream.fileno()
+
+
+@contextmanager
+def locked(root):
+    """Acquire an independent lease; callers cannot bypass an existing consumer."""
+    with leased(root, inherit=False) as (base, _):
         yield base
+
+
+def delegate(root, command, descriptor):
+    """Only cooperating entry points inherit the lock; ordinary tools do not."""
+    env = dict(os.environ, **{LEASE_DESCRIPTOR: str(descriptor)})
+    return subprocess.run(command, cwd=root, env=env, pass_fds=(descriptor,), check=False)
 
 
 def checked_marker(root):
@@ -241,23 +270,37 @@ def prepare(root, base):
 def build(root, command):
     if not command or Path(command[0]).name != "xcodebuild" or "-derivedDataPath" in command:
         raise ValueError("Pass xcodebuild arguments without an independent DerivedData override")
-    with locked(root) as base:
+    with leased(root) as (base, _):
         current = prepare(root, base)
-        result = subprocess.run([*command, "-derivedDataPath", str(current)], cwd=root, check=False)
+        env = {key: value for key, value in os.environ.items() if key != LEASE_DESCRIPTOR}
+        result = subprocess.run(
+            [*command, "-derivedDataPath", str(current)], cwd=root, env=env, check=False
+        )
         checked_marker(root)
         return result.returncode
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["build", "check"])
+    parser.add_argument("action", choices=["build", "check", "lease", "check-lease"])
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.action == "check":
         print(checked_marker(ROOT))
+    elif args.action == "check-lease":
+        if LEASE_DESCRIPTOR not in os.environ:
+            raise ValueError("Native build entry requires an inherited lease")
+        with leased(ROOT):
+            pass
     else:
         command = args.command[1:] if args.command[:1] == ["--"] else args.command
-        raise SystemExit(build(ROOT, command))
+        if args.action == "lease":
+            if not command:
+                parser.error("lease requires a command")
+            with leased(ROOT) as (_, descriptor):
+                raise SystemExit(delegate(ROOT, command, descriptor).returncode)
+        else:
+            raise SystemExit(build(ROOT, command))
 
 
 if __name__ == "__main__":

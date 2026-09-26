@@ -3,6 +3,8 @@
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -85,6 +87,65 @@ class TrialModelTests(unittest.TestCase):
         model.symlink_to(outside)
         with self.assertRaises(ValueError):
             builder.model_artifact("untuned")
+
+    def test_active_native_build_refuses_trial_before_project_or_asset_work(self):
+        generation = builder.product_generation
+        with (
+            patch.object(generation.workspace, "location", return_value=self.root / "build"),
+            generation.locked(self.root),
+            patch("sys.argv", ["trial", "--model", "untuned"]),
+            patch.object(builder, "source_snapshot") as snapshot,
+            patch.object(builder, "prepare") as prepare,
+            patch.object(builder, "run") as run,
+        ):
+            with self.assertRaises(BlockingIOError):
+                builder.main()
+        snapshot.assert_not_called()
+        prepare.assert_not_called()
+        run.assert_not_called()
+
+    def test_trial_restores_project_under_lease_after_failed_xcode(self):
+        generation = builder.product_generation
+        project = self.root / "project"
+        project.write_text("ordinary project")
+
+        def delegate(root, command, descriptor):
+            self.assertEqual(root, self.root)
+            self.assertEqual(command, ["sh", "tooling/build/build-native.sh", "simulator"])
+            with patch.dict(os.environ, {generation.LEASE_DESCRIPTOR: str(descriptor)}):
+                with generation.leased(root):
+                    pass
+            with self.assertRaises(BlockingIOError):
+                with generation.locked(root):
+                    self.fail("nested build lost the trial's lease")
+            return subprocess.CompletedProcess(command, 0)
+
+        def run(*command):
+            with self.assertRaises(BlockingIOError):
+                with generation.locked(self.root):
+                    self.fail("project mutation escaped the trial's lease")
+            if command[0] == "xcodebuild":
+                self.assertEqual(project.read_text(), "trial project")
+                raise subprocess.CalledProcessError(65, command)
+            self.assertEqual(command[0], "xcodegen")
+            project.write_text(
+                "trial project" if "apps/ios/assistant-trial.yml" in command else "ordinary project"
+            )
+
+        with (
+            patch.object(generation.workspace, "location", return_value=self.root / "build"),
+            patch.object(builder, "BASE", self.root / "trial"),
+            patch("sys.argv", ["trial", "--model", "untuned"]),
+            patch.object(builder, "source_snapshot", return_value={}),
+            patch.object(builder, "prepare", return_value={}),
+            patch.object(generation, "delegate", side_effect=delegate),
+            patch.object(builder, "run", side_effect=run),
+        ):
+            with self.assertRaises(subprocess.CalledProcessError):
+                builder.main()
+            self.assertEqual(project.read_text(), "ordinary project")
+            with generation.locked(self.root):
+                pass
 
 
 if __name__ == "__main__":

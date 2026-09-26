@@ -2,6 +2,10 @@
 # Uses a disposable simulator and only the public synthetic plan.
 set -eu
 cd "$(dirname "$0")/../.."
+if [ -z "${REHA_NATIVE_BUILD_LEASE_FD:-}" ]; then
+  exec python3 tooling/build/product_generation.py lease -- sh tooling/checks/test-native-ui.sh "$@"
+fi
+python3 tooling/build/product_generation.py check-lease
 eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 runtime=$(python3 tooling/checks/native-simulator.py --profile "${REHA_SIMULATOR_PROFILE:-local}" --simulator "${REHA_TEST_SIMULATOR:-}")

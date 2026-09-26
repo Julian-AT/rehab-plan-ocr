@@ -10,7 +10,11 @@ import json
 import plistlib
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import product_generation  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / ".local/builds/assistant-app-trial"
@@ -157,11 +161,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=["tuned", "untuned"], default="tuned")
     args = parser.parse_args()
+    with product_generation.leased(ROOT) as (_, descriptor):
+        build_trial(args.model, descriptor)
+
+
+def build_trial(model, descriptor):
     BASE.mkdir(parents=True, exist_ok=True)
     sources = source_snapshot()
     # These paths perform read-only manifest verification and normal source builds.
-    run("sh", "tooling/build/build-native.sh", "simulator")
-    manifest = prepare(args.model)
+    product_generation.delegate(
+        ROOT, ["sh", "tooling/build/build-native.sh", "simulator"], descriptor
+    ).check_returncode()
+    manifest = prepare(model)
     try:
         run(
             "xcodegen",

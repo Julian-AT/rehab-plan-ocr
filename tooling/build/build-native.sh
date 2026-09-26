@@ -2,6 +2,10 @@
 # Reproducible native build. Signing and installation are explicit modes only.
 set -eu
 cd "$(dirname "$0")/../.."
+if [ -z "${REHA_NATIVE_BUILD_LEASE_FD:-}" ]; then
+  exec python3 tooling/build/product_generation.py lease -- sh tooling/build/build-native.sh "$@"
+fi
+python3 tooling/build/product_generation.py check-lease
 eval "$(python3 tooling/dev/workspace.py shell)"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0
 mode=${1:-simulator}

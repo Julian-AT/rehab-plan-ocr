@@ -275,8 +275,16 @@ die gesamte Paketveröffentlichung verhindert und das Quellarchiv unverändert l
 
 ## Product generations after resource changes
 
-`make build` and the UI build entry use one product-generation lease around
-Xcode. The contract hashes the project specification, model/runtime pins, notices,
+`make build`, direct framework assembly and the UI test entry share one exclusive
+native build lease. It starts before shared framework publication or Xcode project
+generation and remains held while Xcode and UI tests consume those products.
+The experimental app trial holds the same lease through its nested ordinary build,
+temporary project replacement and restoration, including failed trial compilation.
+Nested shell builds receive the actual locked descriptor; its file identity and
+exclusive lock are checked before reuse. A stale environment flag cannot bypass
+another consumer. Ordinary Xcode subprocesses do not inherit that descriptor.
+
+The product contract hashes the project specification, model/runtime pins, notices,
 runtime inventory, build scripts, exclusion policy and pinned toolchain settings.
 An unchanged contract reuses `.local/builds/ios/DerivedData`. Normal rebuilds do
 not create generations or duplicate caches. `--built` UI checks reject an unknown,
@@ -318,6 +326,9 @@ part of this transition.
 `make test-product-generation` uses synthetic directories to verify preservation,
 contract changes, ordinary cache reuse, active consumers, exclusive build leases,
 interrupted rename/marker publication and recovery refusal after corruption. A
+paused fake Xcode process also verifies that competing native build/framework/UI
+entries fail before changing its framework or project. Separate trial tests cover
+lease delegation and restoring the ordinary project after compilation fails. A
 successful helper test is not a final app/bundle acceptance; the resulting actual
 product still needs the usual build, resource and release checks.
 

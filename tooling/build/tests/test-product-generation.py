@@ -4,6 +4,8 @@ import fcntl
 import importlib.util
 import json
 import os
+import select
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -16,6 +18,11 @@ spec = importlib.util.spec_from_file_location("product_generation", SOURCE)
 g = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = g
 spec.loader.exec_module(g)
+assembly_spec = importlib.util.spec_from_file_location(
+    "generation_test_assembly", SOURCE.with_name("assemble-native.py")
+)
+assembly = importlib.util.module_from_spec(assembly_spec)
+assembly_spec.loader.exec_module(assembly)
 
 
 class ProductGenerationTests(unittest.TestCase):
@@ -176,6 +183,122 @@ class ProductGenerationTests(unittest.TestCase):
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
             with self.assertRaises(BlockingIOError):
                 self.prepare()
+
+    def copy_entrypoints(self):
+        for name in [
+            "tooling/build/product_generation.py",
+            "tooling/build/build-native.sh",
+            "tooling/checks/test-native-ui.sh",
+            "tooling/dev/workspace.py",
+            "tooling/dev/artifacts.py",
+            "config/storage/workspace.json",
+        ]:
+            destination = self.root / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(SOURCE.parents[2] / name, destination)
+        tools = self.root / "test-tools"
+        tools.mkdir()
+        (tools / "python3").symlink_to(sys.executable)
+        return dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"])
+
+    def test_active_xcode_blocks_framework_and_shell_entries_before_mutation(self):
+        env = self.copy_entrypoints()
+        tools = self.root / "test-tools"
+        xcode = tools / "xcodebuild"
+        xcode.write_text('#!/bin/sh\nprintf "xcode-ready\\n"\nread -r finish\nexit 65\n')
+        xcode.chmod(0o755)
+        framework = self.root / "packages/apple/RehaCore/RehaCoreFFI.xcframework"
+        framework.parent.mkdir(parents=True)
+        framework.symlink_to("simulator-original")
+        project = self.root / "apps/ios/Termine.xcodeproj/project.pbxproj"
+        project.parent.mkdir(parents=True)
+        project.write_bytes(b"original generated project")
+        code = (
+            "import sys; from pathlib import Path; "
+            "sys.path.insert(0, 'tooling/build'); import product_generation as g; "
+            "g.ensure_quiet = lambda *args: None; "
+            "raise SystemExit(g.build(Path.cwd(), ['xcodebuild', 'build']))"
+        )
+        with subprocess.Popen(
+            [sys.executable, "-c", code],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ) as build:
+            try:
+                self.assertTrue(select.select([build.stdout], [], [], 10)[0])
+                self.assertEqual(build.stdout.readline().strip(), "xcode-ready")
+                with self.assertRaises(BlockingIOError):
+                    assembly.assemble(self.root, {"device"})
+                self.assertFalse((self.root / ".local/builds/ffi").exists())
+                for entry, mode in [
+                    ("tooling/build/build-native.sh", "device"),
+                    ("tooling/build/build-native.sh", "framework"),
+                    ("tooling/checks/test-native-ui.sh", "--built"),
+                ]:
+                    result = subprocess.run(
+                        ["sh", entry, mode], cwd=self.root, env=env, capture_output=True, timeout=10
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(b"BlockingIOError", result.stderr)
+                self.assertEqual(os.readlink(framework), "simulator-original")
+                self.assertEqual(project.read_bytes(), b"original generated project")
+            finally:
+                _, error = build.communicate("finish\n", timeout=10)
+        self.assertEqual(build.returncode, 65, error)
+        with g.locked(self.root):
+            pass
+
+    def test_delegated_shell_inherits_valid_lease_without_releasing_parent(self):
+        env = self.copy_entrypoints()
+        code = (
+            "from pathlib import Path; import sys; "
+            "sys.path.insert(0, 'tooling/build'); import product_generation as g; "
+            "g.main()"
+        )
+        with g.leased(self.root) as (_, descriptor), patch.dict(os.environ, env):
+            result = g.delegate(
+                self.root,
+                [
+                    "sh",
+                    "-c",
+                    'exec python3 -c "$1" check-lease',
+                    "delegate",
+                    code,
+                ],
+                descriptor,
+            )
+            self.assertEqual(result.returncode, 0)
+            with self.assertRaises(BlockingIOError):
+                with g.locked(self.root):
+                    self.fail("delegated process released its parent's lease")
+        with g.locked(self.root):
+            pass
+
+    def test_closed_wrong_file_and_nonowning_descriptors_cannot_bypass_lease(self):
+        self.base.mkdir(parents=True)
+        (self.base / "product-generation.lock").touch()
+        wrong = self.root / "unrelated"
+        wrong.write_text("unrelated")
+        with wrong.open() as stream:
+            with patch.dict(os.environ, {g.LEASE_DESCRIPTOR: str(stream.fileno())}):
+                with self.assertRaisesRegex(ValueError, "Invalid inherited"):
+                    with g.leased(self.root):
+                        self.fail("wrong file accepted")
+            descriptor = stream.fileno()
+        with patch.dict(os.environ, {g.LEASE_DESCRIPTOR: str(descriptor)}):
+            with self.assertRaisesRegex(ValueError, "Invalid inherited"):
+                with g.leased(self.root):
+                    self.fail("closed descriptor accepted")
+        with g.locked(self.root):
+            with (self.base / "product-generation.lock").open("a+") as independent:
+                with patch.dict(os.environ, {g.LEASE_DESCRIPTOR: str(independent.fileno())}):
+                    with self.assertRaisesRegex(ValueError, "Invalid inherited"):
+                        with g.leased(self.root):
+                            self.fail("nonowning descriptor accepted")
 
     def test_process_guard_allows_own_build_ancestry_but_rejects_other_builds(self):
         pid = os.getpid()

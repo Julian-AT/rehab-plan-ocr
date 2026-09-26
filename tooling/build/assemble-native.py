@@ -19,6 +19,9 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).parent))
+import product_generation  # noqa: E402
+
 sys.path.insert(0, str(ROOT / "tooling/dev"))
 import workspace  # noqa: E402
 
@@ -139,6 +142,11 @@ def check_symbols(result):
 
 
 def assemble(root, variants):
+    with product_generation.leased(root):
+        assemble_locked(root, variants)
+
+
+def assemble_locked(root, variants):
     cache = root / ".local/builds/ffi"
     cache.mkdir(parents=True, exist_ok=True)
     with (cache / "assembly.lock").open("a") as lock:
