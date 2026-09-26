@@ -73,8 +73,12 @@ Pixel-verified synthetic tables now feed the actual trainer. Whole source groups
 are assigned before selecting crops; identical training pixels are excluded from
 validation. The larger experiment has 512 training crops from 129 groups and 91
 validation crops from 42 groups. Validation contains dates/times/therapist lines,
-with no novel title/location/notes pixels. Frozen and full training are running;
-these experiments cannot qualify real-photo recognition. Critical-field metric
+with no novel title/location/notes pixels. The frozen run completes four epochs
+and selects epoch one (91/91 exact crops versus 90/91 pretrained), but its complete
+export fails 18 of 1,206 numeric checks despite identical token sequences. Its
+[model card and experiment](../../ml/experiments/2026-09-26-s18-synthetic-ocr-development.md)
+remain unqualified. Full adaptation is still running. These experiments cannot
+qualify real-photo recognition. Critical-field metric
 version 2 covers appointment identity, room and therapist as well as dates/times,
 and row-level regression checks catch relocated missing/invented appointments.
 
