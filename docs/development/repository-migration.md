@@ -4,13 +4,16 @@ The project is `Julian-AT/rehab-plan-ocr`. Its rewritten development sequence
 starts on September 26, 2026 at 14:08 Europe/Vienna. The original 525 mainline
 commits and six additional branch commits retain their authors, parent
 relationships and substantive changes. Migration follow-up commits appear after
-that sequence. Thirteen branches are retained.
+that sequence. `main` is the sole active branch; the twelve completed side
+branches are preserved in the external archive.
 
-Five retained branches contain six commits that are not ancestors of `main`.
+Five former side branches contained six commits outside the mainline ancestry.
 Each has a patch-identical counterpart already on the original mainline, verified
-with stable Git patch IDs and mapped into the rewritten mainline. They retain
-their original branch relationships; no additional implementation is missing
-from `main`. The original main working tree was clean when checked.
+with stable Git patch IDs and mapped into the rewritten mainline. A subsequent
+history-only merge incorporated these branch histories without changing the
+verified main tree. Every original rewritten commit remains reachable from
+`main`, and the original commits retain their parent relationships. No additional
+implementation is missing. The original main working tree was clean when checked.
 
 Project chronology and repository references were normalized throughout the
 historical trees, including deleted files. Date-bearing paths use stable sequence
@@ -30,10 +33,15 @@ records; they do not refer to runs in the new repository.
 
 The archive is at `~/Documents/Project Archives/rehab-plan-ocr/2026-09-26/`.
 It contains a verified standalone Git bundle, the original Git metadata, the
-original secondary worktree, original workspace data, GitHub records and the two
-downloaded Actions artifacts. `recovery.json` identifies the archived workspace
-and recovery maps. Original timestamps and original-to-rewritten mappings stay
-exclusively in that archive.
+original secondary worktree, GitHub records and the two downloaded Actions
+artifacts. `recovery.json` identifies the original workspace data and recovery
+maps; it records the old workspace location until its final move into the
+archive. Original timestamps and original-to-rewritten mappings stay exclusively
+in that archive.
+
+`branch-cleanup/rewritten-before-cleanup.bundle` preserves all thirteen rewritten
+branch tips before cleanup. It was restored into a separate bare repository and
+passed Git integrity checks before the completed branches were removed.
 
 Locate historical private evidence using its rewritten workspace path:
 
