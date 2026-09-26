@@ -232,6 +232,22 @@ class ArchiveObjectTests(unittest.TestCase):
             path.write_bytes(original)
         self.assertFalse(self.manifest.with_suffix(".receipt.json").exists())
 
+    def test_legacy_source_revision_is_retained_but_ambiguity_is_rejected(self):
+        source = self.runs[0] / "source.json"
+        source.write_text(json.dumps({"revision": "a" * 40, "dirty": ""}))
+        self.plan()
+        original = source.read_bytes()
+        objects.apply(self.root, self.manifest)
+        self.assertEqual(source.read_bytes(), original)
+        for value in [
+            {"revision": "a" * 40, "head": "b" * 40},
+            {"revision": "short"},
+            {"revision": None},
+        ]:
+            source.write_text(json.dumps(value))
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "source revision"):
+                objects.proof(self.root, self.runs[0])
+
     def test_symlink_or_original_path_is_never_eligible(self):
         values = json.loads(self.review.read_text())
         values["groups"][0]["paths"][0]["path"] = str(self.originals.relative_to(self.root))

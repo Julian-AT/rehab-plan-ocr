@@ -116,8 +116,15 @@ def proof(root, run):
     source = local_path(root, str((run / "source.json").relative_to(root)))
     locations = local_path(root, str((run / "product-locations.json").relative_to(root)))
     decoded = json.loads(source.read_text())
-    revision = decoded.get("head", decoded.get("commit", ""))
-    if not re.fullmatch(r"[a-f0-9]{40}", revision):
+    revisions = [decoded[name] for name in ["head", "commit", "revision"] if name in decoded]
+    if (
+        not revisions
+        or any(
+            not isinstance(value, str) or not re.fullmatch(r"[a-f0-9]{40}", value)
+            for value in revisions
+        )
+        or len(set(revisions)) != 1
+    ):
         raise ValueError("Retained test products need an identified source revision")
     if not isinstance(json.loads(locations.read_text()), dict):
         raise ValueError("Expected retained producer locations")

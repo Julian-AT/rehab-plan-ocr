@@ -56,7 +56,7 @@ Originale, Modellgewichte, Checkpoints und Sicherungen sind nicht zulässig.
 Es werden keine Pfade gelöscht. Die beobachtete Volume-Differenz wird getrennt
 von logischen Größen ausgewiesen und ist kein garantierter APFS-Speichergewinn.
 
-Die 18 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
+Die 19 gezielten macOS-Prüfungen bestehen einschließlich tatsächlicher
 APFS-Klone, unabhängig beschreibbarer Kopien, Abbruch/Wiederanlauf, verweigerter
 Clone-Unterstützung, ACL-/Attributschutz, veränderter Belege und konkurrierender
 Zieländerung. Ein echtes C-Archiv lässt sich nach Zusammenführung weiterhin
@@ -72,6 +72,11 @@ Eine zusätzliche negative Gegenprobe zeigt, dass der Vorgänger eine Änderung
 zwischen Vorprüfung und Eintritt in den Clone-Helfer überschreiben konnte.
 Die erneute Prüfung gegen die freigegebene Identität schließt dieses Fenster;
 derselbe Test scheitert am Vorgänger und besteht mit der Korrektur.
+Auch ältere Quellenbelege mit dem Schlüssel `revision` bleiben lesbar;
+widersprüchliche oder verkürzte Revisionen werden abgewiesen. Die anschließende
+reine Bestandsprüfung erfasst alle 15.682 Dateien/Verweise der 17 zugehörigen
+Läufe (13.162.722.905 logische Bytes) ohne Änderungen. Ihr separater Beleg liegt
+unter `.local/maintenance/archive-reference-audit-20260926-s20-001.json`.
 
 ## Bestehender Bereinigungsvertrag
 
