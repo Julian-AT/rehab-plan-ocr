@@ -66,6 +66,9 @@ enum LocalSpeechError: LocalizedError {
   private var endpointSent = false
   private var monitor = false
   private var startedAt = 0.0
+  #if DEBUG && targetEnvironment(simulator)
+    private var previewInputTask: Task<Void, Never>?
+  #endif
 
   static func makeRecognizer() -> SFSpeechRecognizer? {
     ["de-AT", "de-DE"].compactMap { SFSpeechRecognizer(locale: Locale(identifier: $0)) }.first {
@@ -80,6 +83,12 @@ enum LocalSpeechError: LocalizedError {
     failure = nil
     let current = generation
     do {
+      #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("--preview-microphone") {
+          try beginPreviewInput()
+          return
+        }
+      #endif
       if !ConversationAudio.shared.microphoneActive {
         guard await AVAudioApplication.requestRecordPermission() else {
           throw LocalSpeechError.message("Mikrofonzugriff in den iPhone-Einstellungen erlauben.")
@@ -223,6 +232,10 @@ enum LocalSpeechError: LocalizedError {
     return text
   }
   func cancelTurn() {
+    #if DEBUG && targetEnvironment(simulator)
+      previewInputTask?.cancel()
+      previewInputTask = nil
+    #endif
     generation = UUID()
     segment = UUID()
     monitor = false
@@ -241,6 +254,35 @@ enum LocalSpeechError: LocalizedError {
     committed = ""
     failure = nil
   }
+
+  #if DEBUG && targetEnvironment(simulator)
+    /// Explicit simulator-only PCM fixture: exercise the real level detector
+    /// without pretending the simulator has on-device speech recognition.
+    private func beginPreviewInput() throws {
+      let format = AVAudioFormat(
+        commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
+      let detector = try VoiceActivityDetector(input: format)
+      let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 320)!
+      buffer.frameLength = 320
+      let silent = ProcessInfo.processInfo.arguments.contains("--preview-microphone-silent")
+      state = .recording
+      previewInputTask = Task { [weak self] in
+        var frame = 0
+        while !Task.isCancelled {
+          guard let self else { return }
+          let time = Double(frame) / 16_000
+          let gain = silent ? 0 : 0.12 * (0.55 + 0.45 * sin(time * 3))
+          for index in 0..<320 {
+            buffer.floatChannelData![0][index] = Float(
+              gain * sin(2 * .pi * 220 * Double(frame + index) / 16_000))
+          }
+          detector.append(buffer) { _, level in self.receive(voice: false, level: level) }
+          frame += 320
+          do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
+        }
+      }
+    }
+  #endif
 }
 struct VoiceSettingsView: View {
 

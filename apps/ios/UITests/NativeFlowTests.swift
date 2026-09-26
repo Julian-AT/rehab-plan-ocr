@@ -320,7 +320,7 @@ import XCTest
     XCTAssertEqual(state.value as? String, "idle")
     XCTAssertFalse(app.buttons["finish-speaking"].exists)
     XCTAssertFalse(app.staticTexts["voice-response"].exists)
-    app.buttons["stop-speech"].tap()
+    XCTAssertFalse(app.buttons["stop-speech"].exists)
     app.tabBars.buttons["Archiv"].tap()
     app.tabBars.buttons["Sprechen"].tap()
     XCTAssertEqual(state.value as? String, "idle")

@@ -66,10 +66,7 @@ struct VoiceSnapshot {
       self?.failure = message
     }
   }
-  var mainButtonTitle: String {
-    running ? "Gespräch pausieren" : sessionState == .paused ? "Fortsetzen" : "Gespräch starten"
-  }
-  func toggleSession() async { if running { pauseSession() } else { await beginTurn() } }
+  var isSessionRunning: Bool { running }
   private func rememberSpoken() {
     guard !rounds.isEmpty else { return }
     rounds[rounds.count - 1].spoken = SpeechOutput.shared.spokenText

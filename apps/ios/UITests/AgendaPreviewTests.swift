@@ -167,8 +167,8 @@ import XCTest
   func testConversationWithoutAssetSetup() {
     launch("one")
     app.tabBars.buttons["Sprechen"].tap()
-    XCTAssertLessThan(app.buttons["stop-speech"].frame.maxY, voiceState.frame.minY)
-    XCTAssertLessThan(app.buttons["voice-details"].frame.maxY, voiceState.frame.minY)
+    XCTAssertFalse(app.buttons["stop-speech"].exists)
+    XCTAssertLessThan(app.buttons["voice-details"].frame.maxY, voiceState.frame.midY)
     XCTAssertTrue(app.buttons["voice-details"].isHittable)
     XCTAssertEqual(app.buttons["speak"].label, "Gespräch starten")
     XCTAssertEqual(app.buttons["speak"].frame.midX, app.frame.midX, accuracy: 12)
@@ -321,7 +321,7 @@ import XCTest
     capture("11-tagesliste-groesste-schrift")
     app.tabBars.buttons["Sprechen"].tap()
     XCTAssertTrue(app.buttons["speak"].isHittable)
-    XCTAssertTrue(app.buttons["stop-speech"].isHittable)
+    XCTAssertFalse(app.buttons["stop-speech"].exists)
     XCTAssertTrue(app.buttons["voice-details"].isHittable)
     capture("12-sprechen-groesste-schrift")
     try app.performAccessibilityAudit(for: [
@@ -474,7 +474,8 @@ import XCTest
     if app.alerts.buttons["OK"].exists { app.alerts.buttons["OK"].tap() }
     if voiceState.value as? String == "recording" {
       Thread.sleep(forTimeInterval: 3)
-      XCTAssertEqual(app.buttons["speak"].label, "Gespräch pausieren")
+      XCTAssertTrue(app.buttons["stop-speech"].isHittable)
+      XCTAssertFalse(app.buttons["speak"].exists)
     }
     app.buttons["stop-speech"].tap()
     XCTAssertEqual(voiceState.value as? String, "idle")

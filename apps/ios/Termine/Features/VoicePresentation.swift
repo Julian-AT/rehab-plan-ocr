@@ -103,9 +103,7 @@ struct VoiceOrb: View {
       .frame(width: 224, height: 224)
       .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: energy)
     }.frame(width: 248, height: 248)
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel(state.title).accessibilityValue(state.phase.rawValue)
-      .accessibilityIdentifier("voice-state")
+      .accessibilityHidden(true)
   }
 }
 
@@ -116,49 +114,78 @@ struct VoiceView: View {
   @State private var settings = false
   @State private var details = false
   @State private var alert: String?
-  @Environment(\.dynamicTypeSize) private var typeSize
+  @State private var controlsHeight: CGFloat = 108
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+  private var responseVisible: Bool {
+    !model.response.isEmpty && (output.lineVisible || voiceOver)
+  }
   private var failure: String? {
     model.failure ?? model.recorder.failure ?? model.edits.error
       ?? (output.phase == .failed ? output.status : nil)
   }
   var body: some View {
     let presentation = VoicePresentation(model: model, output: output)
-    VStack(spacing: 0) {
-      Spacer(minLength: 12)
-      VoiceOrb(state: presentation)
-      Spacer(minLength: 12)
-      if !model.response.isEmpty {
-        SpokenResponseLine(output: output, fullText: model.response)
-          .padding(.horizontal).padding(.bottom, 12)
+    ZStack {
+      GeometryReader { geometry in
+        ZStack {
+          VoiceOrb(state: presentation)
+            .opacity(responseVisible ? 0 : 1)
+          if !model.response.isEmpty {
+            SpokenResponseLine(output: output, fullText: model.response)
+              .padding(.horizontal, 28)
+          }
+        }
+        .padding(
+          .vertical,
+          controlsHeight + max(geometry.safeAreaInsets.top, geometry.safeAreaInsets.bottom)
+        )
+        .frame(width: geometry.size.width, height: geometry.size.height)
       }
+      .ignoresSafeArea(.container, edges: .vertical)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(uiColor: .systemBackground))
-    .safeAreaInset(edge: .bottom) {
-      Button(
-        model.mainButtonTitle,
-        systemImage: model.sessionState == .paused
-          ? "play" : model.sessionState == .stopped ? "mic" : "pause"
-      ) {
-        Task { await model.toggleSession() }
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: responseVisible)
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(presentation.title).accessibilityValue(presentation.phase.rawValue)
+    .accessibilityIdentifier("voice-state")
+    .overlay(alignment: .bottom) {
+      Group {
+        if model.isSessionRunning || model.busy || output.speaking || !model.response.isEmpty {
+          HStack(spacing: 16) {
+            MicrophoneWaveform(recorder: model.recorder)
+            Button {
+              model.cancelSession()
+            } label: {
+              Image(systemName: "stop.fill").font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(AppPalette.tint, in: .circle).contentShape(.circle)
+            }
+            .buttonStyle(.plain).accessibilityLabel("Gespräch stoppen")
+            .accessibilityIdentifier("stop-speech")
+            .disabled(model.edits.busy)
+          }
+          .padding(10).padding(.leading, 8)
+          .background(AppPalette.tint.opacity(0.07), in: .capsule)
+          .frame(maxWidth: 320)
+        } else {
+          Button("Gespräch starten") { Task { await model.beginTurn() } }
+            .buttonStyle(AppPrimaryButtonStyle(capsule: true, foreground: .white))
+            .accessibilityIdentifier("speak")
+            .accessibilityHint("Startet das Mikrofon und hört nach jeder Antwort weiter zu.")
+            .disabled(model.edits.busy || model.edits.proposal != nil)
+        }
       }
-      .buttonStyle(AppPrimaryButtonStyle(capsule: true, foreground: .white)).buttonBorderShape(
-        .capsule
-      ).controlSize(
-        .extraLarge
-      )
-      .accessibilityIdentifier("speak")
-      .accessibilityHint(
-        "Einmal starten, automatisch antworten und weiter zuhören. Hineinsprechen unterbricht die Antwort."
-      )
-      .disabled(model.edits.busy || model.edits.proposal != nil)
-      .padding(.horizontal).padding(.bottom, 24).padding(.top, 20)
+      .padding(.horizontal, 24).padding(.bottom, 24).padding(.top, 20)
+      .onGeometryChange(for: CGFloat.self) {
+        $0.size.height
+      } action: {
+        controlsHeight = $0
+      }
     }
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        Button("Abbrechen", systemImage: "xmark") { model.cancelSession() }
-          .accessibilityIdentifier("stop-speech")
-      }
       ToolbarItemGroup(placement: .topBarTrailing) {
         Button("Gesprächsdetails", systemImage: "text.bubble") {
           model.pauseSession()
@@ -342,45 +369,67 @@ private struct VoiceDetailsView: View {
   }
 }
 
-/// Word appearance is driven exclusively by rendered player sample position.
+/// A short, centered window of words follows the actual player position.
 private struct SpokenResponseLine: View {
   let output: SpeechOutput
   let fullText: String
   @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
   var body: some View {
-    Group {
-      if typeSize.isAccessibilitySize || reduceMotion {
-        Text(output.words.suffix(18).map(\.text).joined(separator: " "))
-          .font(.body).fixedSize(horizontal: false, vertical: true)
-      } else {
-        ScrollViewReader { proxy in
-          ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-              ForEach(output.words) { word in
-                Text(word.text).font(.body).transition(.opacity).id(word.id)
-              }
-            }.padding(.leading, 24).padding(.trailing, 8)
-          }.scrollIndicators(.hidden).scrollDisabled(true)
-            .mask {
-              LinearGradient(
-                stops: [
-                  .init(color: .clear, location: 0), .init(color: .black, location: 0.12),
-                  .init(color: .black, location: 1),
-                ], startPoint: .leading, endPoint: .trailing)
-            }
-            .onChange(of: output.words.last?.id) { _, id in
-              if let id {
-                withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .trailing) }
-              }
-            }
-        }.frame(height: 44)
+    GeometryReader { geometry in
+      ScrollView {
+        Text(
+          voiceOver
+            ? fullText
+            : output.words.suffix(typeSize.isAccessibilitySize ? 6 : 12).map(\.text).joined(
+              separator: " ")
+        )
+        .font(.title2.weight(.medium)).multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .contentTransition(.opacity)
+        .accessibilityLabel(fullText).accessibilityIdentifier("voice-response")
+        .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
+      }.scrollIndicators(.hidden)
+    }
+    .opacity(output.lineVisible || voiceOver ? 1 : 0)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: output.words.last?.id)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: output.lineVisible)
+  }
+}
+
+/// Only microphone levels enter this short, in-memory history. Silence adds
+/// flat marks; playback volume and decorative oscillators never drive it.
+private struct MicrophoneWaveform: View {
+  let recorder: LocalSpeechRecorder
+  @State private var levels = Array(repeating: 0.0, count: 40)
+  @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  var body: some View {
+    Canvas { context, size in
+      let step = size.width / CGFloat(levels.count)
+      let width = max(1, step * 0.52)
+      for (index, sample) in levels.enumerated() {
+        let level = reduceMotion ? (levels.last ?? 0) : sample
+        let height = 3 + (size.height - 6) * min(1, max(0, level))
+        let rect = CGRect(
+          x: CGFloat(index) * step + (step - width) / 2,
+          y: (size.height - height) / 2, width: width, height: height)
+        context.fill(
+          Path(roundedRect: rect, cornerRadius: width / 2), with: .color(AppPalette.tint))
       }
     }
-    .opacity(output.lineVisible ? 1 : 0)
-    .animation(.easeOut(duration: 0.15), value: output.words.last?.id)
-    .animation(.easeOut(duration: 0.3), value: output.lineVisible)
-    .accessibilityElement(children: .ignore).accessibilityLabel(fullText)
-    .accessibilityIdentifier("voice-response")
+    .frame(height: 44)
+    .accessibilityElement(children: .ignore).accessibilityLabel("Mikrofonpegel")
+    .accessibilityValue(recorder.level > 0.02 ? "Ton erkannt" : "Still")
+    .accessibilityIdentifier("microphone-waveform")
+    .task(id: scenePhase) {
+      guard scenePhase == .active else { return }
+      while !Task.isCancelled {
+        levels.removeFirst()
+        levels.append(recorder.level.isFinite ? min(1, max(0, recorder.level)) : 0)
+        do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+      }
+    }
   }
 }
