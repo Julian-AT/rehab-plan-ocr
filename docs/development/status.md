@@ -30,6 +30,9 @@ Current verified implementation slices:
 - Shared receipt publication has a visible cancellation action, a provider
   deadline and an atomic publication fence (`eadde06`). Interrupted new copies
   cannot reappear through recovery; complete receipts and originals remain intact.
+  Swift scan attempts now have bounded producer/worker leases (`c9412b4`);
+  2,000 controlled cycles leave no retained registrations. A timed-out native
+  worker keeps its lease until actual completion. The integrated app check is pending.
 - Typed native errors distinguish read timeouts from uncertain calendar writes.
   Binary photo decoding covers all eight orientations and the primary HEIF image.
   Request completion, stale settings replies, temporary-file erasure and partial
@@ -53,6 +56,13 @@ Current verified implementation slices:
   [dependency audit](../releases/dependency-security-2026-09-26-s18.md) records zero
   RustSec vulnerability matches and two maintenance warnings; native-runtime
   qualification and final bundle checks remain separate.
+  A [pinned local audit workflow](dependency-audit.md) now repeats that review
+  offline without depending on a Homebrew installation (`150edc9`).
+- Xcode product generations preserve previous files before changing a resource
+  contract (`d16dacb`); twelve controlled rotation/recovery tests pass. The first
+  actual rotation/build remains pending. Bundle policy checks embedded Mach-O
+  files and static archives as well as the four main executables (`619dbe5`);
+  ten packaging regressions pass. These are tooling results, not a current IPA approval.
 
 The complete local baseline at `9b5eef3` passed 178 Rust tests, 232 tool tests,
 native probes and bindings. A later combined working-tree tool run passes 303
@@ -108,7 +118,7 @@ are checked against actual bundles. Synthetic fixtures are used in hosted CI.
 
 | Area | Current evidence and limit |
 | --- | --- |
-| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The current local tool suite passes 232 tests; sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
+| Portable/native logic | 178 macOS Rust tests and 174 Linux Rust tests pass on the recorded earlier candidates. The earlier 232-tool-test baseline and later 303-test working-tree run are separate observations; final combined checks remain pending. Sixteen monitor tests pass. Four HEIF cases require macOS. Exact revisions and native probes are recorded in the ledgers. |
 | EventKit | 17 native tests, with one simulator-only file-protection skip. |
 | Hosted CI | Complete results confirm run 35295159442 at `0597aab` has 62 UI passes/four failures, and run 35297619578 at `a303bc2` has 65 passes/one failure, both with zero skips on iOS 26.5. Four focused picker/import cases pass locally after excluding the temporary same-label cancel control. See the [follow-up](../releases/history/2026-09-26-s18-native-ui-followup.md). No complete candidate pass is claimed. |
 | Current CI prerequisite | The latest inspected run [35336726552](archive:github/run-35336726552) at `7d3d3e9` is still blocked by GitHub's payment/spending-limit check before either runner starts: zero executed steps. The account prerequisite remains unresolved. No retry, payment or limit change was made by this read-only check. |
@@ -179,6 +189,13 @@ An [explicit backend/batch diagnostic](../../ml/experiments/2026-09-26-s18-assis
 reproduces all six prior export divergences with automatic backend selection and
 both CPU batch configurations. Changing these settings supplies no parity or
 quality fix; all original model gates remain open.
+Subsequent [token diagnosis](../../ml/experiments/2026-09-26-s18-assistant-token-parity.md)
+found that the old CLI text-file option removed a final newline, changing input
+tokens despite unchanged token counts. All four consumers now preserve exact
+prompt bytes (`2d38d8e`). A corrected single-case comparison agrees; all forty
+MLX instrumentation controls reproduce the retained fused answers. The complete
+corrected CLI comparison remains pending. Equal output alone would not resolve
+the remaining incorrect intent/date predictions.
 
 Nine installed German system voices now have 90 anonymous host previews rendered
 by the actual product provider, with 1,782 checked word-progress markers and no
@@ -204,6 +221,8 @@ natural endpoints and the complete iPhone route remain required.
 - Older iOS/non-Apple-Intelligence hardware and eligible Apple hardware; denied or
   revoked permissions, airplane mode, Bluetooth, backgrounding and long sessions.
 - Human voice/comprehension and patient usability studies; a justified provider/voice choice.
+  [Nine task cards and a session record](../product/research/usability-rounds.md)
+  prepare the two rounds of at least five people; no sessions have been conducted.
 - Publisher/contact details, final public-package rights and branding-rights checks,
   complete privacy/support materials, internal acceptance and a small TestFlight pilot.
 - Explicit current preview/listening approval, then a fresh complete backup,

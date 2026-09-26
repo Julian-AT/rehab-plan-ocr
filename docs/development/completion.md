@@ -147,9 +147,35 @@ Ausgangsprüfung vor den folgenden Änderungen, kein Gesamtnachweis des Endstand
   Textdateieingang ein abschließendes Zeilenende. Gemeinsamer Adapter, gezielte
   Regressionen und gepaarter Einzelvergleich bestehen. Der vollständige neue
   Paritätsvergleich ist noch offen; Modelle und alte Berichte bleiben unverändert.
-- Checkpoint-Aufbewahrung: `7d84ac1`; 19 synthetische Regressionen einschließlich
+- Checkpoint-Aufbewahrung: `7d84ac1`, `42863cc`; 20 synthetische Regressionen einschließlich
   tatsächlicher Resume-Leser, Optimizer/RNG-Erhalt und Wiederanlauf nach Unlink.
+  Diagnoseverweise bleiben von reinen Metadateninventaren unterschieden.
   Reale Vorschau und Ausführung stehen wegen aktiver Läufe noch aus.
+- Begrenzte Swift-Aufnahmeversuche: `c9412b4`; Producer, PDF-Fortsetzungen und
+  native Restarbeit besitzen widerrufbare Leases. 2.000 kontrollierte Wiederholungen
+  hinterlassen keine Registrierungen; integrierte ScanModel-Prüfung folgt im Appbuild.
+- Bild-/PDF-Vorschau reicht Abbruch an ihre Worker weiter und verwirft späte
+  Veröffentlichungen: `ccfc996`. Parser und strenge Formatprüfung bestehen;
+  die isolierte UIKit-Typprüfung wurde bei Hostüberlast abgebrochen und zählt nicht
+  als Erfolg. Der gemeinsame Appbuild bleibt erforderlich.
+- Bytegleiche Assistenten-Wiederverwendung und gezielte Token-/Logitdiagnose:
+  `045cd2b`; zwölf Regressionen und C++-Kompilierung bestanden. Alle 40 MLX-Kontrollen
+  stimmen mit den gespeicherten Antworten überein; korrigierter CLI-Vollvergleich offen.
+- Alte Xcode-Produkte mit Hashinventar erhalten und bei geändertem Ressourcenvertrag
+  eine neue Generation beginnen: `d16dacb`; zwölf Rotations-/Wiederanlauftests.
+  Tatsächliche Rotation und erster Appbuild auf dem gemeinsamen Stand folgen separat.
+- Alle eingebetteten nativen Binärdateien in der Releaseprüfung erfassen:
+  `619dbe5`; zehn Pakettests einschließlich Debug-Dylib, Framework und umbenanntem
+  statischem Archiv. Das aktuelle echte Paket muss diese Prüfung noch bestehen.
+- Reproduzierbare [Abhängigkeitsprüfung](dependency-audit.md): `150edc9`, `e7c885b`;
+  14 Regressionen und zwei tatsächliche Offline-Durchläufe mit identischen Berichten.
+  Einrichtung, Download und Aktualisierung der Warnungsdatenbank bleiben getrennt.
+- Menschliche Referenzprüfung: `4f50580`; privates Paket mit 20 Originalen,
+  188 Zeilenvorkommen und getrennten Feld-/Geometrie-/Datenschutzabschnitten.
+  Arbeitsnotizen vergeben keine Freigaben; aktuelle Referenz-/Cropfreigaben bleiben null.
+- Zwei [moderierte Bedienungsrunden](../product/research/usability-rounds.md):
+  `f7b8aa7`; Aufgaben und lokales Protokoll vorbereitet, vier Dokumentationsprüfungen
+  bestanden. Tatsächliche Teilnehmende, Durchführung und Ergebnisse stehen aus.
 
 Der zuletzt vorhandene CI-Lauf `35336726552` an `7d3d3e9` wurde erneut lesend geprüft:
 beide Jobs haben null ausgeführte Schritte und eine Abrechnungs-/Limitannotation.
