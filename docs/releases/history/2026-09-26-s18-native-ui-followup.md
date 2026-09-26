@@ -96,3 +96,30 @@ reproduction is blocked before the changed assertion by the independently
 reproduced CoreAudio RPC abort; it is not recorded as a pass. Production audio
 code, pause thresholds, visuals and test assertions about user behavior remain
 unchanged.
+
+## Candidate blocked before runner startup
+
+[Run 35306312405](archive:github/run-35306312405)
+was dispatched in full scope at
+`404f68eb1baac694c7bb9cfab1d11f7bd4c1d815` on
+`codex/offline-plan-ui-readiness-20260926-s18`. Both jobs fail with **zero executed
+steps**, without a runner or downloadable job log. GitHub's check annotations
+identify failed recent account payments or a spending limit requiring an increase.
+This is an account-level execution block, not a test result for the candidate.
+
+`ci_monitor.cjs annotations` now reads the exact run attempt's job/check metadata
+and every annotation page. Repository, commit, attempt, check identity and counts
+are verified; the command cannot follow a different repository's check URL. Sixteen
+monitor regressions pass, including multi-page and identity-mismatch cases. Actual
+annotations are retained under `.local/runs/hosted-ci-20260926-s18-008/annotations.json`.
+The user was asked to resolve the GitHub billing/settings prerequisite. No billing
+setting, payment or spending limit was changed, and no identical retry was started.
+
+After completing the local tests, the owned synthetic-only simulator was retired.
+All containers, documents, media, preferences, TCC state and simulator logs were
+copied and hash-checked first: 1,935 entries and 577,159,345 bytes. Backup receipt
+`.local/runs/disposable-simulator-retirement-20260926-s18-002/receipt.json` has SHA-256
+`daefe2bfa11087fa56150224d21c80b532b9edf94120b6545eba7d2d0f16dd87`.
+Original data, model artifacts, result bundles, other simulators and physical
+devices remain preserved. This removes regenerated simulator system/cache storage,
+not any acceptance requirement.

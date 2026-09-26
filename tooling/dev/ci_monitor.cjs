@@ -12,6 +12,7 @@ Commands:
   runs                 List recent runs, optionally for --branch / --commit
   view <run-id>        Show run identity, conclusion, jobs and steps
   log-failed <run-id>  Print failed-step logs
+  annotations <run-id> Read check annotations, including failures before runner startup
   artifacts <run-id>   List retained artifacts and their run/commit identity
   evidence <run-id>    Download synthetic native checks for --commit to new --output
   check-actions       Verify commits pinned in --file (default verify.yml)
@@ -75,9 +76,9 @@ function main(args, run = execute, read = readFileSync) {
   });
   if (values.help || positionals.length === 0) return HELP;
   const [command, id] = positionals;
-  const commands = ['runs', 'view', 'log-failed', 'check-actions', 'dispatch', 'artifacts', 'evidence'];
+  const commands = ['runs', 'view', 'log-failed', 'annotations', 'check-actions', 'dispatch', 'artifacts', 'evidence'];
   if (!commands.includes(command)) throw new Error('Unknown command; use --help.');
-  const needsID = ['view', 'log-failed', 'artifacts', 'evidence'].includes(command);
+  const needsID = ['view', 'log-failed', 'annotations', 'artifacts', 'evidence'].includes(command);
   if (positionals.length !== (needsID ? 2 : 1) || (needsID && !/^\d+$/.test(id))) {
     throw new Error('Unexpected arguments or invalid run ID.');
   }
@@ -105,6 +106,47 @@ function main(args, run = execute, read = readFileSync) {
   }
   const repo = repository(values.repo, run);
   const gh = (...argv) => run('gh', argv);
+  if (command === 'annotations') {
+    const endpoint = `repos/${repo}/actions/runs/${id}`;
+    const workflow = JSON.parse(gh('api', endpoint));
+    if (String(workflow.id) !== id || (values.commit && workflow.head_sha !== values.commit)
+      || !Number.isSafeInteger(workflow.run_attempt) || workflow.run_attempt < 1) {
+      throw new Error('Run does not match the requested identity.');
+    }
+    const listing = JSON.parse(gh('api', `${endpoint}/attempts/${workflow.run_attempt}/jobs?per_page=100`));
+    if (listing.total_count !== listing.jobs.length) throw new Error('Job listing is incomplete.');
+    const jobs = [];
+    for (const job of listing.jobs) {
+      const url = new URL(job.check_run_url);
+      const prefix = `/repos/${repo}/check-runs/`;
+      const checkID = url.pathname.slice(prefix.length);
+      if (String(job.run_id) !== id || job.run_attempt !== workflow.run_attempt
+        || job.head_sha !== workflow.head_sha || url.origin !== 'https://api.github.com'
+        || !url.pathname.toLowerCase().startsWith(prefix.toLowerCase())
+        || !/^\d+$/.test(checkID) || url.search || url.hash) {
+        throw new Error('Check does not belong to the requested repository/run/attempt.');
+      }
+      const checkEndpoint = `repos/${repo}/check-runs/${checkID}`;
+      const check = JSON.parse(gh('api', checkEndpoint));
+      const count = check.output?.annotations_count;
+      if (String(check.id) !== checkID || check.head_sha !== workflow.head_sha
+        || !Number.isSafeInteger(count) || count < 0) {
+        throw new Error('Check identity or annotation count is invalid.');
+      }
+      const annotations = [];
+      for (let page = 1; page <= Math.ceil(count / 100); page++) {
+        const entries = JSON.parse(gh('api', `${checkEndpoint}/annotations?per_page=100&page=${page}`));
+        if (!Array.isArray(entries)) throw new Error('Invalid annotation response.');
+        annotations.push(...entries);
+      }
+      if (annotations.length !== count) throw new Error('Annotation listing is incomplete.');
+      jobs.push({ id: job.id, name: job.name, conclusion: job.conclusion,
+        runner: job.runner_name, steps: job.steps?.length || 0,
+        check: job.check_run_url, annotations });
+    }
+    return JSON.stringify({ repository: repo, run: id, commit: workflow.head_sha,
+      attempt: workflow.run_attempt, conclusion: workflow.conclusion, jobs }, null, 2);
+  }
   if (['artifacts', 'evidence'].includes(command)) {
     const endpoint = `repos/${repo}/actions/runs/${id}`;
     const workflow = JSON.parse(gh('api', endpoint));

@@ -50,6 +50,53 @@ test('failed logs can select a completed numeric job without waiting on unrelate
     () => JSON.stringify({run_id: 999, status: 'completed'})), /belong/);
 });
 
+function annotationFixture(mutate = () => {}) {
+  const workflow = { id: 123, head_sha: sha, run_attempt: 2, conclusion: 'failure' };
+  const job = { id: 456, run_id: 123, run_attempt: 2, head_sha: sha,
+    name: 'apple', conclusion: 'failure', runner_name: null, steps: [],
+    check_run_url: 'https://api.github.com/repos/owner/repo/check-runs/789' };
+  const check = { id: 789, head_sha: sha, output: { annotations_count: 101 } };
+  mutate(workflow, job, check);
+  const calls = [];
+  return { calls, run: (binary, args) => {
+    calls.push([binary, args]);
+    assert.equal(binary, 'gh');
+    assert.equal(args[0], 'api');
+    const path = args[1];
+    if (path.includes('/jobs?')) return JSON.stringify({ total_count: 1, jobs: [job] });
+    if (path.includes('/annotations?')) return JSON.stringify(
+      Array.from({ length: path.endsWith('page=1') ? 100 : 1 }, () => ({ message: 'Runner could not start' })));
+    return JSON.stringify(path.includes('/check-runs/') ? check : workflow);
+  } };
+}
+
+test('startup annotations are read-only, complete and bound to the run attempt', () => {
+  const fixture = annotationFixture();
+  const report = JSON.parse(main(['annotations', '123', '--repo', 'owner/repo', '--commit', sha], fixture.run));
+  assert.equal(report.commit, sha);
+  assert.equal(report.attempt, 2);
+  assert.equal(report.jobs[0].steps, 0);
+  assert.equal(report.jobs[0].annotations.length, 101);
+  assert.match(fixture.calls[1][1][1], /attempts\/2\/jobs/);
+  assert.equal(fixture.calls.length, 5);
+});
+
+test('annotation identity errors cannot redirect reads or hide incomplete evidence', () => {
+  for (const mutate of [
+    workflow => { workflow.head_sha = 'b'.repeat(40); },
+    (_, job) => { job.run_attempt = 1; },
+    (_, job) => { job.check_run_url = 'https://api.github.com/repos/other/repo/check-runs/789'; },
+    (_, job) => { job.check_run_url = 'https://elsewhere.example/repos/owner/repo/check-runs/789'; },
+    (_, __, check) => { check.head_sha = 'b'.repeat(40); },
+    (_, __, check) => { check.output.annotations_count = 102; },
+  ]) {
+    const fixture = annotationFixture(mutate);
+    assert.throws(() => main(['annotations', '123', '--repo', 'owner/repo', '--commit', sha], fixture.run),
+      /identity|belong|incomplete/);
+    assert.ok(fixture.calls.every(([, args]) => args[1].startsWith('repos/owner/repo/')));
+  }
+});
+
 test('dispatch rejects a stale remote identity before creating any workflow event', () => {
   const calls = [];
   assert.throws(() => main(['dispatch', '--repo', 'owner/repo', '--branch', 'candidate', '--commit', sha],
