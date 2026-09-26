@@ -1,0 +1,20 @@
+[package]
+name = "reha-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+onnx = ["reha-core/onnx"]
+onnx-download = ["onnx", "reha-core/onnx-download"]
+
+[dependencies]
+reha-core = { path = "../reha-core" }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+
+[[bin]]
+name = "reha"
+path = "src/main.rs"

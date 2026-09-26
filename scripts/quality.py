@@ -195,7 +195,7 @@ def tests(portable):
     run("cargo", "test", "--locked", "--workspace")
     for test in sorted((ROOT / "tests").glob("test-*.py")):
         run("uv", "run", "--locked", "python", test)
-    run("cargo", "build", "--locked", "-p", "reha-core", "--bin", "reha")
+    run("cargo", "build", "--locked", "-p", "reha-cli", "--bin", "reha")
     run(
         "uv",
         "run",

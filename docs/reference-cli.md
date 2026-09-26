@@ -7,13 +7,13 @@ bleiben in einem ausdrücklich angegebenen privaten Verzeichnis mit `inventory.j
 `raw/` und `labels/provisional/`. Ein gespeicherter Entwurf ist keine freigegebene Referenz.
 
 ```sh
-cargo run --locked -p reha-core -- lab list /PFAD/ZUM/DATENSATZ
-cargo run --locked -p reha-core -- lab get /PFAD/ZUM/DATENSATZ QUELLHASH
-cargo run --locked -p reha-core -- lab image /PFAD/ZUM/DATENSATZ QUELLHASH /PFAD/ZUM/ORIGINAL.png
-cargo run --locked -p reha-core -- lab save /PFAD/ZUM/DATENSATZ /PFAD/ZUR/BEARBEITETEN-REFERENZ.json
-cargo run --locked -p reha-core -- lab confirm-row /PFAD/ZUM/DATENSATZ QUELLHASH ZEILEN-ID
-cargo run --locked -p reha-core -- lab confirm-coverage /PFAD/ZUM/DATENSATZ QUELLHASH
-cargo run --locked -p reha-core -- lab approve /PFAD/ZUM/DATENSATZ QUELLHASH
+cargo run --locked -p reha-cli -- lab list /PFAD/ZUM/DATENSATZ
+cargo run --locked -p reha-cli -- lab get /PFAD/ZUM/DATENSATZ QUELLHASH
+cargo run --locked -p reha-cli -- lab image /PFAD/ZUM/DATENSATZ QUELLHASH /PFAD/ZUM/ORIGINAL.png
+cargo run --locked -p reha-cli -- lab save /PFAD/ZUM/DATENSATZ /PFAD/ZUR/BEARBEITETEN-REFERENZ.json
+cargo run --locked -p reha-cli -- lab confirm-row /PFAD/ZUM/DATENSATZ QUELLHASH ZEILEN-ID
+cargo run --locked -p reha-cli -- lab confirm-coverage /PFAD/ZUM/DATENSATZ QUELLHASH
+cargo run --locked -p reha-cli -- lab approve /PFAD/ZUM/DATENSATZ QUELLHASH
 ```
 
 Zeilen werden erst nach Sichtprüfung des Originalfotos bestätigt. Änderungen an Werten,

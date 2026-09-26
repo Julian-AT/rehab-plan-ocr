@@ -3,5 +3,5 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY tests/fixtures/sample-run.json ./tests/fixtures/sample-run.json
-RUN cargo test --locked -p reha-core --features onnx-download && cargo build --locked --release -p reha-core --features onnx-download
+RUN cargo test --locked -p reha-core --features onnx-download && cargo build --locked --release -p reha-cli --features onnx-download
 ENTRYPOINT ["/app/target/release/reha"]

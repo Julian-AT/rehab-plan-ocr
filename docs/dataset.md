@@ -106,7 +106,7 @@ After approving all references and freezing groups, compare the unchanged small
 and medium models with the same dataset and configuration choices:
 
 ```sh
-cargo build --release -p reha-core --features onnx-download
+cargo build --release -p reha-cli --features onnx-download
 python3 scripts/benchmark.py --models models/private/small --config data/private/config-small.json
 python3 scripts/benchmark.py --models models/private/medium --config data/private/config-medium.json
 ```

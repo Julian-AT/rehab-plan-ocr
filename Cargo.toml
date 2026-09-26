@@ -1,6 +1,6 @@
 [workspace]
-members = ["packages/rust/reha-core", "packages/rust/reha-ffi"]
-default-members = ["packages/rust/reha-core"]
+members = ["packages/rust/reha-core", "packages/rust/reha-ffi", "packages/rust/reha-cli"]
+default-members = ["packages/rust/reha-core", "packages/rust/reha-cli"]
 resolver = "2"
 
 [workspace.package]
