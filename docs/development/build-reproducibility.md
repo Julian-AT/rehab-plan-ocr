@@ -48,9 +48,11 @@ herausführende relative Links benötigen weiterhin eine gesonderte Zuordnung.
 
 `CARGO_TARGET_DIR` bleibt als ausdrücklich gewählter abweichender Ausgabeort
 unterstützt. Generator, Linker, Assembler und CLI-Prüfungen verwenden denselben
-aufgelösten Wert. Sechs Pfadtests vergleichen dies mit tatsächlichen Cargo-Metadaten und prüfen
+aufgelösten Wert. Sieben Pfadtests vergleichen dies mit tatsächlichen Cargo-Metadaten und prüfen
 den FFI-Generator bei gleichzeitig vorhandenem veraltetem Standardartefakt; sieben Migrationstests prüfen Datenerhalt, konkurrierende
 Änderungen, externe Linkziele und Wiederanlauf.
+Die Ignore-Regeln erfassen sowohl alte Verzeichnisse als auch ihre neuen
+Kompatibilitätslinks. Der Pfadtest prüft beide Formen mit tatsächlichem `git check-ignore`.
 
 Die CI lädt weiterhin ausschließlich die ausdrücklich benannten synthetischen
 Testnachweise hoch, mit 14 Tagen Aufbewahrung. Wegen des `.local`-Verzeichnisses

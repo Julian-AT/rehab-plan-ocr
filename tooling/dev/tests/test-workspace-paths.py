@@ -41,6 +41,29 @@ class WorkspacePathTests(unittest.TestCase):
         self.assertEqual((old / "retained").read_bytes(), b"previous failure evidence")
         self.assertFalse((self.root / ".local/builds/rust").exists())
 
+    def test_generated_directories_and_compatibility_links_stay_ignored(self):
+        shutil.copyfile(workspace.ROOT / ".gitignore", self.root / ".gitignore")
+        subprocess.run(["git", "init", "--quiet", str(self.root)], check=True)
+        paths = [item["legacy"] for item in workspace.mappings(self.root).values()]
+        for path in paths:
+            (self.root / path).mkdir(parents=True)
+
+        def ignored():
+            result = subprocess.run(
+                ["git", "check-ignore", "--", *paths],
+                cwd=self.root,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertEqual(set(result.stdout.splitlines()), set(paths))
+
+        ignored()
+        for path in paths:
+            (self.root / path).rmdir()
+        workspace.prepare(self.root)
+        ignored()
+
     def test_conflicting_or_external_aliases_fail_closed(self):
         old = self.root / "target"
         old.mkdir()
