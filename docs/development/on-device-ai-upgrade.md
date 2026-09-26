@@ -93,3 +93,55 @@ Checks: calendar-insights, plan-evidence, calendar-answers, voice-flow (includin
 location-only patch/confirmation), assistant-request, Rust evidence bounds/revision
 unit test and simulator build. Source evidence remains in conversation memory only;
 it never enters routine diagnostics.
+
+## Corpus and qualification tooling
+
+Speech intake now separates evaluation, ASR training and assistant training purposes.
+Both source entry and reviewed receipt must explicitly authorize each use. Frozen
+development/holdout assignments verify original byte hashes and connect speakers,
+dialogues, document/revision/layout families and intake relationships before any
+augmentation. A freeze grants no training permission.
+
+The [physical conversation audit](../../ml/evaluation/conversation/DEVICE-QUALIFICATION.md)
+checks paired provenance, failed-turn denominators, raw-model versus app outcomes,
+clarification rates, endpoint-inclusive cold/warm latency, separate button/spoken
+interruption, energy, memory and scenario coverage. It always requires reviewed
+independent evidence before promotion. Unit fixtures are not device measurements.
+
+`ml/evaluation/speech/app-provider-file.sh WAV NEW_PRIVATE_JSON` exercises the
+shipping SpeechInput/VoiceActivityDetector, conversion and progressive analyzer
+through paced host-file input. Optional `--setup` explicitly installs the required
+host progressive-transcription assets before evaluation. Normal mode never downloads.
+The report records source hashes, actual input format, provisional/final counts,
+voiced frames, result/finalization timings and typed outcome. Transcript stays in
+the private report; no microphone or calendar access occurs. These generated-speech
+controls remain distinct from natural dialogue or physical-device qualification.
+
+## Verified preview and experiments
+
+- Simulator build, focused audio/recognition/voice/calendar/evidence checks, Rust
+  evidence projection, generated-binding parity and repository lint pass.
+- 14 intake/group/qualification tests pass. They exercise permission separation,
+  related-source leakage, failed-turn timing, unsafe results and paired identities.
+- Generated German host files pass through the actual app audio/provider pipeline:
+  correction sample 30 updates/1 final, 217 ms end-of-input to completion; long
+  sample 90 updates/1 final, 157 ms. Long sample used installed assets without
+  downloading. These two controls do not measure conversational accuracy or latency.
+- Fresh visual run `ai-upgrade-visual-20260927-001`: 3 UI tests pass; **17/22 exact
+  images, comparison fails**. Four differences are confined to the nine-pixel-wide
+  scroll indicator. The dark completed-day view differs in 1,559 pixels with maximum
+  channel delta four, matching the previously documented system-control pattern.
+  Baselines and tolerances remain unchanged. Local `review.html` and `triage.json`
+  retain the evidence; full appearance qualification remains open.
+- `ai-upgrade-listening-20260927-001/listening.html` contains 90 host-rendered Apple
+  samples (nine voices). Human preference/comprehension and phone playback are pending.
+- [NVIDIA runtime feasibility](../../ml/experiments/2026-09-27-nemotron-ios-feasibility.md):
+  ASR C/C++ and Metal libraries cross-compile for arm64 iOS 26. No inference,
+  streaming-quality result, framework integration or phone qualification is implied.
+
+Physical installation still requires explicit approval of these previews and
+listening samples under AGENTS.md, followed by a fresh backup and in-place update.
+The next critical step is the guided natural-speech session. Parakeet/Ultra,
+WhisperKit, neural VAD, compact Qwen comparisons, Pocket TTS, whole-plan Apple OCR
+and accelerated OCR remain unqualified; training awaits purpose-approved grouped
+real data and measured residual errors. No replacement is silently selected.

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "nemotron-ios-feasibility-001",
+  "status": "cross-compiled-without-model-inference",
+  "qualified": false,
+  "eligible_for_packaging": false,
+  "runtime": {
+    "repository": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+    "revision": "97a15afa5caa9bce5baaa86c1184103877af4101",
+    "ggml_revision": "c03b4e2bcece5134827881af90242086daf75be5",
+    "sentencepiece_revision": "17d7580d6407802f85855d2cc9190634e2c95624",
+    "cmake": "3.31.6",
+    "xcode": "26.4",
+    "target": "arm64-apple-ios26.0",
+    "sdk": "26.4",
+    "backends": [
+      "CPU",
+      "Accelerate",
+      "Metal"
+    ],
+    "upstream_ggml_patches": false
+  },
+  "model": {
+    "repository": "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b",
+    "downloaded": false,
+    "sha256": null,
+    "conversion_settings": null
+  },
+  "supported_hardware": [],
+  "artifacts": [
+    {
+      "path": ".local/experiments/ai-upgrade/nemo-ios/bin/libnemo_speech_asr_c.dylib",
+      "sha256": "090fa85cba33920a89640156a4c678ab0acd18e36b45dcb74d95f30841f440e7",
+      "bytes": 95320
+    },
+    {
+      "path": ".local/experiments/ai-upgrade/nemo-ios/bin/libnemo_speech_asr.dylib",
+      "sha256": "e00b128996b32a855c473e17c37aca8dfd1db8fa1f3ecb37a4e5905cdc407815",
+      "bytes": 1998744
+    },
+    {
+      "path": ".local/experiments/ai-upgrade/nemo-ios/bin/libggml-metal.0.12.0.dylib",
+      "sha256": "e946909526f3189b869ad6bbcbdf41eb863c9bb07c907bbe3835e06199cbe4ba",
+      "bytes": 825952
+    }
+  ],
+  "evidence": [
+    {
+      "path": ".local/builds/nemo-ios-configure.log",
+      "sha256": "385a85a13d75e9b80e60d5cda2d4b0905ff56469ad3a6b06ee7aaf86b8d49d9d",
+      "bytes": 3361
+    },
+    {
+      "path": ".local/builds/sentencepiece-ios.log",
+      "sha256": "74e7d1d96ec20dbb136e25b7702798845eb01d0496048e5ea780a120fb107fd2",
+      "bytes": 1353
+    },
+    {
+      "path": ".local/builds/sentencepiece-ios-toolchain.log",
+      "sha256": "756444aad70d1648396323802e9096998c19cb304cdb54f81b8f978c3381665e",
+      "bytes": 10971
+    },
+    {
+      "path": ".local/builds/nemo-ios-configure-with-sp.log",
+      "sha256": "a2a4ee3d6e3275eee522c2ecea35108262603d31d75d2db52efff1dac6ca33cf",
+      "bytes": 1562
+    },
+    {
+      "path": ".local/builds/nemo-ios-build.log",
+      "sha256": "9095d520b8fbee7708ad8d614a09e960e06339ee1200a6d8ad3d93430d96cfd5",
+      "bytes": 10817
+    }
+  ],
+  "qualification": {
+    "physical_device": false,
+    "model_inference": false,
+    "app_pipeline": false,
+    "memory_energy_latency": false,
+    "paired_natural_dialogues": 0,
+    "default_provider_changed": false
+  },
+  "limits": [
+    "Successful linking is not evidence of iPhone runtime or streaming model compatibility.",
+    "SentencePiece requires its bundled iOS toolchain; the initial native CMake configuration failed.",
+    "Stock ggml path was used, without NVIDIA optional patches.",
+    "Dynamic libraries still need app-compatible framework packaging, code signing, resource checks and a C/Swift adapter.",
+    "Do not add these experimental artifacts to the shipping runtime inventory."
+  ]
+}

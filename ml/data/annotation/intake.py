@@ -19,7 +19,7 @@ FORMATS = {
 }
 PURPOSES = {
     "schedule": {"schedule_evaluation", "ocr_training"},
-    "speech": {"speech_evaluation"},
+    "speech": {"speech_evaluation", "asr_training", "assistant_training"},
 }
 
 

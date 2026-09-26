@@ -84,6 +84,27 @@ class IntakeTests(unittest.TestCase):
                 self.assertFalse(self.output.exists())
                 self.assertTrue(self.source.exists())
 
+    def test_speech_training_needs_its_own_reviewed_purpose(self):
+        audio = self.root / "invented.wav"
+        audio.write_bytes(b"invented audio")
+        entry = self.request["entries"][0]
+        entry.update(
+            kind="speech",
+            path=audio.name,
+            speaker_id="s01",
+            related_ids=["speaker_s01", "dialogue01"],
+            purposes=["asr_training"],
+        )
+        self.request["consents"][0]["purposes"] = ["speech_evaluation"]
+        with self.assertRaisesRegex(ValueError, "outside"):
+            self.run_intake()
+        self.assertFalse(self.output.exists())
+        self.request["consents"][0]["purposes"].append("asr_training")
+        result = self.run_intake()
+        self.assertEqual(result["entries"][0]["purposes"], ["asr_training"])
+        self.assertNotIn("assistant_training", result["entries"][0]["purposes"])
+        self.assertFalse(result["groups_frozen"])
+
     def test_evaluation_consent_does_not_allow_training(self):
         self.request["entries"][0]["purposes"] = ["ocr_training"]
         with self.assertRaisesRegex(ValueError, "outside"):

@@ -91,6 +91,9 @@ Werkzeug erteilt keine Einwilligung. Auswertungsfreigabe allein erlaubt kein
 OCR-Training. Dafür müssen Beleg und Eintrag zusätzlich `ocr_training` enthalten.
 Sprachdateien verwenden `kind: speech`, `speech_evaluation`, `speaker_id: s01`
 und stets die Beziehung `speaker_s01` neben Sitzungs- und Szenariokennungen.
+Sprachtraining braucht eine eigene Zweckfreigabe: Beleg und Eintrag müssen
+`asr_training` beziehungsweise `assistant_training` ausdrücklich enthalten.
+`speech_evaluation` allein erlaubt keines von beiden.
 Alle Beziehungen müssen später datensatzübergreifend zusammengeführt werden.
 
 ```sh
@@ -117,6 +120,9 @@ Das historische `dataset.py inventory` ist kein Importbefehl für neue Stapel.
 
 Entwicklungsgruppen vor jeder Augmentation einfrieren. Für Sprache bleiben alle
 Aufnahmen einer Person sowie verwandte Dialog-/Paraphrasenfamilien zusammen.
+`ml/data/annotation/freeze_groups.py` prüft diese Zuordnung einschließlich
+Prüfsummen und transitiver Beziehungen; Aufruf und Format stehen in der
+[Geräteauswertung](../../../ml/evaluation/conversation/DEVICE-QUALIFICATION.md).
 Den abschließenden, bisher ungesehenen Testsatz getrennt halten und erst nach
 festgelegter Kandidatenauswahl öffnen. Ergebnisse getrennt nach echten Fotos,
 synthetischen Beispielen und negativen Eingaben ausweisen; Anzahl unabhängiger
