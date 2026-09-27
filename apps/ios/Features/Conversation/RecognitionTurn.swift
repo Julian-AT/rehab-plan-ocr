@@ -60,16 +60,29 @@ enum RecognitionEvent: Sendable {
 }
 
 /// A stalled recognizer is distinct from an idle microphone or a natural pause.
-/// Reset on every provider result. Silence alone never starts this deadline.
+/// Only changed words/numbers are progress. Repeated snapshots and punctuation
+/// revisions cannot keep a finished question open in background noise.
 struct RecognitionProgress {
   private(set) var voicedFrames = 0
   private var lastProgress: Double?
   private var firstVoice: Double?
+  private var lastWords = ""
   mutating func voice(at time: Double) {
     voicedFrames += 1
     if firstVoice == nil { firstVoice = time }
   }
-  mutating func result(at time: Double) { lastProgress = time }
+  mutating func result(text: String, at time: Double) {
+    let words = text.lowercased().split { !$0.isLetter && !$0.isNumber }.joined(separator: " ")
+    guard !words.isEmpty, words != lastWords else { return }
+    lastWords = words
+    lastProgress = time
+  }
+  /// Backup for noise classified as sustained speech. Drain the recognizer,
+  /// then accept only its finalized outcome; never promote a partial snapshot.
+  func shouldFinalize(at time: Double) -> Bool {
+    guard let lastProgress else { return false }
+    return time - lastProgress >= 4
+  }
   func stalled(at time: Double) -> Bool {
     guard voicedFrames >= 25, let since = lastProgress ?? firstVoice else { return false }
     return time - since >= 12

@@ -30,19 +30,40 @@ struct HeardSpeech {
 struct SpeechEndpoint {
   private(set) var voicedFrames = 0
   private(set) var silenceFrames = 0
+  private(set) var hasSpeech = false
+  private var recentVoice: [Bool] = []
+  private var pendingVoice = 0
   init(confirmedPreRoll: Bool = false) {
     // Barge-in already required ten voiced frames. A short word may finish
     // entirely inside the pre-roll, before this endpoint starts receiving.
     voicedFrames = confirmedPreRoll ? 10 : 0
+    hasSpeech = confirmedPreRoll
   }
   mutating func append(voice: Bool, transcript: String) -> Bool {
+    recentVoice.append(voice)
+    if recentVoice.count > 5 { recentVoice.removeFirst() }
     if voice {
       voicedFrames += 1
-      silenceFrames = 0
+      // Match the input gate's 60 ms in 100 ms onset confirmation. A click or
+      // one noisy VAD frame cannot restart an otherwise completed pause.
+      if recentVoice.filter({ $0 }).count >= 3 {
+        hasSpeech = true
+        silenceFrames = 0
+        pendingVoice = 0
+      } else {
+        pendingVoice += 1
+      }
+      // Give a word beginning at the pause boundary time to prove its onset.
+      return false
     } else {
-      silenceFrames += 1
+      silenceFrames += 1 + pendingVoice
+      pendingVoice = 0
     }
-    guard voicedFrames >= 5 else { return false }
+    // ASR may recognize a quiet, short reply with fewer than five VAD frames.
+    // This only requests finalization; provisional text is never a command.
+    guard hasSpeech,
+      voicedFrames >= 5 || transcript.contains(where: { $0.isLetter || $0.isNumber })
+    else { return false }
     let last =
       transcript.lowercased().split(whereSeparator: { !$0.isLetter }).last.map(String.init) ?? ""
     let incomplete = [

@@ -40,9 +40,28 @@ private final class RecordingSink: RecognitionAudioSink, Sendable {
     for _ in 0..<25 { progress.voice(at: 10) }
     precondition(!progress.stalled(at: 21.9))
     precondition(progress.stalled(at: 22))
-    progress.result(at: 20)
+    progress.result(text: "Wann ist mein Termin", at: 20)
     precondition(!progress.stalled(at: 25))
     precondition(progress.stalled(at: 32))
+    precondition(!progress.shouldFinalize(at: 23.99))
+    // Provider callback traffic is not evidence of continued user speech.
+    progress.result(text: "Wann ist mein Termin", at: 22)
+    progress.result(text: "Wann ist mein Termin?", at: 23)
+    progress.result(text: " WANN ist mein Termin?! ", at: 23.9)
+    precondition(progress.shouldFinalize(at: 24))
+    precondition(progress.stalled(at: 32), "Duplicate snapshots reset the no-progress clock")
+    progress.result(text: "Wann ist mein Termin morgen", at: 24)
+    precondition(!progress.shouldFinalize(at: 27.99), "New words did not extend listening")
+    precondition(progress.shouldFinalize(at: 28))
+    progress.result(text: "Raum 2.14", at: 29)
+    progress.result(text: "Raum 3.14", at: 32)
+    precondition(!progress.shouldFinalize(at: 35.99), "A corrected number was ignored")
+    var quiet = RecognitionProgress()
+    precondition(!quiet.shouldFinalize(at: 1000), "Silence started finalization")
+    quiet.result(text: "...", at: 10)
+    precondition(!quiet.shouldFinalize(at: 1000), "Punctuation started finalization")
+    quiet.result(text: "Ja", at: 1000)
+    precondition(quiet.shouldFinalize(at: 1004), "A short recognized answer waited forever")
 
     let channel = SpeechInputChannel()
     let input = SpeechInput(channel: channel)
@@ -99,7 +118,7 @@ private final class RecordingSink: RecognitionAudioSink, Sendable {
       preconditionFailure("Cancelled audio stayed active")
     } catch is CancellationError {}
     print(
-      "Recognition: 100 synthetic final/provisional cycles, overlapping ranges, stalled progress, PCM ownership, ordered finish, pre-roll and cancellation passed (no real speech qualification)"
+      "Recognition: 100 synthetic final/provisional cycles, overlapping ranges, duplicate/changed words, bounded finalization, PCM ownership, ordered finish, pre-roll and cancellation passed (no real speech qualification)"
     )
   }
 }

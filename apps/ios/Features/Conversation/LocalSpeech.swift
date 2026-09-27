@@ -206,12 +206,16 @@ import SwiftUI
             return
           }
         }
-        if self.state == .recording && !self.monitor && self.progress.stalled(at: now) {
-          LocalDiagnostics.shared.record(
-            .recognitionProgress, .failed, correlation: self.turnID.uuidString,
-            count: self.progress.voicedFrames)
-          self.failInput(RecognitionFailure.noProgress.message)
-          return
+        if self.state == .recording && !self.monitor && !self.endpointSent {
+          if self.progress.shouldFinalize(at: now) {
+            self.requestEndpoint(reason: 3)
+          } else if self.progress.stalled(at: now) {
+            LocalDiagnostics.shared.record(
+              .recognitionProgress, .failed, correlation: self.turnID.uuidString,
+              count: self.progress.voicedFrames)
+            self.failInput(RecognitionFailure.noProgress.message)
+            return
+          }
         }
         switch self.watchdog.check(at: now) {
         case .wait: continue
@@ -294,24 +298,26 @@ import SwiftUI
         onBargeIn?()
       }
     } else if (state == .recording || state == .preparing) && !endpointSent {
-      if voice { progress.voice(at: ProcessInfo.processInfo.systemUptime) }
-      if endpoint.append(voice: voice, transcript: transcript) {
-        endpointSent = true
-        LocalDiagnostics.shared.record(
-          .speechEndpoint, .completed, correlation: self.turnID.uuidString, count: 1)
-        if state == .recording { onEndpoint?() }
+      let ended = endpoint.append(voice: voice, transcript: transcript)
+      if voice && endpoint.hasSpeech { progress.voice(at: ProcessInfo.processInfo.systemUptime) }
+      if ended {
+        requestEndpoint(reason: 1)
       } else if ProcessInfo.processInfo.systemUptime - startedAt > 120 {
         // Bound even a continuously noisy input. Silence never creates a request.
-        if endpoint.voicedFrames >= 5 {
-          endpointSent = true
-          LocalDiagnostics.shared.record(
-            .speechEndpoint, .completed, correlation: self.turnID.uuidString, count: 2)
-          if state == .recording { onEndpoint?() }
+        if endpoint.hasSpeech && endpoint.voicedFrames >= 5 {
+          requestEndpoint(reason: 2)
         } else {
           startedAt = ProcessInfo.processInfo.systemUptime
         }
       }
     }
+  }
+  private func requestEndpoint(reason: Int) {
+    guard !endpointSent else { return }
+    endpointSent = true
+    LocalDiagnostics.shared.record(
+      .speechEndpoint, .completed, correlation: turnID.uuidString, count: reason)
+    if state == .recording { onEndpoint?() }
   }
   func monitorForInterruption() {
     monitor = true
@@ -401,7 +407,7 @@ import SwiftUI
     switch event {
     case .result(let result):
       transcript = RecognitionTranscript.join(committed, result.text)
-      if !result.text.isEmpty { progress.result(at: result.receivedAt) }
+      progress.result(text: transcript, at: result.receivedAt)
       if !firstResult || result.isFinal {
         LocalDiagnostics.shared.record(
           result.isFinal ? .recognitionFinal : .recognitionPartial,

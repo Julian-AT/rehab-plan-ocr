@@ -21,6 +21,35 @@ import Foundation
     precondition(heard.text == "Frühstück eins beginnt Bitte prüfe die Angaben.")
     var endpoint = SpeechEndpoint()
     for _ in 0..<300 { precondition(!endpoint.append(voice: false, transcript: "")) }
+    for text in ["Ja", "Was habe ich am"] {
+      endpoint = SpeechEndpoint()
+      for _ in 0..<3 { _ = endpoint.append(voice: true, transcript: text) }
+      let frames = text == "Ja" ? 60 : 125
+      for _ in 1..<frames { precondition(!endpoint.append(voice: false, transcript: text)) }
+      precondition(endpoint.append(voice: false, transcript: text), "Quiet reply stayed open")
+    }
+    endpoint = SpeechEndpoint()
+    for _ in 0..<3 { _ = endpoint.append(voice: true, transcript: "...") }
+    for _ in 0..<300 { precondition(!endpoint.append(voice: false, transcript: "...")) }
+    // Sparse false VAD hits alone cannot acquire a turn.
+    endpoint = SpeechEndpoint()
+    for frame in 0..<600 {
+      precondition(!endpoint.append(voice: frame.isMultiple(of: 25), transcript: ""))
+    }
+    for (text, frames) in [("Wann ist mein Termin", 60), ("Verschiebe ihn um", 125)] {
+      endpoint = SpeechEndpoint()
+      for _ in 0..<50 { _ = endpoint.append(voice: true, transcript: text) }
+      // Start noise after the onset window; each burst is only 20 or 40 ms.
+      // If a tentative burst starts exactly at the deadline, wait for its
+      // 40 ms to resolve. A real resumed word still gets a fresh full pause.
+      let completionFrame = frames == 60 ? 62 : frames
+      for frame in 1...completionFrame {
+        let noisy = frame % 25 == 10 || frame % 25 == 11
+        precondition(
+          endpoint.append(voice: noisy, transcript: text) == (frame == completionFrame),
+          "Short noise kept restarting the pause")
+      }
+    }
     endpoint = SpeechEndpoint(confirmedPreRoll: true)
     for _ in 0..<59 { precondition(!endpoint.append(voice: false, transcript: "Nein")) }
     precondition(endpoint.append(voice: false, transcript: "Nein"))
@@ -68,7 +97,7 @@ import Foundation
       precondition(EventCategory.classify(title) == expected, title)
     }
     print(
-      "Conversation: silence, 1.2/2.5-second endpoints, short noise, stable sentence prefixes and conservative categories passed"
+      "Conversation: silence, quiet replies, 1.2/2.5-second pauses, noisy pause boundaries, stable sentence prefixes and conservative categories passed"
     )
   }
 }
