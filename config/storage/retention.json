@@ -10,7 +10,7 @@
     ".local/upstream",
     ".local/envs",
     "docs/product/visual-baseline",
-    ".local/builds/ios/Laßnitzhöhe.xcarchive",
+    ".local/builds/ios/La\u00dfnitzh\u00f6he.xcarchive",
     "external originals and simulators",
     ".local/objects",
     ".local/builds/ios/generations",
@@ -204,6 +204,33 @@
       ],
       "reason": "Only compiler module/editor index cache; all products, Intermediates, logs, original failure and run evidence stay protected",
       "rebuild": "Use recorded build command/source contract in a new run, or current make build TARGET=simulator / make test-calendar-events; preserve historical evidence"
+    },
+    {
+      "path": ".local/builds/ios/generations/3ec561e97e1342b58f2639e54a77ad30/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed, receipt-linked local generation compiler modules only; preserve all products, intermediates, logs, symbols and original transition receipts",
+      "rebuild": "Current make build TARGET=simulator regenerates SDK/compiler modules; historical cache byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/generations/fc816bfcc3a64cafa35de1a29d9f41c4/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed, receipt-linked local generation compiler modules only; preserve all products, intermediates, logs, symbols and original transition receipts",
+      "rebuild": "Current make build TARGET=simulator regenerates SDK/compiler modules; historical cache byte identity is not promised"
+    },
+    {
+      "path": ".local/builds/ios/generations/a6059e26ec2b43bda2191634b926d5fe/DerivedData/ModuleCache.noindex",
+      "consumers": [
+        "tooling/build/product_generation.py",
+        "tooling/build/build-native.sh"
+      ],
+      "reason": "Completed, receipt-linked local generation compiler modules only; preserve all products, intermediates, logs, symbols and original transition receipts",
+      "rebuild": "Current make build TARGET=simulator regenerates SDK/compiler modules; historical cache byte identity is not promised"
     }
   ]
 }
