@@ -144,7 +144,7 @@ class WorkspacePathTests(unittest.TestCase):
         }
         script = alternative / "reha-bindgen"
         script.write_text(
-            f"#!{sys.executable}\nimport os,sys\nfrom pathlib import Path\n"
+            "#!/usr/bin/env python3\nimport os,sys\nfrom pathlib import Path\n"
             "assert Path(sys.argv[2]) == Path(os.environ['CARGO_TARGET_DIR']) / 'debug/libreha_ffi.dylib'\n"
             f"for name, value in {generated!r}.items():\n"
             "    (Path(sys.argv[-1]) / name).write_text(value)\n"
