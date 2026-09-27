@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tooling/dev"))
+import source_tree  # noqa: E402
 import workspace  # noqa: E402
 
 sys.path.insert(0, str(ROOT))
@@ -245,9 +246,7 @@ def main():
     if args.xcresult and output.is_relative_to(args.xcresult.resolve()):
         raise ValueError("Visual evidence must remain outside the source result bundle")
     output.mkdir(parents=True, exist_ok=False)
-    evaluator_revision = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
+    evaluator_revision = source_tree.identity(ROOT)["commit"]
     before = source_snapshot() if args.capture else None
     capture_status = None
     result_bundle = args.xcresult
@@ -319,33 +318,24 @@ def main():
 
 
 def source_snapshot():
-    names = (
-        subprocess.check_output(
-            [
-                "git",
-                "ls-files",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-                "-z",
-                "--",
-                "apps/ios",
-                "packages",
-                "tooling/build",
-                "tooling/checks/test-native-ui.sh",
-                "tooling/checks/native-simulator.py",
-                "docs/third-party/runtime-inventory.json",
-                "config",
-                "ml/registry/runtime",
-                "Cargo.toml",
-                "Cargo.lock",
-                "rust-toolchain.toml",
-            ],
-            cwd=ROOT,
-        )
-        .decode()
-        .split("\0")
+    scopes = (
+        "apps/ios/",
+        "packages/",
+        "tooling/build/",
+        "config/",
+        "ml/registry/runtime/",
+        "tooling/checks/test-native-ui.sh",
+        "tooling/checks/native-simulator.py",
+        "docs/third-party/runtime-inventory.json",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
     )
+    names = [
+        name
+        for name in source_tree.names(ROOT)
+        if any(name.startswith(scope) if scope.endswith("/") else name == scope for scope in scopes)
+    ]
     # Documentation edits do not change the tested app. Runtime/test resources,
     # source code, project configuration and dependency identities still do.
     return {

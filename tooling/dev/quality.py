@@ -15,6 +15,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import source_tree
 import workspace
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -319,9 +320,7 @@ def doctor(portable=False):
 
 
 def files(suffix):
-    names = run(
-        "git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", capture=True
-    ).split("\0")
+    names = source_tree.names(ROOT)
     return sorted(
         {
             name

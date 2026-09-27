@@ -254,7 +254,7 @@ class VisualSuiteTests(unittest.TestCase):
                 "location",
                 side_effect=AssertionError("Current build storage is unrelated to old results"),
             ),
-            patch.object(suite.subprocess, "check_output", return_value="b" * 40),
+            patch.object(suite.source_tree, "identity", return_value={"commit": "b" * 40}),
             patch(
                 "sys.argv",
                 [

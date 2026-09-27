@@ -3,8 +3,9 @@
 import argparse
 import hashlib
 import json
-import subprocess
 from pathlib import Path
+
+import source_tree
 
 ROOT = Path(__file__).resolve().parents[2]
 # Prefixes are disjoint. Root files are named explicitly so new unexplained files fail.
@@ -15,6 +16,8 @@ GROUPS = [
             "AGENTS.md",
             "CLAUDE.md",
             "Makefile",
+            "LICENSE",
+            ".editorconfig",
             "README.md",
             "Cargo.toml",
             "Cargo.lock",
@@ -134,6 +137,8 @@ GROUPS = [
         "Model identities, locked training/export and runtime manifests",
         [
             "Makefile",
+            "LICENSE",
+            ".editorconfig",
             "tooling/build/verify-native-assets.py",
             "tooling/release/runtime_inventory.py",
         ],
@@ -201,11 +206,7 @@ def classify(name):
 
 
 def inventory(root=ROOT):
-    names = subprocess.check_output(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-        cwd=root,
-        text=True,
-    ).split("\0")
+    names = source_tree.names(root)
     groups = {
         g[0]: {
             "kind": g[2],

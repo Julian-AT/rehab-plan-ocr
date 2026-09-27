@@ -654,3 +654,11 @@ prepare-assistant-router-replay:
 assess-assistant-router-replay:
 	@test -n "$(RUN)" || { echo 'Set RUN to the prepared and executed router replay'; exit 2; }
 	python3 ml/evaluation/conversation/router_replay.py summarize --output "$(RUN)"
+
+.PHONY: source-zip verify-source
+source-zip:
+	python3 tooling/dev/source_zip.py create
+
+verify-source:
+	@test -n "$(SOURCE_ZIP)" || { echo 'Set SOURCE_ZIP to the source archive'; exit 2; }
+	python3 tooling/dev/source_zip.py verify "$(SOURCE_ZIP)"

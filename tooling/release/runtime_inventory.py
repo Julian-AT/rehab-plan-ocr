@@ -223,6 +223,7 @@ def generate(root=ROOT, metadata=None, full=None, normal=None):
         "rust-toolchain.toml",
         "config/storage/workspace.json",
         "tooling/dev/workspace.py",
+        "tooling/dev/source_tree.py",
     ]
     locks = {}
     for name in ["small", "ios-runtime"]:

@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tooling/dev"))
+import source_tree  # noqa: E402
 import workspace  # noqa: E402
 
 import artifacts  # noqa: E402
@@ -104,9 +105,13 @@ def ensure_quiet(root, current):
             "gmake",
         }:
             raise ValueError(f"Active build process {pid}; leave existing products in place")
-    worktrees = subprocess.check_output(
-        ["git", "worktree", "list", "--porcelain"], cwd=root, text=True
-    )
+    if source_tree.checkout(root):
+        worktrees = subprocess.check_output(
+            ["git", "worktree", "list", "--porcelain"], cwd=root, text=True
+        )
+    else:
+        source_tree.identity(root)
+        worktrees = ""
     for line in worktrees.splitlines():
         if line.startswith("worktree ") and Path(line[9:]).resolve().is_relative_to(
             current.resolve()

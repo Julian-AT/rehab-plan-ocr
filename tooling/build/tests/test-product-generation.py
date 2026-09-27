@@ -190,6 +190,7 @@ class ProductGenerationTests(unittest.TestCase):
             "tooling/build/build-native.sh",
             "tooling/checks/test-native-ui.sh",
             "tooling/dev/workspace.py",
+            "tooling/dev/source_tree.py",
             "tooling/dev/artifacts.py",
             "tooling/dev/llvm_references.py",
             "config/storage/workspace.json",
@@ -302,6 +303,7 @@ class ProductGenerationTests(unittest.TestCase):
                             self.fail("nonowning descriptor accepted")
 
     def test_process_guard_allows_own_build_ancestry_but_rejects_other_builds(self):
+        (self.root / ".git").mkdir()
         pid = os.getpid()
         with patch.object(
             g.subprocess,
