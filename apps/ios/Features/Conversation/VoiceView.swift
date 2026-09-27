@@ -206,7 +206,10 @@ import RehaCore
     let current = session
     if question == .action { understanding.prepare() }
     recorder.contextualTitles = candidates.map { $0.values.title }
-    do { try await recorder.beginTurn(preRoll: preRoll) } catch {
+    do {
+      try await recorder.beginTurn(preRoll: preRoll)
+      if session == current, !Task.isCancelled { output.prepare() }
+    } catch {
       if session == current {
         pauseSession(reason: .microphoneStartup)
         failure = error.localizedDescription

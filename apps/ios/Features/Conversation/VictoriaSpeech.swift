@@ -25,6 +25,13 @@ import Foundation
       generation = request
       native.setRequest(request: request)
     }
+    func prepare(request: UInt64) async throws {
+      try Task.checkCancellation()
+      guard generation == request else { throw CancellationError() }
+      try await native.prepare(request: request)
+      try Task.checkCancellation()
+      guard generation == request else { throw CancellationError() }
+    }
     func render(text: String, voice: LocalVoice, rate: Float, request: UInt64) async throws
       -> RenderedSpeech
     {
@@ -82,11 +89,18 @@ enum VictoriaPCM {
       bytes(36, 4) == Data("data".utf8), number(40, 4) == data.count - 44,
       (data.count - 44).isMultiple(of: 2)
     else { throw SpeechPCMError.invalidFile }
-    var samples: [Float] = []
-    samples.reserveCapacity((data.count - 44) / 2)
-    for offset in stride(from: 44, to: data.count, by: 2) {
-      if offset.isMultiple(of: 8192) { try Task.checkCancellation() }
-      samples.append(Float(Int16(bitPattern: UInt16(number(offset, 2)))) / 32768)
+    let samples: [Float] = try data.withUnsafeBytes { bytes in
+      let count = (bytes.count - 44) / 2
+      return try Array(unsafeUninitializedCapacity: count) { output, initialized in
+        // PCM16 may begin at an unaligned address (including Data slices).
+        // Pointers stay inside this synchronous closure and never cross tasks.
+        for index in 0..<count {
+          if index.isMultiple(of: 4096) { try Task.checkCancellation() }
+          let sample = bytes.loadUnaligned(fromByteOffset: 44 + index * 2, as: Int16.self)
+          output[index] = Float(Int16(littleEndian: sample)) / 32768
+        }
+        initialized = count
+      }
     }
     return SpeechPCM(samples: samples)
   }

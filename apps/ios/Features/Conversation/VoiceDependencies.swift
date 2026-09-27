@@ -28,6 +28,11 @@ enum VoiceRecordingState { case idle, preparing, recording, finishing }
   var onFailure: ((String) -> Void)? { get set }
   func speak(_ reply: ConversationReply)
   func stop()
+  func prepare()
+}
+
+extension VoiceSpeaking {
+  func prepare() {}
 }
 
 enum VoiceTrace {

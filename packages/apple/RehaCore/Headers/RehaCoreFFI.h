@@ -746,6 +746,16 @@ void uniffi_reha_ffi_fn_free_nativespeech(uint64_t handle, RustCallStatus *_Nonn
 uint64_t uniffi_reha_ffi_fn_constructor_nativespeech_new(RustBuffer model_directory, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_CONSTRUCTOR_NATIVESPEECH_WITH_THREADS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_CONSTRUCTOR_NATIVESPEECH_WITH_THREADS
+uint64_t uniffi_reha_ffi_fn_constructor_nativespeech_with_threads(RustBuffer model_directory, uint32_t threads, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_PREPARE
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_PREPARE
+uint64_t uniffi_reha_ffi_fn_method_nativespeech_prepare(uint64_t ptr, uint64_t request
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_RENDER
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_FN_METHOD_NATIVESPEECH_RENDER
 uint64_t uniffi_reha_ffi_fn_method_nativespeech_render(uint64_t ptr, RustBuffer text, RustBuffer voice, float speed, uint64_t request
@@ -1511,6 +1521,12 @@ uint16_t uniffi_reha_ffi_checksum_method_recognitionjob_close(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_PREPARE
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_PREPARE
+uint16_t uniffi_reha_ffi_checksum_method_nativespeech_prepare(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_METHOD_NATIVESPEECH_RENDER
 uint16_t uniffi_reha_ffi_checksum_method_nativespeech_render(void
@@ -1532,6 +1548,12 @@ uint16_t uniffi_reha_ffi_checksum_method_nativespeech_set_request(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_CONSTRUCTOR_NATIVESPEECH_NEW
 #define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_CONSTRUCTOR_NATIVESPEECH_NEW
 uint16_t uniffi_reha_ffi_checksum_constructor_nativespeech_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_CONSTRUCTOR_NATIVESPEECH_WITH_THREADS
+#define UNIFFI_FFIDEF_UNIFFI_REHA_FFI_CHECKSUM_CONSTRUCTOR_NATIVESPEECH_WITH_THREADS
+uint16_t uniffi_reha_ffi_checksum_constructor_nativespeech_with_threads(void
     
 );
 #endif

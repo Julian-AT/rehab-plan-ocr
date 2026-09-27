@@ -108,6 +108,14 @@ pub struct SpeechEngine {
 }
 impl SpeechEngine {
     pub fn load(root: &Path) -> Result<Self> {
+        Self::load_with_threads(root, 4)
+    }
+    /// Keep inference bounded; explicit variants also support paired device
+    /// measurements without changing the model, frontend, or playback speed.
+    pub fn load_with_threads(root: &Path, threads: usize) -> Result<Self> {
+        if !(1..=6).contains(&threads) {
+            return Err(err("Ungültige Anzahl von Sprachprozessen"));
+        }
         let manifest: serde_json::Value = serde_json::from_slice(include_bytes!(
             "../../../../ml/registry/runtime/kokoro.lock.json"
         ))?;
@@ -138,7 +146,7 @@ impl SpeechEngine {
         let vocab = serde_json::from_slice(&std::fs::read(root.join("vocab.json"))?)?;
         let model = Session::builder()
             .map_err(err)?
-            .with_intra_threads(2)
+            .with_intra_threads(threads)
             .map_err(err)?
             .with_inter_threads(1)
             .map_err(err)?

@@ -35,6 +35,22 @@ import RehaCore
   }
 
   @MainActor static func main() async throws {
+    let warm = Flow()
+    warm.output.didPrepare = {
+      precondition(warm.input.state == .recording, "Speech preparation delayed microphone startup")
+    }
+    await warm.model.beginTurn()
+    precondition(warm.output.preparations == 1 && warm.output.replies.isEmpty)
+    warm.model.cancelSession()
+    let failedMicrophone = Flow()
+    failedMicrophone.input.failBegin = true
+    await failedMicrophone.model.beginTurn()
+    precondition(failedMicrophone.output.preparations == 0)
+    let cancelledStart = Flow()
+    cancelledStart.input.didBegin = { cancelledStart.model.cancelSession() }
+    await cancelledStart.model.beginTurn()
+    precondition(
+      cancelledStart.output.preparations == 0, "Obsolete turn started speech preparation")
     await mutationRouting()
     let room = Flow()
     room.provider.availability = .unavailable("No model assets")

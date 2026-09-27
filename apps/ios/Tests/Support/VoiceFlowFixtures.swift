@@ -18,7 +18,9 @@ import RehaCore
     var suspend = false
     var monitors = 0
     var didBegin: (() -> Void)?
+    var failBegin = false
     func beginTurn(preRoll: Bool) async throws {
+      if failBegin { throw CocoaError(.fileReadNoPermission) }
       state = .recording
       didBegin?()
     }
@@ -43,6 +45,12 @@ import RehaCore
     var onFailure: ((String) -> Void)?
     var replies: [ConversationReply] = []
     var stops = 0
+    var preparations = 0
+    var didPrepare: (() -> Void)?
+    func prepare() {
+      preparations += 1
+      didPrepare?()
+    }
     func speak(_ reply: ConversationReply) {
       responseID = UUID()
       spokenText = ""

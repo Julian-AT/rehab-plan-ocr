@@ -55,6 +55,7 @@ struct PlaybackWord: Identifiable {
   }
   private var generation: UInt64 = 0
   private var task: Task<Void, Never>?
+  private var preparationTask: Task<Void, Never>?
   private var meterTask: Task<Void, Never>?
   private var fadeTask: Task<Void, Never>?
   private var queue: [String] = []
@@ -82,6 +83,19 @@ struct PlaybackWord: Identifiable {
   #endif
   func speak(_ text: String) {
     speak(ConversationReply(text))
+  }
+  /// Starts only after the microphone is ready. Model loading runs in the
+  /// native worker; playback owns the same serial engine when an answer arrives.
+  func prepare() {
+    guard preparationTask == nil, !speaking else { return }
+    let id = generation
+    preparationTask = Task { [weak self, renderer] in
+      // An opportunistic warmup failure is retried by normal rendering, which
+      // owns the existing user-visible error surface.
+      try? await renderer.prepare(request: id)
+      guard let self, self.generation == id else { return }
+      self.preparationTask = nil
+    }
   }
   func speak(_ reply: ConversationReply) {
     beginResponse()
@@ -234,6 +248,8 @@ struct PlaybackWord: Identifiable {
     updateWords(at: ConversationAudio.shared.playbackTime)
     generation &+= 1
     renderer.setRequest(generation)
+    preparationTask?.cancel()
+    preparationTask = nil
     task?.cancel()
     task = nil
     meterTask?.cancel()

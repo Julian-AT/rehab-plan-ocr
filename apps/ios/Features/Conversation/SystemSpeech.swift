@@ -31,10 +31,12 @@ struct RenderedSpeech: Sendable {
   func render(text: String, voice: LocalVoice, rate: Float, request: UInt64) async throws
     -> RenderedSpeech
   func setRequest(_ request: UInt64)
+  func prepare(request: UInt64) async throws
 }
 
 extension LocalSpeechRendering {
   var preferenceKey: String { "voice.system.id" }
+  func prepare(request: UInt64) async throws {}
 }
 
 enum SystemSpeechError: LocalizedError {

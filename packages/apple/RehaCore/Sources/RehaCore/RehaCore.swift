@@ -1967,6 +1967,12 @@ public func FfiConverterTypeNativeApplication_lower(_ value: NativeApplication) 
 
 public protocol NativeSpeechProtocol: AnyObject, Sendable {
     
+    /**
+     * Verify and load once while the user is listening. No generated speech,
+     * microphone work, or playback happens on this background worker.
+     */
+    func prepare(request: UInt64) async throws 
+    
     func render(text: String, voice: String, speed: Float, request: UInt64) async throws  -> Data
     
     func renderTimed(text: String, voice: String, speed: Float, request: UInt64) async throws  -> SpeechRender
@@ -2034,7 +2040,41 @@ public convenience init(modelDirectory: String) {
     }
 
     
+    /**
+     * Explicit configuration for fixed-text device qualification. The app uses
+     * `new`; never accepts an unbounded thread pool from a model or transcript.
+     */
+public static func withThreads(modelDirectory: String, threads: UInt32) -> NativeSpeech  {
+    return try!  FfiConverterTypeNativeSpeech_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_reha_ffi_fn_constructor_nativespeech_with_threads(
+        FfiConverterString.lower(modelDirectory),
+        FfiConverterUInt32.lower(threads),uniffiCallStatus
+    )
+})
+}
+    
 
+    
+    /**
+     * Verify and load once while the user is listening. No generated speech,
+     * microphone work, or playback happens on this background worker.
+     */
+open func prepare(request: UInt64)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_reha_ffi_fn_method_nativespeech_prepare(
+                        self.uniffiCloneHandle(),FfiConverterUInt64.lower(request)
+                )
+            },
+            pollFunc: ffi_reha_ffi_rust_future_poll_void,
+            completeFunc: ffi_reha_ffi_rust_future_complete_void,
+            freeFunc: ffi_reha_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeAppError_lift
+        )
+}
     
 open func render(text: String, voice: String, speed: Float, request: UInt64)async throws  -> Data  {
     return
@@ -12680,6 +12720,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_reha_ffi_checksum_method_recognitionjob_close() != 37454) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_reha_ffi_checksum_method_nativespeech_prepare() != 13666) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_reha_ffi_checksum_method_nativespeech_render() != 36515) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -12690,6 +12733,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_constructor_nativespeech_new() != 56940) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_reha_ffi_checksum_constructor_nativespeech_with_threads() != 2777) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_reha_ffi_checksum_method_applehost_calendar_event_call() != 26829) {
