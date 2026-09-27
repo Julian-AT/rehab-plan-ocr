@@ -64,3 +64,40 @@ meaning. Model-generated calendar filters must occur in the current request;
 generic appointment words cannot silently become title filters. This blocks false
 empty-calendar answers from invented constraints. Raw model scores remain separate
 from rule/router results; broader extraction quality is not qualified.
+
+The 2706 signed Release build from clean source `f893942` passed package,
+provisioning, signature, symbol and pinned-Victoria verification. IPA SHA-256:
+`2dad885349054be8722d508b7f63ed6336840588766117eac027b0f32b68d43b`.
+Calendar-answer, calendar-insight, provider, voice-flow and assistant-boundary
+checks passed, including first-versus-next semantics, rejected extra constraints,
+invalid dates, invented filters, cancellation and visible confirmation. Lint
+passed. The preceding 2705 simulator build covered the unchanged interface and
+voice; the final 2706 native code compiled in the signed device archive.
+
+The phone was updated in place after a fresh verified backup. Strict post-install
+comparison passed. The actual-router phone probe then passed all 11 expected
+development-case outcomes: five conversational replies, five calendar searches
+with checked dates/details and empty unrequested filters, and blocked negated
+deletion. Conversational generation took 0.83–1.26 seconds; this excludes speech
+recognition, endpoint waiting and playback. No calendar operation or microphone
+capture occurred in this probe. Normal app launch succeeded afterward.
+
+Raw model extraction of the first-appointment question still omitted its date and
+invented a title filter; the complete rule path now handles that request. The
+11/11 router result therefore does **not** establish raw model accuracy, held-out
+dialogue quality, or complete spoken-turn reliability.
+
+A consistent post-launch copy required a second attempt; the first remains as
+rejected evidence. All 17 tables, schema 11, 31 scans, 30 original source files,
+preferences and other existing durable files were preserved. The strict tool
+correctly flags routine diagnostics as changed. Separate review found 21 appended
+records, 21 oldest records evicted at the 5,000-record cap, and 4,979 shared records
+unchanged. The only added durable file is the completed fixed synthetic probe.
+Private package and evidence are under `assistant-calendar-20260927-001` in
+`.local/releases` and `.local/runs`.
+
+The user's later routine trace identifies speech-onset interruptions during
+thinking and speech preparation, followed by an explicit action cancellation.
+It does not distinguish actual further speech from false detection. The user was
+asked whether cutoffs occur while silent; that answer and a real microphone-to-
+Victoria conversation remain pending. No unmeasured VAD-threshold change was made.
