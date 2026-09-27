@@ -43,4 +43,26 @@ constitute a natural-speech or speaker-identification benchmark.
 
 Private evidence: `.local/runs/noise-endpoint-20260927-001/`, including the
 pre-change reproduction, content-free phone diagnostics and targeted test logs.
-Device build and delivery evidence will be recorded after the verified update.
+
+Build 2026092709 was archived from clean source `2ec3e79`. The three original
+failure reproductions now pass, as do the conversation-rules, speech-input and
+recognition-turn probes, strict formatting checks and runtime inventory check.
+The private package verifies all four signed components, their phone provisioning
+profiles and all 15 pinned Victoria files. No fresh simulator visual run or
+real-microphone qualification is claimed for this state-machine change.
+
+The Swift-only archive reused the previous build's verified native artifacts;
+native source, generated bindings, runtime binaries and asset identities were
+checked before reuse. The build retained the 20 GiB storage reserve with a
+separate 2.5 GiB allowance for this bounded Swift build and packaging. Managed
+compiler-cache cleanup retained private originals, backups, models, archives and
+debug symbols. Build receipts and the signed IPA remain in ignored local storage.
+
+A fresh scoped backup of the app and both App Groups was reverified immediately
+before the authorized in-place update. Build 2026092709 is installed. The strict
+post-install comparison passed: schema 11, all 17 original table projections,
+preferences, durable files and all 30 original source files are unchanged.
+The normal launch attempt, without diagnostic arguments, was rejected by iOS
+because the phone was locked. Opening the app and replaying the reported room
+noise remain pending; synthetic endpoint tests do not establish physical-phone
+conversational reliability.
