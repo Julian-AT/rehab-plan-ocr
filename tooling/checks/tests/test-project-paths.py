@@ -53,6 +53,12 @@ class ProjectPathsTests(unittest.TestCase):
                 for package in spec.get("packages", {}).values():
                     (ios / package["path"]).mkdir(parents=True, exist_ok=True)
                 for target in spec["targets"].values():
+                    for phase in ["preBuildScripts", "postBuildScripts"]:
+                        for script in target.get(phase, []):
+                            if "path" in script:
+                                path = ios / script["path"]
+                                path.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copyfile(ROOT / "apps/ios" / script["path"], path)
                     for source in target.get("sources", []):
                         item = source if isinstance(source, dict) else {"path": source}
                         path = ios / item["path"]
@@ -71,12 +77,14 @@ class ProjectPathsTests(unittest.TestCase):
 
             for spec, trial in [("project.yml", False), ("assistant-trial.yml", True)]:
                 with self.subTest(spec=spec):
-                    subprocess.run(
+                    generated = subprocess.run(
                         [generator, "generate", "--spec", str(ios / spec), "--project", str(ios)],
                         env=env,
-                        check=True,
+                        check=False,
                         capture_output=True,
+                        text=True,
                     )
+                    self.assertEqual(generated.returncode, 0, generated.stdout + generated.stderr)
                     project = json.loads(
                         subprocess.check_output(
                             [

@@ -26,3 +26,8 @@ The first tool-suite run exposed a pre-existing provenance mismatch: the Python
 conversation evaluator expected `calendar-5`, while the current Swift provider
 reports `calendar-6`. The evaluator now accepts the current identity and explicitly
 rejects `calendar-5` alongside earlier identities; no app behavior changed.
+
+The expanded tool run exposed another pre-existing fixture failure: XcodeGen's
+resource-closure fixture omitted the existing signing scripts declared by the
+unchanged project specification. The fixture now copies declared pre/post-build
+script sources and reports generator stderr. Both normal/trial resource checks pass.
