@@ -79,6 +79,26 @@ private actor ChangingSelectionFixture {
     ] {
       precondition(CalendarQuestion.direct(phrase, now: now) == nil, phrase)
     }
+    for phrase in [
+      "Wann habe ich morgen meinen ersten Termin?",
+      "Um wie viel Uhr beginnt mein erster Termin morgen?",
+      "Der erste Termin am Mittwoch", "Wann ist der erste Termin am 16.09.2026?",
+    ] {
+      guard let query = CalendarQuestion.direct(phrase, now: now) else {
+        preconditionFailure("Missing first-appointment query: \(phrase)")
+      }
+      precondition(query.detail == .first && query.date != nil && query.days == 1, phrase)
+      precondition(query.ordinal == 0 && !query.usesLastPage && query.title.isEmpty, phrase)
+    }
+    precondition(CalendarQuestion.direct("Was steht für morgen an?", now: now)?.detail == .list)
+    for phrase in [
+      "Wann habe ich morgen meinen ersten Termin außer Physiotherapie?",
+      "Wann habe ich morgen meinen ersten Termin und übermorgen?",
+      "Wann beginnt mein erster Termin am 31.02.2026?",
+      "Was steht für morgen an im Kalender Privat?",
+    ] {
+      precondition(CalendarQuestion.direct(phrase, now: now) == nil, phrase)
+    }
     precondition(CalendarQuestion.isRepeat("Bitte wiederholen!"))
     precondition(CalendarQuestion.concernsCalendar("Was steht danach an?"))
     precondition(!CalendarQuestion.concernsCalendar("Wie geht es dir?"))
@@ -92,6 +112,14 @@ private actor ChangingSelectionFixture {
       "Structured schema bytes: \((try JSONEncoder().encode(CalendarUnderstanding.generationSchema)).count)"
     )
     let rows = (0..<8).map { event("\($0)", hour: 8 + $0) }
+    let later = ISO8601DateFormatter().date(from: "2026-09-15T10:45:00Z")!
+    let firstOfDay = CalendarAnswer.build(
+      CalendarQuestion(detail: .first), events: rows, now: later)
+    let nextUpcoming = CalendarAnswer.build(
+      CalendarQuestion(detail: .next), events: rows, now: later)
+    precondition(
+      firstOfDay.events.map(\.id) == ["0"], "First of the day must include past appointments")
+    precondition(nextUpcoming.events.map(\.id) == ["3"], "Next must exclude ended appointments")
     let list = CalendarAnswer.build(
       CalendarQuestion(), events: rows.reversed() + [rows[0]], now: now)
     precondition(list.total == 8 && list.events.map(\.id) == ["0", "1", "2", "3", "4"])

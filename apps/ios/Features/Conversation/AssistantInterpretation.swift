@@ -99,6 +99,18 @@ enum AssistantInterpretation {
         }
       }
       if value.action == .calendar {
+        // An invented filter can turn real appointments into a false empty
+        // answer. Read-only requests need the same grounding as write targets.
+        for filter in [query.title, query.excluding, query.calendarName ?? ""]
+        where !filter.isEmpty {
+          guard words.contains(VoiceRules.normalized(filter)) else { return clarify() }
+        }
+        let generic = ["termin", "termine", "therapie", "therapien", "behandlung", "behandlungen"]
+        if generic.contains(VoiceRules.normalized(query.title)),
+          VoiceRules.matches(#"\b(?:titel|namens|heisst|bezeichnung)\b"#, words).isEmpty
+        {
+          return clarify()
+        }
         if let date = VoiceRules.date(request.text, now: request.now, calendar: request.calendar),
           query.date != date
         {

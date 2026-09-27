@@ -46,3 +46,21 @@ generation requires the current utterance to pass the existing explicit-intent
 check first. Both model stages remain within one router deadline and cancellation
 scope. Phone evaluation adds alternate phrasings rather than counting only the
 original examples. Private evidence: `.local/runs/assistant-focused-20260927-001/`.
+
+Build 2705 (source `bc10c8f`) was signed, installed in place, and checked against a
+fresh backup: existing data remained unchanged. The physical phone completed the
+expanded probe and reopened normally. All five conversational questions produced
+replies in 0.82–1.28 seconds through the actual router. Exact-rule calendar queries
+and negated-change rejection still passed. Three natural calendar questions still
+unnecessarily clarified; raw generation omitted the requested date and introduced
+an unrequested therapy filter. These are development examples, not a held-out
+natural-dialogue evaluation or end-to-end speech latency measurement.
+
+Build 2706 adds complete, anchored patterns for natural date placement in
+first/next appointment, free-time and day-list questions. Extra constraints and
+invalid dates still leave the exact-rule path. A distinct `first` detail includes
+earlier appointments in the requested period, while `next` retains its upcoming
+meaning. Model-generated calendar filters must occur in the current request;
+generic appointment words cannot silently become title filters. This blocks false
+empty-calendar answers from invented constraints. Raw model scores remain separate
+from rule/router results; broader extraction quality is not qualified.

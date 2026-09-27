@@ -63,7 +63,7 @@ enum InterpretationDiagnostics {
 
   @Generable struct Query {
     @Generable enum Detail {
-      case list, next, count, room, place, therapist, start, end, duration
+      case list, first, next, count, room, place, therapist, start, end, duration
       case freeTime, conflicts, totalDuration, dailySummary
     }
     var detail: Detail
@@ -290,7 +290,7 @@ extension CalendarUnderstanding {
     InterpretationIdentity(
       provider: "apple-intelligence",
       model: "system-default/\(ProcessInfo.processInfo.operatingSystemVersionString)",
-      schemaVersion: 3)
+      schemaVersion: 4)
   }
   let capabilities: Set<InterpretationCapability> = [
     .calendar, .mutation, .conversation, .planEvidence,
@@ -398,7 +398,7 @@ extension CalendarUnderstanding {
           Extract a calendar search from the current German utterance. The app will read the actual calendar AFTER this search; missing appointments in context never prevent a search.
           Select calendar with a query unless the requested target or period is genuinely ambiguous.
           Use explicit_date from the current request when present. Otherwise resolve the period using today and last_discussed_date. Never use last_page references unless the user refers back to a listed appointment.
-          First/next appointment in a stated period: detail next, that period's date, ordinal 0, no last_page reference. A start-time question about an already listed appointment uses detail start.
+          First appointment in a stated period: detail first; next upcoming appointment: detail next. Use that period's date, ordinal 0, no last_page reference. A start-time question about an already listed appointment uses detail start.
           Free time: freeTime; overlapping appointments: conflicts; total therapy minutes: totalDuration; daily overview: dailySummary. Only extract, do not calculate.
           Generic words Termin, Behandlung and Therapie are not a title filter: use an empty title. Copy only a specifically named title. Preserve exclusions and morning/afternoon limits.
           \(dataInstruction)

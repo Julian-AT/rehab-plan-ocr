@@ -187,7 +187,7 @@ enum CalendarInsights {
 /// A request contains search constraints, never calendar facts supplied by a model.
 struct CalendarQuestion: Equatable, Sendable {
   enum Detail: String, Codable, Sendable {
-    case list, next, count, room, place, therapist, start, end, duration
+    case list, first, next, count, room, place, therapist, start, end, duration
     case freeTime, conflicts, totalDuration, dailySummary
     var isInsight: Bool { [.freeTime, .conflicts, .totalDuration, .dailySummary].contains(self) }
   }
@@ -301,6 +301,31 @@ struct CalendarQuestion: Equatable, Sendable {
     if !VoiceRules.matches(next, text).isEmpty { return Self(detail: .next, days: 90) }
     let dates =
       "heute|morgen|übermorgen|(?:am )?(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|\(VoiceRules.civilDatePattern))"
+    // Match the whole utterance so additional filters, corrections and date
+    // ranges cannot be silently discarded by the fast calendar path.
+    let firstPatterns = [
+      "(?:wann|um wie viel uhr) habe ich (?:\(dates)) (?:meinen|den) ersten termin",
+      "(?:wann|um wie viel uhr) (?:ist|beginnt) (?:mein erster|der erste) termin (?:\(dates))",
+      "(?:mein erster|der erste) termin (?:\(dates))",
+    ]
+    let nextPatterns = [
+      "(?:wann|um wie viel uhr) habe ich (?:\(dates)) (?:meinen|den) nächsten termin",
+      "(?:wann|um wie viel uhr) (?:ist|beginnt) (?:mein nächster|der nächste) termin (?:\(dates))",
+    ]
+    let naturalQuestions: [(String, Detail)] =
+      firstPatterns.map { ($0, .first) } + nextPatterns.map { ($0, .next) } + [
+        ("wann (?:habe ich|bin ich) (?:\(dates)) frei", .freeTime),
+        ("wann habe ich (?:\(dates)) zeit", .freeTime),
+        ("was steht (?:für )?(?:\(dates)) an", .list),
+        ("welche termine habe ich (?:\(dates))", .list),
+      ]
+    for (pattern, detail) in naturalQuestions
+    where !VoiceRules.matches("^(?:\(pattern))$", text).isEmpty {
+      guard !VoiceRules.hasInvalidDate(text, now: now, calendar: calendar),
+        let date = VoiceRules.date(text, now: now, calendar: calendar)
+      else { return nil }
+      return Self(detail: detail, date: date)
+    }
     let datedNext =
       "^(?:(?:was|welchen termin) habe ich (?:\(dates)) als nächstes|(?:mein )?nächster termin (?:\(dates)))$"
     let correctedList =
@@ -434,14 +459,15 @@ enum CalendarAnswer {
       return Result(
         text: prefix + "In diesem Zeitraum wurden keine passenden lesbaren Termine gefunden.")
     }
-    if question.detail == .list || question.detail == .next {
-      let page = Array(found.dropFirst(question.offset).prefix(question.detail == .next ? 1 : 5))
+    if [.list, .first, .next].contains(question.detail) {
+      let single = question.detail != .list
+      let page = Array(found.dropFirst(question.offset).prefix(single ? 1 : 5))
       if page.isEmpty {
         return Result(
           text: prefix + "In diesem Zeitraum gibt es keine weiteren passenden Termine.",
           total: found.count, offset: question.offset)
       }
-      let remaining = question.detail == .next ? 0 : found.count - question.offset - page.count
+      let remaining = single ? 0 : found.count - question.offset - page.count
       return Result(
         text: prefix + page.map { $0.spoken(in: timezone) }.joined(separator: " ")
           + (remaining > 0 ? " Es gibt \(remaining) weitere passende Termine." : ""),
@@ -480,7 +506,7 @@ enum CalendarAnswer {
         event.isAllDay
         ? "Der Termin ist ganztägig eingetragen; eine Behandlungsdauer ist nicht bekannt."
         : "Der Termin dauert \(Int(event.values.end.timeIntervalSince(event.values.start) / 60)) Minuten."
-    case .list, .next, .count, .freeTime, .conflicts, .totalDuration, .dailySummary:
+    case .list, .first, .next, .count, .freeTime, .conflicts, .totalDuration, .dailySummary:
       detail = event.spoken(in: timezone)
     }
     return Result(text: prefix + detail, events: [event], total: 1)

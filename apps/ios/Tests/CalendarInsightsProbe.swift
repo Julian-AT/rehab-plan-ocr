@@ -69,12 +69,21 @@ import Foundation
     }
     for (text, detail) in [
       ("Wann habe ich frei morgen von 9 bis 12 Uhr?", CalendarQuestion.Detail.freeTime),
+      ("Wann habe ich morgen frei von 9 bis 12 Uhr?", .freeTime),
+      ("Wann bin ich am Montag frei?", .freeTime),
+      ("Wann habe ich übermorgen Zeit nachmittags?", .freeTime),
       ("Gibt es Überschneidungen heute?", .conflicts),
       ("Wie lange dauern meine Termine insgesamt morgen?", .totalDuration),
       ("Tagesübersicht morgen", .dailySummary),
     ] {
       precondition(
         CalendarQuestion.direct(text, now: day, calendar: calendar)?.detail == detail, text)
+    }
+    for text in [
+      "Wann habe ich morgen frei ohne Physiotherapie?", "Wann bin ich morgen und übermorgen frei?",
+      "Wann habe ich am 31.02.2026 Zeit?",
+    ] {
+      precondition(CalendarQuestion.direct(text, now: day, calendar: calendar) == nil, text)
     }
     let conversation = CalendarConversation { _, _, _ in
       CalendarQueryResponse(scope: scope, events: [a, b], unavailableCalendarIDs: [])

@@ -117,6 +117,22 @@ import Foundation
     let proposedDelete = try CalendarUnderstandingOutput.remove(query: query).value.validated()
     precondition(
       AssistantInterpretation.checked(proposedDelete, for: request("Hallo")).action == .clarify)
+    for query in [
+      CalendarQuestion(title: "Therapie"), CalendarQuestion(excluding: "Ergo"),
+      CalendarQuestion(calendarName: "Privat"), CalendarQuestion(title: "Termin"),
+    ] {
+      let output = ConversationInterpretation(action: .calendar, query: query)
+      precondition(
+        AssistantInterpretation.checked(output, for: request("Wann beginnt mein Termin?")).action
+          == .clarify,
+        "Unrequested calendar filter escaped validation")
+    }
+    let namedTherapy = ConversationInterpretation(
+      action: .calendar, query: CalendarQuestion(title: "Physiotherapie"))
+    precondition(
+      AssistantInterpretation.checked(
+        namedTherapy, for: request("Wann beginnt meine Physiotherapie?")
+      ).action == .calendar)
     for reply in [" ", String(repeating: "x", count: 4_097)] {
       do {
         _ = try CalendarUnderstandingOutput.conversation(reply: reply).value.validated()
