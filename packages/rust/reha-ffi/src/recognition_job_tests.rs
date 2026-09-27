@@ -1,4 +1,6 @@
 use super::{host_routing_tests::Host, *};
+use reha_core::service::Platform;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 async fn application() -> (tempfile::TempDir, Arc<NativeApplication>) {
     let dir = tempfile::tempdir().unwrap();

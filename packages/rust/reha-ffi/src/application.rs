@@ -12,7 +12,6 @@ use crate::{
     EventMutationRequest, EventMutationResult, OwnedEventResolution, RecognitionJob,
     TextRecognitionRequest, TextRecognitionResult,
 };
-use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::{
     contracts as domain,
     service::{self, Application},

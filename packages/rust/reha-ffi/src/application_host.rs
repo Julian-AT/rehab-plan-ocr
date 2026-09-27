@@ -1,5 +1,6 @@
 use super::errors::platform_failure;
 use super::*;
+use base64::{engine::general_purpose::STANDARD, Engine};
 use reha_core::service::Platform;
 use std::sync::atomic::{AtomicBool, Ordering};
 
