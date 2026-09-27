@@ -4,8 +4,13 @@ import Synchronization
 
 private final class RecordingSink: RecognitionAudioSink, Sendable {
   let observations = Mutex([Int]())
+  let energies = Mutex([Double]())
   func append(_ buffer: AVAudioPCMBuffer) throws {
     observations.withLock { $0.append(Int(buffer.frameLength)) }
+    let values = buffer.floatChannelData![0]
+    energies.withLock {
+      $0.append((0..<Int(buffer.frameLength)).reduce(0.0) { $0 + abs(Double(values[$1])) })
+    }
   }
   func finish() throws { observations.withLock { $0.append(-1) } }
 }
@@ -53,18 +58,41 @@ private final class RecordingSink: RecognitionAudioSink, Sendable {
     var iterator = channel.stream.makeAsyncIterator()
     let packet = try await iterator.next()!
     precondition(packet.level == 0)
-    precondition(sink.observations.withLock { $0 == [320] })
+    precondition(sink.observations.withLock { $0.isEmpty }, "Unadmitted silence reached ASR")
     input.replace(nil)
     for _ in 0..<100 where sink.observations.withLock({ $0.last != -1 }) {
       try await Task.sleep(for: .milliseconds(2))
     }
-    precondition(sink.observations.withLock { $0 == [320, -1] }, "Finish overtook queued audio")
+    precondition(sink.observations.withLock { $0 == [-1] }, "Finish overtook queued audio")
     let second = RecordingSink()
+    input.beginPending(preRoll: true)
     input.replace(second, preRoll: true)
     for _ in 0..<100 where second.observations.withLock({ $0.isEmpty }) {
       try await Task.sleep(for: .milliseconds(2))
     }
     precondition(second.observations.withLock { $0 == [320] }, "Pre-roll was lost or overwritten")
+    // After a confirmed onset, low background becomes equal-duration silence,
+    // while the original PCM remains intact in the interruption pre-roll.
+    for _ in 0..<30 {
+      buffer.floatChannelData![0].initialize(repeating: 0.001, count: 320)
+      input.append(buffer)
+      _ = try await iterator.next()
+    }
+    precondition(second.observations.withLock { $0.count == 31 && $0.allSatisfy { $0 == 320 } })
+    precondition(second.energies.withLock { $0.last == 0 }, "Rejected background reached ASR")
+    input.monitorForInterruption()
+    input.append(buffer)
+    _ = try await iterator.next()
+    precondition(second.observations.withLock { $0.count == 31 }, "Monitoring fed the old request")
+    let third = RecordingSink()
+    input.beginPending(preRoll: true)
+    input.replace(third, preRoll: true)
+    for _ in 0..<100 where third.observations.withLock({ $0.isEmpty }) {
+      try await Task.sleep(for: .milliseconds(2))
+    }
+    precondition(
+      third.energies.withLock { !$0.isEmpty && $0.allSatisfy { $0 > 0 } },
+      "Admission mutated pre-roll")
     input.cancel()
     do {
       try channel.checkActive()

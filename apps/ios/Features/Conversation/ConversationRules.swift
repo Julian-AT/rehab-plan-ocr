@@ -67,11 +67,15 @@ enum SpeechPhrasing {
     for word in text.split(whereSeparator: \.isWhitespace) {
       if !current.isEmpty { current += " " }
       current += word
-      if current.count > 40
-        && (word.hasSuffix("!") || word.hasSuffix("?")
-          || (word.hasSuffix(".") && word.dropLast().last?.isNumber == false
-            && !isAbbreviation(String(word))))
-      {
+      let sentence =
+        word.hasSuffix("!") || word.hasSuffix("?")
+        || (word.hasSuffix(".") && word.dropLast().last?.isNumber == false
+          && !isAbbreviation(String(word)))
+      // Start with the first complete sentence, even when it is short. Split
+      // long sentences at clause punctuation so Victoria can prepare the next
+      // phrase during playback; never split a date, abbreviation or bare word.
+      let clause = current.count >= 55 && [",", ";", ":"].contains(where: word.hasSuffix)
+      if sentence || clause {
         chunks.append(current)
         current = ""
       }

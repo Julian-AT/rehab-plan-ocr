@@ -62,6 +62,11 @@ import Foundation
       LocalDiagnostics.shared.record(.audioEngine, .started, correlation: diagnosticID)
       let microphoneOnly = ProcessInfo.processInfo.arguments.contains("--microphone-only-trial")
       try graph.inputNode.setVoiceProcessingEnabled(!microphoneOnly)
+      if !microphoneOnly {
+        // Keep echo/noise processing, but do not amplify a quiet room or distant
+        // speech between turns. Admission uses the processed microphone energy.
+        graph.inputNode.isVoiceProcessingAGCEnabled = false
+      }
       LocalDiagnostics.shared.record(
         .voiceProcessing, .completed, correlation: diagnosticID,
         count: microphoneOnly ? 0 : 1)

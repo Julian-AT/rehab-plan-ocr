@@ -32,6 +32,7 @@ import SwiftUI
   private var onset: [Bool] = []
   private var endpointSent = false
   private var monitor = false
+  private var monitoringSince = 0.0
   private var startedAt = 0.0
   private var microphoneID = UUID()
   private var watchdog = InputBufferWatchdog()
@@ -130,8 +131,12 @@ import SwiftUI
           self.receiveBuffer(
             level: packet.level, rate: packet.sampleRate, channels: packet.channels,
             capturedAt: packet.capturedAt)
-          for voice in packet.voicedFrames {
+          let observations = self.monitor ? packet.interruptionFrames : packet.voicedFrames
+          for voice in observations {
             guard self.generation == current, self.microphoneID == id else { return }
+            if packet.capturedAt < (self.monitor ? self.monitoringSince : self.startedAt) {
+              continue
+            }
             self.receive(voice: voice)
           }
         }
@@ -310,6 +315,8 @@ import SwiftUI
   }
   func monitorForInterruption() {
     monitor = true
+    monitoringSince = ProcessInfo.processInfo.systemUptime
+    input?.monitorForInterruption()
     onset = []
     level = 0
     levelPublication = InputLevelPublication()

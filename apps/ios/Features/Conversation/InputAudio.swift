@@ -100,7 +100,7 @@ final class VoiceActivityDetector: @unchecked Sendable {
     fvad_set_mode(detector, 2)
   }
   deinit { fvad_free(detector) }
-  func append(_ buffer: AVAudioPCMBuffer, frame: (Bool) -> Void) throws {
+  func append(_ buffer: AVAudioPCMBuffer, frame: (SpeechActivityFrame) -> Void) throws {
     guard buffer.format == inputFormat else { throw InputAudioError.invalidFormat }
     try InputAudioLimits.validate(buffer)
     guard buffer.frameLength > 0 else { return }
@@ -129,7 +129,7 @@ final class VoiceActivityDetector: @unchecked Sendable {
         )
       }
       guard decision >= 0 else { throw InputAudioError.detector }
-      frame(decision == 1 && rms > 0.003)
+      frame(SpeechActivityFrame(speech: decision == 1, rms: rms))
       offset += 320
     }
     samples.removeFirst(offset)

@@ -39,6 +39,16 @@ import Foundation
     let unfinished = "Heute folgt nach dem Frühstück beispielsweise z.B. Physiotherapie"
     precondition(abbreviations.append(snapshot: unfinished).isEmpty)
     precondition(SpeechPhrasing.phrases(unfinished).count == 1)
+    precondition(
+      SpeechPhrasing.phrases("Hallo! Wie kann ich dir helfen?") == [
+        "Hallo!", "Wie kann ich dir helfen?",
+      ])
+    let long =
+      "Du kannst mir Fragen zu deinen nächsten Terminen stellen, und ich schaue in deinem Kalender nach."
+    precondition(SpeechPhrasing.phrases(long).count == 2)
+    precondition(SpeechPhrasing.phrases(long).joined(separator: " ") == long)
+    let date = "Am 14. September um 09:15 Uhr ist Dr. Muster in Raum 2.14."
+    precondition(SpeechPhrasing.phrases(date) == [date])
     var phrases = StableSpeechPhrases()
     precondition(
       phrases.append(snapshot: "Am 14. September ist Dr. Muster da. Danach").joined().contains(

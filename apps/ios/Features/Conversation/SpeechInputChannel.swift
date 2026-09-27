@@ -8,6 +8,7 @@ struct SpeechInputPacket: Sendable {
   let channels: Int
   let capturedAt: Double
   let voicedFrames: [Bool]
+  var interruptionFrames: [Bool] = []
 }
 
 /// One consumer preserves tap order. An overflow invalidates queued observations
@@ -33,7 +34,9 @@ final class SpeechInputChannel: Sendable {
       guard !state.closed else { return false }
       guard packet.level.isFinite, (0...1).contains(packet.level),
         packet.sampleRate.isFinite, packet.sampleRate > 0, packet.channels > 0,
-        packet.capturedAt.isFinite, packet.voicedFrames.count <= 64
+        packet.capturedAt.isFinite, packet.voicedFrames.count <= 64,
+        packet.interruptionFrames.isEmpty
+          || packet.interruptionFrames.count == packet.voicedFrames.count
       else {
         state.closed = true
         state.failure = Failure.invalidPacket

@@ -133,7 +133,12 @@ struct PlaybackWord: Identifiable {
           currentMarks = audio.marks
           revealed = 0
           committed = 0
-          LocalDiagnostics.shared.record(.synthesis, .completed, correlation: turnID.uuidString)
+          let preparation = audio.preparation.components
+          LocalDiagnostics.shared.record(
+            .synthesis, .completed, correlation: turnID.uuidString,
+            durationMs: Int(
+              preparation.seconds * 1_000 + preparation.attoseconds / 1_000_000_000_000_000),
+            count: audio.marks.count)
           LocalDiagnostics.shared.record(.playback, .started, correlation: turnID.uuidString)
           phase = .playing
           status = "Wird vorgelesen"

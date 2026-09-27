@@ -21,11 +21,20 @@ final class SpeechInput: @unchecked Sendable {
   private var pending: [AVAudioPCMBuffer]?
   private var pendingSeconds = 0.0
   private var detector: VoiceActivityDetector?
+  private var activity = SpeechActivityGate()
+  private var monitoring = false
+  private var admittedTurn = false
+  private var silence: AVAudioPCMBuffer?
   init(channel: SpeechInputChannel) { self.channel = channel }
+
+  func monitorForInterruption() { queue.async { self.monitoring = true } }
 
   func beginPending(preRoll: Bool) {
     queue.async {
       guard !self.admission.withLock({ $0.closed }) else { return }
+      self.monitoring = false
+      self.admittedTurn = preRoll
+      self.activity.beginTurn(preRoll: preRoll)
       self.pending = preRoll ? self.ring : []
       self.pendingSeconds = preRoll ? self.ringSeconds : 0
     }
@@ -39,9 +48,8 @@ final class SpeechInput: @unchecked Sendable {
         if let next, let pending = self.pending {
           for buffer in pending { try next.append(buffer) }
           self.pending = nil
-          for buffer in pending where !self.ring.contains(where: { $0 === buffer }) {
-            self.recycle(buffer)
-          }
+          // Pending may share immutable silence buffers. Release these refs;
+          // only raw buffers leaving the pre-roll ring return to the tap pool.
           self.pendingSeconds = 0
         } else if preRoll {
           for buffer in self.ring { try next?.append(buffer) }
@@ -100,15 +108,27 @@ final class SpeechInput: @unchecked Sendable {
       guard let level = try InputAudioLevel.measure(buffer) else { return }
       if let detector, detector.inputFormat != buffer.format { throw InputAudioError.invalidFormat }
       if detector == nil { detector = try VoiceActivityDetector(input: buffer.format) }
-      if pending != nil {
-        pending?.append(buffer)
-        pendingSeconds += Double(buffer.frameLength) / buffer.format.sampleRate
-        guard pendingSeconds <= 2 else { throw RecognitionFailure.overflow }
-      } else {
-        try sink?.append(buffer)
-      }
       var frames: [Bool] = []
-      try detector?.append(buffer) { frames.append($0) }
+      var interruptions: [Bool] = []
+      var admit = false
+      try detector?.append(buffer) {
+        let decision = activity.append($0, monitoring: monitoring)
+        frames.append(decision.voice)
+        interruptions.append(decision.interruption)
+        admit = admit || decision.admit
+      }
+      if !monitoring && (pending != nil || sink != nil) {
+        if !admittedTurn && admit {
+          admittedTurn = true
+          // Recover the onset used to confirm speech, including a soft first word.
+          for previous in ring { try forward(previous) }
+        }
+        if admittedTurn {
+          // Keep the recognizer's timeline continuous after onset. Rejected
+          // background must not become words or prolong the spoken request.
+          try forward(admit ? buffer : silentBuffer(like: buffer))
+        }
+      }
       ring.append(buffer)
       ringSeconds += Double(buffer.frameLength) / buffer.format.sampleRate
       while ringSeconds > 0.4, let first = ring.first {
@@ -120,9 +140,33 @@ final class SpeechInput: @unchecked Sendable {
         channel.send(
           SpeechInputPacket(
             level: level, sampleRate: buffer.format.sampleRate,
-            channels: Int(buffer.format.channelCount), capturedAt: time, voicedFrames: frames))
+            channels: Int(buffer.format.channelCount), capturedAt: time, voicedFrames: frames,
+            interruptionFrames: interruptions))
       else { throw RecognitionFailure.overflow }
     } catch { fail(error) }
+  }
+  private func forward(_ buffer: AVAudioPCMBuffer) throws {
+    if pending != nil {
+      pending?.append(buffer)
+      pendingSeconds += Double(buffer.frameLength) / buffer.format.sampleRate
+      guard pendingSeconds <= 2 else { throw RecognitionFailure.overflow }
+    } else {
+      try sink?.append(buffer)
+    }
+  }
+  private func silentBuffer(like buffer: AVAudioPCMBuffer) throws -> AVAudioPCMBuffer {
+    if let silence, silence.format == buffer.format, silence.frameLength == buffer.frameLength {
+      return silence
+    }
+    guard let result = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
+    else { throw InputAudioError.conversion }
+    result.frameLength = buffer.frameLength
+    for part in UnsafeMutableAudioBufferListPointer(result.mutableAudioBufferList) {
+      guard let data = part.mData else { throw InputAudioError.invalidFormat }
+      memset(data, 0, Int(part.mDataByteSize))
+    }
+    silence = result  // Immutable, including while retained by pending input.
+    return result
   }
   private func recycle(_ buffer: AVAudioPCMBuffer) {
     admission.withLock { if $0.pool.count < 24 { $0.pool.append(OwnedPCM(buffer)) } }

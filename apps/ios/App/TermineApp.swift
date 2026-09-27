@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
           if await AssistantProviderScenario.runIfRequested() { return }
         #endif
         #if REHA_PRIVATE_VICTORIA
+          if await PrivateSpeechProbe.runIfRequested() { return }
           if await PrivateAssistantProbe.runIfRequested() { return }
         #endif
         if core == nil { await open() }

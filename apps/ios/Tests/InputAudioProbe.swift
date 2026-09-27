@@ -122,7 +122,7 @@ import Foundation
     let detector = try VoiceActivityDetector(input: format)
     var frames = 0
     try detector.append(buffer) { voiced in
-      precondition(!voiced)
+      precondition(!voiced.speech && voiced.rms == 0)
       frames += 1
     }
     precondition(frames == 50, "Bounded PCM lost pause evidence")
