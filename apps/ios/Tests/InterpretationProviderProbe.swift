@@ -105,6 +105,31 @@ import Foundation
     let query = CalendarUnderstanding.Query(
       detail: .room, date: nil, days: 1, title: "", excluding: "", calendarName: nil,
       reference: "r1", ordinal: 0, usesLastPage: false, after: nil, before: nil)
+    // Branch-specific guided output cannot carry unrelated optional payloads.
+    // It must still reject invalid values and retain current-request validation.
+    let smallTalk = try CalendarUnderstandingOutput.conversation(reply: "Hallo!").value.validated()
+    precondition(smallTalk.action == .conversation && smallTalk.reply == "Hallo!")
+    precondition(smallTalk.plan == nil && smallTalk.query == nil && smallTalk.change == nil)
+    let guidedRead = try ReadOnlyCalendarUnderstanding.calendar(query: query).value.validated()
+    precondition(guidedRead.action == .calendar && guidedRead.query?.reference == "r1")
+    let guidedClarification = try ReadOnlyCalendarUnderstanding.clarify.value.validated()
+    precondition(guidedClarification.action == .clarify && guidedClarification.query == nil)
+    let proposedDelete = try CalendarUnderstandingOutput.remove(query: query).value.validated()
+    precondition(
+      AssistantInterpretation.checked(proposedDelete, for: request("Hallo")).action == .clarify)
+    for reply in [" ", String(repeating: "x", count: 4_097)] {
+      do {
+        _ = try CalendarUnderstandingOutput.conversation(reply: reply).value.validated()
+        preconditionFailure("Invalid conversational reply accepted")
+      } catch CalendarUnderstandingError.invalidRequest {}
+    }
+    let malformedChange = CalendarUnderstanding.Change(
+      title: nil, date: nil, time: "25:99", duration: nil)
+    do {
+      _ = try CalendarUnderstandingOutput.update(query: query, change: malformedChange).value
+        .validated()
+      preconditionFailure("Branch schema bypassed field validation")
+    } catch CalendarUnderstandingError.invalidRequest {}
     let decoded = try CalendarUnderstanding(
       action: .calendar, query: query, change: nil, reply: nil
     ).validated()

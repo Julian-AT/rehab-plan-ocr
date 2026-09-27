@@ -81,9 +81,27 @@
         let context =
           #"{"today":"2031-05-15","timezone":"Europe/Vienna","last_page":[],"last_discussed_date":"","plan_sources":[]}"#
         let router = InterpretationRouter(generation: provider)
+        // Inspect only these fixed synthetic generations, never live dialogue.
+        for text in [
+          "Wie geht es dir?", "Was kannst du?", "Wann habe ich morgen meinen ersten Termin?",
+        ] {
+          try await observe("generated: " + text) {
+            let output = try await provider.respond(text: text, context: context, history: [])
+            var result: [String: Any] = ["generated": String(reflecting: output)]
+            do {
+              let value = try output.validated(calendar: calendar)
+              result["validated_action"] = InterpretationDiagnostics.action(value)
+            } catch {
+              result["validation_error"] = String(reflecting: error)
+            }
+            return result
+          }
+        }
         for text in [
           "Hallo", "Wie geht es dir?", "Was kannst du?",
           "Wann habe ich morgen meinen ersten Termin?",
+          "Wie viele Termine habe ich übermorgen?", "Wann habe ich morgen frei?",
+          "Lösche den Termin nicht", "Termine morgen",
         ] {
           try await observe(text) {
             let result = try await router.interpret(

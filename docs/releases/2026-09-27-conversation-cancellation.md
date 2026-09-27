@@ -40,14 +40,21 @@ both the entire backup and fresh phone inventories. The strict post-install
 comparison passes without review: all 17 tables, schema 11, 31 scans, 30 originals,
 preferences and other durable files are unchanged.
 
-The attempted diagnostic launch was rejected by iOS because the phone was locked.
-The user has been asked to unlock it. The assistant probe has **not run**, and
-neither the basic-answer issue nor physical Auto-Lock behavior is qualified yet.
-The pending synthetic run ID and launch failure are recorded privately. After
-unlocking, launch the same prepared probe, collect its per-run report, and reopen
-normally. Continue diagnosis from its actual error/result instead of assuming the
-model or microphone is now fixed. A concrete failed utterance was also requested
-from the user and remains unanswered.
+After the user unlocked the phone, the synthetic probe completed. Plain and small
+guided greetings succeeded in 1.87 and 0.49 seconds. The app's greeting succeeded,
+but “Wie geht es dir?” and “Was kannst du?” failed with
+`CalendarUnderstandingError.invalidRequest` after generation. The first-appointment
+question returned clarification. This establishes an app interpretation failure;
+it does not establish which optional output field caused rejection because the
+initial probe did not retain raw synthetic generations. The model itself can
+generate German answers on this phone.
+
+The subsequent normal launch was rejected because the phone had locked again.
+Fresh routine diagnostics include a background cancellation (code 4), but no new
+active microphone session qualifying the foreground idle-timer fix. The assistant
+schema follow-up retains raw fixed synthetic output separately from routine logs.
+Physical microphone conversation and Auto-Lock behavior remain unqualified. A
+concrete failed utterance was also requested from the user and remains unanswered.
 
 Private evidence: `.local/runs/victoria-cancellation-20260927-001/` and
 `.local/runs/assistant-runtime-device-20260927-001/`; package:
