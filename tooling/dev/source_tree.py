@@ -27,6 +27,7 @@ ROOT_FILES = {
     ".editorconfig",
 }
 EXCLUDED = {"AGENTS.md", "CLAUDE.md"}
+GENERATED_PREFIXES = ("apps/ios/build",)
 FORBIDDEN = {
     ".git",
     ".local",
@@ -88,6 +89,8 @@ def safe_path(name):
 
 def allowed(name):
     path = safe_path(name)
+    if any(name == prefix or name.startswith(prefix + "/") for prefix in GENERATED_PREFIXES):
+        return False
     return (name in ROOT_FILES or path.parts[0] in ROOTS) and not any(
         part in FORBIDDEN
         or part in EXCLUDED

@@ -81,6 +81,22 @@ class SourceZipTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "content"):
             source.identity(root)
 
+    def test_setup_alias_is_excluded_but_source_symlinks_are_rejected(self):
+        output = Path(self.temporary.name) / "setup tree"
+        with zipfile.ZipFile(self.archive) as archive:
+            archive.extractall(output)
+            for info in archive.infolist():
+                (output / info.filename).chmod(stat.S_IMODE(info.external_attr >> 16))
+        root = output / "rehab-plan-ocr"
+        (root / "apps/ios").mkdir(parents=True)
+        (root / ".local/builds/ios").mkdir(parents=True)
+        (root / "apps/ios/build").symlink_to("../../.local/builds/ios", target_is_directory=True)
+        (root / ".local/private.wav").write_bytes(b"private test recording")
+        self.assertEqual(source.identity(root)["kind"], "source-archive")
+        (root / "tooling/injected.sh").symlink_to("run.sh")
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            source.identity(root)
+
     def test_missing_modified_duplicate_and_symlink_entries_fail(self):
         def symlink(entries):
             entries[0][0].external_attr = (stat.S_IFLNK | 0o777) << 16
