@@ -257,13 +257,10 @@ operation-level diagnostic, not deployment qualification. The
 [recorded results](../../experiments/findings.md) identify the
 first reproducible rounding difference and preserve the original parity failures.
 
-The bounded [Conv-to-MatMul experiment](../../experiments/findings.md)
-uses only the two saved operation fixtures and four exact integer geometry cases.
-`make prepare-ocr-convolution-lowering DIAGNOSTIC_RUN=<new-private-directory>`
-records its immutable protocol without inference. After scheduling the runtime
-window, `make diagnose-ocr-convolution-lowering DIAGNOSTIC_RUN=<same-directory>`
-executes that protocol. Both stored Paddle arrays must match byte-for-byte;
-otherwise this approach stops. It never launches a full model or experiment 2.
+The completed isolated convolution/BatchNorm investigations and their exclusive
+commands have been retired. Their [findings](../../experiments/findings.md) and
+[source recovery](../../../docs/development/recovery.md) preserve the scope and
+failed gates. Reusable full-model export, stage and operation checks remain above.
 
 ## Register retained results
 
