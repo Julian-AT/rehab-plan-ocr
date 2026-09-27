@@ -1,13 +1,12 @@
 # Private reference dataset
 
-The 20 distinct original photos have been visually transcribed into **188 row
-occurrences**. Alternate captures and revised plans remain separate references.
-These are **unapproved drafts**, including proposed text polygons and error causes;
-no qualified clinical model or independent final test exists. Both model pipelines
-have produced synthetic smoke artifacts; see the [current status](recovery.md).
-Personal data and every content-bearing artifact remain in ignored private storage.
+Original plan photos, transcriptions, draft polygons and error annotations belong
+in private storage. A draft is unapproved until each required human review passes.
+Synthetic smoke artifacts do not qualify a clinical model or an independent final
+test. See the [retained findings](../../ml/experiments/findings.md) for historical
+scope and the [verification record](verification.md) for current source checks.
 
-New collections follow the [German collection guide](../product/research/collection-guide.md)
+New collections follow the [collection guide](../product/research/collection-guide.md)
 and its consent draft. `make intake` copies a checked incoming batch without
 changing existing originals, references or group assignments. Intake never grants
 annotation approval, train/validation assignment or privacy-mask approval.
