@@ -86,7 +86,8 @@
           "Wie geht es dir?", "Was kannst du?", "Wann habe ich morgen meinen ersten Termin?",
         ] {
           try await observe("generated: " + text) {
-            let output = try await provider.respond(text: text, context: context, history: [])
+            let output = try await provider.respond(
+              text: text, context: context, history: [], now: now, calendar: calendar)
             var result: [String: Any] = ["generated": String(reflecting: output)]
             do {
               let value = try output.validated(calendar: calendar)
@@ -102,6 +103,7 @@
           "Wann habe ich morgen meinen ersten Termin?",
           "Wie viele Termine habe ich übermorgen?", "Wann habe ich morgen frei?",
           "Lösche den Termin nicht", "Termine morgen",
+          "Servus, hörst du mich?", "Wobei kannst du mir helfen?", "Was steht für morgen an?",
         ] {
           try await observe(text) {
             let result = try await router.interpret(
