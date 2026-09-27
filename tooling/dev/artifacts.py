@@ -238,8 +238,19 @@ def generation_locations(root):
                 or value.get("new_identity") != planned.get("identity", {}).get("sha256")
                 or value.get("plan_sha256") != sha(plan)
                 or value.get("previous_location") != ".local/builds/ios/DerivedData"
-                or value.get("preserved_location") != expected
             ):
+                raise ValueError("Invalid completed product-generation linkage")
+            if value.get("preserved_location") is None:
+                # The initial generation has no prior directory to relocate.
+                # Accept only the builder's explicit empty inventory contract.
+                if (
+                    planned.get("previous_directory_existed") is not False
+                    or planned.get("previous_files") != {}
+                    or (directory / "DerivedData").exists()
+                ):
+                    raise ValueError("Invalid empty product-generation linkage")
+                continue
+            if value.get("preserved_location") != expected:
                 raise ValueError("Invalid completed product-generation linkage")
             locations.append(local_path(root, expected))
     return locations

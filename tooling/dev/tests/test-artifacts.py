@@ -367,6 +367,42 @@ class ConsumerCleanupTests(CleanupTests):
         self.assertEqual(symbol.read_bytes(), b"original generation symbol")
         self.assertEqual(json.loads((generation / "receipt.json").read_text()), receipt)
 
+    def test_initial_generation_without_prior_products(self):
+        generation = self.root / ".local/builds/ios/generations" / ("3" * 32)
+        generation.mkdir(parents=True)
+        planned = {
+            "schema_version": 1,
+            "root": str(self.root),
+            "identity": {"sha256": "new"},
+            "previous_directory_existed": False,
+            "previous_files": {},
+        }
+        receipt = {
+            "schema_version": 1,
+            "new_identity": "new",
+            "previous_location": ".local/builds/ios/DerivedData",
+            "preserved_location": None,
+        }
+
+        def save():
+            (generation / "plan.json").write_text(json.dumps(planned))
+            receipt["plan_sha256"] = artifacts.sha(generation / "plan.json")
+            (generation / "receipt.json").write_text(json.dumps(receipt))
+
+        save()
+        self.assertEqual(artifacts.generation_locations(self.root), [])
+        for key, value in [("previous_directory_existed", True), ("previous_files", {"file": {}})]:
+            original = planned[key]
+            planned[key] = value
+            save()
+            with self.assertRaisesRegex(ValueError, "empty product-generation"):
+                artifacts.generation_locations(self.root)
+            planned[key] = original
+        save()
+        (generation / "DerivedData").mkdir()
+        with self.assertRaisesRegex(ValueError, "empty product-generation"):
+            artifacts.generation_locations(self.root)
+
     def test_foreign_generation_root_is_rejected(self):
         generation = self.root / ".local/builds/ios/generations" / ("2" * 32)
         generation.mkdir(parents=True)
