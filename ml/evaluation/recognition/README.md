@@ -58,7 +58,7 @@ only the experimental copy's recognizer changes. Model, dictionary, manifest,
 training lineage, app binary, evaluation sources and simulator/toolchain identities
 are retained privately with raw results and traces.
 
-The [first app experiment](../../experiments/2026-09-26-s18-ocr-app-provider.md) passes
+The [first app experiment](../../experiments/findings.md) passes
 compatibility for both variants. One synthetic source and serial repeated imports
 do not establish real-photo accuracy, paired latency, correction effort or model
 promotion. Camera/picker interaction and first visible content are outside this

@@ -1,57 +1,46 @@
-# Native iPhone-App
+# Native iPhone application
 
-Die App und ihre drei Erweiterungen werden aus `project.yml` mit XcodeGen erzeugt.
-Gemeinsame Swift-Pakete liegen unter `../../packages/apple`, Rust-Fachlogik und FFI unter
-`../../packages/rust`. Die aktuelle Einrichtung steht im [Repository-Einstieg](../../README.md).
-
-Alle Befehle laufen vom Repository-Stamm:
+XcodeGen creates the app and its three extensions from `project.yml`. Shared Apple
+packages live in `packages/apple`, and the domain/FFI in `packages/rust`. Run all
+commands from the source root; follow [setup](../../README.md#prerequisites-and-setup).
 
 ```sh
-make bootstrap
-make restore
 make convert TARGET=all
-make build
-make test-ios
+make build TARGET=simulator
 make check-bindings
 make build TARGET=device
+make test-ios
 ```
 
-Die App verwendet UniFFI ohne die standardmäßig aktivierte Cargo-Metadatensuche.
-`make bindings` und `make check-bindings` aktivieren CLI und Metadatensuche explizit
-über das Feature `bindgen`. Die Swift-Schnittstelle bleibt identisch; Hilfsprogramme
-für die Paketauflösung gehören damit nur zum Generator-Build.
+The standard build links the pinned OCR/ONNX runtime and uses Apple system speech.
+`make bindings` explicitly enables UniFFI's `bindgen` feature. `make check-bindings`
+compares generated Swift and headers with committed files; the native binding
+probe exercises actual Swift/Rust calls. Generated sources must not be edited.
 
-`build-native.sh framework` erzeugt getrennte arm64-iOS- und Simulatorvarianten des
-XCFrameworks. Die Rust-Bibliothek wird mit ONNX Runtime 1.22.0 verbunden. `check-bindings`
-vergleicht generierte UniFFI-Bindings mit den versionierten Dateien. `test-native-bindings.sh`
-prüft echte Rust/Swift-Aufrufe, Revisionen, Bestätigung, Kalenderidentitäten und Abbruch.
-Die vollständige UI-Prüfung erzeugt einen Simulator ausschließlich mit synthetischen Daten.
-`config/testing/simulator.json` bindet für UI- und EventKit-Tests Version und Build der Laufzeit:
-lokal iOS 26.4/23E244, mit `REHA_SIMULATOR_PROFILE=ci` iOS 26.5/23F77.
-Eine fehlende oder abweichende Laufzeit führt vor dem Build zum Fehler; es gibt
-keinen automatischen Wechsel auf die neueste installierte Version. Ein bestehender
-`REHA_TEST_SIMULATOR` muss ein eigener iPhone-17-Testsimulator derselben Laufzeit sein.
-Jeder erfolgreiche Vorabcheck schreibt eine neue `simulator-environment-*.json`
-unter `.local/builds/ios`; CI bewahrt diese Identität mit dem Testergebnis auf.
-Diese beiden Profile ersetzen keine Prüfung der Mindestversion iOS 26.0.
+The optional [Victoria profile](../../docs/development/personal-victoria.md) uses
+`private-victoria.yml`, a separate generated RehaCore package and the original
+stored voice key. Experimental assistant trials have their own project overlay.
+Neither changes the default `make build` selection.
 
-`make archive RELEASE_RUN=.local/releases/<neuer-lauf>` reserviert einen neuen
-geschützten Lauf, erzeugt darin ein signiertes privates Archiv und führt die
-Paketprüfung einschließlich Binär-/dSYM-Identitäten aus. Bestehende Archive und
-Paketnachweise werden nicht überschrieben; eine ausdrücklich angegebene alte
-Archivquelle kann nur in einen neuen Lauf paketiert werden. Details stehen im
-[Buildvertrag](../../docs/development/build-reproducibility.md). Das ist keine Geräteinstallation. Für Installation gilt die Freigabegrenze
-in AGENTS.md: neue Vorschau und Hörproben, ausdrückliche Freigabe, frische Sicherung, Update
-ohne Deinstallation und Vergleich dauerhafter Daten.
+The identifier `at.rehakalender.personal`, extension IDs, App Groups and storage
+under `Library/Application Support/at.rehakalender.personal` remain compatible.
+SQLite schema 11 and JSON document schema 3 retain the existing migrations,
+import evidence and settings. Calendar writes still require visible confirmation.
 
-Die App-Kennung `at.rehakalender.personal`, Erweiterungskennungen, App Groups und der
-Speicher `Library/Application Support/at.rehakalender.personal` bleiben erhalten.
-Schema 8 ergänzt gemeinsame Terminzuordnungen, Schema 9 die wiederaufnehmbare
-Quellenlöschung und Schema 10/11 kompakte, paginierte Archivabfragen. Historische
-Importbelege und vorhandene Einstellungen bleiben erhalten. Die App lädt Modelle
-aus `.local/models/runtime` in die OCR-Bundle-Ressourcen. Die Sprachausgabe nutzt
-installierte Apple-Systemstimmen; das Release enthält keine Victoria-Gewichte und
-keinen eSpeak-Phonemizer. `make restore convert` benötigt nur die OCR-/ORT-Artefakte.
-Die erhaltenen [Victoria-Experimente](../../docs/third-party/experiments/kokoro/README.md)
-haben eigene Einrichtungs- und Konvertierungsziele. Stimmenqualität und tatsächliche
-Offline-Verfügbarkeit auf Testgeräten bleiben gesonderte Abnahmekriterien.
+## Tests and builds
+
+Simulator tests use synthetic fixtures and disposable iPhone 17 devices. The
+local profile requires iOS 26.4 / 23E244; the explicit CI profile requires iOS 26.5 /
+23F77. A missing runtime fails instead of selecting another version. These checks
+do not establish minimum-iOS-26.0 coverage or physical-device reliability.
+
+`make verify-bundle APP_BUNDLE="<app path>" TARGET=simulator` checks app and extension
+resources, model hashes, privacy manifests and notices. Use `TARGET=device` for an
+unsigned device build. Visual checks retain the
+[existing references](../../docs/product/visual-baseline/README.md).
+
+For explicitly authorized signed work, `make archive RELEASE_RUN=.local/releases/<new-name>`
+reserves immutable output, and `make package` verifies it. Signed builds require
+local signing configuration. No build command installs on a phone. Device updates
+require approved previews/listening, a fresh backup, an update without uninstalling,
+and comparison of persistent data. See [build contracts](../../docs/development/build-reproducibility.md).

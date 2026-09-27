@@ -16,6 +16,7 @@ class MakePathTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="reha make fixture ") as directory:
             root = Path(directory)
             shutil.copyfile(ROOT / "Makefile", root / "Makefile")
+            shutil.copytree(ROOT / "tooling/make", root / "tooling/make")
             for name in [
                 "tooling/dev/workspace.py",
                 "config/storage/workspace.json",

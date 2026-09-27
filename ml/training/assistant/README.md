@@ -74,7 +74,7 @@ and validation examples. Invalid outputs are rejected, not repaired into success
 These smoke examples await human German-language review. They are not independent
 test dialogues. The original smoke runner remains a historical compatibility check;
 its fusion probe checks only the greedy next token.
-See [the experiment and limits](../../experiments/2026-09-26-s16-assistant-compatibility.md).
+See [the experiment and limits](../../experiments/findings.md).
 
 The development trainer now provides grouped validation and complete epoch resume:
 
@@ -139,5 +139,5 @@ The production trainer has no added wall-clock limit.
 Desktop prompt files are passed with `--binary-file --no-escape` so llama.cpp
 receives the same rendered template as MLX and the native adapter. The previous
 `-f` boundary dropped one final LF; historical reports remain immutable. The
-[full-corpus token diagnosis](../../experiments/2026-09-26-s18-assistant-token-parity.md)
+[full-corpus token diagnosis](../../experiments/findings.md)
 checks actual input IDs and records remaining numerical differences separately.

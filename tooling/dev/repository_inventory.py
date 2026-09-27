@@ -160,7 +160,7 @@ GROUPS = [
         [
             "tooling/checks/compare-visual-suite.py",
             "tooling/checks/tests/test-documentation.py",
-            "docs/releases/history/kokoro-device-update.md",
+            "docs/development/recovery.md",
         ],
         "retain unchanged; device capture is distinct evidence",
     ),
@@ -179,7 +179,7 @@ GROUPS = [
         "documentation-and-evidence",
         "Current instructions and dated historical evidence",
         ["README.md", "docs/README.md", "tooling/checks/tests/test-documentation.py"],
-        "retain; historical reports are immutable, current claims require live-code verification",
+        "retain; current guides and recovery identities; verification claims require evidence",
     ),
     (
         "notices",

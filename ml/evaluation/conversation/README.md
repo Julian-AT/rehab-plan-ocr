@@ -31,7 +31,7 @@ Original parity evidence is never replaced. A successful diagnostic command mean
 the comparison completed, not that answers agree or a model qualifies. It uses
 only earlier failures, adds no independent examples and cannot establish full
 parity, iOS execution or physical latency. The historical
-[six-case result](../../experiments/2026-09-26-s18-assistant-backend-parity.md) reproduced
+[six-case result](../../experiments/findings.md) reproduced
 all six failures with each configuration. It used the old CLI file boundary,
 which removed a final newline; the prompt-boundary diagnosis below supersedes
 its interpretation without rewriting the retained evidence.
@@ -63,7 +63,7 @@ immediately. `REUSE_MLX=<prior-diagnostic-directory>` can reuse a fully complete
 MLX worker only after exact model/source/request identity checks and unchanged
 worker/helper implementations; historical files remain untouched. No tolerance,
 original report, model weight or release decision is changed. See the
-[token diagnosis](../../experiments/2026-09-26-s18-assistant-token-parity.md).
+[token diagnosis](../../experiments/findings.md).
 The completed full comparison has 38/40 identical answers: five old differences
 disappear, one remains and one previously matching case diverges. Both remaining
 differences reproduce on identical prefixes, so the strict parity gate still fails.

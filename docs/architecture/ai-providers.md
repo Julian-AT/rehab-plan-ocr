@@ -1,5 +1,3 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # Local interpretation providers
 
 `InterpretationProvider` is the app's common contract for complete calendar rules
@@ -75,7 +73,7 @@ normal generated Xcode project. Regular release packaging rejects the trial mark
 
 The provider probe verifies exact-rule fallback, single-provider selection, invalid
 output rejection, capability limits, deadline/cancellation with an uncooperative
-fake provider and isolation of later answers. The [app trial](../../ml/experiments/2026-09-26-s18-assistant-app-provider.md)
+fake provider and isolation of later answers. The [app trial](../../ml/experiments/findings.md)
 executes the actual provider selection/router in the app binary, with two synthetic
 development prompts. It reproduces both known wrong outputs without executing a
 calendar operation. It opens neither a calendar database nor an audio session;

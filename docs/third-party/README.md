@@ -1,5 +1,3 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # Runtime notices and dependency inventory
 
 `licenses/manifest.json` pins every notice bundled by `apps/ios/project.yml`.
@@ -16,7 +14,7 @@ scope are recorded per package. Shared texts are deduplicated in the bundled
 `licenses/rust-dependencies.txt`; SQLite's amalgamation declaration is retained
 separately from its Rust wrapper's MIT license.
 
-The [2026-09-26 security review](../releases/dependency-security-2026-09-26-s18.md)
+The [2026-09-26 security review](../development/recovery.md)
 records the RustSec snapshot, native-library findings, SQLite update and remaining
 maintenance/ONNX qualification work. Its result is bound to the recorded inputs;
 it is not an evergreen security clearance.
@@ -39,9 +37,8 @@ The inventory pins runtime model locks, native source identities, vendored VAD
 files and build declarations. Apple system models are recorded as OS-provided;
 their weights are not exposed. Training environments and experimental checkpoints
 are outside this app inventory. License expressions reflect upstream declarations,
-and a checksum check does not decide redistribution compatibility. The workspace
-declares MIT but does not yet have a publisher-approved root license notice;
-publisher/rights review remains an explicit release gate. The native release feature
+and a checksum check does not decide redistribution compatibility. First-party code is covered by the root MIT license. Supplied clinic artwork,
+model assets and dependencies retain their separate rights and notices. The native release feature
 now selects OCR only; it does not select the experimental Kokoro/eSpeak renderer.
 
 | Runtime component | Source of version/identity | Bundled notices |
@@ -59,7 +56,7 @@ assembly rejects eSpeak symbols, and packaging checks actual executable bytes an
 rejects its resource folders. These checks supplement each other; a text scan alone
 does not establish legal clearance. Actual final simulator/device bundles must
 still pass verification after the system-voice implementation is integrated.
-The public release gate in the [ledger](../development/implementation-plan.md)
+The public release gate in the [ledger](../development/recovery.md)
 remains open. Model-development
 dependencies are separately locked under `ml/training` and are not app dependencies;
 Qwen development artifacts remain unqualified and unbundled.
@@ -79,4 +76,4 @@ historical reports. The only retained HTML is the self-contained palette decisio
 there is no React, Next, Radix, Tailwind, shadcn, Zod, Lucide or Tauri runtime/source.
 Fourteen notices belonging solely to those removed implementations, including the
 duplicate React texts, were removed from the active bundle. Their original hashes
-and Git revision are in the [retirement inventory](../releases/history/retired-assets.json).
+and Git revision are in the [retirement inventory](../development/retired-assets.json).

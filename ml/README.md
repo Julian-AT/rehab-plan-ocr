@@ -1,8 +1,21 @@
-# Local model development
+# Model development
 
-Application code must not depend on this directory. App tooling uses the root
-`pyproject.toml`/`uv.lock`; OCR and assistant training each have an independent
-project and lockfile under `training/`.
+This workspace retains reusable data preparation, training, export, evaluation,
+runtime manifests and model cards. The app's selected runtime assets are pinned in
+`registry/runtime`; experimental cards never implicitly replace the default.
+
+| Area | Responsibility |
+| --- | --- |
+| `data/annotation` | Private intake, human reference review and approval |
+| [data/augmentation](data/augmentation/README.md) | Geometry-preserving variants |
+| [data/synthesis](data/synthesis/README.md) | Synthetic tables with pixel/label checks |
+| [training/ocr](training/ocr/README.md) | Pinned OCR training, resumption and export |
+| [training/assistant](training/assistant/README.md) | MLX training, resumption and separate conversion |
+| [evaluation/recognition](evaluation/recognition/README.md) | Critical fields, omissions, hallucinations and export parity |
+| [evaluation/conversation](evaluation/conversation/README.md) | Strict app interpretation and bounded native trials |
+| [evaluation/speech](evaluation/speech/README.md) | Speech/listening measurements |
+| [registry](registry/README.md) | Runtime pins and experimental provenance |
+| [experiments](experiments/findings.md) | Retained findings and active protocols |
 
 ```sh
 make restore-ocr-training
@@ -10,32 +23,19 @@ make restore-assistant-training
 make restore-assistant-export
 ```
 
-The assistant environment requires an Apple Silicon Mac. These commands install
-dependencies under ignored `.local/envs/`. Keep original documents, model weights,
-checkpoints, generated samples and run logs under `.local/`. The verified private
-migration is complete; ignored aliases preserve historical references. Never put
-patient records in hosted CI.
+These explicit setup commands create ignored `.local/envs` environments. The
+assistant environment requires Apple Silicon. Its converter is separate because
+the pinned llama.cpp converter and MLX-LM use different Transformers versions.
+Upstream checkouts require Git and exact pinned revisions. Model restoration is
+explicit; private source data, model weights, checkpoints and logs stay in `.local`.
 
-The assistant export environment is separate because the pinned llama.cpp
-converter requires Transformers 4.57.6 while MLX-LM 0.31.3 requires Transformers
-5 or later. It does not replace or change the training environment. The converter
-revision is pinned by `ml/registry/assistant-base.json`; full conversion and
-target-runtime checks are required before choosing the deployment route.
+OCR parity uses the app's pinned ONNX Runtime 1.22.0 and deployment dictionary.
+Do not truncate labels, change thresholds or replace reference groups to hide
+failures. Preserve train/validation lineage and resumable optimizer state. Real
+references require explicit human review and approval before training export.
+See the [dataset contract](../docs/development/dataset.md).
 
-The OCR environment targets the official
-[PP-OCRv6 Small training configuration](https://github.com/PaddlePaddle/PaddleOCR/blob/main/configs/rec/PP-OCRv6/PP-OCRv6_small_rec.yml).
-ONNX parity must use the app's ONNX Runtime 1.22.0 and the unchanged deployment
-dictionary. Derive maximum label length from verified examples; do not truncate.
-The assistant environment targets Qwen3-0.6B using
-[MLX-LM LoRA and adapter fusion](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/LORA.md).
-
-Both custom models have experimental trained artifacts; neither is qualified for
-production. The [new assistant candidate](experiments/2026-09-26-s21-assistant-development-v2-results.md)
-passes complete-answer export parity on its 40 known development cases, with
-30 exact answers and four unsafe raw proposals. OCR export parity remains open.
-The [current status](../docs/development/status.md) records the scoped evidence.
-Preserve train/validation lineage, resumable optimizer state and
-grouped evaluation. Existing real references remain unapproved; the exporter keeps
-them blocked from training. The [synthetic table generator](data/synthesis/README.md)
-checks actual pixels and labels, but its counts cannot establish real-photo or
-patient-conversation accuracy.
+Both custom model paths remain experimental. Synthetic development results,
+compatibility checks and session reuse do not establish real-photo accuracy,
+real-speech reliability or independent generalization. Retired one-off diagnostic
+commands are cataloged in [recovery](../docs/development/recovery.md).

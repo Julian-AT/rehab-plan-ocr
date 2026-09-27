@@ -24,6 +24,7 @@ class SimulatorStorageTests(unittest.TestCase):
                 destination = root / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / name, destination)
+            shutil.copytree(ROOT / "tooling/make", root / "tooling/make")
             (root / "tooling/dev/artifacts.py").write_text(
                 'import sys\nassert sys.argv[1:] == ["space", "--peak-gib", "16"]\n'
                 'print("reserve rejected", flush=True)\nraise SystemExit(23)\n'

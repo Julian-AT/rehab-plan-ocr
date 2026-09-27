@@ -1,5 +1,3 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # Reproducible dependency security review
 
 The optional audit entry uses cargo-audit **0.22.2** from the hash-pinned Homebrew
@@ -88,7 +86,7 @@ never ignored automatically. Every result directory is immutable to this command
 No RustSec result supplies public release approval. Native libraries, Apple
 frameworks, models, training environments, licensing and actual release binaries
 need their own checks. The
-[dated security review](../releases/dependency-security-2026-09-26-s18.md) records those
+[dated security review](recovery.md) records those
 scope decisions and remaining work; historical reports remain unchanged.
 
 ## Verification
@@ -145,7 +143,7 @@ On 2026-09-26, an isolated Python-runtime comparison of ONNX Runtime 1.22.0 and
 1.30.0 completed all **3,618 historical cases** with unchanged inputs and passing
 environment controls, but failed the existing numerical gate. There were
 **11 old-pass/new-fail cells and 10 old-fail/new-pass cells**; all token comparisons
-passed. The [complete result](../../ml/experiments/2026-09-26-s21-onnxruntime-upgrade-comparison.md)
+passed. The [complete result](../../ml/experiments/findings.md)
 records the model totals, fixed thresholds and bound private evidence.
 
 The predecessor 001 remains failed: its dynamic package-discovery check changed
@@ -256,7 +254,7 @@ denied with `EPERM`. The audit correctly returned exit 1: **38 active advisory
 records, seven affected package/version pairs and 24 connected vulnerability
 groups**, with no withdrawn records. This is a completed audit with open findings,
 not a clean dependency or release result. The
-[dated package review](../releases/dependency-security-2026-09-26-s21-python.md)
+[dated package review](recovery.md)
 retains the original pre-update findings and the separately qualified Pillow change.
 
 The incomplete first canonical retrieval remains unchanged. It exposed OSV's

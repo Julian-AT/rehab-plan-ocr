@@ -1,0 +1,716 @@
+{
+  "source_revision": "237cb0fd7d17200f2e219d2afe449eabe3117118",
+  "reason": "Completed release/migration narratives and isolated diagnostic investigations; recover from Git or the verified private recovery bundle at the initial revision. Reusable training, export, evaluation and active protocols remain.",
+  "files": [
+    {
+      "path": "docs/development/completion.md",
+      "sha256": "8a5bfa4520ed8d4539f863903cd61fc921ecb956e9dca5d7e22f17f2c266f782",
+      "bytes": 26481
+    },
+    {
+      "path": "docs/development/implementation-plan.md",
+      "sha256": "a4a14fc472987bb8158f1b1e5b61fb93f402aa1758767e8ffc4109c2105bd499",
+      "bytes": 73718
+    },
+    {
+      "path": "docs/development/inventory.md",
+      "sha256": "759c8beaa7fd8b5ef91914ae43d05069ba163604094f46bba05800f0f36274ae",
+      "bytes": 18805
+    },
+    {
+      "path": "docs/development/model-coalescence.md",
+      "sha256": "f90a2544806e2afbe82cee83b2f2867a329e9fcc26bf81ff7b676bd5940efe11",
+      "bytes": 7459
+    },
+    {
+      "path": "docs/development/on-device-ai-upgrade.md",
+      "sha256": "3e432026e1e72cb5be04c3170da4bf9891184c95788c01e4012ab6f92bf21c15",
+      "bytes": 11497
+    },
+    {
+      "path": "docs/development/private-storage.md",
+      "sha256": "baaaa9fcc7fcf05e3857791dde2db3ecc2b87ccd8be7343f8859e85fd6d8fa8c",
+      "bytes": 9441
+    },
+    {
+      "path": "docs/development/repository-migration.md",
+      "sha256": "aedd06250b49dfc4e1c3ac838453ee9455696a00f01e7a81f3722b55db3335ee",
+      "bytes": 5710
+    },
+    {
+      "path": "docs/development/status.md",
+      "sha256": "22041d76e4c067be2a52172c8b73cff0840517609cb21b3535160860106b4ac8",
+      "bytes": 3070
+    },
+    {
+      "path": "docs/releases/2026-09-27-ai-upgrade-device.md",
+      "sha256": "174b8c8b5e036343d721557592f17aa6793c629a18dd4d2ba18b83f1f1313ed0",
+      "bytes": 4701
+    },
+    {
+      "path": "docs/releases/2026-09-27-assistant-output-branches.md",
+      "sha256": "0031dfbc0aa696b7cf4e6e40749231c878cdef94b7d622a4bb37fa5d45a7e368",
+      "bytes": 6793
+    },
+    {
+      "path": "docs/releases/2026-09-27-background-speech-latency.md",
+      "sha256": "ffa0da673da16b46899a87c44ffea62418b592d164cba58d3b740bc97c1c473c",
+      "bytes": 6074
+    },
+    {
+      "path": "docs/releases/2026-09-27-conversation-cancellation.md",
+      "sha256": "c3fee80fb24fcfb33b637caef6e15f6b9e1b2aa08b264d49b12fe8727e3e6134",
+      "bytes": 3881
+    },
+    {
+      "path": "docs/releases/2026-09-27-noise-endpoint.md",
+      "sha256": "d9d81e70bbdf086c6c373b1181adeae2f1321097d4e7ff3148ea8e5b810ec9bc",
+      "bytes": 4320
+    },
+    {
+      "path": "docs/releases/2026-09-27-victoria-restoration.md",
+      "sha256": "381bb950b66cc7241c9b685fdc7bad52f89e38a8505fc65e0b4e77f48df11d63",
+      "bytes": 2858
+    },
+    {
+      "path": "docs/releases/2026-09-27-victoria-speed.md",
+      "sha256": "17ec0921a9d35538edde7c3b3cbdd7420d074507eb272c9af72a6509a2a383fc",
+      "bytes": 3419
+    },
+    {
+      "path": "docs/releases/dependency-security-2026-09-26-s18.md",
+      "sha256": "90f248c98ecb588f7fd7937669391d18ecc1084d4ca7984edad2f4d124c036d6",
+      "bytes": 12242
+    },
+    {
+      "path": "docs/releases/dependency-security-2026-09-26-s21-python.md",
+      "sha256": "cf83e7471de4bb4fdbb3bebeb209e6e878de044e87755ec0fc0fb060d73851fa",
+      "bytes": 5192
+    },
+    {
+      "path": "docs/releases/history/2026-09-26-s17-ui-audio.md",
+      "sha256": "c7aa2e6c728850d28d53f9bd0190d77b2d4e0e489f672eff4a7559b1f65b2bc6",
+      "bytes": 5123
+    },
+    {
+      "path": "docs/releases/history/2026-09-26-s18-hosted-ui.md",
+      "sha256": "c0cdf87c7c2956acc607240159020938a947a01cfbfd2afc5b37728f2b94f28d",
+      "bytes": 3231
+    },
+    {
+      "path": "docs/releases/history/2026-09-26-s18-native-ui-followup.md",
+      "sha256": "b5ba865c13081cff4d4244284c2777bd0a367580a84d089c2c5f5581287b9161",
+      "bytes": 7730
+    },
+    {
+      "path": "docs/releases/history/2026-09-26-s18-signed-package.md",
+      "sha256": "7514e3c41eb1e12e9e2582b68e05b160b5503f4cb5e3f7cc0fe3d2d1acf91e56",
+      "bytes": 1888
+    },
+    {
+      "path": "docs/releases/history/README.md",
+      "sha256": "018620ad360a5b8fa5d76e94f92692e4eab11235adbbf5e0d14719fe7b7a7a40",
+      "bytes": 1843
+    },
+    {
+      "path": "docs/releases/history/agenda-030.md",
+      "sha256": "4e0fbd40044eb55c27992ef109c79cd806a49d54f566dc2f9eaaf0ccb9f0f7e6",
+      "bytes": 10641
+    },
+    {
+      "path": "docs/releases/history/apple-voice-preview.md",
+      "sha256": "10eda3cdf8daf4e0ccc892cc72230dac281969d96d3b4ae89f1a592bb93710a3",
+      "bytes": 12954
+    },
+    {
+      "path": "docs/releases/history/calendar-cache-device-update.md",
+      "sha256": "c1b4072ee4d2e1f5610790937ac380f0c1b6684f944abe78fa0d836fe10697a4",
+      "bytes": 3525
+    },
+    {
+      "path": "docs/releases/history/calendar-voice-implementation.md",
+      "sha256": "ed1a422860b564fee3cb7d086ec68f0a432c814f0e5dde4af1dd3652ee5f1f14",
+      "bytes": 13760
+    },
+    {
+      "path": "docs/releases/history/calm-voice-device-update.md",
+      "sha256": "4045d4c5d19379ac3ac8de6205d994780ff4a647104c8078d8a4e21d18ce60ba",
+      "bytes": 3944
+    },
+    {
+      "path": "docs/releases/history/continuous-calendar-voice.md",
+      "sha256": "1ff213056870cfcaa2c6817bcf3aa614def9b0763991fe35a30d97c118d9701e",
+      "bytes": 11295
+    },
+    {
+      "path": "docs/releases/history/continuous-voice-device-update.md",
+      "sha256": "fdea79517a47be2d87b10ecde9e951faef5bd8d77c349ba1080ba24576652148",
+      "bytes": 3918
+    },
+    {
+      "path": "docs/releases/history/fluid-calendar-voice.md",
+      "sha256": "be49dc5acbf728f170d7b045f6af9a6e44fda9f165cc807a6f9c7bed19d2a431",
+      "bytes": 7223
+    },
+    {
+      "path": "docs/releases/history/fluid-device-update.md",
+      "sha256": "9bcafd27fc6695812f0694ee0c684706c89bfe2c4d42e08d81a6615b7baa65dc",
+      "bytes": 4585
+    },
+    {
+      "path": "docs/releases/history/greens-device-update.md",
+      "sha256": "a964507fa88d1e5c104b79595963851bc0ef5c967eaf60a34937458f5b207587",
+      "bytes": 4015
+    },
+    {
+      "path": "docs/releases/history/iphone-update-20260926-s11.md",
+      "sha256": "a5ee975fbecdb0ed5af84ed70a1abbedf52ca93af7febac8701f8d266b0bd622",
+      "bytes": 2939
+    },
+    {
+      "path": "docs/releases/history/kokoro-device-update.md",
+      "sha256": "160cd485ec65d9cddb2c192e99164ebaca0b17a0f16bfab0c312729892977bf7",
+      "bytes": 6250
+    },
+    {
+      "path": "docs/releases/history/lassnitzhoehe-release.md",
+      "sha256": "b066fabfb4721cc43723f4234bde544b42ee375a0eaf4e98458512d3eb9f8bd8",
+      "bytes": 11206
+    },
+    {
+      "path": "docs/releases/history/logo-calendar-device-update.md",
+      "sha256": "18cf1f0e505956fcd15790b91db5f7c12a6f56d64bab2165395d34d4dc5219a2",
+      "bytes": 4157
+    },
+    {
+      "path": "docs/releases/history/native-iphone-migration.md",
+      "sha256": "e1a7db9e5dd25582acfc52ba3c746f033b5f3ad54ab44e71d5052dd6da1d0f65",
+      "bytes": 10983
+    },
+    {
+      "path": "docs/releases/history/native-minimal-device-update.md",
+      "sha256": "d24011955de24b82dd7a2a16b5f32bc07f4970c7b885dcfeccb607410033859a",
+      "bytes": 3898
+    },
+    {
+      "path": "docs/releases/history/native-minimal-iphone.md",
+      "sha256": "5bdded9080a6e89978553492afe66bf4c5fbe8bc6339ccb7d3d2e77f7d72a47f",
+      "bytes": 6632
+    },
+    {
+      "path": "docs/releases/history/one-confirmation.md",
+      "sha256": "a50d67f019f3d29b02f551d59cf7b20ffec1e5542c5d048156f24bdfecd4a747",
+      "bytes": 7151
+    },
+    {
+      "path": "docs/releases/history/optimization-followup-2026-09-26-s16.md",
+      "sha256": "7631b7862e6c210770d9890b4335b1849a4da515733019dac1c2100382eb6af5",
+      "bytes": 9765
+    },
+    {
+      "path": "docs/releases/history/plan-voice-comparison-2026-09-26-s15.md",
+      "sha256": "a858695ed2c5b2b675c307170a4908d9a034389e6562f05154a7a3200c76c3e4",
+      "bytes": 19835
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-continuous.md",
+      "sha256": "3bcc16a770f1526300d87baa6126f511c718dd71bcbec1cfbd18da513ee43ddd",
+      "bytes": 4293
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-fluid.md",
+      "sha256": "cafe691b662937964f267edb15ce8eb6626f567f39e5e33ed953209c7741bf7a",
+      "bytes": 4773
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-native.md",
+      "sha256": "a7c837250ebb1b371d27e365ac70a49144b9786a467ca4271d764d41cbfe6472",
+      "bytes": 6824
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-quality.md",
+      "sha256": "7fa6860edbcde4c638a970f8683025813562fdb2428837590a2a761f7fa9f473",
+      "bytes": 7859
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-smooth-voice.md",
+      "sha256": "154fb35cb993e6893db9417ef0d1e9dcaeeb67c17faeac28351da518cc6917b8",
+      "bytes": 4269
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12-victoria.md",
+      "sha256": "9bc8f1b94a0d7a9d5233f100ca2770d5ceb13da1bda1952c7dad46626930f32a",
+      "bytes": 4099
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s12.md",
+      "sha256": "49980c9a6a4a1c9efb0c699d101045386136661055e5dfdcd5bbcb3131c4bcc7",
+      "bytes": 7108
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-calendar-cache.md",
+      "sha256": "aa9e5c493e9efee5c55824c2c9838b84a8e9ad829c021c08e7ee69ec3327f4a9",
+      "bytes": 3638
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-fluid.md",
+      "sha256": "2799a9af0a7dea8a7b01c71b6ab0638eb57b07288a194c218546eb75671bab61",
+      "bytes": 6462
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-interface-tracing.md",
+      "sha256": "c19ddafd40585d413028a0779ee9060610a2ff7ec9abd9b01242a4838dbe28ad",
+      "bytes": 7952
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-logo-calendar.md",
+      "sha256": "5f646b7e53975ae4a7bd23abd1494a52cf368d2a21f9dcaea10cd25a43f915fc",
+      "bytes": 8792
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-page-axis.md",
+      "sha256": "110ba68bedac03c381b035e7f511a3f8624d3b5910974a5cfb5d63398d6370da",
+      "bytes": 2154
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-simplified-controls.md",
+      "sha256": "aabdb42971de3f61b2163aa48ec7b891675fcc80a66f0fd1422738fa07050232",
+      "bytes": 6720
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s13-voice-waveform.md",
+      "sha256": "98c2fff3d218945c72395df9004929bab01f7ed499bd53f6885c996c1d05c259",
+      "bytes": 5068
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s14-calendar-banner.md",
+      "sha256": "800afa56cc8f54efa84af95d158a257d474ff5aca4f91f7c3d87ef549e9b2ad4",
+      "bytes": 1813
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s14-calendar-repair.md",
+      "sha256": "2ab0429ebdec64f4c3bc6890e24c4a966af148dd125c3bef26de572e73ad9646",
+      "bytes": 4064
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s14-calm-voice.md",
+      "sha256": "a8c23f65aadceed39baa1a1735000791d84b33e0e3d072bd17c6a0371748cdb6",
+      "bytes": 12022
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s14-greens.md",
+      "sha256": "0195e1207773bca1d9dda765299651af1bf7ea255769d6b8331f204f589ffc63",
+      "bytes": 5019
+    },
+    {
+      "path": "docs/releases/history/previews/2026-09-26-s14-soft-greens-audio.md",
+      "sha256": "095be388dfe8371e695e05a43dd60935859e58a87e9e376642dc1efa845a973f",
+      "bytes": 9262
+    },
+    {
+      "path": "docs/releases/history/quality-device-update.md",
+      "sha256": "35877e8af6142facb313c8500911c15e44658c622514ac3993ed54dfe5ca15da",
+      "bytes": 4195
+    },
+    {
+      "path": "docs/releases/history/quality-overhaul.md",
+      "sha256": "8321bd389296b3af4bf7a8b8e01968b57a847d601db75caaa0c3503a4d89cd65",
+      "bytes": 13424
+    },
+    {
+      "path": "docs/releases/history/real-image-baseline.md",
+      "sha256": "906a538458ccc31f637ac549282a5935c9fc2095ce6262fc06c5767fc28e33b9",
+      "bytes": 6067
+    },
+    {
+      "path": "docs/releases/history/recognition-review.md",
+      "sha256": "2013562c9ac1c5e05c92fc0af384d8e68d74769034d6fafa03df1fb02bfdc960",
+      "bytes": 14043
+    },
+    {
+      "path": "docs/releases/history/requirements.md",
+      "sha256": "cd39992ab5a066499ce3e66e8c96c40dd86658512b8628053102b49741aa537c",
+      "bytes": 11881
+    },
+    {
+      "path": "docs/releases/history/research.md",
+      "sha256": "9fccecbb910012b5a6fcfb758fe22db39b0aa98fee4bd2e0a346e512351019f3",
+      "bytes": 8847
+    },
+    {
+      "path": "docs/releases/history/simple-app-delivery.md",
+      "sha256": "d2898af7e5e8d7996d18c27121ff8f60f3c10671683ad06976ea67cdf16ff557",
+      "bytes": 14921
+    },
+    {
+      "path": "docs/releases/history/smooth-voice-device-update.md",
+      "sha256": "aa9118f733e1f67bffb5bb8d0d9577eb8fae9f0baec51ba95f318d7f2cbd5f28",
+      "bytes": 3079
+    },
+    {
+      "path": "docs/releases/history/smooth-voice.md",
+      "sha256": "ff0b774cfe11d38e724961b6b8a300e9c446e5aca24d51f8125287a97ee0adf3",
+      "bytes": 3283
+    },
+    {
+      "path": "docs/releases/history/soft-audio-device-update.md",
+      "sha256": "d5bca8b4e521b3fd1c17a0bf4276f39ea071e7c73fde368e7074c995b26e1619",
+      "bytes": 4194
+    },
+    {
+      "path": "docs/releases/history/ui-voice-refresh.md",
+      "sha256": "b512d3cc9f754d9b418a29c24a12da125f410c2c89b929496da89ea9f29f8992",
+      "bytes": 9549
+    },
+    {
+      "path": "docs/releases/history/uniform-calendar-conversation.md",
+      "sha256": "2dc54ba963ab479192f8254c580f1dfae76cbf1cc935691e03bf8c577e80ae3b",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/releases/history/verification.md",
+      "sha256": "26bace22d8da62d86554425f4d09d2ffb21472a63e5e70e6d774ab9cd380428a",
+      "bytes": 15381
+    },
+    {
+      "path": "docs/releases/history/victoria-calendar-update.md",
+      "sha256": "9d7f73e945be0156c86511d36b8d5f1f3b569d0bc33aa2b9787af3b1ae83ce49",
+      "bytes": 6161
+    },
+    {
+      "path": "docs/releases/history/voice-accessibility-proposal.md",
+      "sha256": "908b96abe99f8d52dec81430bf68688c246bfbc5bdb1a76bb5b37f8bff666049",
+      "bytes": 31984
+    },
+    {
+      "path": "docs/releases/history/zitrus-device-update.md",
+      "sha256": "f1a520759b76e18ec6060ad71525ca692c2f939a7f2bd111fc89c1e94627628f",
+      "bytes": 3867
+    },
+    {
+      "path": "docs/releases/ios-installation.md",
+      "sha256": "cb71f5c7d5467c33532e1d1b81f2574f784402185d1bc4a8ece14cd0c52b410d",
+      "bytes": 4819
+    },
+    {
+      "path": "docs/releases/privacy-manifest-audit.md",
+      "sha256": "c170e94ad1e17246024b8060f2cea0df2fe6a7e0f4cc47b94bc7b293c09ff2ff",
+      "bytes": 3153
+    },
+    {
+      "path": "ml/evaluation/conversation/tests/test-token-parity.py",
+      "sha256": "21ea2b95526cc5f913a03d2d58b2ef8bc73a54f1e704861409286124f0ea4f27",
+      "bytes": 7746
+    },
+    {
+      "path": "ml/evaluation/conversation/token_parity.py",
+      "sha256": "697c0e783e9be4eb0322d7ad68ec3b8309eecd9b2a04ce0314ee07a035858f69",
+      "bytes": 30458
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_fma.cpp",
+      "sha256": "a8ca6e71bfff2ab3ae5938a98e862fbfc9f0b98692cba7d7ab161714a0cfa228",
+      "bytes": 1316
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_fma.py",
+      "sha256": "53665ce9d18dc10cf3cf728624b7218808603150d15521e8c2fb1e0efed2487a",
+      "bytes": 9913
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_graph.py",
+      "sha256": "c1036d15657cd97d5c9128c7a4c4a368d7e9b2e49f496b65fb67a376bf5317d9",
+      "bytes": 6623
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_onnx.py",
+      "sha256": "f731c5c945f5b506654567e5ff66621846377391070f886a4af2b7eb5436c7e2",
+      "bytes": 9634
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_reciprocal.cpp",
+      "sha256": "bc7e581b4dd988bf2e0646ae0b581488e3b67f85d74d38f0e71ce68c7700f17f",
+      "bytes": 2770
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_reciprocal.py",
+      "sha256": "ad5bc59527fab116b254d851b2ec83e723f41a96a9089694e6de8be58a133bf1",
+      "bytes": 11055
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_replay.py",
+      "sha256": "2f9c2f26f31fafbf2acb48145ad412eb1131d2173881515272893ac8c2f0ecef",
+      "bytes": 14011
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_stage.py",
+      "sha256": "3123595db2bf3ae3a39106b8b7d6581f6de98463c8e983daa6150dd3186984c5",
+      "bytes": 13732
+    },
+    {
+      "path": "ml/evaluation/recognition/batchnorm_trace.py",
+      "sha256": "77ba031705b1783415b68f6b47138de19907a2dd6ae8eeceefc16abd9dfe8a70",
+      "bytes": 12056
+    },
+    {
+      "path": "ml/evaluation/recognition/convolution_lowering.py",
+      "sha256": "dba4feb644276ceae740b2f51d99b3b2736add34b53af20e3afeffcbe3ccc374",
+      "bytes": 15761
+    },
+    {
+      "path": "ml/evaluation/recognition/convolution_stage.py",
+      "sha256": "942c60fabf10a5229834fe34730617965fd4e73ad01f6373739f4784b362394e",
+      "bytes": 16436
+    },
+    {
+      "path": "ml/evaluation/recognition/convolution_trace.py",
+      "sha256": "efb28e5ee278bbfd52491f1fb19dfab7f36c1b1b824e55d4f0204c0b42fd8a39",
+      "bytes": 11761
+    },
+    {
+      "path": "ml/evaluation/recognition/strided_convolution.py",
+      "sha256": "9c0a5d85ec046a640afb8e36245b55a455189d1582e101d733e4bc4b18d65d0a",
+      "bytes": 17874
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-fma.py",
+      "sha256": "fc554a2bc345a8faef7fa0c96de8daad1b9856ce5191771be844dc66a828fe17",
+      "bytes": 2582
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-graph.py",
+      "sha256": "f2f8bdb6efb619ef595c393aec634a899ed4eb388b939680b0385e2f1465541f",
+      "bytes": 5539
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-onnx.py",
+      "sha256": "2f4e1b1402b9290924728106c1012a3db825480421dfe430f1c41d62bd1f37b6",
+      "bytes": 3126
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-reciprocal.py",
+      "sha256": "2ff0c8f567d78ffc9ae458e69865357e6bf46622bfc14df895e272b80461a570",
+      "bytes": 5263
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-replay.py",
+      "sha256": "f56096593d81f2c7bbe08b23d870e4c5d886027679038ff0ced4b88251120994",
+      "bytes": 3595
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-stage.py",
+      "sha256": "b7f3d3410608f82f74daf2ae5ed54a8fbb8f795a340fc1fd9ee3dd47487f645d",
+      "bytes": 2981
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-batchnorm-trace.py",
+      "sha256": "44e59aa2e3dddf2b826e0277ffc90d65c49394b19fc2b015f32b51a19062ad89",
+      "bytes": 4532
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-convolution-lowering.py",
+      "sha256": "2a6a9a973973dcd710c6adc0d10412743954b57d3f532beefad93550eda38941",
+      "bytes": 5648
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-convolution-stage.py",
+      "sha256": "cdc5415e3da15d226b565c813187c157d305de455d86cd1bbdeed33411c5af45",
+      "bytes": 6759
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-convolution-trace.py",
+      "sha256": "49d1088c51b0261f304f8e7fd473239b24a9a3bad9ceb8cff74c22874be1e7a8",
+      "bytes": 4039
+    },
+    {
+      "path": "ml/evaluation/recognition/tests/test-strided-convolution.py",
+      "sha256": "7a64cbaab95f1f3671902b3ca40c5289ef4aa3d856833f653ad26b7f111d078c",
+      "bytes": 5268
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s16-assistant-compatibility.md",
+      "sha256": "0085ba2eefe6d69077f0f2680d59481d1260fc19d611afb455177a3b23f6e308",
+      "bytes": 3348
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s16-calendar-projection.md",
+      "sha256": "6ac5b566b754e88f09aae1e0a702c8b91bb6732759c209b982472bd9cdd0ea82",
+      "bytes": 1950
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s16-checkpoint-compatibility.md",
+      "sha256": "daa2051f1ebc99f25ea81a987a586e2ed3c28ababd8cbd266b74b9119daee6e3",
+      "bytes": 3285
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-assistant-development.md",
+      "sha256": "2e243b3f5f02f15befdac18736fc0a533625c1e247a1843494f00402f7b0449e",
+      "bytes": 2526
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-assistant-native.md",
+      "sha256": "1724d6eac3e34aec47d932891e5792f153193c821a092b7f4f84e6676f11b80b",
+      "bytes": 3628
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-assistant-resumption.md",
+      "sha256": "f895d6dde10cfb6fabbec5cf11ce34f3e6963deb76877fb06b25e96dd569f42f",
+      "bytes": 4282
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-augmentation-geometry.md",
+      "sha256": "1f9ef31d2f71127dae8f304594e1f0f05e1fc1ec2604f80faba1c877ec0492b4",
+      "bytes": 2118
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-listening-preparation.md",
+      "sha256": "8aa2c69ec0c2e7c5268b2dfb43176caba8acef80f83fed280117647f5873a208",
+      "bytes": 2687
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-ocr-resumption.md",
+      "sha256": "294ab180841778a1b890c0bd67ac67d2d82e2e1587ecc9a45c9c84b34300d2b1",
+      "bytes": 5062
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s17-synthetic-layout.md",
+      "sha256": "9e475570c4e6eb1d02e640c744d88f58287153b11db3e7cc6f054dbe1b05a27b",
+      "bytes": 1936
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-app-provider-comparison.md",
+      "sha256": "982aaa8d225f93b6328c8f28d5c38e54aad42a80cb9a9fcf9659ddcad15a49e5",
+      "bytes": 4442
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-assistant-app-provider.md",
+      "sha256": "0569bfc121a4a81413b586017cd116c0da95ad13023704249d8fb316c70bae59",
+      "bytes": 4444
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-assistant-backend-parity.md",
+      "sha256": "4e918b47b55e6137fe54a0c24468f856fe5f792e662a9564e2554fdec88ee282",
+      "bytes": 3309
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-assistant-token-parity.md",
+      "sha256": "09c67a12ce205ea85ce734457472753b693950ed66a6f8d6cebec3d7263fbbbf",
+      "bytes": 9874
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-file-speech-recognition.md",
+      "sha256": "31ea9b5d87e9c46b6d75109e7224b722aea69e95efb1f470688f0bbe71836108",
+      "bytes": 4980
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-ocr-app-provider.md",
+      "sha256": "42709b757d1e0f2fbbdcc7412ea54ec7d50c67c61618e88c257e1aeb150db88e",
+      "bytes": 4000
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-ocr-convolution-lowering.md",
+      "sha256": "bdb4af485683b31a6fbe3646d48f1eda58585326c5507b06f4f2e95462c5c7b4",
+      "bytes": 5516
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-ocr-convolution-stage.md",
+      "sha256": "37f9e296a0ff5d34c113d2fd4c7b81bd2720c59536424584d1f95cf0e464c649",
+      "bytes": 3712
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-ocr-operation-parity.md",
+      "sha256": "502ec3a7effca10a5a0f5b3615df38f2f5d9b07d8d0e4f6fce0a9e2aeee357fc",
+      "bytes": 7573
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-synthetic-ocr-development.md",
+      "sha256": "f28eca22332799faf52c2a566d55555565db625db3530d85b982a3a4da2504df",
+      "bytes": 8431
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s18-visual-baseline.md",
+      "sha256": "b71cfe7dfad293959624ee4969cba57a302edf5c82571882c9ac13a2673b3f1c",
+      "bytes": 4966
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-batchnorm-fma.md",
+      "sha256": "f07a2fa1739e550f85fcf7926408ca6bc0668f27b235e18a9e4a330d9d0c8567",
+      "bytes": 4924
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-batchnorm-onnx.md",
+      "sha256": "f0d3d55601492d2f42deb7eaa0211b1985c20c87dddd7350cd52246a6944cac0",
+      "bytes": 4391
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-batchnorm-reciprocal.md",
+      "sha256": "e45a4db8e3c46a9c5a424d39a6cf9de7c920f4ff9b76779614025f5db96b7192",
+      "bytes": 5731
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-batchnorm-replay.md",
+      "sha256": "f6a70b48a8aca66515e58738412b8423b6d1105f79dab1a7fc0e1d59f2d82eac",
+      "bytes": 4174
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-batchnorm-stage.md",
+      "sha256": "ba2024b023e49b827dfe6eee0db4323ffd1368797f46809abefcdd73f8cf7376",
+      "bytes": 5827
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s19-ocr-convolution-trace.md",
+      "sha256": "1ad78dd2be8970464fcdefb0c75955b249bfc25a1f00af39af15256a7ed9a5c3",
+      "bytes": 4060
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s20-ocr-batchnorm-trace.md",
+      "sha256": "4ecfbc61d6fb580ea5eeafb29faa610d9f885bc6cf5c5970dc6a137926ff629e",
+      "bytes": 5515
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s20-ocr-strided-convolution.md",
+      "sha256": "0a6c26c629c4e9b8e7c5f29e1330068dc0c785de88ea8c9299b61bc4a9962a31",
+      "bytes": 4746
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s21-assistant-development-v2-results.md",
+      "sha256": "934bc1500ce90589912e2808d523bac9a997f5ef6edc99a393ae2e1c4685a7fd",
+      "bytes": 5942
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s21-ocr-app-preprocessing-results.md",
+      "sha256": "407b2b05b68b724ed4955226e1fb79035a0c3766d6be8a3ec09cb880ba79eda6",
+      "bytes": 3814
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s21-ocr-cumulative-export-results.md",
+      "sha256": "cdda912272bda76ab85aee0423722b6ad612684a6318167b1feecde9c4204467",
+      "bytes": 7903
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s21-ocr-field-coverage-results.md",
+      "sha256": "fae2218b982ce145572f10d6451ce9d3b1e409b876833ca2cb8be270ac17098d",
+      "bytes": 4873
+    },
+    {
+      "path": "ml/experiments/2026-09-26-s21-onnxruntime-upgrade-comparison.md",
+      "sha256": "7b9a0eaa31a93289f6744dd2a7149b41f49c0b28c3f7bc47c4ef581e319ae7b4",
+      "bytes": 4467
+    },
+    {
+      "path": "ml/experiments/2026-09-27-nemotron-ios-feasibility.md",
+      "sha256": "bd8f4b9110745182202d582128c3103e207a37f1e5b959b38bd50980f1224109",
+      "bytes": 3420
+    },
+    {
+      "path": "tooling/dev/smoke_export_objects.py",
+      "sha256": "c9cbcdba8417c409010847dd10012457a80ba49687528eb28c9519962d7a1d23",
+      "bytes": 9025
+    },
+    {
+      "path": "tooling/dev/tests/test-smoke-export-objects.py",
+      "sha256": "3034bcf810173ed807ed1f576ce37416370257a5a851497f76dd36806fb58c10",
+      "bytes": 16098
+    }
+  ]
+}

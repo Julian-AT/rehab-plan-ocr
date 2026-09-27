@@ -116,6 +116,7 @@ class WorkspacePathTests(unittest.TestCase):
     def test_native_generator_uses_alternate_cargo_outputs_not_stale_default(self):
         for name in [
             "tooling/dev/workspace.py",
+            "tooling/dev/source_tree.py",
             "tooling/dev/artifacts.py",
             "tooling/dev/llvm_references.py",
             "tooling/build/build-native.sh",

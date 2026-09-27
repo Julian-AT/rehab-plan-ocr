@@ -90,7 +90,11 @@ def verify(path):
     with zipfile.ZipFile(path) as archive:
         entries = archive.infolist()
         names = [entry.filename for entry in entries]
-        if names != sorted(set(names)) or archive.comment:
+        if (
+            names != sorted(set(names))
+            or len({name.casefold() for name in names}) != len(names)
+            or archive.comment
+        ):
             raise ValueError("Duplicate or unsorted ZIP entries, or unexpected comment")
         for entry in entries:
             source.safe_path(entry.filename)

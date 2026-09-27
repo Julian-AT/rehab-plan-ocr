@@ -1,10 +1,8 @@
-# Personal-device Victoria restoration
+# Personal Victoria profile
 
-The user explicitly requested restoration of the existing Victoria voice after
-the 2026092701 update selected Apple speech instead. That update retained the
-saved `voice.neural.id = victoria` and speech rate, but its system renderer read
-another preference key. The personal build now reads the original preference
-and uses the original pinned local Kokoro/Victoria model.
+The optional personal build reads the original `voice.neural.id = victoria`
+preference and uses the pinned local Kokoro/Victoria model. The default project
+uses installed Apple system voices.
 
 `VictoriaSpeechRenderer` implements the existing speech renderer boundary.
 Native inference remains on the Rust blocking worker, PCM decoding runs off the
@@ -20,9 +18,12 @@ separate ignored RehaCore package/XCFramework compiled with `kokoro`. The ordina
 project and native framework link remain unchanged. Private weights and build
 products stay outside Git.
 
-After restoring the existing pinned speech model and phonemizer, build with:
+Restore and verify the separately pinned speech model and phonemizer explicitly,
+then build into a new output directory:
 
 ```sh
+make restore-experimental-speech
+make convert-experimental-speech TARGET=all
 python3 tooling/build/build-private-victoria.py simulator --output /absolute/new/build-directory
 python3 tooling/build/build-private-victoria.py archive --output /absolute/new/archive-directory
 python3 tooling/release/package-native.py --run .local/releases/new-run \
@@ -41,38 +42,10 @@ App Group and dSYM checks. The base dependency inventory describes the ordinary
 runtime; the bundled `private-speech/manifest.json` supplements it for Victoria.
 This profile does not claim public-distribution qualification.
 
-## Recognition repair in the same update
+## Speech and qualification
 
-Observed microphone-only and duplex trials both produced voiced audio but failed
-on follow-up turns using the legacy de-AT recognizer. Disabling voice processing
-did not resolve the failure. Previously, absent SpeechAnalyzer assets silently
-selected that legacy recognizer. Initial preparation now installs and reserves
-supported German assets before capture; subsequent turns require ready assets.
-Only unsupported hardware/locales or the explicit legacy trial select the old
-provider. Setup is cancellable and bounded, with content-free readiness/error
-diagnostics. Initial asset setup can require Internet; inference stays local.
-
-Portable checks cover setup/cancellation, incomplete recognition rejection, PCM
-validation, and public/private package separation. Actual speech reliability and
-the restored voice must be checked on the phone; simulator playback alone does
-not qualify microphone-to-answer conversation.
-
-## Cancellation and assistant diagnosis
-
-Foreground conversation now owns a temporary idle-timer override while listening,
-thinking or speaking. Stopping, pausing or leaving the foreground restores the
-previous setting. Explicit locking/backgrounding still ends capture. This avoids
-the app's own background cancellation being triggered by hands-free Auto-Lock.
-
-`VoiceTrace` carries typed interruption and cancellation reasons. Routine `tools`
-events now record completion/action or a fixed error category, without arbitrary
-error strings or conversation content. Codes are defined in `VoiceDependencies`
-and `InterpretationDiagnostics`; uncategorized errors are 99.
-
-The personal build supports the explicitly requested launch argument
-`--diagnose-assistant <new-UUID>` for runtime diagnosis. This bypasses the normal
-app/database initialization and microphone, runs fixed synthetic greetings and a
-calendar question through plain, guided and app-provider generation, and writes
-an exclusive per-run report under Documents/assistant-diagnostics. Model errors
-and generated replies in that report belong only to these synthetic requests.
-Normal app launches never run this check. Relaunch normally after collecting it.
+German speech assets are prepared before capture, with bounded cancellable setup.
+Initial preparation can need Internet. Native rendering, PCM preparation and
+ordered playback retain cancellation ownership. Simulator playback and synthetic
+endpoint checks do not qualify real microphone-to-answer reliability, listening
+quality or device speed. This source cleanup installs no phone build.

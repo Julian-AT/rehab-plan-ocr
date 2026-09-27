@@ -25,11 +25,6 @@ class DocumentationTests(unittest.TestCase):
             ]
         )
         for document in documents:
-            if document.is_relative_to(ROOT / "docs/releases/history"):
-                # Historical reports identify the exact Git revision of retired assets.
-                if document.name != "README.md":
-                    self.assertIn("Historical record", document.read_text())
-                continue
             for target in re.findall(r"\]\(([^)\n]+)\)", document.read_text()):
                 if re.match(r"[a-z][a-z0-9+.-]*:|#|/", target, re.I):
                     continue
@@ -57,8 +52,20 @@ class DocumentationTests(unittest.TestCase):
             with self.subTest(notice=name):
                 self.assertEqual(hashlib.sha256((folder / name).read_bytes()).hexdigest(), expected)
 
+    def test_cleanup_catalog_retains_unique_recovery_identities(self):
+        inventory = json.loads((ROOT / "docs/development/retired-source.json").read_text())
+        self.assertRegex(inventory["source_revision"], r"^[a-f0-9]{40}$")
+        paths = [entry["path"] for entry in inventory["files"]]
+        self.assertEqual(len(paths), len(set(paths)))
+        for entry in inventory["files"]:
+            self.assertNotIn("..", Path(entry["path"]).parts)
+            self.assertFalse(Path(entry["path"]).is_absolute())
+            self.assertRegex(entry["sha256"], r"^[a-f0-9]{64}$")
+            self.assertGreater(entry["bytes"], 0)
+            self.assertFalse((ROOT / entry["path"]).exists())
+
     def test_retired_assets_have_unique_recoverable_identities(self):
-        inventory = json.loads((ROOT / "docs/releases/history/retired-assets.json").read_text())
+        inventory = json.loads((ROOT / "docs/development/retired-assets.json").read_text())
         self.assertRegex(inventory["source_revision"], r"^[a-f0-9]{40}$")
         paths = [entry["path"] for entry in inventory["files"]]
         self.assertEqual(len(paths), len(set(paths)))

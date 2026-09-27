@@ -1,5 +1,3 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # iOS source ownership
 
 `apps/ios/project.yml` remains the authoritative Xcode project specification.

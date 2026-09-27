@@ -148,7 +148,7 @@ This trainer's crop scores use OpenCV linear resizing and padding to the recorde
 fixed width (320 in the completed v3 study). They do not measure the Rust app's
 proportional-width/Triangle input policy. Compare checkpoints under the same
 explicit preprocessing contract; changing that contract requires a separate
-bound evaluation. The [later native-input comparison](../../experiments/2026-09-26-s21-ocr-app-preprocessing-results.md)
+bound evaluation. The [later native-input comparison](../../experiments/findings.md)
 preserves the historical training scores and finds no adapted-model advantage
 over the pretrained checkpoint under the shared app preprocessing policy.
 
@@ -190,7 +190,7 @@ checkpoint binds the export configuration as well as its weights.
 
 `verify_resume.py` compares every model and optimizer tensor between uninterrupted
 and resumed runs and checks frozen backbone buffers against the original weights.
-The [recorded experiment](../../experiments/2026-09-26-s17-ocr-resumption.md) states the
+The [recorded experiment](../../experiments/findings.md) states the
 actual verification evidence and its limits.
 
 ## Export
@@ -243,7 +243,7 @@ and ONNX outputs are compared with the original dynamic model. Both normal and
 disabled ORT graph optimization are recorded separately. Artifacts, conversion
 command/log and hashes stay in a new directory; the standard export, runtime and
 earlier model card are untouched. Even a passing subset cannot qualify this
-alternative architecture. See the [stage results](../../experiments/2026-09-26-s18-synthetic-ocr-development.md).
+alternative architecture. See the [stage results](../../experiments/findings.md).
 
 ONNX parity does not establish physical iOS parity, latency, recognition quality,
 quantization safety or release readiness. The app continues using its existing
@@ -254,10 +254,10 @@ compares saved Paddle and ONNX intermediate outputs while retaining the original
 graphs and checking instrumented outputs against immutable controls. `OCR_TRACE_BATCH`
 defaults to 32; `ALL_FAILURES=1` selects all retained failures. This remains an
 operation-level diagnostic, not deployment qualification. The
-[recorded results](../../experiments/2026-09-26-s18-ocr-operation-parity.md) identify the
+[recorded results](../../experiments/findings.md) identify the
 first reproducible rounding difference and preserve the original parity failures.
 
-The bounded [Conv-to-MatMul experiment](../../experiments/2026-09-26-s18-ocr-convolution-lowering.md)
+The bounded [Conv-to-MatMul experiment](../../experiments/findings.md)
 uses only the two saved operation fixtures and four exact integer geometry cases.
 `make prepare-ocr-convolution-lowering DIAGNOSTIC_RUN=<new-private-directory>`
 records its immutable protocol without inference. After scheduling the runtime

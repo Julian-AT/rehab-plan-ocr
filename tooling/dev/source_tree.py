@@ -155,6 +155,9 @@ def validate_manifest(value):
     tree = tree_hash(entries)
     if not commit_data.startswith(f"tree {tree}\n".encode()):
         raise ValueError("Git tree provenance mismatch")
+    for entry in entries:
+        if not allowed(entry["path"]) and entry["path"] not in EXCLUDED:
+            raise ValueError(f"Prohibited tracked artifact: {entry['path']}")
     expected = {e["path"]: e for e in entries if allowed(e["path"])}
     files = value["files"]
     if [e["path"] for e in files] != sorted(expected):

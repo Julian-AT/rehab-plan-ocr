@@ -39,5 +39,5 @@ unusable inputs have no appointment targets.
 All derivatives of a generated source must retain its `group`. These examples are
 training/robustness data, never an independent real-photo holdout. Correct rendered
 labels do not establish OCR accuracy, clinical plausibility or patient usability.
-The [first v2 experiment](../../experiments/2026-09-26-s17-synthetic-layout.md) records
+The [first v2 experiment](../../experiments/findings.md) records
 verification and its limits. Geometry/obstruction augmentation is a separate step.

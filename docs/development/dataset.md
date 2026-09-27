@@ -1,12 +1,10 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # Private reference dataset
 
 The 20 distinct original photos have been visually transcribed into **188 row
 occurrences**. Alternate captures and revised plans remain separate references.
 These are **unapproved drafts**, including proposed text polygons and error causes;
 no qualified clinical model or independent final test exists. Both model pipelines
-have produced synthetic smoke artifacts; see the [current status](status.md).
+have produced synthetic smoke artifacts; see the [current status](recovery.md).
 Personal data and every content-bearing artifact remain in ignored private storage.
 
 New collections follow the [German collection guide](../product/research/collection-guide.md)
@@ -188,7 +186,7 @@ Real-photo training and accuracy comparisons require approved references and
 frozen source groups. Synthetic compatibility runs do not grant those approvals.
 The matching PP-OCRv6 Small checkpoint has already completed loading, a short
 training run, export and 24/24 Paddle/ONNX comparisons; the artifact remains
-experimental. See the [recorded smoke experiment](../../ml/experiments/2026-09-26-s16-checkpoint-compatibility.md).
+experimental. See the [recorded smoke experiment](../../ml/experiments/findings.md).
 
 The [adaptation trainer](../../ml/training/ocr/README.md) now supports frozen-backbone
 and lower-rate full fine-tuning, the exact dictionary, label-derived sequence
@@ -196,8 +194,8 @@ lengths, atomic optimizer checkpoints and validation stopping. A forced mid-epoc
 interruption reproduced the uninterrupted tensors exactly. The former eight-hour
 cap is removed. The earlier small smoke comparison passes export parity for its
 frozen candidate; its full-adaptation candidate fails two numerical cases.
-Both later [v3 field-coverage exports](../../ml/experiments/2026-09-26-s21-ocr-field-coverage-results.md)
-fail their numerical gate. The separate [native-input crop comparison](../../ml/experiments/2026-09-26-s21-ocr-app-preprocessing-results.md)
+Both later [v3 field-coverage exports](../../ml/experiments/findings.md)
+fail their numerical gate. The separate [native-input crop comparison](../../ml/experiments/findings.md)
 does not change those failures or qualify an app model.
 Real-photo adaptation, critical-field/correction evaluation and device
 parity remain open. Detection training stays conditional on measured errors.

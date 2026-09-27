@@ -1,5 +1,3 @@
-> Historical record: technical findings retained from the archived development sequence. Project dates, build labels and source references have been normalized. This record is not a new test, delivery approval or signing attestation; unaltered evidence and original validity dates are held in the external private archive.
-
 # Local difficult-region experiment
 
 The static `reha-vlm` adapter embeds llama.cpp/libmtmd. It has model loading,
@@ -130,7 +128,7 @@ comparison retains the source crop, provisional annotation and readings for loca
 review. Each reader has an independent 60-second limit. The retired desktop Dataset
 screen is not part of the current iOS application.
 
-The 20-photo exploratory run is retained in the [historical delivery report](../../../docs/releases/history/simple-app-delivery.md). No
+The 20-photo exploratory run is retained in the [historical delivery report](../../../docs/development/recovery.md). No
 verified appointment-level accuracy scores or physical-device qualification are
 available, so neither additional model is shipped.
 
