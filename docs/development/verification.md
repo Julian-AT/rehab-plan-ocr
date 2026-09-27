@@ -21,3 +21,8 @@ The storage policy requires a 20 GiB working reserve plus each operation's peak.
 The permitted existing caches cannot recover enough capacity. Private evidence,
 models, backups and retained products must remain intact. No storage checks are
 bypassed. Source cleanup does not qualify experimental models or real speech.
+
+The first tool-suite run exposed a pre-existing provenance mismatch: the Python
+conversation evaluator expected `calendar-5`, while the current Swift provider
+reports `calendar-6`. The evaluator now accepts the current identity and explicitly
+rejects `calendar-5` alongside earlier identities; no app behavior changed.

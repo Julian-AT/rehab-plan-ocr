@@ -137,7 +137,7 @@ class AppEvaluationTests(unittest.TestCase):
         changed = copy.deepcopy(self.result)
         changed["cases"][0].update(provider="complete-rules", model_identity=identity)
         self.audit(changed)
-        for stale in ["calendar-3", "calendar-4"]:
+        for stale in ["calendar-3", "calendar-4", "calendar-5"]:
             changed["cases"][0]["model_identity"] = stale
             with self.subTest(scope="mixed provider observation", identity=stale):
                 with self.assertRaises(ValueError):
