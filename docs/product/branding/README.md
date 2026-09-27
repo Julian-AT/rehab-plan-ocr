@@ -6,15 +6,10 @@ omitted so the emblem remains legible at small sizes.
 
 - `ios.png`: canonical square artwork, created with the built-in Imagegen tool in
   image-edit mode using the supplied logo as reference. iOS applies its own mask.
-- `macos-template.svg`: deterministic platform container for the same artwork,
-  with a rounded white tile, transparent outer margin and subtle shadow.
-- `macos.png`: rendered 1024-pixel macOS master. The desktop PNGs and ICNS have
-  actual transparent corners; the iOS catalog has fully opaque backgrounds.
-
 The native iPhone catalog is committed at
 `apps/ios/App/Resources/Assets.xcassets/AppIcon.appiconset`.
 The reviewed masters and their provenance remain here independently of build tooling.
-The macOS images are historical artwork; no desktop app is built.
+Historical desktop artwork is recoverable through the [retired-source catalog](../../development/recovery.md).
 
 ## Imagegen prompt
 

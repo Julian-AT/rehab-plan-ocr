@@ -154,15 +154,15 @@ GROUPS = [
     ),
     (
         "visual-evidence",
-        ["docs/product/visual-baseline/", "docs/device/", "docs/decisions/"],
+        ["docs/product/visual-baseline/", "docs/decisions/"],
         "protected-evidence",
-        "Chosen visual references, original device capture and palette decision",
+        "Chosen visual references and palette decision",
         [
             "tooling/checks/compare-visual-suite.py",
             "tooling/checks/tests/test-documentation.py",
             "docs/development/recovery.md",
         ],
-        "retain unchanged; device capture is distinct evidence",
+        "retain unchanged; committed visual comparison inputs",
     ),
     (
         "documentation",

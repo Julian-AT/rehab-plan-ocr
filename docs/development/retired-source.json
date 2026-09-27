@@ -43,6 +43,21 @@
       "bytes": 3070
     },
     {
+      "path": "docs/device/2026-09-26-s12/mehr.png",
+      "sha256": "ac10f5bd6bdbfa402b7713819dcfdd3b0f2c5b49c6e2b9654878e5358ebf76d1",
+      "bytes": 237420
+    },
+    {
+      "path": "docs/product/branding/macos-template.svg",
+      "sha256": "e1322325c1a5ff0e6aa2a5d0da25284cffa8ba109f9dc7780b48e6a0a3db9c85",
+      "bytes": 758
+    },
+    {
+      "path": "docs/product/branding/macos.png",
+      "sha256": "5fc5d1127ec807cbd4b020c29ed15425a866420669414ac9922b8cca9260bb74",
+      "bytes": 440057
+    },
+    {
       "path": "docs/releases/2026-09-27-ai-upgrade-device.md",
       "sha256": "174b8c8b5e036343d721557592f17aa6793c629a18dd4d2ba18b83f1f1313ed0",
       "bytes": 4701
